@@ -1,0 +1,16 @@
+{
+    "name": "TinyTown.Runtime",
+    "rootNamespace": "TinyTown.Runtime",
+    "references": [
+        "TinyTown.Simulation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

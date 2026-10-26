@@ -2,13 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 0. Current Repository State (update as the project grows)
+## 0. Repository Layout, Commands and Current State
 
-As of the initial commit, the repository contains only `README.md`, this file and `GameDesignDocument.md`. There is no Unity project, no C# source, no tests and no build pipeline yet, so there are no build, lint or test commands to run. Phase 0 (section 19) creates them.
+Phase 0 (foundation) is in place. Full build and test instructions, including the Unity licence secrets CI needs, are in `Documentation/BuildAndTest.md`.
 
-The cloud container used so far has no Unity editor, no Unity licence, no .NET SDK and no Mono. Do not assume any of them exists; re-check with `which dotnet unity mono` at the start of a session. Until a Unity-capable runner exists (for example a GitHub Actions workflow using a Unity licence), only static checks and pure C# logic tests runnable with a .NET SDK can be executed here.
+- Unity **6000.3.27f1** (6.3 LTS), set in `ProjectSettings/ProjectVersion.txt`. Only `ProjectVersion.txt` and `Packages/manifest.json` are hand-written; Unity generates the other project settings, the `Assets/Scenes/Boot.unity` scene and `packages-lock.json` on first open. Commit generated files from a real editor run rather than writing Unity YAML by hand.
+- Windows builds and Unity tests run only in GitHub Actions (`.github/workflows/build.yml`, GameCI on Ubuntu, Mono backend). The cloud coding container has no Unity editor or licence, so do not claim a Unity build or Unity test result unless a CI run actually reported it. Download builds from the run's `TheTinyTown-Windows-*` artifact.
+- Assemblies:
+  - `TinyTown.Simulation` (`Assets/Scripts/Simulation`): deterministic simulation and data models. `noEngineReferences: true`, no `UnityEngine` usage, C# 9. Persistent records and rules live here so they are testable without Unity.
+  - `TinyTown.Runtime` (`Assets/Scripts/Runtime`): MonoBehaviours and Unity glue. `Bootstrap` is created by `[RuntimeInitializeOnLoadMethod]`, so the boot scene stays empty and nothing references scripts by GUID.
+  - `TinyTown.Editor` (`Assets/Scripts/Editor`): `BuildScript.BuildWindows`, the CI build entry point.
+  - Tests: `Assets/Tests/EditMode` (plain NUnit, must not use `UnityEngine`, also compiled by `DotNetTests/`) and `Assets/Tests/PlayMode` (Unity-only).
+- Player settings live in `Assets/StreamingAssets/Configuration/settings.json`; `GameSettings.ValidOrDefault` falls back to defaults on invalid input.
+- When adding files under `Assets/`, also add a `.meta` file with a new random GUID so CI and the editor agree on asset identity.
 
-When Phase 0 lands, replace this section with the real commands: how to open the project, run Edit Mode and Play Mode tests (including a single test), run any plain .NET tests, and produce a Windows build.
+Commands runnable in the cloud container (install the SDK first with `sudo apt-get install -y dotnet-sdk-8.0` if `dotnet` is missing):
+
+```bash
+dotnet test DotNetTests                                          # Simulation + Edit Mode tests
+dotnet test DotNetTests --filter "FullyQualifiedName~GameSettingsTests.InvalidEndpoint_IsRejected"   # single test
+```
 
 # The Tiny Town
 
