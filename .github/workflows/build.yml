@@ -45,6 +45,10 @@ jobs:
     needs: licence-check
     if: needs.licence-check.outputs.available == 'true'
     runs-on: ubuntu-latest
+    # The test runner publishes results as a check run.
+    permissions:
+      contents: read
+      checks: write
     steps:
       # The Unity editor image needs more disk than a standard runner has free.
       - name: Free disk space
