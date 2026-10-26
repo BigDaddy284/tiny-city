@@ -43,7 +43,7 @@ namespace TinyTown.Simulation.Configuration
         {
             if (candidate == null)
             {
-                problems = new[] { "Settings could not be read; using defaults." };
+                problems = new List<string> { "Settings could not be read; using defaults." };
                 return new GameSettings();
             }
 
