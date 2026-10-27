@@ -68,6 +68,9 @@ namespace TinyTown.Editor
             PlayerSettings.resizableWindow = true;
             PlayerSettings.runInBackground = true;
 
+            // Ollama is reached over plain http on the player's own machine (http://localhost:11434 by default).
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
+
             var version = GetArgument("-buildVersion");
             if (!string.IsNullOrEmpty(version) && version != "none")
             {

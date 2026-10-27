@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Time;
 using TinyTown.Simulation.World;
@@ -141,7 +142,26 @@ namespace TinyTown.Simulation.Content
         public static TownSimulation CreateNewGame()
         {
             var world = CreateWorld();
-            return new TownSimulation(world, new[] { CreateResident(world) }, StartTime);
+            var simulation = new TownSimulation(world, new[] { CreateResident(world) }, StartTime);
+            AddLifeHistory(simulation);
+            return simulation;
+        }
+
+        /// <summary>The background each resident starts with, so the AI has something to draw on from the first day.</summary>
+        public static void AddLifeHistory(TownSimulation simulation)
+        {
+            if (simulation.GetResident(ResidentId) == null)
+            {
+                return;
+            }
+
+            var start = simulation.Time;
+            simulation.Memories.Add(ResidentId, start, MemoryType.LifeHistory, 7,
+                "I moved into Rose Cottage last spring and became the village's community gardener.",
+                tags: new[] { CottageMapId, GardenPlotId, "work" });
+            simulation.Memories.Add(ResidentId, start, MemoryType.LifeHistory, 5,
+                "Reading in my armchair with a cup of tea is my favourite way to unwind.",
+                tags: new[] { "obj-cottage1-armchair", "read", "fun" });
         }
 
         private static void AddObjects(List<WorldObject> objects, string mapId, string[] rows, Dictionary<char, (string id, string name, ObjectType type)> markers)

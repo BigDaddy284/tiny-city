@@ -47,6 +47,27 @@ namespace TinyTown.Tests.EditMode
             Assert.That(settings.Validate(), Has.Count.EqualTo(1));
         }
 
+        [TestCase(-1, 20)]
+        [TestCase(OllamaSettings.MaxMaxRetries + 1, 20)]
+        [TestCase(1, 0)]
+        [TestCase(1, OllamaSettings.MaxDecisionWaitMinutes + 1)]
+        public void OutOfRangeRetriesOrDecisionWait_IsRejected(int retries, int waitMinutes)
+        {
+            var settings = new OllamaSettings { maxRetries = retries, decisionWaitMinutes = waitMinutes };
+
+            Assert.That(settings.Validate(), Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void AiIsOnByDefault_WithOneRetry()
+        {
+            var settings = new OllamaSettings();
+
+            Assert.That(settings.enabled, Is.True);
+            Assert.That(settings.maxRetries, Is.EqualTo(1));
+            Assert.That(settings.decisionWaitMinutes, Is.EqualTo(20));
+        }
+
         [Test]
         public void CustomValidSettings_AreKept()
         {

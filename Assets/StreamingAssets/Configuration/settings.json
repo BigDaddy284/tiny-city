@@ -1,8 +1,11 @@
 {
     "version": 1,
     "ollama": {
+        "enabled": true,
         "endpoint": "http://localhost:11434",
         "model": "qwen2.5:7b",
-        "timeoutSeconds": 60
+        "timeoutSeconds": 60,
+        "maxRetries": 1,
+        "decisionWaitMinutes": 20
     }
 }

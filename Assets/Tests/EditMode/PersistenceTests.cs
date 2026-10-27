@@ -194,7 +194,7 @@ namespace TinyTown.Tests.EditMode
             var json = SaveSerializer.Save(sim);
 
             Assert.That(json, Does.Not.Contain("path"));
-            Assert.That(json, Does.Contain("\"version\": 1"));
+            Assert.That(json, Does.Contain($"\"version\": {SaveSerializer.CurrentVersion}"));
         }
 
         [Test]

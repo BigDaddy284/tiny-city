@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Time;
@@ -6,20 +7,64 @@ using TinyTown.Simulation.World;
 
 namespace TinyTown.Simulation.Activities
 {
+    /// <summary>Why the planner picked something, from most to least pressing.</summary>
+    public enum PlanPriority
+    {
+        UrgentNeed,
+        Bedtime,
+        Work,
+        Nap,
+        Comfort,
+        Leisure,
+    }
+
     public sealed class PlanChoice
     {
-        public PlanChoice(ActivityDefinition activity, WorldObject target, string reason)
+        public PlanChoice(ActivityDefinition activity, WorldObject target, string reason, PlanPriority priority = PlanPriority.Leisure)
         {
             Activity = activity;
             Target = target;
             Reason = reason;
+            Priority = priority;
         }
+
+        public PlanPriority Priority { get; }
+
+        /// <summary>Free-time choices are the ones the AI may make instead; needs, sleep and work are not up for debate.</summary>
+        public bool IsDiscretionary => Priority == PlanPriority.Comfort || Priority == PlanPriority.Leisure;
 
         public ActivityDefinition Activity { get; }
 
         public WorldObject Target { get; }
 
         public string Reason { get; }
+    }
+
+    /// <summary>One thing a resident could do with free time: an activity at a reachable object, or relaxing where they are.</summary>
+    public sealed class FreeTimeOption
+    {
+        public const string RelaxActionId = "relax";
+        public const string NoTargetId = "none";
+
+        public FreeTimeOption(ActivityDefinition activity, WorldObject target, int distance)
+        {
+            Activity = activity;
+            Target = target;
+            Distance = distance;
+        }
+
+        /// <summary>Null for relaxing.</summary>
+        public ActivityDefinition Activity { get; }
+
+        /// <summary>Null for relaxing.</summary>
+        public WorldObject Target { get; }
+
+        /// <summary>Steps to walk there.</summary>
+        public int Distance { get; }
+
+        public string ActionId => Activity?.Id ?? RelaxActionId;
+
+        public string TargetId => Target?.Id ?? NoTargetId;
     }
 
     /// <summary>
@@ -44,6 +89,9 @@ namespace TinyTown.Simulation.Activities
 
         /// <summary>Free-time activities are only worth starting if their main need has at least this much room to improve.</summary>
         private const double MinimumLeisureDeficit = 10;
+
+        /// <summary>At most this many objects are offered for each free-time activity, nearest first.</summary>
+        private const int MaxTargetsPerActivity = 2;
 
         private static readonly NeedType[] UrgentNeeds = { NeedType.Toilet, NeedType.Thirst, NeedType.Hunger, NeedType.Energy };
 
@@ -89,7 +137,7 @@ namespace TinyTown.Simulation.Activities
             var urgent = MostUrgentNeed(resident);
             if (urgent != null)
             {
-                var choice = Nearest(resident, ActivityCatalog.ForNeed(urgent.Value), $"{urgent.Value} is urgent ({resident.Needs[urgent.Value]:0})");
+                var choice = Nearest(resident, ActivityCatalog.ForNeed(urgent.Value), $"{urgent.Value} is urgent ({resident.Needs[urgent.Value]:0})", PlanPriority.UrgentNeed);
                 if (choice != null)
                 {
                     return choice;
@@ -98,7 +146,7 @@ namespace TinyTown.Simulation.Activities
 
             if (IsSleepTime(time))
             {
-                var bed = BedChoice(resident, "It's bedtime");
+                var bed = BedChoice(resident, "It's bedtime", PlanPriority.Bedtime);
                 if (bed != null)
                 {
                     return bed;
@@ -108,12 +156,12 @@ namespace TinyTown.Simulation.Activities
             if (IsWorkTime(resident, time) && world.TryGetObject(resident.Job.WorkObjectId, out var workplace)
                 && pathfinder.Distance(resident.Location, workplace.Location) != Pathfinder.Unreachable)
             {
-                return new PlanChoice(ActivityCatalog.Work, workplace, $"Shift as {resident.Job.Title} until {FormatMinute(resident.Job.EndMinuteOfDay)}");
+                return new PlanChoice(ActivityCatalog.Work, workplace, $"Shift as {resident.Job.Title} until {FormatMinute(resident.Job.EndMinuteOfDay)}", PlanPriority.Work);
             }
 
             if (resident.Needs[NeedType.Energy] < TiredEnergy)
             {
-                var nap = BedChoice(resident, "Feeling tired");
+                var nap = BedChoice(resident, "Feeling tired", PlanPriority.Nap);
                 if (nap != null)
                 {
                     return nap;
@@ -122,6 +170,35 @@ namespace TinyTown.Simulation.Activities
 
             // Null means every need is comfortable and nothing is due; the simulation lets the resident take it easy.
             return BestScored(resident, comfortOnly: true) ?? BestScored(resident, comfortOnly: false);
+        }
+
+        /// <summary>
+        /// What the resident could sensibly do with free time right now, in a fixed order: activities whose main need
+        /// has room to improve, at up to <see cref="MaxTargetsPerActivity"/> reachable objects each, then relaxing.
+        /// AI decisions must pick one of these.
+        /// </summary>
+        public IReadOnlyList<FreeTimeOption> FreeTimeOptions(Resident resident)
+        {
+            var options = new List<FreeTimeOption>();
+            foreach (var activity in ActivityCatalog.All)
+            {
+                if (activity.PrimaryNeed == null || (activity.Kind != ActivityKind.Care && activity.Kind != ActivityKind.Leisure)
+                    || resident.Needs[activity.PrimaryNeed.Value] > Needs.Max - MinimumLeisureDeficit)
+                {
+                    continue;
+                }
+
+                options.AddRange(world.Objects
+                    .Where(activity.CanUse)
+                    .Select(obj => new FreeTimeOption(activity, obj, pathfinder.Distance(resident.Location, obj.Location)))
+                    .Where(o => o.Distance != Pathfinder.Unreachable)
+                    .OrderBy(o => o.Distance)
+                    .ThenBy(o => o.Target.Id, StringComparer.Ordinal)
+                    .Take(MaxTargetsPerActivity));
+            }
+
+            options.Add(new FreeTimeOption(null, null, 0));
+            return options;
         }
 
         /// <summary>Whether something more important should stop the resident's current activity.</summary>
@@ -176,18 +253,18 @@ namespace TinyTown.Simulation.Activities
             return activity.DurationMinutes;
         }
 
-        private PlanChoice BedChoice(Resident resident, string reason)
+        private PlanChoice BedChoice(Resident resident, string reason, PlanPriority priority)
         {
             if (world.TryGetObject(resident.BedObjectId, out var bed)
                 && pathfinder.Distance(resident.Location, bed.Location) != Pathfinder.Unreachable)
             {
-                return new PlanChoice(ActivityCatalog.Sleep, bed, reason);
+                return new PlanChoice(ActivityCatalog.Sleep, bed, reason, priority);
             }
 
-            return Nearest(resident, ActivityCatalog.Sleep, reason);
+            return Nearest(resident, ActivityCatalog.Sleep, reason, priority);
         }
 
-        private PlanChoice Nearest(Resident resident, ActivityDefinition activity, string reason)
+        private PlanChoice Nearest(Resident resident, ActivityDefinition activity, string reason, PlanPriority priority = PlanPriority.UrgentNeed)
         {
             WorldObject best = null;
             var bestDistance = int.MaxValue;
@@ -201,7 +278,7 @@ namespace TinyTown.Simulation.Activities
                 }
             }
 
-            return best == null ? null : new PlanChoice(activity, best, reason);
+            return best == null ? null : new PlanChoice(activity, best, reason, priority);
         }
 
         /// <summary>
@@ -258,7 +335,7 @@ namespace TinyTown.Simulation.Activities
                         var reason = comfortOnly
                             ? $"{primary} is getting low ({resident.Needs[primary]:0})"
                             : $"Free time: fancies {activity.Verb}";
-                        best = new PlanChoice(activity, obj, reason);
+                        best = new PlanChoice(activity, obj, reason, comfortOnly ? PlanPriority.Comfort : PlanPriority.Leisure);
                     }
                 }
             }

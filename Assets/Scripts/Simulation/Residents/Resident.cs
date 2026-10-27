@@ -11,6 +11,16 @@ namespace TinyTown.Simulation.Residents
         Travelling,
         Performing,
         Waiting,
+
+        /// <summary>Waiting a short while for an AI suggestion about free time. Never saved as such: see the save loader.</summary>
+        Deciding,
+    }
+
+    /// <summary>Who chose the current activity, so the inspector can keep game rules and AI explanations apart.</summary>
+    public enum DecisionSource
+    {
+        Routine,
+        Ai,
     }
 
     public enum LifeStage
@@ -119,6 +129,18 @@ namespace TinyTown.Simulation.Residents
         /// <summary>Why the resident chose their current activity, for the inspector.</summary>
         public string Goal { get; internal set; } = string.Empty;
 
+        /// <summary>Whether <see cref="Goal"/> is the built-in routine's reason or the AI's explanation.</summary>
+        public DecisionSource GoalSource { get; internal set; } = DecisionSource.Routine;
+
+        /// <summary>While <see cref="ResidentState.Deciding"/>, the id an AI answer must quote to be accepted.</summary>
+        public long PendingDecisionId { get; internal set; }
+
+        /// <summary>While deciding, the game minute at which the built-in routine takes over.</summary>
+        public long DecisionDeadline { get; internal set; }
+
+        /// <summary>The last day the resident reflected on, so each day gets at most one reflection.</summary>
+        public int LastReflectionDay { get; internal set; }
+
         public IReadOnlyList<ActivityLogEntry> Log => log;
 
         internal void AddLog(GameTime time, string text)
@@ -137,6 +159,9 @@ namespace TinyTown.Simulation.Residents
             TargetObjectId = null;
             MinutesRemaining = 0;
             Goal = string.Empty;
+            GoalSource = DecisionSource.Routine;
+            PendingDecisionId = 0;
+            DecisionDeadline = 0;
         }
     }
 }
