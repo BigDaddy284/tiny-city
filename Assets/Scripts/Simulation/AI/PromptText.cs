@@ -71,7 +71,7 @@ namespace TinyTown.Simulation.AI
             for (var day = now.Day; day <= now.Day + GameTime.DaysPerWeek; day++)
             {
                 var leave = GameTime.FromDayAndTime(day, 0, 0).AddMinutes(leaveMinute);
-                if (leave.TotalMinutes > now.TotalMinutes && (r.Job.WorksWeekends || !leave.IsWeekend))
+                if (leave.TotalMinutes > now.TotalMinutes && r.Job.WorksOn(leave.Weekday))
                 {
                     return (int)(leave.TotalMinutes - now.TotalMinutes);
                 }
@@ -110,12 +110,34 @@ namespace TinyTown.Simulation.AI
                 return;
             }
 
+            // Everyone they know gets a line, closest friends first; strangers share one line so prompts stay short.
+            var known = others
+                .Where(o => sim.Relationships.TryGet(r.Id, o.Id, out var rel) && rel.HaveMet)
+                .OrderByDescending(o => sim.Relationships.Get(r.Id, o.Id).Friendship)
+                .ThenBy(o => o.Id, System.StringComparer.Ordinal)
+                .ToList();
+            var strangers = others.Where(o => !known.Contains(o)).ToList();
             sb.AppendLine("People in the village:");
-            foreach (var o in others)
+            foreach (var o in known.Take(MaxPeopleListed))
             {
-                sb.Append("- ").Append(o.FullName).Append(", ").Append(o.AgeYears).Append(": ").AppendLine(Relationship(sim, r, o));
+                sb.Append("- ").Append(o.FullName).Append(", ").Append(o.AgeYears).Append(Work(o)).Append(": ").AppendLine(Relationship(sim, r, o));
+            }
+
+            if (strangers.Count > 0)
+            {
+                sb.Append("- You have never really met: ").AppendLine(string.Join(", ", strangers.Select(o => o.FullName + Work(o))));
             }
         }
+
+        /// <summary>At most this many people the resident knows are described in a prompt.</summary>
+        public const int MaxPeopleListed = 6;
+
+        private static string Work(Resident o) => o.Job == null ? string.Empty : $" ({o.Job.Title.ToLowerInvariant()})";
+
+        /// <summary>Money and food at home, so the AI can weigh paid treats against what's in the cupboard.</summary>
+        public static string Purse(Resident r) =>
+            $"you have {Economy.Money.Format(r.MoneyPence)}, and food at home for {r.Groceries} meal{(r.Groceries == 1 ? string.Empty : "s")}"
+            + (r.MoneyPence < r.WeeklyRentPence ? $"; money is tight, rent of {Economy.Money.Format(r.WeeklyRentPence)} is due on Monday" : string.Empty);
 
         public static string Relationship(TownSimulation sim, Resident r, Resident other)
         {

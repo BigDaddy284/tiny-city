@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TinyTown.Simulation.Economy;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Time;
 using TinyTown.Simulation.World;
@@ -85,6 +86,9 @@ namespace TinyTown.Simulation.Activities
         public string ActionId => Activity?.Id ?? RelaxActionId;
 
         public string TargetId => Target?.Id ?? Partner?.Id ?? NoTargetId;
+
+        /// <summary>What it costs, in pence; 0 if free.</summary>
+        public long PricePence { get; internal set; }
     }
 
     /// <summary>
@@ -113,26 +117,45 @@ namespace TinyTown.Simulation.Activities
         /// <summary>At most this many objects are offered for each free-time activity, nearest first.</summary>
         private const int MaxTargetsPerActivity = 2;
 
+        /// <summary>At or below this many meals of groceries, residents go shopping when they have time.</summary>
+        public const int LowGroceries = 2;
+
+        /// <summary>Below this many meals, the AI may also choose to go shopping.</summary>
+        public const int ShoppingWorthwhile = 5;
+
+        /// <summary>How much a pound of cost counts against an activity when choosing.</summary>
+        private const double PricePenaltyPerPound = 1.5;
+
         private static readonly NeedType[] UrgentNeeds = { NeedType.Toilet, NeedType.Thirst, NeedType.Hunger, NeedType.Energy };
 
         private readonly TownWorld world;
         private readonly Pathfinder pathfinder;
         private readonly IReadOnlyList<Resident> residents;
+        private readonly TownEconomy economy;
+        private readonly Func<GameTime> clock;
 
-        public ActivityPlanner(TownWorld world, Pathfinder pathfinder, IReadOnlyList<Resident> residents = null)
+        public ActivityPlanner(TownWorld world, Pathfinder pathfinder, IReadOnlyList<Resident> residents = null, TownEconomy economy = null, Func<GameTime> clock = null)
         {
             this.world = world;
             this.pathfinder = pathfinder;
             this.residents = residents ?? new Resident[0];
+            this.economy = economy;
+            this.clock = clock ?? (() => new GameTime(0));
         }
 
         /// <summary>
-        /// Whether a resident may use an object now: things inside someone else's home are private, and an object is
-        /// full once as many other residents are using or heading for it as it has room for.
+        /// Whether a resident may use an object now: other people's homes are private (shops and the café are
+        /// public), and an object is full once as many other residents are using or heading for it as it has room for.
         /// </summary>
         public bool IsAvailableTo(Resident resident, WorldObject obj)
         {
-            if (obj == null || (!world.GetMap(obj.Location.MapId).IsExterior && obj.Location.MapId != resident.HomeMapId))
+            if (obj == null)
+            {
+                return false;
+            }
+
+            var mapId = obj.Location.MapId;
+            if (!world.GetMap(mapId).IsExterior && mapId != resident.HomeMapId && world.BusinessOnMap(mapId) == null)
             {
                 return false;
             }
@@ -155,7 +178,7 @@ namespace TinyTown.Simulation.Activities
         public static bool IsWorkTime(Resident resident, GameTime time)
         {
             var job = resident.Job;
-            if (job == null || (time.IsWeekend && !job.WorksWeekends))
+            if (job == null || !job.WorksOn(time.Weekday))
             {
                 return false;
             }
@@ -178,12 +201,16 @@ namespace TinyTown.Simulation.Activities
             return result;
         }
 
+        /// <summary>Whether the resident can use this object for this activity now: available, and affordable if it costs anything.</summary>
+        public bool CanDo(Resident resident, ActivityDefinition activity, WorldObject obj, GameTime time) =>
+            activity.CanUse(obj) && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _));
+
         public PlanChoice Choose(Resident resident, GameTime time)
         {
             var urgent = MostUrgentNeed(resident);
             if (urgent != null)
             {
-                var choice = Nearest(resident, ActivityCatalog.ForNeed(urgent.Value), $"{urgent.Value} is urgent ({resident.Needs[urgent.Value]:0})", PlanPriority.UrgentNeed);
+                var choice = NearestForNeed(resident, urgent.Value, time, $"{urgent.Value} is urgent ({resident.Needs[urgent.Value]:0})");
                 if (choice != null)
                 {
                     return choice;
@@ -215,7 +242,21 @@ namespace TinyTown.Simulation.Activities
             }
 
             // Null means every need is comfortable and nothing is due; the simulation lets the resident take it easy.
-            return BestScored(resident, comfortOnly: true) ?? BestScored(resident, comfortOnly: false);
+            return BestScored(resident, time, comfortOnly: true)
+                ?? ShoppingChoice(resident, time)
+                ?? BestScored(resident, time, comfortOnly: false);
+        }
+
+        /// <summary>A trip to the shop when groceries are running low and the shop can serve them.</summary>
+        private PlanChoice ShoppingChoice(Resident resident, GameTime time)
+        {
+            if (resident.Groceries > LowGroceries)
+            {
+                return null;
+            }
+
+            var shop = NearestDoable(resident, ActivityCatalog.BuyGroceries, time);
+            return shop == null ? null : new PlanChoice(ActivityCatalog.BuyGroceries, shop, $"Running low on food at home ({resident.Groceries} meals left)", PlanPriority.Comfort);
         }
 
         /// <summary>
@@ -225,18 +266,20 @@ namespace TinyTown.Simulation.Activities
         /// </summary>
         public IReadOnlyList<FreeTimeOption> FreeTimeOptions(Resident resident)
         {
+            var time = clock();
             var options = new List<FreeTimeOption>();
             foreach (var activity in ActivityCatalog.All)
             {
-                if (activity.PrimaryNeed == null || (activity.Kind != ActivityKind.Care && activity.Kind != ActivityKind.Leisure)
-                    || resident.Needs[activity.PrimaryNeed.Value] > Needs.Max - MinimumLeisureDeficit)
+                var errand = activity == ActivityCatalog.BuyGroceries && resident.Groceries < ShoppingWorthwhile;
+                if (!errand && (activity.PrimaryNeed == null || (activity.Kind != ActivityKind.Care && activity.Kind != ActivityKind.Leisure)
+                    || resident.Needs[activity.PrimaryNeed.Value] > Needs.Max - MinimumLeisureDeficit))
                 {
                     continue;
                 }
 
                 options.AddRange(world.Objects
-                    .Where(obj => activity.CanUse(obj) && IsAvailableTo(resident, obj))
-                    .Select(obj => new FreeTimeOption(activity, obj, pathfinder.Distance(resident.Location, obj.Location)))
+                    .Where(obj => CanDo(resident, activity, obj, time))
+                    .Select(obj => new FreeTimeOption(activity, obj, pathfinder.Distance(resident.Location, obj.Location)) { PricePence = economy?.PriceOf(activity, obj) ?? 0 })
                     .Where(o => o.Distance != Pathfinder.Unreachable)
                     .OrderBy(o => o.Distance)
                     .ThenBy(o => o.Target.Id, StringComparer.Ordinal)
@@ -256,12 +299,12 @@ namespace TinyTown.Simulation.Activities
             }
 
             var urgent = MostUrgentNeed(resident);
-            if (urgent != null && current.PrimaryNeed != urgent && Nearest(resident, ActivityCatalog.ForNeed(urgent.Value), string.Empty) != null)
+            if (urgent != null && current.PrimaryNeed != urgent && NearestForNeed(resident, urgent.Value, time, string.Empty) != null)
             {
                 return true;
             }
 
-            if (current.Kind == ActivityKind.Leisure || current.Kind == ActivityKind.Care || current.Kind == ActivityKind.Social)
+            if (current.Kind == ActivityKind.Leisure || current.Kind == ActivityKind.Care || current.Kind == ActivityKind.Social || current.Kind == ActivityKind.Errand)
             {
                 // Finish looking after an urgent need first; otherwise work and bedtime come before leisure.
                 var forUrgent = current.PrimaryNeed != null && current.PrimaryNeed == urgent;
@@ -317,14 +360,37 @@ namespace TinyTown.Simulation.Activities
                 return new PlanChoice(ActivityCatalog.Sleep, bed, reason, priority);
             }
 
-            return Nearest(resident, ActivityCatalog.Sleep, reason, priority);
+            var nearest = NearestDoable(resident, ActivityCatalog.Sleep, clock());
+            return nearest == null ? null : new PlanChoice(ActivityCatalog.Sleep, nearest, reason, priority);
         }
 
-        private PlanChoice Nearest(Resident resident, ActivityDefinition activity, string reason, PlanPriority priority = PlanPriority.UrgentNeed)
+        /// <summary>
+        /// The nearest way to deal with an urgent need. Several activities may help (cooking, a snack, the café); the
+        /// nearest doable one wins, and ties go to the earlier activity in the catalogue, so a proper meal beats a snack.
+        /// </summary>
+        private PlanChoice NearestForNeed(Resident resident, NeedType need, GameTime time, string reason)
+        {
+            PlanChoice best = null;
+            var bestDistance = int.MaxValue;
+            foreach (var activity in ActivityCatalog.ForNeed(need))
+            {
+                var obj = NearestDoable(resident, activity, time);
+                var d = obj == null ? Pathfinder.Unreachable : pathfinder.Distance(resident.Location, obj.Location);
+                if (obj != null && d < bestDistance)
+                {
+                    best = new PlanChoice(activity, obj, reason, PlanPriority.UrgentNeed);
+                    bestDistance = d;
+                }
+            }
+
+            return best;
+        }
+
+        private WorldObject NearestDoable(Resident resident, ActivityDefinition activity, GameTime time)
         {
             WorldObject best = null;
             var bestDistance = int.MaxValue;
-            foreach (var obj in world.Objects.Where(o => activity.CanUse(o) && IsAvailableTo(resident, o)))
+            foreach (var obj in world.Objects.Where(o => CanDo(resident, activity, o, time)))
             {
                 var d = pathfinder.Distance(resident.Location, obj.Location);
                 if (d != Pathfinder.Unreachable && d < bestDistance)
@@ -334,14 +400,14 @@ namespace TinyTown.Simulation.Activities
                 }
             }
 
-            return best == null ? null : new PlanChoice(activity, best, reason, priority);
+            return best;
         }
 
         /// <summary>
         /// Scores care and leisure activities by how much they help the resident's low needs, their personality and
         /// the walk to get there. Comfort mode only considers activities whose main need is below its comfort level.
         /// </summary>
-        private PlanChoice BestScored(Resident resident, bool comfortOnly)
+        private PlanChoice BestScored(Resident resident, GameTime time, bool comfortOnly)
         {
             PlanChoice best = null;
             var bestScore = double.NegativeInfinity;
@@ -376,7 +442,7 @@ namespace TinyTown.Simulation.Activities
                 }
 
                 var baseScore = (primaryDeficit * Preference(resident.Personality, activity)) + (0.5 * secondary);
-                foreach (var obj in world.Objects.Where(o => activity.CanUse(o) && IsAvailableTo(resident, o)))
+                foreach (var obj in world.Objects.Where(o => CanDo(resident, activity, o, time)))
                 {
                     var d = pathfinder.Distance(resident.Location, obj.Location);
                     if (d == Pathfinder.Unreachable)
@@ -384,7 +450,8 @@ namespace TinyTown.Simulation.Activities
                         continue;
                     }
 
-                    var score = baseScore - (TravelPenaltyPerStep * d);
+                    var price = economy?.PriceOf(activity, obj) ?? 0;
+                    var score = baseScore - (TravelPenaltyPerStep * d) - (PricePenaltyPerPound * price / 100.0);
                     if (score > bestScore)
                     {
                         bestScore = score;
@@ -406,7 +473,7 @@ namespace TinyTown.Simulation.Activities
                 return 0.5 + p.Active;
             }
 
-            if (activity == ActivityCatalog.WatchTown)
+            if (activity == ActivityCatalog.WatchTown || activity == ActivityCatalog.Coffee || activity == ActivityCatalog.CafeMeal)
             {
                 return 0.5 + p.Sociable;
             }

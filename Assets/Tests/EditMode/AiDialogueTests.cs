@@ -258,7 +258,13 @@ namespace TinyTown.Tests.EditMode
             Assert.That(chat.TargetId, Is.EqualTo(StarterTown.ArthurId));
             Assert.That(text, Does.Contain($"target_id \"{StarterTown.ArthurId}\": go and chat with Arthur Bramble"));
             Assert.That(text, Does.Contain("People in the village:"));
-            Assert.That(text, Does.Contain("Arthur Bramble, 71: you have never really met"));
+            Assert.That(text, Does.Contain("- You have never really met: Arthur Bramble"));
+            Assert.That(text, Does.Contain("Money: you have £450.00, and food at home for 4 meals."));
+
+            sim.Relationships.Get(mabel.Id, StarterTown.ArthurId).Interactions = 1;
+            text = DecisionPrompt.UserText(sim, mabel, options, new MemoryRecord[0]);
+            Assert.That(text, Does.Contain("- Arthur Bramble, 71: "));
+            Assert.That(text, Does.Not.Contain("never really met"));
             Assert.That(DecisionPrompt.Cues(sim, mabel, options), Does.Contain(StarterTown.ArthurId));
             Assert.That(sim.ApplyDecision(mabel.Id, 1, chat.ActionId, StarterTown.NellId, "x", null), Is.Not.EqualTo(DecisionOutcome.Applied));
         }

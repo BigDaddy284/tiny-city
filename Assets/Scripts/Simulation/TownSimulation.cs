@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation.Activities;
+using TinyTown.Simulation.Economy;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Social;
@@ -72,7 +73,8 @@ namespace TinyTown.Simulation
 
             Time = time;
             Pathfinder = new Pathfinder(world);
-            Planner = new ActivityPlanner(world, Pathfinder, this.residents);
+            Economy = new TownEconomy(world);
+            Planner = new ActivityPlanner(world, Pathfinder, this.residents, Economy, () => Time);
         }
 
         public TownWorld World { get; }
@@ -90,6 +92,9 @@ namespace TinyTown.Simulation
         public ConversationHistory Conversations { get; } = new ConversationHistory();
 
         public RelationshipBook Relationships { get; } = new RelationshipBook();
+
+        /// <summary>Money, businesses and the ledger.</summary>
+        public TownEconomy Economy { get; }
 
         /// <summary>Conversations happening right now.</summary>
         public IReadOnlyList<ConversationSession> ActiveConversations => sessions;
@@ -175,6 +180,12 @@ namespace TinyTown.Simulation
 
         public void Tick()
         {
+            Economy.RestockOpening(Time);
+            if (Time.Weekday == Weekday.Monday && Time.MinuteOfDay == TownEconomy.WeeklyBillsMinute)
+            {
+                SettleWeek();
+            }
+
             foreach (var resident in residents)
             {
                 if (resident.IsAlive)
@@ -191,6 +202,21 @@ namespace TinyTown.Simulation
         private void Step(Resident r)
         {
             ActivityCatalog.TryGet(r.ActivityId, out var activity);
+            var working = r.State == ResidentState.Performing && activity?.Kind == ActivityKind.Work;
+            if (working)
+            {
+                r.UnpaidWorkMinutes++;
+            }
+            else if (r.UnpaidWorkMinutes > 0)
+            {
+                // The shift has ended, however it ended: pay for the time worked.
+                var paid = Economy.PayWages(r, Time);
+                if (paid > 0)
+                {
+                    r.AddLog(Time, $"Was paid {Money.Format(paid)} in wages");
+                }
+            }
+
             NeedRules.ApplyMinute(r.Needs, r.Personality, r.State == ResidentState.Performing || r.State == ResidentState.Talking ? activity : null);
 
             switch (r.State)
@@ -409,7 +435,7 @@ namespace TinyTown.Simulation
             var options = Planner.FreeTimeOptions(r).ToList();
             var relax = options[options.Count - 1];
             options.RemoveAt(options.Count - 1);
-            options.AddRange(ChatPartners(r).Select(p => new FreeTimeOption(p.partner, p.distance)));
+            options.AddRange(ChatPartners(r).Take(SocialRules.MaxChatOptions).Select(p => new FreeTimeOption(p.partner, p.distance)));
             options.Add(relax);
             return options;
         }
@@ -543,13 +569,18 @@ namespace TinyTown.Simulation
             }
 
             return residents
-                .Where(o => o != r && SocialRules.CanBeApproached(o, Time, IsOutdoors(o)) && SocialRules.CooldownOver(Relationships, r.Id, o.Id, Time))
+                .Where(o => o != r && SocialRules.CanBeApproached(o, Time, IsOutdoors(o)) && !IsHeadingIndoors(o) && SocialRules.CooldownOver(Relationships, r.Id, o.Id, Time))
                 .Select(o => (partner: o, distance: Pathfinder.Distance(r.Location, o.Location)))
                 .Where(p => p.distance != Pathfinder.Unreachable && p.distance <= SocialRules.MaxSeekDistance)
                 .OrderBy(p => p.distance)
                 .ThenBy(p => p.partner.Id, StringComparer.Ordinal)
                 .ToList();
         }
+
+        /// <summary>Someone walking to a place indoors will be gone before they can be caught, so nobody sets off after them.</summary>
+        private bool IsHeadingIndoors(Resident r) =>
+            r.State == ResidentState.Travelling && World.TryGetObject(r.TargetObjectId, out var target)
+            && World.TryGetMap(target.Location.MapId, out var map) && !map.IsExterior;
 
         private bool IsOutdoors(Resident r) => World.TryGetMap(r.Location.MapId, out var map) && map.IsExterior;
 
@@ -563,7 +594,9 @@ namespace TinyTown.Simulation
             r.MinutesRemaining--;
             if (other == null || !SocialRules.CanBeApproached(other, Time, IsOutdoors(other)) || r.MinutesRemaining <= 0)
             {
-                r.AddLog(Time, $"Couldn't catch {other?.FirstName ?? "them"} for a chat");
+                r.AddLog(Time, other != null && other.State == ResidentState.Talking
+                    ? $"Went to find {other.FirstName}, but they'd got talking with someone else"
+                    : $"Couldn't catch {other?.FirstName ?? "them"} for a chat");
                 r.ResetActivity();
                 return;
             }
@@ -754,6 +787,24 @@ namespace TinyTown.Simulation
             }
         }
 
+        /// <summary>Monday morning: pensions and other income arrive, rent goes out. Falling behind is remembered.</summary>
+        private void SettleWeek()
+        {
+            foreach (var r in residents.Where(r => r.IsAlive))
+            {
+                Economy.SettleWeek(r, Time);
+                if (r.WeeklyRentPence > 0)
+                {
+                    r.AddLog(Time, $"Paid the weekly rent ({Money.Format(r.WeeklyRentPence)})");
+                }
+
+                if (r.MoneyPence < 0)
+                {
+                    Memories.Add(r.Id, Time, MemoryType.Event, 5, $"I couldn't cover this week's rent; I owe {Money.Format(-r.MoneyPence)}.", tags: new[] { "money", "rent" });
+                }
+            }
+        }
+
         /// <summary>Running desperately low on something is worth remembering, once per need per day.</summary>
         private void RememberUrgentNeed(Resident r, NeedType need)
         {
@@ -824,6 +875,23 @@ namespace TinyTown.Simulation
 
         private void BeginPerforming(Resident r, ActivityDefinition activity)
         {
+            if (activity.ItemId != null || activity.UsesGroceries)
+            {
+                World.TryGetObject(r.TargetObjectId, out var target);
+                var price = Economy.PriceOf(activity, target);
+                if (!Economy.Pay(r, activity, target, Time, out var reason))
+                {
+                    r.AddLog(Time, $"Couldn't {activity.Name.ToLowerInvariant()}: {reason}");
+                    r.ResetActivity();
+                    return;
+                }
+
+                if (price > 0)
+                {
+                    r.AddLog(Time, $"Paid {Money.Format(price)} ({activity.Name.ToLowerInvariant()})");
+                }
+            }
+
             r.State = ResidentState.Performing;
             r.MinutesRemaining = ActivityPlanner.DurationFor(r, activity, Time);
             r.AddLog(Time, $"Started {activity.Verb}");

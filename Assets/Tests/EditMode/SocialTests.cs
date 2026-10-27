@@ -190,7 +190,7 @@ namespace TinyTown.Tests.EditMode
                 TestTown.WeekendAfternoon,
                 r => r.Id == StarterTown.ResidentId ? new Location(StarterTown.VillageMapId, 3, 8) : r.Id == StarterTown.ArthurId ? new Location(StarterTown.VillageMapId, 14, 9) : (Location?)null,
                 (r, n) => n[NeedType.Social] = r.Id == StarterTown.ResidentId ? 30 : 90,
-                r => r.Id != StarterTown.NellId);
+                r => r.Id == StarterTown.ResidentId || r.Id == StarterTown.ArthurId);
 
             sim.Tick();
 
@@ -206,7 +206,7 @@ namespace TinyTown.Tests.EditMode
                 TestTown.WeekendAfternoon,
                 r => r.Id == StarterTown.ResidentId ? new Location(StarterTown.VillageMapId, 10, 9) : (Location?)null,
                 (r, n) => n[NeedType.Social] = 30,
-                r => r.Id != StarterTown.NellId);
+                r => r.Id == StarterTown.ResidentId || r.Id == StarterTown.ArthurId);
 
             sim.Tick();
 
@@ -491,7 +491,7 @@ namespace TinyTown.Tests.EditMode
                 TestTown.WeekendAfternoon,
                 r => r.Id == StarterTown.ResidentId ? new Location(StarterTown.VillageMapId, 3, 8) : r.Id == StarterTown.ArthurId ? new Location(StarterTown.VillageMapId, 14, 9) : (Location?)null,
                 (r, n) => n[NeedType.Social] = r.Id == StarterTown.ResidentId ? 30 : 90,
-                r => r.Id != StarterTown.NellId);
+                r => r.Id == StarterTown.ResidentId || r.Id == StarterTown.ArthurId);
             sim.Advance(2);
             Assert.That(Mabel(sim).TargetResidentId, Is.EqualTo(StarterTown.ArthurId));
 
@@ -550,16 +550,17 @@ namespace TinyTown.Tests.EditMode
             Assert.That(result.UpgradedFromVersion, Is.EqualTo(2));
             var loaded = result.Simulation;
             Assert.That(loaded.Relationships.All, Is.Empty);
-            Assert.That(StarterTown.AddMissingResidents(loaded), Is.EqualTo(2));
+            var everyone = StarterTown.CreateResidents(StarterTown.CreateWorld()).Select(r => r.Id).ToList();
+            Assert.That(StarterTown.AddMissingResidents(loaded), Is.EqualTo(everyone.Count - 1));
             Assert.That(StarterTown.AddMissingResidents(loaded), Is.EqualTo(0));
-            Assert.That(loaded.Residents.Select(r => r.Id).ToList(), Is.EqualTo(new List<string> { StarterTown.ResidentId, StarterTown.ArthurId, StarterTown.NellId }));
+            Assert.That(loaded.Residents.Select(r => r.Id).ToList(), Is.EqualTo(everyone));
             Assert.That(loaded.Memories.ForResident(StarterTown.NellId), Is.Not.Empty);
             Assert.That(loaded.Memories.All.Select(m => m.Id).Distinct().Count(), Is.EqualTo(loaded.Memories.All.Count));
 
             loaded.Advance(24 * 60);
             var resaved = SaveSerializer.Load(SaveSerializer.Save(loaded), StarterTown.CreateWorld());
             Assert.That(resaved.Success, Is.True);
-            Assert.That(resaved.Simulation.Residents.Count, Is.EqualTo(3));
+            Assert.That(resaved.Simulation.Residents.Count, Is.EqualTo(everyone.Count));
         }
 
         [Test]

@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using TinyTown.Simulation.Time;
 
 namespace TinyTown.Simulation.Residents
 {
@@ -37,7 +39,18 @@ namespace TinyTown.Simulation.Residents
 
     public sealed class Job
     {
-        public Job(string title, string workObjectId, int startMinuteOfDay, int endMinuteOfDay, bool worksWeekends)
+        /// <summary>Monday to Friday, as a <see cref="WorkDays"/> mask.</summary>
+        public const int Weekdays = 0b0011111;
+
+        public const int EveryDay = 0b1111111;
+
+        public Job(string title, string workObjectId, int startMinuteOfDay, int endMinuteOfDay, bool worksWeekends, long hourlyWagePence = 0)
+            : this(title, workObjectId, startMinuteOfDay, endMinuteOfDay, worksWeekends ? EveryDay : Weekdays, hourlyWagePence)
+        {
+        }
+
+        /// <param name="workDays">Bit 0 is Monday, bit 6 Sunday.</param>
+        public Job(string title, string workObjectId, int startMinuteOfDay, int endMinuteOfDay, int workDays, long hourlyWagePence)
         {
             if (startMinuteOfDay >= endMinuteOfDay)
             {
@@ -48,7 +61,8 @@ namespace TinyTown.Simulation.Residents
             WorkObjectId = workObjectId;
             StartMinuteOfDay = startMinuteOfDay;
             EndMinuteOfDay = endMinuteOfDay;
-            WorksWeekends = worksWeekends;
+            WorkDays = workDays & EveryDay;
+            HourlyWagePence = Math.Max(0, hourlyWagePence);
         }
 
         public string Title { get; }
@@ -59,6 +73,28 @@ namespace TinyTown.Simulation.Residents
 
         public int EndMinuteOfDay { get; }
 
-        public bool WorksWeekends { get; }
+        /// <summary>Which days the shift runs; bit 0 is Monday.</summary>
+        public int WorkDays { get; }
+
+        public bool WorksWeekends => WorksOn(Weekday.Saturday) || WorksOn(Weekday.Sunday);
+
+        /// <summary>Pay per hour actually worked, in pence.</summary>
+        public long HourlyWagePence { get; }
+
+        public bool WorksOn(Weekday day) => (WorkDays & (1 << (int)day)) != 0;
+
+        /// <summary>Short text such as "Mon–Fri" or "Tue–Sun".</summary>
+        public string DaysText()
+        {
+            if (WorkDays == EveryDay)
+            {
+                return "every day";
+            }
+
+            var names = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+            var days = Enumerable.Range(0, 7).Where(d => WorksOn((Weekday)d)).ToList();
+            var consecutive = days.Count > 1 && days.Last() - days.First() == days.Count - 1;
+            return consecutive ? $"{names[days.First()]}–{names[days.Last()]}" : string.Join(", ", days.Select(d => names[d]));
+        }
     }
 }

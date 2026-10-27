@@ -21,11 +21,11 @@ namespace TinyTown.Tests.EditMode
             gaveUp = new List<string>();
         }
 
-        private AiRequest Request(string key, AiPriority priority = AiPriority.Decision, System.Func<string, AiReplyCheck> handle = null, System.Func<bool> wanted = null)
+        private AiRequest Request(string key, AiPriority priority = AiPriority.Decision, System.Func<string, AiReplyCheck> handle = null, System.Func<bool> wanted = null, string residentId = "res-0001")
         {
             return new AiRequest(
                 key,
-                "res-0001",
+                residentId,
                 priority,
                 key,
                 "{\"key\":\"" + key + "\"}",
@@ -36,6 +36,36 @@ namespace TinyTown.Tests.EditMode
                 }),
                 wanted,
                 reason => gaveUp.Add(key + ": " + reason));
+        }
+
+        [Test]
+        public void ResidentJustServed_WaitsBehindOthersOfTheSamePriority()
+        {
+            queue.Enqueue(Request("mabel-1", residentId: "res-0001"), 0);
+            queue.Update(0);
+            queue.Enqueue(Request("mabel-2", residentId: "res-0001"), 0.5);
+            queue.Enqueue(Request("arthur-1", residentId: "res-0002"), 1);
+            transport.Calls[0].Succeed("{}");
+            queue.Update(1.5);
+
+            Assert.That(transport.Calls[1].Body, Does.Contain("arthur-1"), "Mabel asked first, but she was just served");
+
+            transport.Calls[1].Succeed("{}");
+            queue.Update(2);
+            Assert.That(transport.Calls[2].Body, Does.Contain("mabel-2"));
+        }
+
+        [Test]
+        public void JustServedResident_StillBeatsLessImportantRequests()
+        {
+            queue.Enqueue(Request("mabel-decision", residentId: "res-0001"), 0);
+            queue.Update(0);
+            queue.Enqueue(Request("mabel-urgent", AiPriority.Urgent, residentId: "res-0001"), 0.5);
+            queue.Enqueue(Request("arthur-chat", AiPriority.Dialogue, residentId: "res-0002"), 0.5);
+            transport.Calls[0].Succeed("{}");
+            queue.Update(1);
+
+            Assert.That(transport.Calls[1].Body, Does.Contain("mabel-urgent"));
         }
 
         [Test]

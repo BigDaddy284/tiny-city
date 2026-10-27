@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TinyTown.Simulation.Economy;
 
 namespace TinyTown.Simulation.World
 {
@@ -12,7 +13,7 @@ namespace TinyTown.Simulation.World
         private readonly List<WorldObject> objects;
         private readonly List<Portal> portals;
 
-        public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals)
+        public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals, IEnumerable<Business> businesses = null)
         {
             if (string.IsNullOrWhiteSpace(townId))
             {
@@ -49,6 +50,15 @@ namespace TinyTown.Simulation.World
                 objectsById.Add(obj.Id, obj);
             }
 
+            Businesses = (businesses ?? Enumerable.Empty<Business>()).ToList();
+            foreach (var business in Businesses)
+            {
+                if (!this.maps.ContainsKey(business.MapId) || Businesses.Count(b => b.Id == business.Id || b.MapId == business.MapId) != 1)
+                {
+                    throw new ArgumentException($"Business '{business.Id}' needs its own existing map.");
+                }
+            }
+
             this.portals = portals.ToList();
             foreach (var portal in this.portals)
             {
@@ -68,6 +78,12 @@ namespace TinyTown.Simulation.World
         public IReadOnlyList<WorldObject> Objects => objects;
 
         public IReadOnlyList<Portal> Portals => portals;
+
+        /// <summary>Shops, café, bakery and clinic, each with its own interior map.</summary>
+        public IReadOnlyList<Business> Businesses { get; }
+
+        /// <summary>The business whose building contains this map, or null.</summary>
+        public Business BusinessOnMap(string mapId) => Businesses.FirstOrDefault(b => b.MapId == mapId);
 
         public bool TryGetMap(string mapId, out TileMap map)
         {

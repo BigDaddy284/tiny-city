@@ -4,6 +4,7 @@ using System.Linq;
 using TinyTown.Simulation;
 using TinyTown.Simulation.AI;
 using TinyTown.Simulation.Configuration;
+using TinyTown.Simulation.Economy;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Content;
 using TinyTown.Simulation.Persistence;
@@ -27,6 +28,7 @@ namespace TinyTown.Runtime
         private const int AutosaveEveryGameMinutes = 6 * 60;
         private const int MaxTicksPerFrame = 600;
         private const float PanelWidth = 380f;
+        private const int RosterPerRow = 5;
         private const float ConfirmSeconds = 4f;
         private const float SpeechSeconds = 8f;
 
@@ -204,7 +206,13 @@ namespace TinyTown.Runtime
                     StarterTown.AddLifeHistory(result.Simulation);
                 }
 
-                // Saves from before Phase 3 had only Mabel; her new neighbours move in at home.
+                if (result.UpgradedFromVersion > 0 && result.UpgradedFromVersion < 4)
+                {
+                    // Saves from before the economy: wages for existing jobs, and starting money, food and rent.
+                    StarterTown.AddFinancesToOlderSave(result.Simulation);
+                }
+
+                // Older saves have fewer residents; the newcomers move in at home.
                 var newcomers = StarterTown.AddMissingResidents(result.Simulation);
 
                 SetSimulation(result.Simulation);
@@ -384,6 +392,15 @@ namespace TinyTown.Runtime
                 Label(IsoGrid.TileToWorld(obj.Location.Position.X, obj.Location.Position.Y) + new Vector3(0f, 0.32f, 0f), obj.Name, smallStyle);
             }
 
+            // Each door outside is labelled with the building it leads into.
+            foreach (var portal in Simulation.World.PortalsFrom(viewedMapId))
+            {
+                if (Simulation.World.TryGetMap(portal.To.MapId, out var inside) && !inside.IsExterior)
+                {
+                    Label(IsoGrid.TileToWorld(portal.From.Position.X, portal.From.Position.Y) + new Vector3(0f, 0.5f, 0f), inside.Name, smallStyle);
+                }
+            }
+
             foreach (var r in Simulation.Residents)
             {
                 if (!residentRenderers.TryGetValue(r.Id, out var renderer) || !renderer.enabled)
@@ -442,21 +459,27 @@ namespace TinyTown.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            foreach (var other in Simulation.Residents)
+            // Five names to a row, so a town of any size fits the panel.
+            var roster = Simulation.Residents;
+            for (var row = 0; row < roster.Count; row += RosterPerRow)
             {
-                if (GUILayout.Toggle(other == r, other.FirstName, GUI.skin.button) && other != r)
+                GUILayout.BeginHorizontal();
+                foreach (var other in roster.Skip(row).Take(RosterPerRow))
                 {
-                    Select(other);
+                    var name = other.IsAlive ? other.FirstName : $"{other.FirstName} †";
+                    if (GUILayout.Toggle(other == r, name, GUI.skin.button) && other != r)
+                    {
+                        Select(other);
+                    }
                 }
-            }
 
-            GUILayout.EndHorizontal();
+                GUILayout.EndHorizontal();
+            }
             GUILayout.Space(6f);
             panelScroll = GUILayout.BeginScrollView(panelScroll);
 
             GUILayout.Label($"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", titleStyle);
-            GUILayout.Label($"{r.Job?.Title ?? "No job"} · {r.Personality.Describe()}", smallStyle);
+            GUILayout.Label($"{DescribeLivelihood(r)} · {r.Personality.Describe()}", smallStyle);
             GUILayout.Label($"Where: {DescribeLocation(r)}", textStyle);
             GUILayout.Label($"Doing: {DescribeActivity(r)}", textStyle);
             if (!string.IsNullOrEmpty(r.Goal))
@@ -478,10 +501,34 @@ namespace TinyTown.Runtime
             }
 
             GUILayout.Space(6f);
+            GUILayout.Label($"Money: {Money.Format(r.MoneyPence)} · food at home for {r.Groceries} meal(s)", textStyle);
+            var bills = r.WeeklyRentPence > 0 ? $"Rent {Money.Format(r.WeeklyRentPence)} a week, due Monday morning" : "No rent";
+            var income = r.WeeklyIncomePence > 0 ? $" · {r.IncomeLabel} {Money.Format(r.WeeklyIncomePence)} a week" : string.Empty;
+            GUILayout.Label(bills + income, smallStyle);
+            foreach (var payment in Simulation.Economy.Ledger.For(r.Id).Reverse().Take(3))
+            {
+                var sign = payment.AmountPence >= 0 ? "+" : string.Empty;
+                GUILayout.Label($"Day {payment.Time.Day} {payment.Time.ClockText}  {sign}{Money.Format(payment.AmountPence)}  {payment.Description}", smallStyle);
+            }
+
+            GUILayout.Space(6f);
             GUILayout.Label("People", textStyle);
+            var strangers = new List<string>();
             foreach (var other in Simulation.Residents.Where(o => o != r))
             {
-                GUILayout.Label(DescribeRelationship(r, other), smallStyle);
+                if (Simulation.Relationships.TryGet(r.Id, other.Id, out var rel) && rel.HaveMet)
+                {
+                    GUILayout.Label(DescribeRelationship(r, other), smallStyle);
+                }
+                else
+                {
+                    strangers.Add(other.FirstName);
+                }
+            }
+
+            if (strangers.Count > 0)
+            {
+                GUILayout.Label($"Hasn't met yet: {string.Join(", ", strangers)}", smallStyle);
             }
 
             GUILayout.Space(6f);
@@ -559,7 +606,21 @@ namespace TinyTown.Runtime
         {
             var map = Simulation.World.GetMap(r.Location.MapId);
             var at = Simulation.World.Objects.FirstOrDefault(o => o.Location == r.Location);
-            return at != null ? $"{map.Name}, at the {at.Name.ToLowerInvariant()}" : map.Name;
+            var business = Simulation.World.BusinessOnMap(map.Id);
+            var name = business == null ? map.Name : $"{map.Name} ({(business.IsOpen(Simulation.Time) ? "open" : "closed")}, {business.HoursText})";
+            return at != null ? $"{name}, at the {at.Name.ToLowerInvariant()}" : name;
+        }
+
+        private static string DescribeLivelihood(Resident r)
+        {
+            if (r.Job != null)
+            {
+                var hours = $"{r.Job.StartMinuteOfDay / 60:00}:{r.Job.StartMinuteOfDay % 60:00}–{r.Job.EndMinuteOfDay / 60:00}:{r.Job.EndMinuteOfDay % 60:00}";
+                var wage = r.Job.HourlyWagePence > 0 ? $", {Money.Format(r.Job.HourlyWagePence)}/hour" : string.Empty;
+                return $"{r.Job.Title}, {r.Job.DaysText()} {hours}{wage}";
+            }
+
+            return string.IsNullOrEmpty(r.IncomeLabel) ? "No job" : $"No job ({r.IncomeLabel.ToLowerInvariant()})";
         }
 
         private string DescribeActivity(Resident r)

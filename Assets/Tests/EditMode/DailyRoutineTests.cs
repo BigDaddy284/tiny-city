@@ -37,13 +37,29 @@ namespace TinyTown.Tests.EditMode
         public void NewGame_FirstWeekday_EatsWorksAndSleeps()
         {
             var sim = StarterTown.CreateNewGame();
+            var r = sim.Residents[0];
+            var done = new System.Collections.Generic.HashSet<string>();
+            var log = new System.Collections.Generic.List<string>();
 
-            var eating = MinutesDoing(sim, ActivityCatalog.Eat.Id, 24 * 60, out _);
-            var log = string.Join("\n", sim.Residents[0].Log.Select(e => $"{e.Time} {e.Text}"));
+            for (var i = 0; i < 24 * 60; i++)
+            {
+                sim.Tick();
+                if (r.State == ResidentState.Performing)
+                {
+                    done.Add(r.ActivityId);
+                }
 
-            Assert.That(eating, Is.GreaterThan(0), log);
-            Assert.That(sim.Residents[0].Log.Any(e => e.Text.StartsWith("Started working")), Is.True, log);
-            Assert.That(sim.Residents[0].Log.Any(e => e.Text.StartsWith("Started sleeping")), Is.True, log);
+                var last = r.Log.LastOrDefault();
+                if (last != null && last.Time.TotalMinutes == sim.Time.TotalMinutes - 1)
+                {
+                    log.Add($"{last.Time} {last.Text}");
+                }
+            }
+
+            var text = string.Join("\n", log);
+            Assert.That(done.Contains(ActivityCatalog.Eat.Id) || done.Contains(ActivityCatalog.CafeMeal.Id), Is.True, text);
+            Assert.That(done.Contains(ActivityCatalog.Work.Id), Is.True, text);
+            Assert.That(done.Contains(ActivityCatalog.Sleep.Id), Is.True, text);
         }
 
         [Test]

@@ -46,6 +46,9 @@ namespace TinyTown.Simulation.Social
         /// <summary>Game minutes a resident keeps looking for someone before giving up.</summary>
         public const int SeekMinutes = 45;
 
+        /// <summary>The AI is offered chats with at most this many people, the nearest, so prompts stay short in a busy town.</summary>
+        public const int MaxChatOptions = 3;
+
         public const int MaxTopicLength = 40;
 
         /// <summary>Friendship at which a memory of becoming good friends is made.</summary>

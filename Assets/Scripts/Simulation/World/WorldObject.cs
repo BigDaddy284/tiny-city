@@ -15,6 +15,17 @@ namespace TinyTown.Simulation.World
         Bench,
         ExerciseSpot,
         Workbench,
+
+        /// <summary>Shelves in the general store, where customers pick up groceries.</summary>
+        ShopShelf,
+
+        /// <summary>A serving counter: where shop, café, bakery and clinic staff work.</summary>
+        Counter,
+        CafeTable,
+
+        /// <summary>The bakery's display of cakes and pastries.</summary>
+        BakeryDisplay,
+        ClinicBed,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -53,7 +64,13 @@ namespace TinyTown.Simulation.World
                 case ObjectType.Workbench:
                     return 2;
                 case ObjectType.GardenPlot:
+                case ObjectType.CafeTable:
                     return 4;
+                case ObjectType.ShopShelf:
+                case ObjectType.BakeryDisplay:
+                    return 3;
+                case ObjectType.Counter:
+                    return 2;
                 default:
                     return 1;
             }

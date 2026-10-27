@@ -28,6 +28,7 @@ namespace TinyTown.Tests.EditMode
                 template.Job,
                 location ?? template.Location,
                 needs);
+            CopyFinances(template, resident);
             return new TownSimulation(world, new[] { resident }, time);
         }
 
@@ -48,7 +49,7 @@ namespace TinyTown.Tests.EditMode
 
                 var needs = new Needs(needsLevel);
                 adjust?.Invoke(template, needs);
-                residents.Add(new Resident(
+                var resident = new Resident(
                     template.Id,
                     template.FirstName,
                     template.LastName,
@@ -60,7 +61,9 @@ namespace TinyTown.Tests.EditMode
                     template.BedObjectId,
                     template.Job,
                     place?.Invoke(template) ?? template.Location,
-                    needs));
+                    needs);
+                CopyFinances(template, resident);
+                residents.Add(resident);
             }
 
             return new TownSimulation(world, residents, time);
@@ -73,7 +76,17 @@ namespace TinyTown.Tests.EditMode
                 time,
                 r => r.Id == StarterTown.ResidentId ? new Location(StarterTown.VillageMapId, 10, 9) : r.Id == StarterTown.ArthurId ? new Location(StarterTown.VillageMapId, 11, 9) : (Location?)null,
                 (r, n) => n[NeedType.Social] = social,
-                r => r.Id != StarterTown.NellId);
+                r => r.Id == StarterTown.ResidentId || r.Id == StarterTown.ArthurId);
+        }
+
+        /// <summary>Money, groceries, rent and income as the starter content gives them.</summary>
+        public static void CopyFinances(Resident from, Resident to)
+        {
+            to.MoneyPence = from.MoneyPence;
+            to.Groceries = from.Groceries;
+            to.WeeklyRentPence = from.WeeklyRentPence;
+            to.WeeklyIncomePence = from.WeeklyIncomePence;
+            to.IncomeLabel = from.IncomeLabel;
         }
 
         public static WorldObject Object(TownSimulation sim, string id)

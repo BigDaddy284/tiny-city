@@ -49,7 +49,8 @@ namespace TinyTown.Simulation.AI
 
     /// <summary>
     /// The single place AI requests go. It sends one request at a time, serves higher priorities first while
-    /// ageing waiting requests so nobody starves, replaces duplicates, enforces timeouts and a bounded number of
+    /// ageing waiting requests so nobody starves, lets residents who were just served wait behind others of the same
+    /// priority, replaces duplicates, enforces timeouts and a bounded number of
     /// attempts, and drops requests whose situation has changed. It never throws because of a bad answer.
     /// </summary>
     public sealed class AiRequestQueue
@@ -61,8 +62,15 @@ namespace TinyTown.Simulation.AI
 
         public const double RetryDelaySeconds = 2;
 
+        /// <summary>A resident whose request was sent this recently waits behind other residents' requests of the same priority.</summary>
+        public const double RecentlyServedSeconds = 15;
+
+        /// <summary>How many priority classes worse a just-served resident's request counts, fading over <see cref="RecentlyServedSeconds"/>.</summary>
+        public const double RecentlyServedPenalty = 0.75;
+
         private readonly IAiTransport transport;
         private readonly List<AiRequest> pending = new List<AiRequest>();
+        private readonly Dictionary<string, double> lastServed = new Dictionary<string, double>();
         private long nextId = 1;
         private IAiCall activeCall;
         private double activeSentAt;
@@ -256,7 +264,7 @@ namespace TinyTown.Simulation.AI
                     continue;
                 }
 
-                var score = (int)request.Priority - ((now - request.EnqueuedAt) / AgingSecondsPerClass);
+                var score = (int)request.Priority - ((now - request.EnqueuedAt) / AgingSecondsPerClass) + RecentPenalty(request.ResidentId, now);
                 if (score < bestScore || (score == bestScore && request.Id < best.Id))
                 {
                     best = request;
@@ -267,8 +275,30 @@ namespace TinyTown.Simulation.AI
             return best;
         }
 
+        private double RecentPenalty(string residentId, double now)
+        {
+            if (residentId == null || !lastServed.TryGetValue(residentId, out var served))
+            {
+                return 0;
+            }
+
+            var since = now - served;
+            return since >= RecentlyServedSeconds || since < 0 ? 0 : RecentlyServedPenalty * (1 - (since / RecentlyServedSeconds));
+        }
+
         private void Send(AiRequest request, double now)
         {
+            if (request.ResidentId != null)
+            {
+                // Residents are few, but forget old entries anyway so the record can't grow without bound.
+                foreach (var stale in lastServed.Where(p => now - p.Value >= RecentlyServedSeconds).Select(p => p.Key).ToList())
+                {
+                    lastServed.Remove(stale);
+                }
+
+                lastServed[request.ResidentId] = now;
+            }
+
             request.Attempts++;
             Stats.Sent++;
             Active = request;

@@ -111,7 +111,26 @@ namespace TinyTown.Simulation.Residents
 
         public string BedObjectId { get; }
 
-        public Job Job { get; }
+        /// <summary>Null for the retired and the unemployed. Replaced only by game logic, e.g. upgrading an old save.</summary>
+        public Job Job { get; internal set; }
+
+        /// <summary>Money in pence. Can go below zero when rent is due and there isn't enough; purchases can't.</summary>
+        public long MoneyPence { get; internal set; }
+
+        /// <summary>Meals' worth of food at home. Cooking uses one; without any, a resident can only snack.</summary>
+        public int Groceries { get; internal set; }
+
+        /// <summary>Paid every Monday morning, in pence: rent for their home.</summary>
+        public long WeeklyRentPence { get; internal set; }
+
+        /// <summary>Income every Monday morning that isn't wages, e.g. a pension, in pence.</summary>
+        public long WeeklyIncomePence { get; internal set; }
+
+        /// <summary>What <see cref="WeeklyIncomePence"/> is called, e.g. "Pension".</summary>
+        public string IncomeLabel { get; internal set; } = string.Empty;
+
+        /// <summary>Minutes worked since wages were last paid; paid when the shift ends.</summary>
+        public int UnpaidWorkMinutes { get; internal set; }
 
         public bool IsAlive { get; internal set; } = true;
 
