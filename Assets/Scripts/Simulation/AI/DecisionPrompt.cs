@@ -49,6 +49,7 @@ namespace TinyTown.Simulation.AI
             sb.AppendLine($"How you feel: {PromptText.Feelings(r)}.");
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
             PromptText.AppendMemories(sb, memories);
+            PromptText.AppendPeople(sb, sim, r);
 
             var recent = PromptText.RecentLog(r, sim.Time.AddMinutes(-6 * 60), RecentLogCount).ToList();
             if (recent.Count > 0)
@@ -135,6 +136,11 @@ namespace TinyTown.Simulation.AI
                 {
                     cues.Add(o.Target.Id);
                 }
+
+                if (o.Partner != null)
+                {
+                    cues.Add(o.Partner.Id);
+                }
             }
 
             for (var i = 0; i < Needs.Count; i++)
@@ -149,7 +155,7 @@ namespace TinyTown.Simulation.AI
             return cues;
         }
 
-        private static string Describe(FreeTimeOption o)
+        internal static string Describe(FreeTimeOption o)
         {
             if (o.Activity == null)
             {
@@ -157,6 +163,11 @@ namespace TinyTown.Simulation.AI
             }
 
             var walk = o.Distance == 0 ? "right here" : $"{o.Distance} steps away";
+            if (o.Partner != null)
+            {
+                return $"go and chat with {o.Partner.FullName} ({walk})";
+            }
+
             return $"{o.Activity.Name.ToLowerInvariant()} at the {o.Target.Name.ToLowerInvariant()} ({walk}, about {o.Activity.DurationMinutes} minutes)";
         }
     }

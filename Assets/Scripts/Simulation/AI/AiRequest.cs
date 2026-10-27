@@ -7,8 +7,9 @@ namespace TinyTown.Simulation.AI
     {
         Urgent = 0,
         Decision = 1,
-        Reflection = 2,
-        Flavour = 3,
+        Dialogue = 2,
+        Reflection = 3,
+        Flavour = 4,
     }
 
     public enum AiReplyStatus

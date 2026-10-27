@@ -28,6 +28,16 @@ namespace TinyTown.Simulation.Activities
             Priority = priority;
         }
 
+        /// <summary>A chat: walk over to <paramref name="partner"/> and talk.</summary>
+        public PlanChoice(Resident partner, string reason, PlanPriority priority)
+            : this(ActivityCatalog.Chat, null, reason, priority)
+        {
+            TargetResident = partner;
+        }
+
+        /// <summary>The person to chat with, for <see cref="ActivityCatalog.Chat"/>; otherwise null.</summary>
+        public Resident TargetResident { get; }
+
         public PlanPriority Priority { get; }
 
         /// <summary>Free-time choices are the ones the AI may make instead; needs, sleep and work are not up for debate.</summary>
@@ -53,18 +63,28 @@ namespace TinyTown.Simulation.Activities
             Distance = distance;
         }
 
+        /// <summary>Going over to chat with someone.</summary>
+        public FreeTimeOption(Resident partner, int distance)
+            : this(ActivityCatalog.Chat, null, distance)
+        {
+            Partner = partner;
+        }
+
         /// <summary>Null for relaxing.</summary>
         public ActivityDefinition Activity { get; }
 
-        /// <summary>Null for relaxing.</summary>
+        /// <summary>The object to use; null for relaxing and chatting.</summary>
         public WorldObject Target { get; }
+
+        /// <summary>The person to chat with, or null.</summary>
+        public Resident Partner { get; }
 
         /// <summary>Steps to walk there.</summary>
         public int Distance { get; }
 
         public string ActionId => Activity?.Id ?? RelaxActionId;
 
-        public string TargetId => Target?.Id ?? NoTargetId;
+        public string TargetId => Target?.Id ?? Partner?.Id ?? NoTargetId;
     }
 
     /// <summary>
@@ -97,11 +117,37 @@ namespace TinyTown.Simulation.Activities
 
         private readonly TownWorld world;
         private readonly Pathfinder pathfinder;
+        private readonly IReadOnlyList<Resident> residents;
 
-        public ActivityPlanner(TownWorld world, Pathfinder pathfinder)
+        public ActivityPlanner(TownWorld world, Pathfinder pathfinder, IReadOnlyList<Resident> residents = null)
         {
             this.world = world;
             this.pathfinder = pathfinder;
+            this.residents = residents ?? new Resident[0];
+        }
+
+        /// <summary>
+        /// Whether a resident may use an object now: things inside someone else's home are private, and an object is
+        /// full once as many other residents are using or heading for it as it has room for.
+        /// </summary>
+        public bool IsAvailableTo(Resident resident, WorldObject obj)
+        {
+            if (obj == null || (!world.GetMap(obj.Location.MapId).IsExterior && obj.Location.MapId != resident.HomeMapId))
+            {
+                return false;
+            }
+
+            var users = 0;
+            foreach (var other in residents)
+            {
+                if (other != resident && other.IsAlive && other.TargetObjectId == obj.Id
+                    && (other.State == ResidentState.Travelling || other.State == ResidentState.Performing))
+                {
+                    users++;
+                }
+            }
+
+            return users < obj.Capacity;
         }
 
         public static bool IsSleepTime(GameTime time) => GameTime.IsWithin(time.MinuteOfDay, BedtimeMinute, WakeMinute);
@@ -189,7 +235,7 @@ namespace TinyTown.Simulation.Activities
                 }
 
                 options.AddRange(world.Objects
-                    .Where(activity.CanUse)
+                    .Where(obj => activity.CanUse(obj) && IsAvailableTo(resident, obj))
                     .Select(obj => new FreeTimeOption(activity, obj, pathfinder.Distance(resident.Location, obj.Location)))
                     .Where(o => o.Distance != Pathfinder.Unreachable)
                     .OrderBy(o => o.Distance)
@@ -215,17 +261,27 @@ namespace TinyTown.Simulation.Activities
                 return true;
             }
 
-            if (current.Kind == ActivityKind.Leisure || current.Kind == ActivityKind.Care)
+            if (current.Kind == ActivityKind.Leisure || current.Kind == ActivityKind.Care || current.Kind == ActivityKind.Social)
             {
                 // Finish looking after an urgent need first; otherwise work and bedtime come before leisure.
                 var forUrgent = current.PrimaryNeed != null && current.PrimaryNeed == urgent;
-                if (!forUrgent && current.Kind == ActivityKind.Leisure && (IsWorkTime(resident, time) || IsSleepTime(time)))
+                if (!forUrgent && current.Kind != ActivityKind.Care && (IsWorkTime(resident, time) || IsSleepTime(time)) && WorkOrBedIsPossible(resident, time))
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Whether the planner would send the resident to work or bed right now. False when, say, the workplace can't
+        /// be reached, so leisure isn't interrupted for something that can't happen.
+        /// </summary>
+        private bool WorkOrBedIsPossible(Resident resident, GameTime time)
+        {
+            var next = Choose(resident, time);
+            return next != null && (next.Priority == PlanPriority.Work || next.Priority == PlanPriority.Bedtime);
         }
 
         public bool IsComplete(Resident resident, ActivityDefinition activity, GameTime time)
@@ -268,7 +324,7 @@ namespace TinyTown.Simulation.Activities
         {
             WorldObject best = null;
             var bestDistance = int.MaxValue;
-            foreach (var obj in world.Objects.Where(activity.CanUse))
+            foreach (var obj in world.Objects.Where(o => activity.CanUse(o) && IsAvailableTo(resident, o)))
             {
                 var d = pathfinder.Distance(resident.Location, obj.Location);
                 if (d != Pathfinder.Unreachable && d < bestDistance)
@@ -320,7 +376,7 @@ namespace TinyTown.Simulation.Activities
                 }
 
                 var baseScore = (primaryDeficit * Preference(resident.Personality, activity)) + (0.5 * secondary);
-                foreach (var obj in world.Objects.Where(activity.CanUse))
+                foreach (var obj in world.Objects.Where(o => activity.CanUse(o) && IsAvailableTo(resident, o)))
                 {
                     var d = pathfinder.Distance(resident.Location, obj.Location);
                     if (d == Pathfinder.Unreachable)

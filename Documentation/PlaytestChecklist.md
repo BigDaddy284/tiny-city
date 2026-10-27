@@ -34,4 +34,18 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 11. **Speed:** at 10x the AI often can't answer within her short wait, so she falls back to her routine more often ("no AI answer in time" in the log). At 1x most free-time decisions should come from the AI.
 12. **Old save:** a Phase 1 save loads without errors, and Mabel gains her two background memories.
 
+## Phase 3: social simulation
+
+1. **Neighbours:** a new town has Mabel in Rose Cottage, Arthur in Willow Cottage and Nell in Fern Cottage. The buttons under the speed controls switch the inspector and camera between them; N does the same.
+2. **Several residents on screen:** on the village map everyone outdoors is drawn with their name. Two residents on the same tile stand side by side.
+3. **Meeting and chatting:** within the first day or two, residents stop to talk when they pass each other, or go "looking for" someone when they feel lonely or sociable. While they talk, both show "chatting with ...", and speech bubbles alternate between them.
+4. **Relationships:** after a chat, "People" in the inspector changes from "hasn't met yet" to a description such as "acquaintance", with friendship and trust numbers. Further chats raise them gradually.
+5. **Shared memories:** after a first meeting, both residents have a "met ... for the first time" memory under "Remembers".
+6. **Interruptions:** a chat ends early when someone gets desperately hungry, thirsty, tired or needs the toilet, when work starts for one of them, or at bedtime. The log says who had to go and why.
+7. **Private homes:** residents never use furniture in someone else's cottage.
+8. **Work:** on weekdays Nell walks to the repair workshop by about 09:30 and works until 18:00. Arthur is retired.
+9. **AI conversation lines (Ollama running):** lines read like the residents and follow on from each other. The topic appears after "chatting with ... about". If Ollama is slow or stopped, the chat carries on with simple small talk.
+10. **Save mid-chat:** press F5 while two residents are talking, then F9. They are still talking, and what was already said is kept.
+11. **Old save:** a Phase 2 save loads without errors; the status line says two new neighbours moved in, and Mabel keeps her memories.
+
 Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\` (`town.json` plus `town.json.bak`).

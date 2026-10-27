@@ -99,6 +99,7 @@ namespace TinyTown.Runtime
                 case ObjectType.GardenTap: return new Color(0.6f, 0.62f, 0.66f);
                 case ObjectType.Bench: return new Color(0.58f, 0.4f, 0.26f);
                 case ObjectType.ExerciseSpot: return new Color(0.95f, 0.6f, 0.25f);
+                case ObjectType.Workbench: return new Color(0.72f, 0.52f, 0.3f);
                 default: return Color.magenta;
             }
         }

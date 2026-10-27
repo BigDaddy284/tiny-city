@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation.Configuration;
 using TinyTown.Simulation.Residents;
+using TinyTown.Simulation.Social;
 
 namespace TinyTown.Simulation.AI
 {
@@ -44,6 +45,7 @@ namespace TinyTown.Simulation.AI
         private readonly IAiTransport transport;
         private readonly Dictionary<string, long> requestedDecisions = new Dictionary<string, long>();
         private readonly Dictionary<string, int> requestedReflections = new Dictionary<string, int>();
+        private readonly Dictionary<string, long> requestedLines = new Dictionary<string, long>();
         private readonly List<string> events = new List<string>();
         private IAiCall checkCall;
         private CheckPhase checkPhase;
@@ -83,6 +85,7 @@ namespace TinyTown.Simulation.AI
             Queue.CancelAll("a different town was loaded");
             requestedDecisions.Clear();
             requestedReflections.Clear();
+            requestedLines.Clear();
             Simulation = simulation;
             if (simulation != null)
             {
@@ -295,12 +298,64 @@ namespace TinyTown.Simulation.AI
                     }
                 }
             }
+
+            foreach (var session in sim.ActiveConversations)
+            {
+                if (session.AwaitingLine
+                    && (!requestedLines.TryGetValue(session.Id, out var askedLine) || askedLine != session.LineRequestId))
+                {
+                    requestedLines[session.Id] = session.LineRequestId;
+                    Queue.Enqueue(LineRequest(sim, session), now);
+                }
+            }
+
+            if (requestedLines.Count > sim.ActiveConversations.Count)
+            {
+                foreach (var finished in requestedLines.Keys.Where(id => sim.GetConversation(id) == null).ToList())
+                {
+                    requestedLines.Remove(finished);
+                }
+            }
+        }
+
+        private AiRequest LineRequest(TownSimulation sim, ConversationSession session)
+        {
+            var lineId = session.LineRequestId;
+            var speakerId = session.SpeakerId;
+            var speaker = sim.GetResident(speakerId);
+            return new AiRequest(
+                $"dialogue:{session.Id}",
+                speakerId,
+                AiPriority.Dialogue,
+                $"a line for {speaker.FirstName}",
+                DialoguePrompt.BuildBody(Model, sim, session),
+                text =>
+                {
+                    if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
+                        || !DialoguePrompt.TryParse(content, out var reply, out error))
+                    {
+                        return AiReplyCheck.Invalid(error);
+                    }
+
+                    var outcome = sim.ApplyConversationLine(session.Id, lineId, speakerId, reply.Say, reply.Tone, reply.Topic, reply.End);
+                    switch (outcome)
+                    {
+                        case DecisionOutcome.Applied:
+                            return AiReplyCheck.Accepted();
+                        case DecisionOutcome.InvalidText:
+                            return AiReplyCheck.Invalid("the line was empty");
+                        default:
+                            return AiReplyCheck.Stale(outcome.ToString());
+                    }
+                },
+                () => Simulation == sim && sim.GetConversation(session.Id) == session && session.AwaitingLine && session.LineRequestId == lineId,
+                reason => AddEvent($"{speaker.FirstName} used small talk: {reason}"));
         }
 
         private AiRequest DecisionRequest(TownSimulation sim, Resident r)
         {
             var decisionId = r.PendingDecisionId;
-            var options = sim.Planner.FreeTimeOptions(r);
+            var options = sim.FreeTimeOptionsFor(r);
             return new AiRequest(
                 $"decision:{r.Id}",
                 r.Id,

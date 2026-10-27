@@ -14,6 +14,9 @@ namespace TinyTown.Simulation.Residents
 
         /// <summary>Waiting a short while for an AI suggestion about free time. Never saved as such: see the save loader.</summary>
         Deciding,
+
+        /// <summary>In a conversation; see <see cref="Resident.ConversationId"/>.</summary>
+        Talking,
     }
 
     /// <summary>Who chose the current activity, so the inspector can keep game rules and AI explanations apart.</summary>
@@ -123,6 +126,12 @@ namespace TinyTown.Simulation.Residents
 
         public string TargetObjectId { get; internal set; }
 
+        /// <summary>The resident being walked to for a chat, or null.</summary>
+        public string TargetResidentId { get; internal set; }
+
+        /// <summary>The live conversation while <see cref="ResidentState.Talking"/>, or null.</summary>
+        public string ConversationId { get; internal set; }
+
         /// <summary>Minutes left of the current activity, or of waiting.</summary>
         public int MinutesRemaining { get; internal set; }
 
@@ -157,6 +166,8 @@ namespace TinyTown.Simulation.Residents
             State = ResidentState.Idle;
             ActivityId = null;
             TargetObjectId = null;
+            TargetResidentId = null;
+            ConversationId = null;
             MinutesRemaining = 0;
             Goal = string.Empty;
             GoalSource = DecisionSource.Routine;
