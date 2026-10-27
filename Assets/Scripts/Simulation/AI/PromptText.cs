@@ -34,19 +34,57 @@ namespace TinyTown.Simulation.AI
             return string.Join(", ", parts);
         }
 
+        /// <summary>Work only gets a mention when the resident leaves within this many minutes, so evenings don't sound like work is next.</summary>
+        public const int WorkSoonMinutes = 3 * 60;
+
         public static string Commitments(Resident r, GameTime now)
         {
             var notes = new List<string>();
-            if (r.Job != null)
+            var minutesToWork = MinutesUntilLeavingForWork(r, now);
+            if (minutesToWork >= 0 && minutesToWork <= WorkSoonMinutes)
             {
-                var start = r.Job.StartMinuteOfDay - ActivityPlanner.CommuteLeadMinutes;
-                var minutesToWork = ((start - now.MinuteOfDay) + GameTime.MinutesPerDay) % GameTime.MinutesPerDay;
-                notes.Add($"you leave for work as {r.Job.Title.ToLowerInvariant()} in {Duration(minutesToWork)} (on working days)");
+                notes.Add($"you leave for work as {r.Job.Title.ToLowerInvariant()} in {Duration(minutesToWork)}");
+            }
+            else if (r.Job != null && ActivityPlanner.IsWorkTime(r, now))
+            {
+                notes.Add("you are on shift now");
+            }
+            else
+            {
+                notes.Add("no work until " + (minutesToWork < 0 ? "further notice" : NextWorkText(now, minutesToWork)));
             }
 
             var minutesToBed = ((ActivityPlanner.BedtimeMinute - now.MinuteOfDay) + GameTime.MinutesPerDay) % GameTime.MinutesPerDay;
             notes.Add($"bedtime is in {Duration(minutesToBed)}");
             return string.Join("; ", notes);
+        }
+
+        /// <summary>Minutes until the resident next leaves for a shift (working days only), or -1 if they have no job.</summary>
+        public static int MinutesUntilLeavingForWork(Resident r, GameTime now)
+        {
+            if (r.Job == null)
+            {
+                return -1;
+            }
+
+            var leaveMinute = r.Job.StartMinuteOfDay - ActivityPlanner.CommuteLeadMinutes;
+            for (var day = now.Day; day <= now.Day + GameTime.DaysPerWeek; day++)
+            {
+                var leave = GameTime.FromDayAndTime(day, 0, 0).AddMinutes(leaveMinute);
+                if (leave.TotalMinutes > now.TotalMinutes && (r.Job.WorksWeekends || !leave.IsWeekend))
+                {
+                    return (int)(leave.TotalMinutes - now.TotalMinutes);
+                }
+            }
+
+            return -1;
+        }
+
+        private static string NextWorkText(GameTime now, int minutesToWork)
+        {
+            var leave = now.AddMinutes(minutesToWork);
+            var when = leave.Day == now.Day ? "later today" : leave.Day == now.Day + 1 ? "tomorrow" : leave.Weekday.ToString();
+            return $"{when} at {leave.ClockText}";
         }
 
         public static void AppendMemories(StringBuilder sb, IReadOnlyList<MemoryRecord> memories)

@@ -4,6 +4,7 @@ using NUnit.Framework;
 using TinyTown.Simulation.AI;
 using TinyTown.Simulation.Persistence;
 using TinyTown.Simulation.Residents;
+using TinyTown.Simulation.Time;
 
 namespace TinyTown.Tests.EditMode
 {
@@ -64,6 +65,18 @@ namespace TinyTown.Tests.EditMode
             Assert.That(actions.Contains("work"), Is.False);
             Assert.That(actions.Contains("sleep"), Is.False);
             Assert.That(options.All(o => user.Contains(o.TargetId)), Is.True);
+        }
+
+        [TestCase(4, 21, 37, "no work until tomorrow at 08:30")]
+        [TestCase(5, 19, 0, "no work until Monday at 08:30")]
+        [TestCase(1, 7, 0, "you leave for work as community gardener in 1 h 30 min")]
+        [TestCase(1, 12, 0, "you are on shift now")]
+        [TestCase(6, 7, 0, "no work until Monday at 08:30")]
+        public void Prompt_MentionsWorkOnlyWhenItIsComingUp(int day, int hour, int minute, string expected)
+        {
+            var sim = TestTown.WithResident(GameTime.FromDayAndTime(day, hour, minute));
+
+            Assert.That(PromptText.Commitments(sim.Residents[0], sim.Time), Does.StartWith(expected));
         }
 
         [Test]
