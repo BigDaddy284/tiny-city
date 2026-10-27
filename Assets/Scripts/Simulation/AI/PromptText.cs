@@ -167,7 +167,18 @@ namespace TinyTown.Simulation.AI
                 text += $", dislike {rel.Dislike:0}/100";
             }
 
-            return text + $"), talked {rel.Interactions} time{(rel.Interactions == 1 ? string.Empty : "s")}";
+            text += $"), talked {rel.Interactions} time{(rel.Interactions == 1 ? string.Empty : "s")}";
+            var couple = sim.Relationships.PartnershipOf(r.Id);
+            if (couple != null && couple.Includes(other.Id))
+            {
+                text += couple.Stage == Social.RomanceStage.Committed ? "; your partner, in a committed relationship" : "; you are dating";
+            }
+            else if (rel.Romance >= Social.RomanceRules.SoftSpot)
+            {
+                text += "; you have a soft spot for them";
+            }
+
+            return text;
         }
 
         public static IEnumerable<ActivityLogEntry> RecentLog(Resident r, GameTime since, int max) =>

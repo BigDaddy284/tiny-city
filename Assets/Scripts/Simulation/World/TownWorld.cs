@@ -13,7 +13,7 @@ namespace TinyTown.Simulation.World
         private readonly List<WorldObject> objects;
         private readonly List<Portal> portals;
 
-        public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals, IEnumerable<Business> businesses = null)
+        public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals, IEnumerable<Business> businesses = null, Community.CommunityCalendar calendar = null)
         {
             if (string.IsNullOrWhiteSpace(townId))
             {
@@ -59,6 +59,15 @@ namespace TinyTown.Simulation.World
                 }
             }
 
+            Calendar = calendar ?? new Community.CommunityCalendar(null);
+            foreach (var e in Calendar.Events)
+            {
+                if (!objectsById.TryGetValue(e.PlaceObjectId, out var place) || place.Type != ObjectType.GatheringSpot)
+                {
+                    throw new ArgumentException($"Community event '{e.Id}' needs a gathering spot.");
+                }
+            }
+
             this.portals = portals.ToList();
             foreach (var portal in this.portals)
             {
@@ -81,6 +90,9 @@ namespace TinyTown.Simulation.World
 
         /// <summary>Shops, café, bakery and clinic, each with its own interior map.</summary>
         public IReadOnlyList<Business> Businesses { get; }
+
+        /// <summary>The village calendar of community events.</summary>
+        public Community.CommunityCalendar Calendar { get; }
 
         /// <summary>The business whose building contains this map, or null.</summary>
         public Business BusinessOnMap(string mapId) => Businesses.FirstOrDefault(b => b.MapId == mapId);

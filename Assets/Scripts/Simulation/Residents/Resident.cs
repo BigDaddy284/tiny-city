@@ -170,6 +170,9 @@ namespace TinyTown.Simulation.Residents
 
         public const int MaxHobbies = 4;
 
+        /// <summary>Whether they're open to romance at all. Some residents simply aren't looking.</summary>
+        public bool OpenToRomance { get; internal set; } = true;
+
         public Needs Needs { get; }
 
         public Location Location { get; internal set; }

@@ -76,4 +76,17 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 10. **Old save:** a build 1 save loads without errors. Everyone is healthy, and the starter residents get their hobbies.
 11. **Save and load:** F5 while someone is ill, then F9: the illness, its recovery time, health and any death record are kept.
 
+## Phase 4, build 3: romance, community events and village news
+
+1. **Calendar:** under the clock, the panel shows the next event ("Next: Quiz night, Wednesday (day 3) at 18:00") or the one on now. There are three: a Sunday get-together on the pond-side lawn (15:00–17:00), a Wednesday quiz night in the café (18:00–20:00), and the village fête on the village green on day 14 of every 28-day year (14:00–17:00, instead of that Sunday's get-together). The gathering spots are new orange squares on the map.
+2. **Going to events:** while an event is on, a few free residents head there (log: "Decided to go to a village event … The quiz night is on at the café"). Sociable residents go more often, and the fête draws a crowd. Each one remembers it once ("I went to the quiz night at the café. Tom was there too.").
+3. **Village news:** the bottom of the panel lists the latest town history: who came to each event, couples, break-ups and deaths.
+4. **Romance (slow):** "People" shows "soft spot" when someone has feelings for a neighbour. Feelings grow only between adults who are open to it, are within 12 years of each other's age, already friends, and have chemistry, which most pairs don't. Arthur and Edith aren't looking. The inspector's "Love life" line says single, dating or committed. In the trial run one couple got together on about day 15 and committed two weeks later; in your game it may be different people, later, or nobody.
+5. **Couples:** a couple seek each other out first for chats and invite each other for coffee or a meal at the café. Now and then they have a row (log: "Had a row with …"). Enough rows or fading feelings end in a break-up, and after a week apart they can get back together.
+6. **Loss:** if someone in a couple dies, their partner's top memory is losing them.
+7. **Settings:** set `"romance": false` or `"communityEvents": false` in `settings.json` (see the Ollama setup page) and restart: no new couples, or no events, and the panel says so.
+8. **AI (Ollama running):** a resident's prompt mentions who they're dating or have a soft spot for, and "Go to a village event" is one of the choices while one is on. Warm and playful AI lines help feelings grow; disagreements set them back.
+9. **Old save:** a build 2 save loads without errors, with nobody in a couple and empty village news. Arthur and Edith are "not looking for romance".
+10. **Save and load:** F5 while a couple exists, then F9: the couple, their stage and the village news are as they were.
+
 Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\` (`town.json` plus `town.json.bak`).

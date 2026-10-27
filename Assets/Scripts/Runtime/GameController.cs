@@ -10,6 +10,7 @@ using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Content;
 using TinyTown.Simulation.Persistence;
 using TinyTown.Simulation.Residents;
+using TinyTown.Simulation.Social;
 using TinyTown.Simulation.World;
 using UnityEngine;
 
@@ -147,6 +148,8 @@ namespace TinyTown.Runtime
         private void SetSimulation(TownSimulation simulation)
         {
             Simulation = simulation;
+            simulation.RomanceEnabled = Settings.Simulation.romance;
+            simulation.CommunityEventsEnabled = Settings.Simulation.communityEvents;
             Ai?.Attach(simulation);
             speech.Clear();
             previousLocations.Clear();
@@ -217,6 +220,12 @@ namespace TinyTown.Runtime
                 {
                     // Saves from before hobbies: the starter residents get theirs.
                     StarterTown.AddHobbiesToOlderSave(result.Simulation);
+                }
+
+                if (result.UpgradedFromVersion > 0 && result.UpgradedFromVersion < 6)
+                {
+                    // Saves from before romance: starter residents take their usual openness to it.
+                    StarterTown.AddRomanceToOlderSave(result.Simulation);
                 }
 
                 // Older saves have fewer residents; the newcomers move in at home.
@@ -454,6 +463,7 @@ namespace TinyTown.Runtime
             GUILayout.BeginArea(new Rect(area.x + 14f, 10f, PanelWidth - 28f, Screen.height - 20f));
             GUILayout.Label("The Tiny Town", titleStyle);
             GUILayout.Label($"{Simulation.Time.Weekday}, Day {Simulation.Time.Day}   {Simulation.Time.ClockText}", textStyle);
+            GUILayout.Label(DescribeCalendar(), smallStyle);
 
             GUILayout.BeginHorizontal();
             for (var i = 0; i < Speeds.Length; i++)
@@ -488,6 +498,7 @@ namespace TinyTown.Runtime
             GUILayout.Label($"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", titleStyle);
             GUILayout.Label($"{DescribeLivelihood(r)} · {r.Personality.Describe()}", smallStyle);
             GUILayout.Label($"Birthday: day {HealthRules.BirthdayCycleDay(r)} of each {HealthRules.DaysPerYear}-day year · Hobbies: {(r.Hobbies.Count > 0 ? string.Join(", ", r.Hobbies) : "none")}", smallStyle);
+            GUILayout.Label(DescribeLoveLife(r), smallStyle);
             if (!r.IsAlive)
             {
                 GUILayout.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}. Remembered by the town.", textStyle);
@@ -560,6 +571,13 @@ namespace TinyTown.Runtime
             foreach (var memory in Simulation.Memories.ForResident(r.Id).OrderByDescending(m => m.Time.TotalMinutes).ThenByDescending(m => m.Id).Take(3))
             {
                 GUILayout.Label($"Day {memory.Time.Day}: {memory.Summary}", smallStyle);
+            }
+
+            GUILayout.Space(4f);
+            GUILayout.Label("Village news", textStyle);
+            foreach (var news in Simulation.History.Events.Reverse().Take(3))
+            {
+                GUILayout.Label($"Day {news.Time.Day}: {news.Summary}", smallStyle);
             }
 
             GUILayout.EndScrollView();
@@ -686,7 +704,46 @@ namespace TinyTown.Runtime
                 return $"{other.FirstName}: hasn't met yet";
             }
 
-            return $"{other.FirstName}: {rel.Describe()} (friendship {rel.Friendship:0}, trust {rel.Trust:0}{(rel.Dislike >= 10 ? $", dislike {rel.Dislike:0}" : string.Empty)}), {rel.Interactions} chat(s)";
+            var heart = Simulation.Relationships.PartnerOf(r.Id) == other.Id ? ", partner"
+                : rel.Romance >= RomanceRules.SoftSpot ? $", soft spot ({rel.Romance:0})" : string.Empty;
+            return $"{other.FirstName}: {rel.Describe()} (friendship {rel.Friendship:0}, trust {rel.Trust:0}{(rel.Dislike >= 10 ? $", dislike {rel.Dislike:0}" : string.Empty)}{heart}), {rel.Interactions} chat(s)";
+        }
+
+        private string DescribeLoveLife(Resident r)
+        {
+            var couple = Simulation.Relationships.PartnershipOf(r.Id);
+            if (couple != null)
+            {
+                var partner = Simulation.GetResident(couple.OtherThan(r.Id));
+                return couple.Stage == RomanceStage.Committed
+                    ? $"Love life: committed to {partner?.FirstName} (together since day {couple.Since.Day})"
+                    : $"Love life: dating {partner?.FirstName} since day {couple.Since.Day}";
+            }
+
+            if (!Simulation.RomanceEnabled)
+            {
+                return "Love life: romance is switched off in settings";
+            }
+
+            return r.OpenToRomance ? "Love life: single" : "Love life: not looking for romance";
+        }
+
+        private string DescribeCalendar()
+        {
+            if (!Simulation.CommunityEventsEnabled)
+            {
+                return "Community events are switched off in settings";
+            }
+
+            var on = Simulation.Planner.CurrentEvent(Simulation.Time);
+            if (on != null)
+            {
+                Simulation.World.TryGetObject(on.PlaceObjectId, out var place);
+                return $"On now: {on.Name} at the {place?.Name.ToLowerInvariant()}, until {on.EndMinute / 60:00}:{on.EndMinute % 60:00}";
+            }
+
+            var next = Simulation.World.Calendar.Next(Simulation.Time);
+            return next == null ? "Nothing on the village calendar" : $"Next: {next.Value.evt.Name}, {next.Value.start.Weekday} (day {next.Value.start.Day}) at {next.Value.start.ClockText}";
         }
 
         private static string Words(string pascal) =>

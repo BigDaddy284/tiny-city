@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using TinyTown.Simulation.Community;
 using TinyTown.Simulation.Economy;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
@@ -41,9 +43,13 @@ namespace TinyTown.Simulation.Content
         public const string BakeryId = "biz-bakery";
         public const string ClinicId = "biz-clinic";
         public const string GroceriesItemId = "groceries";
+        public const string VillageGreenId = "obj-village-green";
+        public const string PondLawnId = "obj-village-pond-lawn";
+        public const string QuizCornerId = "obj-cafe-quiz-corner";
 
         // T tree, . grass, = path, H house wall, ~ pond, g garden bed, G garden plot (work), w garden tap,
-        // b/p park bench, e/r exercise spot, W workshop bench (work), a easel, h chess table, f fishing spot. Doors: D the first three cottages (in reading
+        // b/p park bench, e/r exercise spot, W workshop bench (work), a easel, h chess table, f fishing spot,
+        // q village green and j pond-side lawn (gathering spots for community events). Doors: D the first three cottages (in reading
         // order), 4-9 and 0 cottages 4-10, S store, C cafe, K bakery, L clinic.
         // The top-left 27 x 15 corner is the Phase 3 village, unchanged so saved positions stay valid.
         private static readonly string[] VillageRows =
@@ -64,7 +70,7 @@ namespace TinyTown.Simulation.Content
             "T.HHDHH........=.............HHKHH..HHLHH=.T",
             "T...======================================.T",
             "T..............=.........................=.T",
-            "T..............=..................T......=.T",
+            "T..............=........q.........T......=.T",
             "T.HHHHH..HHHHH.=HHHHH..HHHHH.............=.T",
             "T.HHHHH..HHHHH.=HHHHH..HHHHH..T..........=.T",
             "T.HHHHH..HHHHH.=HHHHH..HHHHH.............=.T",
@@ -72,7 +78,7 @@ namespace TinyTown.Simulation.Content
             "T.========================================.T",
             "T.HHHHH..HHHHH..HHHHH.=................T...T",
             "T.HHHHH..HHHHH..HHHHH.=.....r...~f.........T",
-            "T.HHHHH..HHHHH..HHHHH.=........~~~.........T",
+            "T.HHHHH..HHHHH..HHHHH.=........~~~...j.....T",
             "T.HH8HH..HH9HH..HH0HH.=.............p...T..T",
             "T.=====================....................T",
             "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
@@ -99,12 +105,12 @@ namespace TinyTown.Simulation.Content
             "####D####",
         };
 
-        // y tables, c counter (work), t toilet, s sink, u piano.
+        // y tables, c counter (work), t toilet, s sink, u piano, q quiz corner (gathering spot).
         private static readonly string[] CafeRows =
         {
             "###########",
             "#y...y..#t#",
-            "#.......#.#",
+            "#...q...#.#",
             "#........u#",
             "#...c...s.#",
             "#####D#####",
@@ -148,6 +154,8 @@ namespace TinyTown.Simulation.Content
             ['a'] = TileType.Grass,
             ['h'] = TileType.Path,
             ['f'] = TileType.Grass,
+            ['q'] = TileType.Grass,
+            ['j'] = TileType.Grass,
             ['S'] = TileType.Door,
             ['C'] = TileType.Door,
             ['K'] = TileType.Door,
@@ -211,6 +219,8 @@ namespace TinyTown.Simulation.Content
                 ['a'] = ("obj-village-easel", "Easel by the pond", ObjectType.Easel),
                 ['h'] = ("obj-village-chess", "Chess table", ObjectType.ChessTable),
                 ['f'] = ("obj-village-fishing", "Fishing spot", ObjectType.FishingSpot),
+                ['q'] = (VillageGreenId, "Village green", ObjectType.GatheringSpot),
+                ['j'] = (PondLawnId, "Pond-side lawn", ObjectType.GatheringSpot),
             });
 
             // Benches share letters, so give them ids by position.
@@ -248,6 +258,7 @@ namespace TinyTown.Simulation.Content
                 ['t'] = ("obj-cafe-toilet", "Café toilet", ObjectType.Toilet),
                 ['s'] = ("obj-cafe-sink", "Café sink", ObjectType.Sink),
                 ['u'] = ("obj-cafe-piano", "Café piano", ObjectType.Piano),
+                ['q'] = (QuizCornerId, "Café", ObjectType.GatheringSpot),
             });
             objects.Add(new WorldObject("obj-cafe-table-window", "Window table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'y', 0)));
             objects.Add(new WorldObject("obj-cafe-table-corner", "Corner table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'y', 1)));
@@ -265,7 +276,7 @@ namespace TinyTown.Simulation.Content
             objects.Add(new WorldObject("obj-clinic-bed-1", "Clinic bed", ObjectType.ClinicBed, Find(ClinicMapId, ClinicRows, 'm', 0)));
             objects.Add(new WorldObject("obj-clinic-bed-2", "Clinic bed", ObjectType.ClinicBed, Find(ClinicMapId, ClinicRows, 'm', 1)));
 
-            return new TownWorld(TownId, "The Tiny Town", maps, objects, portals, CreateBusinesses());
+            return new TownWorld(TownId, "The Tiny Town", maps, objects, portals, CreateBusinesses(), new CommunityCalendar(CreateCommunityEvents()));
         }
 
         private static IEnumerable<Business> CreateBusinesses()
@@ -286,6 +297,20 @@ namespace TinyTown.Simulation.Content
             yield return new Business(ClinicId, "Clinic", ClinicMapId, GameTime.MinuteOfDayFor(9, 0), GameTime.MinuteOfDayFor(17, 0), Job.Weekdays, new ShopItem[0]);
         }
 
+        /// <summary>
+        /// The village calendar: a Sunday afternoon get-together by the pond, a Wednesday quiz night at the café, and
+        /// the village fête once a year (which replaces that Sunday's get-together).
+        /// </summary>
+        public static IEnumerable<CommunityEvent> CreateCommunityEvents()
+        {
+            yield return new CommunityEvent("get-together", "Sunday get-together", PondLawnId, Minute(15), Minute(17), days: 1 << (int)Weekday.Sunday, turnout: 0.45);
+            yield return new CommunityEvent("quiz-night", "Quiz night", QuizCornerId, Minute(18), Minute(20), days: 1 << (int)Weekday.Wednesday, turnout: 0.4);
+            yield return new CommunityEvent("village-fete", "Village fête", VillageGreenId, Minute(14), Minute(17), yearDay: FeteDayOfYear, turnout: 0.8);
+        }
+
+        /// <summary>The fête's day in each 28-day year: the second Sunday.</summary>
+        public const int FeteDayOfYear = 14;
+
         /// <summary>Mabel, the original resident.</summary>
         public static Resident CreateResident(TownWorld world) => CreateResidents(world)[0];
 
@@ -303,6 +328,7 @@ namespace TinyTown.Simulation.Content
                 var r = new Resident(d.id, d.first, d.last, d.age, d.birthday, d.colour, d.personality, d.homeMapId, d.bedId, d.job, Bed(world, d.bedId), needs);
                 ApplyFinances(r, d);
                 r.SetHobbies(HobbiesOf(d.id));
+                r.OpenToRomance = d.openToRomance;
                 residents.Add(r);
             }
 
@@ -328,6 +354,7 @@ namespace TinyTown.Simulation.Content
             public long rent;
             public long income;
             public string incomeLabel = string.Empty;
+            public bool openToRomance = true;
         }
 
         private static int Minute(int hour, int minute = 0) => GameTime.MinuteOfDayFor(hour, minute);
@@ -345,7 +372,7 @@ namespace TinyTown.Simulation.Content
             },
             new Design
             {
-                id = ArthurId, first = "Arthur", last = "Bramble", age = 71, birthday = 290, colour = "#5B7DB1",
+                id = ArthurId, first = "Arthur", last = "Bramble", age = 71, birthday = 290, colour = "#5B7DB1", openToRomance = false,
                 personality = new Personality(active: 0.3, sociable: 0.8, tidy: 0.55, bookish: 0.75),
                 homeMapId = WillowCottageMapId, bedId = "obj-cottage2-bed",
                 needsLevel = 70, needAdjustments = { [NeedType.Energy] = 85, [NeedType.Social] = 45 },
@@ -415,7 +442,7 @@ namespace TinyTown.Simulation.Content
             },
             new Design
             {
-                id = EdithId, first = "Edith", last = "Crumb", age = 82, birthday = 5, colour = "#B0A8A0",
+                id = EdithId, first = "Edith", last = "Crumb", age = 82, birthday = 5, colour = "#B0A8A0", openToRomance = false,
                 personality = new Personality(active: 0.15, sociable: 0.6, tidy: 0.7, bookish: 0.8),
                 homeMapId = "map-cottage-10", bedId = "obj-cottage10-bed",
                 needsLevel = 72, needAdjustments = { [NeedType.Energy] = 80 },
@@ -452,6 +479,19 @@ namespace TinyTown.Simulation.Content
                 if (r.Hobbies.Count == 0)
                 {
                     r.SetHobbies(HobbiesOf(r.Id));
+                }
+            }
+        }
+
+        /// <summary>Residents from a save older than version 6 take their starter openness to romance; newcomers default to open.</summary>
+        public static void AddRomanceToOlderSave(TownSimulation simulation)
+        {
+            foreach (var r in simulation.Residents)
+            {
+                var design = Designs.FirstOrDefault(d => d.id == r.Id);
+                if (design != null)
+                {
+                    r.OpenToRomance = design.openToRomance;
                 }
             }
         }

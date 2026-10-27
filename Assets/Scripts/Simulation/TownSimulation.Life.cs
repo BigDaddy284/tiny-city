@@ -1,6 +1,7 @@
 using System.Linq;
 using TinyTown.Simulation.Activities;
 using TinyTown.Simulation.Health;
+using TinyTown.Simulation.History;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Social;
@@ -144,8 +145,11 @@ namespace TinyTown.Simulation
             r.CauseOfDeath = cause;
             r.UnpaidWorkMinutes = 0;
             r.AddLog(Time, $"Died of {cause}");
+            var partnerId = Relationships.PartnerOf(r.Id);
+            Widow(r);
+            History.Add(Time, TownEventKind.Death, $"{r.FullName} died of {cause}, aged {r.AgeYears}.", new[] { r.Id });
 
-            foreach (var other in residents.Where(o => o.IsAlive && o != r))
+            foreach (var other in residents.Where(o => o.IsAlive && o != r && o.Id != partnerId))
             {
                 var met = Relationships.TryGet(other.Id, r.Id, out var rel) && rel.HaveMet;
                 var close = met && rel.Friendship >= SocialRules.GoodFriendsAt;

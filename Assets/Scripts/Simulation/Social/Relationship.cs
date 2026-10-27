@@ -33,6 +33,12 @@ namespace TinyTown.Simulation.Social
 
         public double Dislike { get; private set; }
 
+        /// <summary>Romantic feelings, 0–100. Only grows between compatible adults with chemistry; see <see cref="RomanceRules"/>.</summary>
+        public double Romance { get; private set; }
+
+        /// <summary>When these two last broke up, or <see cref="Never"/>.</summary>
+        public long BrokeUpMinute { get; internal set; } = Never;
+
         /// <summary>Finished conversations together.</summary>
         public int Interactions { get; internal set; }
 
@@ -59,16 +65,18 @@ namespace TinyTown.Simulation.Social
                 : "barely knows";
         }
 
-        internal void Change(double friendship = 0, double trust = 0, double respect = 0, double dislike = 0)
+        internal void Change(double friendship = 0, double trust = 0, double respect = 0, double dislike = 0, double romance = 0)
         {
+            Romance = Clamp(Romance + romance);
             Friendship = Clamp(Friendship + friendship);
             Trust = Clamp(Trust + trust);
             Respect = Clamp(Respect + respect);
             Dislike = Clamp(Dislike + dislike);
         }
 
-        internal void Set(double friendship, double trust, double respect, double dislike)
+        internal void Set(double friendship, double trust, double respect, double dislike, double romance = 0)
         {
+            Romance = Clamp(romance);
             Friendship = Clamp(friendship);
             Trust = Clamp(trust);
             Respect = Clamp(respect);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TinyTown.Simulation.Community;
 using TinyTown.Simulation.Economy;
 using TinyTown.Simulation.Health;
 using TinyTown.Simulation.Residents;
@@ -208,7 +209,21 @@ namespace TinyTown.Simulation.Activities
         /// <summary>Whether the resident can use this object for this activity now: available, and affordable if it costs anything.</summary>
         public bool CanDo(Resident resident, ActivityDefinition activity, WorldObject obj, GameTime time) =>
             activity.CanUse(obj) && (activity.Hobby == null || resident.Hobbies.Contains(activity.Hobby))
+            && (activity != ActivityCatalog.AttendEvent || EventAt(obj, time) != null)
             && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _));
+
+        /// <summary>Whether the calendar's community events take place. Turned off in settings, nobody can attend one.</summary>
+        public bool CommunityEventsEnabled { get; set; } = true;
+
+        /// <summary>The community event on now, or null (also when events are switched off).</summary>
+        public CommunityEvent CurrentEvent(GameTime time) => CommunityEventsEnabled ? world.Calendar.OnAt(time) : null;
+
+        /// <summary>The event on now at this spot, or null.</summary>
+        public CommunityEvent EventAt(WorldObject obj, GameTime time)
+        {
+            var current = CurrentEvent(time);
+            return current != null && obj != null && current.PlaceObjectId == obj.Id ? current : null;
+        }
 
         /// <summary>A work day and time, and well enough to go: flu and worse keep people at home.</summary>
         public static bool ShouldWork(Resident resident, GameTime time) => IsWorkTime(resident, time) && HealthRules.CanWork(resident);
@@ -264,6 +279,7 @@ namespace TinyTown.Simulation.Activities
             // Null means every need is comfortable and nothing is due; the simulation lets the resident take it easy.
             return BestScored(resident, time, comfortOnly: true)
                 ?? ShoppingChoice(resident, time)
+                ?? EventChoice(resident, time)
                 ?? BestScored(resident, time, comfortOnly: false);
         }
 
@@ -305,6 +321,25 @@ namespace TinyTown.Simulation.Activities
                 : null;
         }
 
+        /// <summary>
+        /// Whether a resident fancies going along to the event that's on. Decided once per resident and event by
+        /// <see cref="Chance"/>, more likely for sociable people, so the same people don't always turn up.
+        /// </summary>
+        public bool FanciesGoing(Resident resident, CommunityEvent evt, int day) =>
+            Chance.Roll(resident.Id + ":" + evt.Id, day, 30) < evt.Turnout * (0.5 + resident.Personality.Sociable);
+
+        private PlanChoice EventChoice(Resident resident, GameTime time)
+        {
+            var evt = CurrentEvent(time);
+            if (evt == null || !world.TryGetObject(evt.PlaceObjectId, out var place) || !FanciesGoing(resident, evt, time.Day)
+                || !CanDo(resident, ActivityCatalog.AttendEvent, place, time) || pathfinder.Distance(resident.Location, place.Location) == Pathfinder.Unreachable)
+            {
+                return null;
+            }
+
+            return new PlanChoice(ActivityCatalog.AttendEvent, place, $"The {evt.Name.ToLowerInvariant()} is on at the {place.Name.ToLowerInvariant()}", PlanPriority.Leisure);
+        }
+
         /// <summary>A trip to the shop when groceries are running low and the shop can serve them.</summary>
         private PlanChoice ShoppingChoice(Resident resident, GameTime time)
         {
@@ -328,7 +363,7 @@ namespace TinyTown.Simulation.Activities
             var options = new List<FreeTimeOption>();
             foreach (var activity in ActivityCatalog.All)
             {
-                var errand = activity == ActivityCatalog.BuyGroceries && resident.Groceries < ShoppingWorthwhile;
+                var errand = (activity == ActivityCatalog.BuyGroceries && resident.Groceries < ShoppingWorthwhile) || activity == ActivityCatalog.AttendEvent;
                 if (!errand && (activity.PrimaryNeed == null || (activity.Kind != ActivityKind.Care && activity.Kind != ActivityKind.Leisure)
                     || resident.Needs[activity.PrimaryNeed.Value] > Needs.Max - MinimumLeisureDeficit))
                 {
@@ -398,6 +433,8 @@ namespace TinyTown.Simulation.Activities
                     return !IsSleepTime(time) && resident.Needs[NeedType.Energy] >= RestedEnergy;
                 case ActivityKind.Work:
                     return resident.MinutesRemaining <= 0 || !ShouldWork(resident, time);
+                case ActivityKind.Leisure when activity == ActivityCatalog.AttendEvent:
+                    return resident.MinutesRemaining <= 0 || CurrentEvent(time) == null;
                 default:
                     return resident.MinutesRemaining <= 0
                         || (activity.PrimaryNeed != null && resident.Needs[activity.PrimaryNeed.Value] >= Needs.Max - 0.5);

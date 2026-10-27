@@ -37,7 +37,7 @@ namespace TinyTown.Simulation.Activities
         public static readonly ActivityDefinition CafeMeal = new ActivityDefinition(
             "cafe-meal", "Eat at the café", "having a meal at the café", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.CafeTable }, 40,
             new Dictionary<NeedType, double> { [NeedType.Hunger] = 2.4, [NeedType.Thirst] = 0.6, [NeedType.Social] = 0.5, [NeedType.Fun] = 0.6 },
-            itemId: "cafe-meal");
+            itemId: "cafe-meal", shared: true);
 
         public static readonly ActivityDefinition Pastry = new ActivityDefinition(
             "pastry", "Buy a pastry", "enjoying a pastry", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.BakeryDisplay }, 10,
@@ -77,7 +77,7 @@ namespace TinyTown.Simulation.Activities
         public static readonly ActivityDefinition Coffee = new ActivityDefinition(
             "coffee", "Have a coffee", "having a coffee at the café", ActivityKind.Leisure, NeedType.Fun, new[] { ObjectType.CafeTable }, 25,
             new Dictionary<NeedType, double> { [NeedType.Fun] = 1.0, [NeedType.Thirst] = 1.5, [NeedType.Social] = 0.5, [NeedType.Energy] = 0.1 },
-            itemId: "coffee");
+            itemId: "coffee", shared: true);
 
         /// <summary>Stocking up the kitchen at home. An errand: chosen when groceries run low, not to restore a need.</summary>
         public static readonly ActivityDefinition BuyGroceries = new ActivityDefinition(
@@ -123,11 +123,19 @@ namespace TinyTown.Simulation.Activities
             "chat", "Chat", "chatting", ActivityKind.Social, NeedType.Social, new ObjectType[0], 20,
             new Dictionary<NeedType, double> { [NeedType.Social] = 2.2, [NeedType.Fun] = 0.4 });
 
+        /// <summary>
+        /// Going to a community event on the calendar. Only possible at the event's spot while it's on, and lasts until
+        /// it ends; see <see cref="Community.CommunityCalendar"/>.
+        /// </summary>
+        public static readonly ActivityDefinition AttendEvent = new ActivityDefinition(
+            "attend-event", "Go to a village event", "joining in at a village event", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.GatheringSpot }, 3 * 60,
+            new Dictionary<NeedType, double> { [NeedType.Social] = 1.2, [NeedType.Fun] = 1.0 });
+
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
             Sleep, Eat, Snack, CafeMeal, Pastry, Drink, UseToilet, Shower, Work, Exercise, Read, WatchTown, Coffee, BuyGroceries, Chat,
-            Rest, SeeDoctor, Paint, PlayPiano, Chess, Fish, Garden, Bake, Knit,
+            Rest, SeeDoctor, Paint, PlayPiano, Chess, Fish, Garden, Bake, Knit, AttendEvent,
         };
 
         /// <summary>Every hobby id, from the hobby activities.</summary>
