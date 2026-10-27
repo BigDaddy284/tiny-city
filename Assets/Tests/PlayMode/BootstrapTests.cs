@@ -20,5 +20,24 @@ namespace TinyTown.Tests.PlayMode
             Assert.That(bootstrap.Settings, Is.Not.Null);
             Assert.That(bootstrap.Settings.Validate(), Is.Empty);
         }
+
+        [UnityTest]
+        public IEnumerator Game_StartsTown_DrawsMap_AndResidentLivesTheirDay()
+        {
+            yield return null;
+            yield return null;
+
+            var game = Object.FindAnyObjectByType<GameController>();
+            Assert.That(game, Is.Not.Null, "GameController was not created.");
+            Assert.That(game.Simulation, Is.Not.Null);
+            Assert.That(Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None).Length, Is.GreaterThan(50), "Map was not drawn.");
+
+            var before = game.Simulation.Time.TotalMinutes;
+            game.AdvanceMinutes(180);
+            yield return null;
+
+            Assert.That(game.Simulation.Time.TotalMinutes - before, Is.GreaterThanOrEqualTo(180));
+            Assert.That(game.Simulation.Residents[0].Log, Is.Not.Empty);
+        }
     }
 }

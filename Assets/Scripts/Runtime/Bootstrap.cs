@@ -5,8 +5,8 @@ using UnityEngine;
 namespace TinyTown.Runtime
 {
     /// <summary>
-    /// Entry point created automatically when the game starts, so the boot scene needs no
-    /// hand-placed objects. Phase 0 only shows that the build runs and which settings it loaded.
+    /// Entry point created automatically when the game starts, so the boot scene needs no hand-placed objects.
+    /// Sets up the camera, loads settings and starts the <see cref="GameController"/>.
     /// </summary>
     public sealed class Bootstrap : MonoBehaviour
     {
@@ -15,7 +15,10 @@ namespace TinyTown.Runtime
         private static readonly Color BackgroundColour = new Color(0.98f, 0.91f, 0.78f);
 
         public GameSettings Settings { get; private set; }
+
         public IReadOnlyList<string> SettingsProblems { get; private set; } = new List<string>();
+
+        public GameController Game { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreateOnStartup()
@@ -36,6 +39,8 @@ namespace TinyTown.Runtime
             Settings = SettingsLoader.Load(out var problems);
             SettingsProblems = problems;
             Debug.Log($"[TinyTown] Started version {Application.version}. Ollama: {Settings.ollama.endpoint} ({Settings.ollama.model}).");
+            Game = gameObject.AddComponent<GameController>();
+            Game.Settings = Settings;
         }
 
         private static void EnsureCamera()
@@ -52,25 +57,6 @@ namespace TinyTown.Runtime
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = BackgroundColour;
             cameraObject.transform.position = new Vector3(0f, 0f, -10f);
-        }
-
-        private void OnGUI()
-        {
-            var title = new GUIStyle(GUI.skin.label) { fontSize = 36, fontStyle = FontStyle.Bold };
-            var body = new GUIStyle(GUI.skin.label) { fontSize = 18 };
-            title.normal.textColor = body.normal.textColor = new Color(0.30f, 0.20f, 0.12f);
-
-            GUILayout.BeginArea(new Rect(40, 40, Screen.width - 80, Screen.height - 80));
-            GUILayout.Label("The Tiny Town", title);
-            GUILayout.Label($"Phase 0 foundation build, version {Application.version}", body);
-            GUILayout.Space(12);
-            GUILayout.Label($"Ollama endpoint: {Settings?.ollama.endpoint}", body);
-            GUILayout.Label($"Ollama model: {Settings?.ollama.model}", body);
-            foreach (var problem in SettingsProblems)
-            {
-                GUILayout.Label($"Settings warning: {problem}", body);
-            }
-            GUILayout.EndArea();
         }
     }
 }
