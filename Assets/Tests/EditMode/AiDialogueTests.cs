@@ -48,6 +48,17 @@ namespace TinyTown.Tests.EditMode
             ai.Update(now);
         }
 
+        /// <summary>Runs at 1x until the first chat has ended (waiting for AI lines pauses the chat clock).</summary>
+        private void RunUntilChatEnds(AiService ai, TownSimulation sim, int maxMinutes = 240)
+        {
+            for (var i = 0; i < maxMinutes && (sim.ActiveConversations.Count > 0 || !sim.Conversations.All.Any(c => c.Kind == ConversationKind.Chat)); i++)
+            {
+                Run(ai, sim, 1);
+            }
+
+            Assert.That(sim.ActiveConversations, Is.Empty, "the chat ended within the time limit");
+        }
+
         private static string Line(string say, string tone = "warm", string topic = "the roses", bool end = false) =>
             "{\"say\":" + FakeAiTransport.Quote(say) + ",\"tone\":\"" + tone + "\",\"topic\":\"" + topic + "\",\"end\":" + (end ? "true" : "false") + "}";
 
@@ -89,7 +100,7 @@ namespace TinyTown.Tests.EditMode
             var transport = FakeAiTransport.WorkingOllama(body => body.Contains(DialogueMarker) ? reply : Relax);
             var ai = Connected(sim, transport);
 
-            Run(ai, sim, SocialRules.MaxConversationMinutes + 5);
+            RunUntilChatEnds(ai, sim);
 
             var chat = sim.Conversations.All.Single(c => c.Kind == ConversationKind.Chat);
             Assert.That(chat.Lines.Count, Is.GreaterThanOrEqualTo(SocialRules.MinLines));
@@ -105,12 +116,74 @@ namespace TinyTown.Tests.EditMode
             var transport = FakeAiTransport.WorkingOllama(body => body.Contains(DialogueMarker) ? null : Relax);
             var ai = Connected(sim, transport);
 
-            Run(ai, sim, SocialRules.MaxConversationMinutes + 5);
+            RunUntilChatEnds(ai, sim);
 
             var chat = sim.Conversations.All.Single(c => c.Kind == ConversationKind.Chat);
             Assert.That(chat.Lines.Count, Is.GreaterThanOrEqualTo(SocialRules.MinLines));
             Assert.That(chat.Lines.Any(l => l.FromAi), Is.False);
             Assert.That(sim.ActiveConversations, Is.Empty);
+        }
+
+        [Test]
+        public void AtTenTimesSpeed_SlowishAiLinesAreStillUsed()
+        {
+            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var transport = FakeAiTransport.WorkingOllama(body => body.Contains(DialogueMarker) ? null : Relax);
+            var ai = Connected(sim, transport);
+            var answerAfter = 0.8;
+            var sentAt = new System.Collections.Generic.Dictionary<FakeAiCall, double>();
+
+            // 10x: ten game minutes per real second. Each line takes the AI 0.8 real seconds, i.e. 8 game minutes.
+            for (var step = 0; step < 3000 && (sim.ActiveConversations.Count > 0 || !sim.Conversations.All.Any(c => c.Kind == ConversationKind.Chat)); step++)
+            {
+                foreach (var call in transport.Calls.Where(c => !c.IsDone && c.Body != null && c.Body.Contains(DialogueMarker)))
+                {
+                    if (!sentAt.ContainsKey(call))
+                    {
+                        sentAt[call] = now;
+                    }
+                    else if (now - sentAt[call] >= answerAfter)
+                    {
+                        call.Succeed(FakeAiTransport.ChatReply(Line("Lovely weather for it!")));
+                    }
+                }
+
+                ai.Update(now);
+                sim.Tick();
+                now += 0.1;
+            }
+
+            var chat = sim.Conversations.All.Single(c => c.Kind == ConversationKind.Chat);
+            Assert.That(chat.Lines.Count, Is.InRange(SocialRules.MinLines, SocialRules.MaxLines));
+            Assert.That(chat.Lines.All(l => l.FromAi), Is.True, "no line fell back to small talk");
+        }
+
+        [Test]
+        public void LineThatNeverComes_UsesSmallTalkAfterTheRealTimeWait()
+        {
+            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var transport = FakeAiTransport.WorkingOllama(body => body.Contains(DialogueMarker) ? null : Relax);
+            var ai = Connected(sim, transport);
+            ConversationSession session = null;
+            for (var i = 0; i < 10 && (session == null || !session.AwaitingLine); i++)
+            {
+                Run(ai, sim, 1);
+                session = sim.ActiveConversations.FirstOrDefault();
+            }
+
+            Assert.That(session.AwaitingLine, Is.True);
+            var asked = now;
+            while (now - asked < AiService.LineWaitSeconds - 0.5)
+            {
+                ai.Update(now);
+                now += 0.25;
+            }
+
+            Assert.That(session.Lines, Is.Empty, "still waiting, even though the game is paused");
+            ai.Update(now + 1);
+            Assert.That(session.Lines.Count, Is.EqualTo(1));
+            Assert.That(session.Lines[0].FromAi, Is.False);
+            Assert.That(ai.RecentEvents.Last(), Does.Contain("small talk"));
         }
 
         [Test]

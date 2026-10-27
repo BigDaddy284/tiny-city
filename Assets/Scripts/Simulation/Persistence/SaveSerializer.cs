@@ -546,6 +546,7 @@ namespace TinyTown.Simulation.Persistence
             ["place"] = c.Place,
             ["topic"] = c.Topic,
             ["nextLineMinutes"] = c.NextLineAt,
+            ["waitedMinutes"] = c.WaitedMinutes,
             ["lines"] = WriteLines(c.Lines),
         };
 
@@ -572,6 +573,8 @@ namespace TinyTown.Simulation.Persistence
                 var session = new ConversationSession(id, participants[0], participants[1], new GameTime((long)started), maxLines, TextRules.Clean(GetString(data, "place"), 60));
                 session.Lines.AddRange(ReadLines(data, participants).Take(maxLines - 1));
                 session.Topic = SocialRules.CleanTopic(GetString(data, "topic"));
+                var waited = GetDouble(data, "waitedMinutes", 0);
+                session.WaitedMinutes = waited >= 0 && waited == Math.Floor(waited) && waited <= simulation.Time.TotalMinutes - started ? (long)waited : 0;
                 var next = GetDouble(data, "nextLineMinutes", simulation.Time.TotalMinutes);
                 session.NextLineAt = next >= 0 && next == Math.Floor(next) && next <= simulation.Time.TotalMinutes + SocialRules.MinutesPerLine
                     ? (long)next

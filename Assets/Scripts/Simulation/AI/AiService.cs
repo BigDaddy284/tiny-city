@@ -35,6 +35,12 @@ namespace TinyTown.Simulation.AI
 
         public const int MaxEvents = 20;
 
+        /// <summary>
+        /// Real seconds a conversation line waits for the AI before built-in small talk is used. Measured in real time,
+        /// not game time, so AI lines keep coming at 4x and 10x speed (the conversation pauses while it waits).
+        /// </summary>
+        public const double LineWaitSeconds = 6;
+
         private enum CheckPhase
         {
             ListModels,
@@ -45,7 +51,7 @@ namespace TinyTown.Simulation.AI
         private readonly IAiTransport transport;
         private readonly Dictionary<string, long> requestedDecisions = new Dictionary<string, long>();
         private readonly Dictionary<string, int> requestedReflections = new Dictionary<string, int>();
-        private readonly Dictionary<string, long> requestedLines = new Dictionary<string, long>();
+        private readonly Dictionary<string, (long lineId, double askedAt)> requestedLines = new Dictionary<string, (long, double)>();
         private readonly List<string> events = new List<string>();
         private IAiCall checkCall;
         private CheckPhase checkPhase;
@@ -299,13 +305,21 @@ namespace TinyTown.Simulation.AI
                 }
             }
 
-            foreach (var session in sim.ActiveConversations)
+            foreach (var session in sim.ActiveConversations.ToList())
             {
-                if (session.AwaitingLine
-                    && (!requestedLines.TryGetValue(session.Id, out var askedLine) || askedLine != session.LineRequestId))
+                if (!session.AwaitingLine)
                 {
-                    requestedLines[session.Id] = session.LineRequestId;
+                    continue;
+                }
+
+                if (!requestedLines.TryGetValue(session.Id, out var asked) || asked.lineId != session.LineRequestId)
+                {
+                    requestedLines[session.Id] = (session.LineRequestId, now);
                     Queue.Enqueue(LineRequest(sim, session), now);
+                }
+                else if (now - asked.askedAt > LineWaitSeconds && sim.UseSmallTalk(session.Id, asked.lineId))
+                {
+                    AddEvent($"{sim.GetResident(session.Lines.Last().SpeakerId)?.FirstName} used small talk: no AI line within {LineWaitSeconds:0}s");
                 }
             }
 
@@ -349,7 +363,13 @@ namespace TinyTown.Simulation.AI
                     }
                 },
                 () => Simulation == sim && sim.GetConversation(session.Id) == session && session.AwaitingLine && session.LineRequestId == lineId,
-                reason => AddEvent($"{speaker.FirstName} used small talk: {reason}"));
+                reason =>
+                {
+                    if (sim.UseSmallTalk(session.Id, lineId))
+                    {
+                        AddEvent($"{speaker.FirstName} used small talk: {reason}");
+                    }
+                });
         }
 
         private AiRequest DecisionRequest(TownSimulation sim, Resident r)
