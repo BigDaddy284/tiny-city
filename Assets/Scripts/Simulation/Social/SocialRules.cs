@@ -19,11 +19,17 @@ namespace TinyTown.Simulation.Social
         /// <summary>Game minutes between lines.</summary>
         public const int MinutesPerLine = 2;
 
-        /// <summary>No conversation lasts longer than this, whatever happens.</summary>
+        /// <summary>
+        /// No conversation lasts longer than this many minutes of talking. Minutes spent waiting for an AI line don't
+        /// count, so a chat at high speed isn't cut short by the AI's real-time answer speed.
+        /// </summary>
         public const int MaxConversationMinutes = 40;
 
-        /// <summary>Game minutes the conversation waits for an AI line before using built-in small talk.</summary>
-        public const int LineWaitMinutes = 4;
+        /// <summary>
+        /// Safety net in game minutes for one AI line. The AI service normally gives up much sooner, after
+        /// <c>AiService.LineWaitSeconds</c> of real time, so the wait is the same at every game speed.
+        /// </summary>
+        public const int LineWaitMinutes = 60;
 
         /// <summary>The same two residents won't start another conversation within this many game minutes.</summary>
         public const int PairCooldownMinutes = 180;

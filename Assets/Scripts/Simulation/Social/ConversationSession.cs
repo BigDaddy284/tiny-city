@@ -46,6 +46,9 @@ namespace TinyTown.Simulation.Social
         /// <summary>The id an AI line must quote; changes for every line.</summary>
         public long LineRequestId { get; internal set; }
 
+        /// <summary>Game minutes spent waiting for AI lines; they don't count towards <see cref="SocialRules.MaxConversationMinutes"/>.</summary>
+        public long WaitedMinutes { get; internal set; }
+
         /// <summary>Game minute at which built-in small talk is used instead of the AI.</summary>
         public long LineDeadline { get; internal set; }
 

@@ -444,6 +444,22 @@ namespace TinyTown.Simulation
             return DecisionOutcome.Applied;
         }
 
+        /// <summary>
+        /// Gives up on the AI for this line and uses built-in small talk now. Called by the AI service when an answer
+        /// is late in real time or unusable. Returns false if the line was already said or the request is stale.
+        /// </summary>
+        public bool UseSmallTalk(string conversationId, long lineRequestId)
+        {
+            var session = GetConversation(conversationId);
+            if (session == null || !session.AwaitingLine || session.LineRequestId != lineRequestId || lineRequestId <= 0)
+            {
+                return false;
+            }
+
+            AddSmallTalk(session);
+            return true;
+        }
+
         private void StartNextActivity(Resident r)
         {
             var choice = Planner.Choose(r, Time);
@@ -622,7 +638,7 @@ namespace TinyTown.Simulation
         {
             foreach (var session in sessions.ToList())
             {
-                if (Time.TotalMinutes - session.Started.TotalMinutes >= SocialRules.MaxConversationMinutes)
+                if (Time.TotalMinutes - session.Started.TotalMinutes - session.WaitedMinutes >= SocialRules.MaxConversationMinutes)
                 {
                     EndConversation(session, null, "they'd been talking for ages");
                     continue;
@@ -630,6 +646,7 @@ namespace TinyTown.Simulation
 
                 if (session.AwaitingLine)
                 {
+                    session.WaitedMinutes++;
                     if (!AiDecisionsEnabled || Time.TotalMinutes >= session.LineDeadline)
                     {
                         AddSmallTalk(session);

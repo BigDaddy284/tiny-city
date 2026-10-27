@@ -472,9 +472,12 @@ namespace TinyTown.Tests.EditMode
                 sim.Tick();
             }
 
+            sim.Advance(3);
+            Assert.That(session.WaitedMinutes, Is.EqualTo(3));
             var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), StarterTown.CreateWorld()).Simulation;
 
             var restored = loaded.GetConversation(session.Id);
+            Assert.That(restored.WaitedMinutes, Is.EqualTo(3), "waiting time still doesn't count towards the chat's length");
             Assert.That(restored.AwaitingLine, Is.False);
             Assert.That(restored.LineRequestId, Is.EqualTo(0));
             loaded.Tick();
