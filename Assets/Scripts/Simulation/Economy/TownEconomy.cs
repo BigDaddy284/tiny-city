@@ -52,22 +52,27 @@ namespace TinyTown.Simulation.Economy
                 return false;
             }
 
-            if (activity.ItemId == null)
+            if (activity.ItemId == null && !activity.NeedsOpenBusiness)
             {
                 return true;
             }
 
             var shop = obj == null ? null : BusinessAt(obj.Location);
+            if (shop != null && !shop.Business.IsOpen(time))
+            {
+                reason = $"the {shop.Business.Name.ToLowerInvariant()} was closed";
+                return false;
+            }
+
+            if (activity.ItemId == null)
+            {
+                return true;
+            }
+
             var item = shop?.Business.Item(activity.ItemId);
             if (item == null)
             {
                 reason = "it isn't sold there";
-                return false;
-            }
-
-            if (!shop.Business.IsOpen(time))
-            {
-                reason = $"the {shop.Business.Name.ToLowerInvariant()} was closed";
                 return false;
             }
 

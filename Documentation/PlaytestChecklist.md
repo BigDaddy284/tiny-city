@@ -62,4 +62,18 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 10. **Old save:** a Phase 3 save loads without errors; the status line says seven new neighbours moved in, and Mabel, Arthur and Nell get their starting money, groceries and wages.
 11. **Save and load:** F5, carry on for a few hours, then F9: money, food at home, shop stock and the recent payments are as they were at the save.
 
+## Phase 4, build 2: hobbies, health and ageing
+
+1. **Hobbies:** each resident's inspector shows two hobbies. New spots on the map: an easel by the top pond, a chess table in the village square, a fishing spot by the park pond, and a piano in the café. Residents only use the spots for their own hobbies (knitting uses the armchair, baking the kitchen).
+2. **Doing hobbies together:** chess, fishing and gardening are shared. When someone sets off for one, the log often says "Invited … to join them", and the other resident says "Accepted …'s invitation". Two residents at the same spot both get "I spent time … with …" under "Remembers", and "People" shows they've met.
+3. **Birthdays:** the inspector shows each birthday as a day of the 28-day year. On that day at midnight their age goes up, the log says "Turned …", and there's a birthday memory. Turning 30, 45 or 65 also adds a life-stage memory.
+4. **Health:** the inspector shows health out of a maximum that falls with age (Edith's is about 67). Health holds steady or slowly recovers when needs are looked after.
+5. **Colds:** someone wakes up with a cold (log: "Woke up with a cold"). They still go to work, and get better in a day or so ("Felt better: over a cold").
+6. **Flu:** someone with flu calls in sick (log: "Called in sick"), rests in bed ("resting in bed, feeling poorly") and won't chat. There are no wages for the day.
+7. **Pneumonia and the clinic:** this is rare in normal play. If flu strikes someone whose health is below 30, it turns into pneumonia. They go to the clinic as soon as it's open (Monday to Friday, 09:00–17:00), and after "being seen by the doctor" their recovery starts.
+8. **Old age:** residents aged 80 or over can die of old age in the small hours. Edith, 82, usually does within a few game months. Their name button gets a †, the inspector shows the day and cause, they disappear from the map, and their neighbours remember them (friends most deeply). They no longer pay rent or use the AI.
+9. **AI (Ollama running):** decisions still come through, and paid, hobby and chat options all appear. A resident with a cold or flu is described as poorly in the prompt.
+10. **Old save:** a build 1 save loads without errors. Everyone is healthy, and the starter residents get their hobbies.
+11. **Save and load:** F5 while someone is ill, then F9: the illness, its recovery time, health and any death record are kept.
+
 Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\` (`town.json` plus `town.json.bak`).

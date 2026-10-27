@@ -26,6 +26,10 @@ namespace TinyTown.Simulation.World
         /// <summary>The bakery's display of cakes and pastries.</summary>
         BakeryDisplay,
         ClinicBed,
+        Easel,
+        Piano,
+        ChessTable,
+        FishingSpot,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -60,6 +64,8 @@ namespace TinyTown.Simulation.World
             switch (type)
             {
                 case ObjectType.Bench:
+                case ObjectType.ChessTable:
+                case ObjectType.FishingSpot:
                 case ObjectType.ExerciseSpot:
                 case ObjectType.Workbench:
                     return 2;

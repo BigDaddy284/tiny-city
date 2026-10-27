@@ -85,6 +85,39 @@ namespace TinyTown.Simulation.Activities
             new Dictionary<NeedType, double> { [NeedType.Fun] = 0.1 },
             itemId: "groceries");
 
+        /// <summary>Lying down at home to get over an illness. Not chosen for a need; the planner picks it for anyone unwell.</summary>
+        public static readonly ActivityDefinition Rest = new ActivityDefinition(
+            "rest", "Rest in bed", "resting in bed, feeling poorly", ActivityKind.Care, null, new[] { ObjectType.Bed }, 90,
+            new Dictionary<NeedType, double> { [NeedType.Energy] = 4.0 / 60 },
+            new Dictionary<NeedType, double> { [NeedType.Energy] = 0, [NeedType.Hunger] = 0.6, [NeedType.Thirst] = 0.6, [NeedType.Exercise] = 0.2, [NeedType.Fun] = 0.6 });
+
+        /// <summary>A visit to the clinic, free of charge, while it's open. Treats a serious illness so recovery can begin.</summary>
+        public static readonly ActivityDefinition SeeDoctor = new ActivityDefinition(
+            "see-doctor", "See the doctor", "being seen by the doctor", ActivityKind.Care, null, new[] { ObjectType.ClinicBed }, 45,
+            new Dictionary<NeedType, double> { [NeedType.Social] = 0.3 },
+            needsOpenBusiness: true);
+
+        public static readonly ActivityDefinition Paint = Hobby("paint", "Paint", "painting at the easel", "painting", ObjectType.Easel, 60,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.2 });
+
+        public static readonly ActivityDefinition PlayPiano = Hobby("play-piano", "Play the piano", "playing the piano", "piano", ObjectType.Piano, 45,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.2, [NeedType.Social] = 0.2 });
+
+        public static readonly ActivityDefinition Chess = Hobby("chess", "Play chess", "playing chess", "chess", ObjectType.ChessTable, 60,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.0 }, shared: true);
+
+        public static readonly ActivityDefinition Fish = Hobby("fish", "Go fishing", "fishing at the pond", "fishing", ObjectType.FishingSpot, 75,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.9 }, shared: true);
+
+        public static readonly ActivityDefinition Garden = Hobby("garden", "Tend the garden", "pottering in the community garden", "gardening", ObjectType.GardenPlot, 50,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.8, [NeedType.Exercise] = 0.6 }, shared: true);
+
+        public static readonly ActivityDefinition Bake = Hobby("bake", "Bake something", "baking at home", "baking", ObjectType.Kitchen, 45,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.0, [NeedType.Hunger] = 0.3 });
+
+        public static readonly ActivityDefinition Knit = Hobby("knit", "Knit", "knitting", "knitting", ObjectType.Armchair, 60,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.0 });
+
         /// <summary>Walking over to someone and talking with them. The duration is set by the conversation, not here.</summary>
         public static readonly ActivityDefinition Chat = new ActivityDefinition(
             "chat", "Chat", "chatting", ActivityKind.Social, NeedType.Social, new ObjectType[0], 20,
@@ -94,7 +127,16 @@ namespace TinyTown.Simulation.Activities
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
             Sleep, Eat, Snack, CafeMeal, Pastry, Drink, UseToilet, Shower, Work, Exercise, Read, WatchTown, Coffee, BuyGroceries, Chat,
+            Rest, SeeDoctor, Paint, PlayPiano, Chess, Fish, Garden, Bake, Knit,
         };
+
+        /// <summary>Every hobby id, from the hobby activities.</summary>
+        public static IEnumerable<string> HobbyIds => All.Where(a => a.Hobby != null).Select(a => a.Hobby);
+
+        public static ActivityDefinition ForHobby(string hobby) => All.FirstOrDefault(a => a.Hobby == hobby);
+
+        private static ActivityDefinition Hobby(string id, string name, string verb, string hobby, ObjectType where, int minutes, Dictionary<NeedType, double> gains, bool shared = false) =>
+            new ActivityDefinition(id, name, verb, ActivityKind.Leisure, NeedType.Fun, new[] { where }, minutes, gains, hobby: hobby, shared: shared);
 
         public static bool TryGet(string id, out ActivityDefinition activity)
         {

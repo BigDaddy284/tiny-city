@@ -43,7 +43,7 @@ namespace TinyTown.Simulation.Content
         public const string GroceriesItemId = "groceries";
 
         // T tree, . grass, = path, H house wall, ~ pond, g garden bed, G garden plot (work), w garden tap,
-        // b/p park bench, e/r exercise spot, W workshop bench (work). Doors: D the first three cottages (in reading
+        // b/p park bench, e/r exercise spot, W workshop bench (work), a easel, h chess table, f fishing spot. Doors: D the first three cottages (in reading
         // order), 4-9 and 0 cottages 4-10, S store, C cafe, K bakery, L clinic.
         // The top-left 27 x 15 corner is the Phase 3 village, unchanged so saved positions stay valid.
         private static readonly string[] VillageRows =
@@ -53,11 +53,11 @@ namespace TinyTown.Simulation.Content
             "T.HHHHH.....~~~.....HHHHH....HHHHH..HHHHH..T",
             "T.HHHHH.....~~~..e..HHHHH....HHHHH..HHHHH..T",
             "T.HHHHH..b..~~~.....HHHHH....HHHHH..HHHHH..T",
-            "T.HHDHH.............HHDHH....HHSHH..HHCHH..T",
+            "T.HHDHH....a........HHDHH....HHSHH..HHCHH..T",
             "T...=.................=........=......=....T",
             "T...======================================.T",
             "T..............=.........................=.T",
-            "T.gggGg.w......=.................p.......=.T",
+            "T.gggGg.w......=.................ph......=.T",
             "T.ggggg........=.b...........HHHHH..HHHHH=.T",
             "T.HHHHH........=.............HHHHH..HHHHH=.T",
             "T.HHHHH........=......W......HHHHH..HHHHH=.T",
@@ -71,7 +71,7 @@ namespace TinyTown.Simulation.Content
             "T.HH4HH..HH5HH.=HH6HH..HH7HH.............=.T",
             "T.========================================.T",
             "T.HHHHH..HHHHH..HHHHH.=................T...T",
-            "T.HHHHH..HHHHH..HHHHH.=.....r...~..........T",
+            "T.HHHHH..HHHHH..HHHHH.=.....r...~f.........T",
             "T.HHHHH..HHHHH..HHHHH.=........~~~.........T",
             "T.HH8HH..HH9HH..HH0HH.=.............p...T..T",
             "T.=====================....................T",
@@ -99,13 +99,13 @@ namespace TinyTown.Simulation.Content
             "####D####",
         };
 
-        // y tables, c counter (work), t toilet, s sink.
+        // y tables, c counter (work), t toilet, s sink, u piano.
         private static readonly string[] CafeRows =
         {
             "###########",
             "#y...y..#t#",
             "#.......#.#",
-            "#.........#",
+            "#........u#",
             "#...c...s.#",
             "#####D#####",
         };
@@ -145,6 +145,9 @@ namespace TinyTown.Simulation.Content
             ['e'] = TileType.Grass,
             ['r'] = TileType.Grass,
             ['W'] = TileType.Path,
+            ['a'] = TileType.Grass,
+            ['h'] = TileType.Path,
+            ['f'] = TileType.Grass,
             ['S'] = TileType.Door,
             ['C'] = TileType.Door,
             ['K'] = TileType.Door,
@@ -205,6 +208,9 @@ namespace TinyTown.Simulation.Content
                 ['e'] = ("obj-village-exercise", "Fitness corner", ObjectType.ExerciseSpot),
                 ['r'] = ("obj-village-fitness-trail", "Fitness trail", ObjectType.ExerciseSpot),
                 ['W'] = (WorkbenchId, "Repair workshop", ObjectType.Workbench),
+                ['a'] = ("obj-village-easel", "Easel by the pond", ObjectType.Easel),
+                ['h'] = ("obj-village-chess", "Chess table", ObjectType.ChessTable),
+                ['f'] = ("obj-village-fishing", "Fishing spot", ObjectType.FishingSpot),
             });
 
             // Benches share letters, so give them ids by position.
@@ -241,6 +247,7 @@ namespace TinyTown.Simulation.Content
                 ['c'] = ("obj-cafe-counter", "Café counter", ObjectType.Counter),
                 ['t'] = ("obj-cafe-toilet", "Café toilet", ObjectType.Toilet),
                 ['s'] = ("obj-cafe-sink", "Café sink", ObjectType.Sink),
+                ['u'] = ("obj-cafe-piano", "Café piano", ObjectType.Piano),
             });
             objects.Add(new WorldObject("obj-cafe-table-window", "Window table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'y', 0)));
             objects.Add(new WorldObject("obj-cafe-table-corner", "Corner table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'y', 1)));
@@ -295,6 +302,7 @@ namespace TinyTown.Simulation.Content
 
                 var r = new Resident(d.id, d.first, d.last, d.age, d.birthday, d.colour, d.personality, d.homeMapId, d.bedId, d.job, Bed(world, d.bedId), needs);
                 ApplyFinances(r, d);
+                r.SetHobbies(HobbiesOf(d.id));
                 residents.Add(r);
             }
 
@@ -414,6 +422,39 @@ namespace TinyTown.Simulation.Content
                 money = Money.Pounds(1500), groceries = 5, rent = Money.Pounds(90), income = Money.Pounds(240), incomeLabel = "Pension",
             },
         };
+
+        /// <summary>Each starter resident's hobbies, chosen to suit them; shared ones give neighbours something to do together.</summary>
+        private static readonly Dictionary<string, string[]> StarterHobbies = new Dictionary<string, string[]>
+        {
+            [ResidentId] = new[] { "gardening", "painting" },
+            [ArthurId] = new[] { "chess", "fishing" },
+            [NellId] = new[] { "fishing", "chess" },
+            [RosaId] = new[] { "knitting", "baking" },
+            [TomId] = new[] { "baking", "piano" },
+            [PriyaId] = new[] { "painting", "piano" },
+            [IvyId] = new[] { "gardening", "fishing" },
+            [SamuelId] = new[] { "chess", "piano" },
+            [FelixId] = new[] { "chess", "painting" },
+            [EdithId] = new[] { "knitting", "gardening" },
+        };
+
+        private static IEnumerable<string> HobbiesOf(string residentId) =>
+            StarterHobbies.TryGetValue(residentId, out var hobbies) ? hobbies : new string[0];
+
+        /// <summary>
+        /// Brings residents from a save older than version 5 into the hobbies and health systems: starter residents
+        /// get their hobbies. Health has already been set from age by the loader.
+        /// </summary>
+        public static void AddHobbiesToOlderSave(TownSimulation simulation)
+        {
+            foreach (var r in simulation.Residents)
+            {
+                if (r.Hobbies.Count == 0)
+                {
+                    r.SetHobbies(HobbiesOf(r.Id));
+                }
+            }
+        }
 
         private static void ApplyFinances(Resident r, Design d)
         {

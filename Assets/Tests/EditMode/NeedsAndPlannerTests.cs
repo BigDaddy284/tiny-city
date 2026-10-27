@@ -148,6 +148,10 @@ namespace TinyTown.Tests.EditMode
             var bookish = TestTown.WithResident(TestTown.WeekendAfternoon, needsLevel: 70, personality: new Personality(0, 0, 0.5, 1));
             var sporty = TestTown.WithResident(TestTown.WeekendAfternoon, needsLevel: 70, personality: new Personality(1, 0, 0.5, 0));
 
+            // Hobbies are favourites whatever the personality; leave them out to see personality alone.
+            bookish.Residents[0].SetHobbies(null);
+            sporty.Residents[0].SetHobbies(null);
+
             Assert.That(bookish.Planner.Choose(bookish.Residents[0], bookish.Time).Activity, Is.SameAs(ActivityCatalog.Read));
             Assert.That(sporty.Planner.Choose(sporty.Residents[0], sporty.Time).Activity, Is.SameAs(ActivityCatalog.Exercise));
         }
