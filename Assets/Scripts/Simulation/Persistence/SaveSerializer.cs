@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation.Activities;
+using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Time;
 using TinyTown.Simulation.World;
@@ -10,12 +11,16 @@ namespace TinyTown.Simulation.Persistence
 {
     public sealed class SaveLoadResult
     {
-        internal SaveLoadResult(TownSimulation simulation, IReadOnlyList<string> errors, IReadOnlyList<string> warnings)
+        internal SaveLoadResult(TownSimulation simulation, IReadOnlyList<string> errors, IReadOnlyList<string> warnings, int upgradedFromVersion = 0)
         {
             Simulation = simulation;
             Errors = errors;
             Warnings = warnings;
+            UpgradedFromVersion = upgradedFromVersion;
         }
+
+        /// <summary>The older save version this was upgraded from, or 0 if it was already current.</summary>
+        public int UpgradedFromVersion { get; }
 
         /// <summary>The restored town, or null when <see cref="Errors"/> is not empty.</summary>
         public TownSimulation Simulation { get; }
@@ -41,7 +46,11 @@ namespace TinyTown.Simulation.Persistence
         /// Bump this when the save layout changes, and teach <see cref="Load"/> to upgrade the older version so
         /// residents, memories and history survive.
         /// </summary>
-        public const int CurrentVersion = 1;
+        /// <remarks>
+        /// Version 1: residents. Version 2 adds memories, conversation history, each resident's decision source
+        /// and last reflection day; a version 1 save loads with empty memories and history.
+        /// </remarks>
+        public const int CurrentVersion = 2;
 
         public static string Save(TownSimulation simulation)
         {
@@ -52,6 +61,16 @@ namespace TinyTown.Simulation.Persistence
                 ["townId"] = simulation.World.TownId,
                 ["gameMinutes"] = simulation.Time.TotalMinutes,
                 ["residents"] = simulation.Residents.Select(WriteResident).Cast<object>().ToList(),
+                ["memories"] = new Dictionary<string, object>
+                {
+                    ["nextNumber"] = simulation.Memories.NextNumber,
+                    ["records"] = simulation.Memories.All.Select(WriteMemory).ToList(),
+                },
+                ["conversations"] = new Dictionary<string, object>
+                {
+                    ["nextNumber"] = simulation.Conversations.NextNumber,
+                    ["records"] = simulation.Conversations.All.Select(WriteConversation).ToList(),
+                },
             };
 
             return Json.Write(root);
@@ -138,13 +157,21 @@ namespace TinyTown.Simulation.Persistence
                 return new SaveLoadResult(null, errors, warnings);
             }
 
-            return new SaveLoadResult(new TownSimulation(world, residents, new GameTime((long)minutes)), errors, warnings);
+            var simulation = new TownSimulation(world, residents, new GameTime((long)minutes));
+            if (version >= 2)
+            {
+                ReadMemories(GetObject(root, "memories"), simulation, warnings);
+                ReadConversations(GetObject(root, "conversations"), simulation, warnings);
+            }
+
+            return new SaveLoadResult(simulation, errors, warnings, version < CurrentVersion ? version : 0);
 
             SaveLoadResult Fail(string message) => new SaveLoadResult(null, new[] { message }, warnings);
         }
 
         private static object WriteResident(Resident r)
         {
+            var deciding = r.State == ResidentState.Deciding;
             var needs = new Dictionary<string, object>();
             for (var i = 0; i < Needs.Count; i++)
             {
@@ -185,11 +212,14 @@ namespace TinyTown.Simulation.Persistence
                     ["x"] = r.Location.Position.X,
                     ["y"] = r.Location.Position.Y,
                 },
-                ["state"] = r.State.ToString(),
-                ["activityId"] = r.ActivityId,
-                ["targetObjectId"] = r.TargetObjectId,
-                ["minutesRemaining"] = r.MinutesRemaining,
-                ["goal"] = r.Goal,
+                // A resident waiting on the AI is saved as idle: unfinished AI requests are never saved as decisions.
+                ["state"] = deciding ? nameof(ResidentState.Idle) : r.State.ToString(),
+                ["activityId"] = deciding ? null : r.ActivityId,
+                ["targetObjectId"] = deciding ? null : r.TargetObjectId,
+                ["minutesRemaining"] = deciding ? 0 : r.MinutesRemaining,
+                ["goal"] = deciding ? string.Empty : r.Goal,
+                ["goalSource"] = deciding ? nameof(DecisionSource.Routine) : r.GoalSource.ToString(),
+                ["lastReflectionDay"] = r.LastReflectionDay,
                 ["log"] = r.Log.Select(e => (object)new Dictionary<string, object>
                 {
                     ["gameMinutes"] = e.Time.TotalMinutes,
@@ -280,6 +310,7 @@ namespace TinyTown.Simulation.Persistence
                 needs);
 
             resident.IsAlive = GetBool(data, "alive", true);
+            resident.LastReflectionDay = Math.Max(0, GetInt(data, "lastReflectionDay", 0));
             foreach (var entry in GetList(data, "log").OfType<Dictionary<string, object>>().Take(Resident.MaxLogEntries))
             {
                 var minute = GetDouble(entry, "gameMinutes", -1);
@@ -327,7 +358,7 @@ namespace TinyTown.Simulation.Persistence
                 return;
             }
 
-            if (state == ResidentState.Idle)
+            if (state == ResidentState.Idle || state == ResidentState.Deciding)
             {
                 return;
             }
@@ -360,6 +391,138 @@ namespace TinyTown.Simulation.Persistence
 
             resident.State = state;
             resident.MinutesRemaining = state == ResidentState.Performing ? minutes : 0;
+            if (Enum.TryParse(GetString(data, "goalSource") ?? string.Empty, out DecisionSource source) && Enum.IsDefined(typeof(DecisionSource), source))
+            {
+                resident.GoalSource = source;
+            }
+        }
+
+        private static object WriteMemory(MemoryRecord m) => new Dictionary<string, object>
+        {
+            ["id"] = m.Id,
+            ["residentId"] = m.ResidentId,
+            ["gameMinutes"] = m.Time.TotalMinutes,
+            ["type"] = m.Type.ToString(),
+            ["importance"] = m.Importance,
+            ["summary"] = m.Summary,
+            ["participants"] = m.Participants.Cast<object>().ToList(),
+            ["tags"] = m.Tags.Cast<object>().ToList(),
+        };
+
+        private static object WriteConversation(ConversationRecord c) => new Dictionary<string, object>
+        {
+            ["id"] = c.Id,
+            ["kind"] = c.Kind.ToString(),
+            ["startedMinutes"] = c.Started.TotalMinutes,
+            ["participants"] = c.Participants.Cast<object>().ToList(),
+            ["context"] = c.Context,
+            ["lines"] = c.Lines.Select(l => (object)new Dictionary<string, object>
+            {
+                ["speakerId"] = l.SpeakerId,
+                ["gameMinutes"] = l.Time.TotalMinutes,
+                ["text"] = l.Text,
+            }).ToList(),
+        };
+
+        private static void ReadMemories(Dictionary<string, object> data, TownSimulation simulation, List<string> warnings)
+        {
+            if (data == null)
+            {
+                warnings.Add("Memories were missing, so residents start with no memories.");
+                return;
+            }
+
+            var ids = new HashSet<string>();
+            var skipped = 0;
+            var next = Math.Max(1, (long)GetDouble(data, "nextNumber", 1));
+            foreach (var item in GetList(data, "records"))
+            {
+                var m = item as Dictionary<string, object>;
+                var id = m == null ? null : GetString(m, "id");
+                var residentId = m == null ? null : GetString(m, "residentId");
+                var minutes = m == null ? -1 : GetDouble(m, "gameMinutes", -1);
+                var summary = m == null ? string.Empty : TextRules.Clean(GetString(m, "summary"), MemoryRecord.MaxSummaryLength);
+                if (string.IsNullOrWhiteSpace(id) || !ids.Add(id) || simulation.GetResident(residentId) == null || minutes < 0 || summary.Length == 0
+                    || !Enum.TryParse(GetString(m, "type") ?? string.Empty, out MemoryType type) || !Enum.IsDefined(typeof(MemoryType), type))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var participants = GetList(m, "participants").OfType<string>().Where(p => !string.IsNullOrWhiteSpace(p)).Distinct().ToList();
+                if (!participants.Contains(residentId))
+                {
+                    participants.Insert(0, residentId);
+                }
+
+                var tags = GetList(m, "tags").OfType<string>().Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList();
+                var record = new MemoryRecord(id, residentId, new GameTime((long)minutes), type, MemoryStore.ClampImportance(GetInt(m, "importance", 1)), summary, participants, tags);
+                simulation.Memories.Restore(record, Math.Max(next, NumberAfter(id)));
+            }
+
+            if (skipped > 0)
+            {
+                warnings.Add($"{skipped} damaged memory record(s) were skipped.");
+            }
+        }
+
+        private static void ReadConversations(Dictionary<string, object> data, TownSimulation simulation, List<string> warnings)
+        {
+            if (data == null)
+            {
+                warnings.Add("Conversation history was missing, so it starts empty.");
+                return;
+            }
+
+            var ids = new HashSet<string>();
+            var skipped = 0;
+            var next = Math.Max(1, (long)GetDouble(data, "nextNumber", 1));
+            foreach (var item in GetList(data, "records"))
+            {
+                var c = item as Dictionary<string, object>;
+                var id = c == null ? null : GetString(c, "id");
+                var started = c == null ? -1 : GetDouble(c, "startedMinutes", -1);
+                var participants = c == null ? new List<string>() : GetList(c, "participants").OfType<string>().Where(p => simulation.GetResident(p) != null).Distinct().ToList();
+                if (string.IsNullOrWhiteSpace(id) || !ids.Add(id) || started < 0 || participants.Count == 0
+                    || !Enum.TryParse(GetString(c, "kind") ?? string.Empty, out ConversationKind kind) || !Enum.IsDefined(typeof(ConversationKind), kind))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var lines = new List<ConversationLine>();
+                foreach (var l in GetList(c, "lines").OfType<Dictionary<string, object>>())
+                {
+                    var speaker = GetString(l, "speakerId");
+                    var at = GetDouble(l, "gameMinutes", -1);
+                    var text = TextRules.Clean(GetString(l, "text"), ConversationLine.MaxTextLength);
+                    if (participants.Contains(speaker) && at >= 0 && text.Length > 0)
+                    {
+                        lines.Add(new ConversationLine(speaker, new GameTime((long)at), text));
+                    }
+                }
+
+                if (lines.Count == 0)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var record = new ConversationRecord(id, kind, new GameTime((long)started), participants, TextRules.Clean(GetString(c, "context"), 60), lines);
+                simulation.Conversations.Restore(record, Math.Max(next, NumberAfter(id)));
+            }
+
+            if (skipped > 0)
+            {
+                warnings.Add($"{skipped} damaged conversation record(s) were skipped.");
+            }
+        }
+
+        /// <summary>For an id like "mem-000041", the number after it (42), so new ids never collide with loaded ones.</summary>
+        private static long NumberAfter(string id)
+        {
+            var dash = id.LastIndexOf('-');
+            return dash >= 0 && long.TryParse(id.Substring(dash + 1), out var n) && n >= 0 && n < long.MaxValue ? n + 1 : 1;
         }
 
         private static string NeedKey(NeedType need) => char.ToLowerInvariant(need.ToString()[0]) + need.ToString().Substring(1);

@@ -1,6 +1,7 @@
 using System.Collections;
 using NUnit.Framework;
 using TinyTown.Runtime;
+using TinyTown.Simulation.AI;
 using UnityEngine;
 using UnityEngine.TestTools;
 
@@ -38,6 +39,31 @@ namespace TinyTown.Tests.PlayMode
 
             Assert.That(game.Simulation.Time.TotalMinutes - before, Is.GreaterThanOrEqualTo(180));
             Assert.That(game.Simulation.Residents[0].Log, Is.Not.Empty);
+        }
+
+        /// <summary>
+        /// The CI runner has no Ollama, so this checks the real web request path reports a refused connection and
+        /// the town carries on with its built-in routine.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator WithoutOllama_AiReportsOffline_AndTheTownKeepsRunning()
+        {
+            yield return null;
+            var game = Object.FindAnyObjectByType<GameController>();
+            Assert.That(game.Ai, Is.Not.Null);
+
+            var waitUntil = Time.realtimeSinceStartup + (float)AiService.CheckTimeoutSeconds + 5f;
+            while ((game.Ai.Status == AiConnectionStatus.Checking || game.Ai.Status == AiConnectionStatus.LoadingModel) && Time.realtimeSinceStartup < waitUntil)
+            {
+                yield return null;
+            }
+
+            Assert.That(game.Ai.Status, Is.EqualTo(AiConnectionStatus.Offline), game.Ai.Summary());
+            Assert.That(game.Ai.StatusDetail, Is.Not.Empty);
+            Assert.That(game.Simulation.AiDecisionsEnabled, Is.False);
+
+            game.AdvanceMinutes(120);
+            Assert.That(game.Simulation.Residents[0].State, Is.Not.EqualTo(TinyTown.Simulation.Residents.ResidentState.Deciding));
         }
     }
 }

@@ -42,7 +42,11 @@ Windows may show a SmartScreen warning because the build is unsigned; choose **M
 
 ## Settings
 
-The built game reads `TheTinyTown_Data/StreamingAssets/Configuration/settings.json`. The source copy is `Assets/StreamingAssets/Configuration/settings.json`. Invalid or missing settings fall back to the defaults (`http://localhost:11434`, `qwen2.5:7b`, 60 second timeout) and the problem is shown on screen.
+The built game reads `TheTinyTown_Data/StreamingAssets/Configuration/settings.json`. The source copy is `Assets/StreamingAssets/Configuration/settings.json`. Invalid or missing settings fall back to the defaults (`http://localhost:11434`, `qwen2.5:7b`, 60 second timeout) and the problem is written to `Player.log`. All AI settings are described in [OllamaSetup.md](OllamaSetup.md).
+
+## AI in tests
+
+Automated tests never contact a real Ollama. Edit Mode tests use `FakeAiTransport`, a scripted stand-in that can answer well, answer badly, answer late or refuse the connection. The Play Mode test `WithoutOllama_AiReportsOffline_AndTheTownKeepsRunning` relies on the CI runner having no Ollama. A real-model check is manual: see the Phase 2 steps in [PlaytestChecklist.md](PlaytestChecklist.md).
 
 ## Running tests in a cloud coding session
 

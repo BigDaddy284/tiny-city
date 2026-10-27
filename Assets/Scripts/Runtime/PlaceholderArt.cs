@@ -103,6 +103,15 @@ namespace TinyTown.Runtime
             }
         }
 
+        /// <summary>A one-pixel texture of a single colour, for IMGUI backgrounds such as speech bubbles.</summary>
+        public static Texture2D Solid(Color colour)
+        {
+            var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            texture.SetPixel(0, 0, colour);
+            texture.Apply();
+            return texture;
+        }
+
         public static Color ParseColour(string hex, Color fallback)
         {
             return ColorUtility.TryParseHtmlString(hex, out var c) ? c : fallback;

@@ -14,10 +14,22 @@ namespace TinyTown.Simulation.Configuration
         public const string DefaultModel = "qwen2.5:7b";
         public const int DefaultTimeoutSeconds = 60;
         public const int MaxTimeoutSeconds = 600;
+        public const int DefaultMaxRetries = 1;
+        public const int MaxMaxRetries = 3;
+        public const int DefaultDecisionWaitMinutes = 20;
+        public const int MaxDecisionWaitMinutes = 240;
 
+        /// <summary>False keeps every resident on the built-in routine and never contacts Ollama.</summary>
+        public bool enabled = true;
         public string endpoint = DefaultEndpoint;
         public string model = DefaultModel;
         public int timeoutSeconds = DefaultTimeoutSeconds;
+
+        /// <summary>Extra attempts after a malformed answer, timeout or connection error.</summary>
+        public int maxRetries = DefaultMaxRetries;
+
+        /// <summary>Game minutes a resident waits for an AI suggestion before using the built-in routine.</summary>
+        public int decisionWaitMinutes = DefaultDecisionWaitMinutes;
 
         public IReadOnlyList<string> Validate()
         {
@@ -37,6 +49,16 @@ namespace TinyTown.Simulation.Configuration
             if (timeoutSeconds <= 0 || timeoutSeconds > MaxTimeoutSeconds)
             {
                 errors.Add($"Ollama timeout must be between 1 and {MaxTimeoutSeconds} seconds, but was {timeoutSeconds}.");
+            }
+
+            if (maxRetries < 0 || maxRetries > MaxMaxRetries)
+            {
+                errors.Add($"Ollama maxRetries must be between 0 and {MaxMaxRetries}, but was {maxRetries}.");
+            }
+
+            if (decisionWaitMinutes < 1 || decisionWaitMinutes > MaxDecisionWaitMinutes)
+            {
+                errors.Add($"Ollama decisionWaitMinutes must be between 1 and {MaxDecisionWaitMinutes}, but was {decisionWaitMinutes}.");
             }
 
             return errors;

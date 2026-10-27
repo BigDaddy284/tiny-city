@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation;
+using TinyTown.Simulation.AI;
 using TinyTown.Simulation.Configuration;
 using TinyTown.Simulation.Content;
 using TinyTown.Simulation.Persistence;
@@ -26,6 +27,7 @@ namespace TinyTown.Runtime
         private const int MaxTicksPerFrame = 600;
         private const float PanelWidth = 380f;
         private const float ConfirmSeconds = 4f;
+        private const float SpeechSeconds = 8f;
 
         private int speedIndex = 1;
         private int lastSpeedIndex = 1;
@@ -35,6 +37,9 @@ namespace TinyTown.Runtime
         private float confirmNewUntil;
         private bool followResident = true;
         private string viewedMapId;
+        private long lastSeenConversationNumber;
+        private string speech;
+        private float speechUntil;
 
         private Camera cam;
         private MapView mapView;
@@ -44,10 +49,14 @@ namespace TinyTown.Runtime
         private GUIStyle textStyle;
         private GUIStyle smallStyle;
         private GUIStyle labelStyle;
+        private GUIStyle bubbleStyle;
 
         public TownSimulation Simulation { get; private set; }
 
         public GameSettings Settings { get; set; } = new GameSettings();
+
+        /// <summary>Talks to Ollama; residents fall back to their built-in routine whenever it can't help.</summary>
+        public AiService Ai { get; private set; }
 
         public int Speed => Speeds[speedIndex];
 
@@ -69,6 +78,7 @@ namespace TinyTown.Runtime
             cam = Camera.main;
             mapView = new GameObject("Map").AddComponent<MapView>();
             residentRenderer = new GameObject("Resident").AddComponent<SpriteRenderer>();
+            Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyTown] AI: {message}") };
 
             if (!SaveStore.Exists(SaveSlot) || !TryLoad())
             {
@@ -80,6 +90,7 @@ namespace TinyTown.Runtime
 
         private void Update()
         {
+            Ai?.Update(UnityEngine.Time.realtimeSinceStartupAsDouble);
             var ticks = 0;
             if (Speed > 0)
             {
@@ -127,6 +138,9 @@ namespace TinyTown.Runtime
         private void SetSimulation(TownSimulation simulation)
         {
             Simulation = simulation;
+            Ai?.Attach(simulation);
+            lastSeenConversationNumber = simulation.Conversations.NextNumber;
+            speech = null;
             previousLocation = Resident.Location;
             lastAutosaveMinute = simulation.Time.TotalMinutes;
             accumulator = 0f;
@@ -166,6 +180,12 @@ namespace TinyTown.Runtime
                 {
                     problems.AddRange(result.Errors);
                     continue;
+                }
+
+                if (result.UpgradedFromVersion == 1)
+                {
+                    // Version 1 saves predate memories; give the starter residents their background.
+                    StarterTown.AddLifeHistory(result.Simulation);
                 }
 
                 SetSimulation(result.Simulation);
@@ -305,6 +325,21 @@ namespace TinyTown.Runtime
             {
                 Label(residentRenderer.transform.position + new Vector3(0f, 0.72f, 0f), Resident.FirstName, labelStyle);
             }
+
+            if (Simulation.Conversations.NextNumber != lastSeenConversationNumber)
+            {
+                lastSeenConversationNumber = Simulation.Conversations.NextNumber;
+                speech = Simulation.Conversations.LastLineBy(Resident.Id)?.Text;
+                speechUntil = UnityEngine.Time.unscaledTime + SpeechSeconds;
+            }
+
+            if (residentRenderer.enabled && !string.IsNullOrEmpty(speech) && UnityEngine.Time.unscaledTime < speechUntil)
+            {
+                var screen = cam.WorldToScreenPoint(residentRenderer.transform.position + new Vector3(0f, 0.95f, 0f));
+                var content = new GUIContent($"“{speech}”");
+                var height = bubbleStyle.CalcHeight(content, 220f);
+                GUI.Box(new Rect(screen.x - 110f, Screen.height - screen.y - height, 220f, height), content, bubbleStyle);
+            }
         }
 
         private void Label(Vector3 world, string text, GUIStyle style)
@@ -345,7 +380,14 @@ namespace TinyTown.Runtime
             GUILayout.Label($"Doing: {DescribeActivity(r)}", textStyle);
             if (!string.IsNullOrEmpty(r.Goal))
             {
-                GUILayout.Label($"Why: {r.Goal}", smallStyle);
+                var source = r.GoalSource == DecisionSource.Ai ? $"in {r.FirstName}'s words, via AI" : "routine";
+                GUILayout.Label($"Why ({source}): {r.Goal}", smallStyle);
+            }
+
+            var said = Simulation.Conversations.LastLineBy(r.Id);
+            if (said != null)
+            {
+                GUILayout.Label($"Last said ({said.Time.ClockText}): “{said.Text}”", smallStyle);
             }
 
             GUILayout.Space(6f);
@@ -356,9 +398,16 @@ namespace TinyTown.Runtime
 
             GUILayout.Space(6f);
             GUILayout.Label("Recently", textStyle);
-            foreach (var entry in r.Log.Reverse().Take(7))
+            foreach (var entry in r.Log.Reverse().Take(5))
             {
                 GUILayout.Label($"{entry.Time.ClockText}  {entry.Text}", smallStyle);
+            }
+
+            GUILayout.Space(4f);
+            GUILayout.Label("Remembers", textStyle);
+            foreach (var memory in Simulation.Memories.ForResident(r.Id).OrderByDescending(m => m.Time.TotalMinutes).ThenByDescending(m => m.Id).Take(3))
+            {
+                GUILayout.Label($"Day {memory.Time.Day}: {memory.Summary}", smallStyle);
             }
 
             GUILayout.FlexibleSpace();
@@ -389,7 +438,13 @@ namespace TinyTown.Runtime
 
             GUILayout.EndHorizontal();
             GUILayout.Label(followResident ? "View: following resident (Tab: other map)" : $"View: {Simulation.World.GetMap(viewedMapId).Name} (F: follow resident)", smallStyle);
-            GUILayout.Label($"AI: Ollama {Settings.ollama.model} at {Settings.ollama.endpoint} (used from Phase 2; built-in decisions now)", smallStyle);
+            GUILayout.Label(Ai.Summary(), smallStyle);
+            var lastEvent = Ai.RecentEvents.LastOrDefault();
+            if (lastEvent != null)
+            {
+                GUILayout.Label(lastEvent, smallStyle);
+            }
+
             if (!string.IsNullOrEmpty(status))
             {
                 GUILayout.Label(status, smallStyle);
@@ -431,6 +486,8 @@ namespace TinyTown.Runtime
                     return $"walking to the {target?.Name.ToLowerInvariant()} to {activity?.Name.ToLowerInvariant()}";
                 case ResidentState.Waiting:
                     return "taking it easy";
+                case ResidentState.Deciding:
+                    return "thinking about what to do";
                 default:
                     return "deciding what to do";
             }
@@ -452,6 +509,9 @@ namespace TinyTown.Runtime
             smallStyle = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = true };
             labelStyle = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             titleStyle.normal.textColor = textStyle.normal.textColor = smallStyle.normal.textColor = labelStyle.normal.textColor = ink;
+            bubbleStyle = new GUIStyle(GUI.skin.box) { fontSize = 13, wordWrap = true, alignment = TextAnchor.MiddleCenter, padding = new RectOffset(8, 8, 6, 6) };
+            bubbleStyle.normal.background = PlaceholderArt.Solid(new Color(1f, 0.99f, 0.95f, 0.95f));
+            bubbleStyle.normal.textColor = ink;
         }
     }
 }
