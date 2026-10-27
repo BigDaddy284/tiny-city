@@ -50,7 +50,8 @@ namespace TinyTown.Tests.EditMode
             }
 
             Assert.That(loaded.Memories.NextNumber, Is.EqualTo(sim.Memories.NextNumber));
-            Assert.That(loaded.Conversations.LastLineBy(StarterTown.ResidentId).Text, Is.EqualTo("What a glorious morning!"));
+            Assert.That(loaded.Conversations.LastLineBy(StarterTown.ResidentId).Text, Is.EqualTo(sim.Conversations.LastLineBy(StarterTown.ResidentId).Text));
+            Assert.That(loaded.Conversations.All.Any(c => c.Lines.Any(l => l.Text == "What a glorious morning!")), Is.True);
             Assert.That(loaded.Conversations.NextNumber, Is.EqualTo(sim.Conversations.NextNumber));
             Assert.That(loaded.Residents[0].LastReflectionDay, Is.EqualTo(sim.Residents[0].LastReflectionDay));
             Assert.That(SaveSerializer.Save(loaded), Is.EqualTo(saved));
@@ -120,6 +121,7 @@ namespace TinyTown.Tests.EditMode
         {
             var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(StarterTown.CreateNewGame()));
             var records = (List<object>)((Dictionary<string, object>)root["memories"])["records"];
+            var validCount = records.Count;
             var good = (Dictionary<string, object>)records[0];
             records.Add(new Dictionary<string, object>(good) { ["id"] = "mem-000099", ["residentId"] = "res-ghost" });
             records.Add(new Dictionary<string, object>(good));
@@ -130,7 +132,7 @@ namespace TinyTown.Tests.EditMode
             var result = SaveSerializer.Load(Json.Write(root), StarterTown.CreateWorld());
 
             Assert.That(result.Success, Is.True);
-            Assert.That(result.Simulation.Memories.All.Count, Is.EqualTo(2));
+            Assert.That(result.Simulation.Memories.All.Count, Is.EqualTo(validCount));
             Assert.That(result.Warnings.Any(w => w.Contains("5 damaged memory")), Is.True, string.Join("; ", result.Warnings));
         }
 

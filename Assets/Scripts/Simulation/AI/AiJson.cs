@@ -52,6 +52,24 @@ namespace TinyTown.Simulation.AI
         public static string GetString(Dictionary<string, object> obj, string key) =>
             obj != null && obj.TryGetValue(key, out var v) ? v as string : null;
 
+        /// <summary>Reads true/false written either as a JSON boolean or as the text "true"/"false".</summary>
+        public static bool TryGetBool(Dictionary<string, object> obj, string key, out bool value)
+        {
+            value = false;
+            if (obj == null || !obj.TryGetValue(key, out var v))
+            {
+                return false;
+            }
+
+            if (v is bool b)
+            {
+                value = b;
+                return true;
+            }
+
+            return v is string s && bool.TryParse(s.Trim(), out value);
+        }
+
         /// <summary>Reads a whole number written either as a number or as numeric text.</summary>
         public static bool TryGetInt(Dictionary<string, object> obj, string key, out int value)
         {

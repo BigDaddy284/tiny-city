@@ -40,7 +40,7 @@ namespace TinyTown.Simulation.Activities
             new Dictionary<NeedType, double> { [NeedType.Hygiene] = 6.5 });
 
         public static readonly ActivityDefinition Work = new ActivityDefinition(
-            "work", "Work", "working", ActivityKind.Work, null, new[] { ObjectType.GardenPlot }, 8 * 60,
+            "work", "Work", "working", ActivityKind.Work, null, new[] { ObjectType.GardenPlot, ObjectType.Workbench }, 8 * 60,
             new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.03 },
             new Dictionary<NeedType, double> { [NeedType.Hygiene] = 1.5, [NeedType.Thirst] = 1.2, [NeedType.Energy] = 1.1, [NeedType.Fun] = 0.8 });
 
@@ -57,10 +57,15 @@ namespace TinyTown.Simulation.Activities
             "watch-town", "Sit in the park", "sitting in the park watching the town", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.Bench }, 45,
             new Dictionary<NeedType, double> { [NeedType.Fun] = 0.6, [NeedType.Social] = 0.7 });
 
+        /// <summary>Walking over to someone and talking with them. The duration is set by the conversation, not here.</summary>
+        public static readonly ActivityDefinition Chat = new ActivityDefinition(
+            "chat", "Chat", "chatting", ActivityKind.Social, NeedType.Social, new ObjectType[0], 20,
+            new Dictionary<NeedType, double> { [NeedType.Social] = 2.2, [NeedType.Fun] = 0.4 });
+
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
-            Sleep, Eat, Drink, UseToilet, Shower, Work, Exercise, Read, WatchTown,
+            Sleep, Eat, Drink, UseToilet, Shower, Work, Exercise, Read, WatchTown, Chat,
         };
 
         public static bool TryGet(string id, out ActivityDefinition activity)

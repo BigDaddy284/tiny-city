@@ -4,6 +4,7 @@ using System.Linq;
 using TinyTown.Simulation.Activities;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
+using TinyTown.Simulation.Social;
 using TinyTown.Simulation.Time;
 using TinyTown.Simulation.World;
 
@@ -48,9 +49,11 @@ namespace TinyTown.Simulation.Persistence
         /// </summary>
         /// <remarks>
         /// Version 1: residents. Version 2 adds memories, conversation history, each resident's decision source
-        /// and last reflection day; a version 1 save loads with empty memories and history.
+        /// and last reflection day; a version 1 save loads with empty memories and history. Version 3 adds
+        /// relationships, conversations in progress, who a resident is talking to or looking for, and the tone of
+        /// each line; older saves load with nobody having met and no conversation going on.
         /// </remarks>
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         public static string Save(TownSimulation simulation)
         {
@@ -71,6 +74,8 @@ namespace TinyTown.Simulation.Persistence
                     ["nextNumber"] = simulation.Conversations.NextNumber,
                     ["records"] = simulation.Conversations.All.Select(WriteConversation).ToList(),
                 },
+                ["relationships"] = simulation.Relationships.All.Select(WriteRelationship).ToList(),
+                ["activeConversations"] = simulation.ActiveConversations.Select(WriteSession).ToList(),
             };
 
             return Json.Write(root);
@@ -164,6 +169,14 @@ namespace TinyTown.Simulation.Persistence
                 ReadConversations(GetObject(root, "conversations"), simulation, warnings);
             }
 
+            if (version >= 3)
+            {
+                ReadRelationships(GetList(root, "relationships"), simulation, warnings);
+                ReadSessions(GetList(root, "activeConversations"), simulation, warnings);
+            }
+
+            ReconcileSocialState(simulation, warnings);
+
             return new SaveLoadResult(simulation, errors, warnings, version < CurrentVersion ? version : 0);
 
             SaveLoadResult Fail(string message) => new SaveLoadResult(null, new[] { message }, warnings);
@@ -219,6 +232,8 @@ namespace TinyTown.Simulation.Persistence
                 ["minutesRemaining"] = deciding ? 0 : r.MinutesRemaining,
                 ["goal"] = deciding ? string.Empty : r.Goal,
                 ["goalSource"] = deciding ? nameof(DecisionSource.Routine) : r.GoalSource.ToString(),
+                ["targetResidentId"] = deciding ? null : r.TargetResidentId,
+                ["conversationId"] = deciding ? null : r.ConversationId,
                 ["lastReflectionDay"] = r.LastReflectionDay,
                 ["log"] = r.Log.Select(e => (object)new Dictionary<string, object>
                 {
@@ -364,6 +379,29 @@ namespace TinyTown.Simulation.Persistence
             }
 
             var minutes = Math.Max(0, GetInt(data, "minutesRemaining", 0));
+            if (state == ResidentState.Talking)
+            {
+                // Checked against the saved conversations once they are loaded; see ReconcileSocialState.
+                resident.State = ResidentState.Talking;
+                resident.ActivityId = ActivityCatalog.Chat.Id;
+                resident.ConversationId = GetString(data, "conversationId");
+                resident.Goal = GetString(data, "goal") ?? string.Empty;
+                return;
+            }
+
+            var partnerId = GetString(data, "targetResidentId");
+            if (state == ResidentState.Travelling && !string.IsNullOrEmpty(partnerId))
+            {
+                // Looking for someone to chat with; the partner is checked once every resident is loaded.
+                resident.State = ResidentState.Travelling;
+                resident.ActivityId = ActivityCatalog.Chat.Id;
+                resident.TargetResidentId = partnerId;
+                resident.MinutesRemaining = Math.Max(1, Math.Min(minutes, SocialRules.SeekMinutes));
+                resident.Goal = GetString(data, "goal") ?? string.Empty;
+                ReadGoalSource(resident, data);
+                return;
+            }
+
             if (state == ResidentState.Waiting)
             {
                 resident.State = ResidentState.Waiting;
@@ -391,6 +429,11 @@ namespace TinyTown.Simulation.Persistence
 
             resident.State = state;
             resident.MinutesRemaining = state == ResidentState.Performing ? minutes : 0;
+            ReadGoalSource(resident, data);
+        }
+
+        private static void ReadGoalSource(Resident resident, Dictionary<string, object> data)
+        {
             if (Enum.TryParse(GetString(data, "goalSource") ?? string.Empty, out DecisionSource source) && Enum.IsDefined(typeof(DecisionSource), source))
             {
                 resident.GoalSource = source;
@@ -416,13 +459,168 @@ namespace TinyTown.Simulation.Persistence
             ["startedMinutes"] = c.Started.TotalMinutes,
             ["participants"] = c.Participants.Cast<object>().ToList(),
             ["context"] = c.Context,
-            ["lines"] = c.Lines.Select(l => (object)new Dictionary<string, object>
-            {
-                ["speakerId"] = l.SpeakerId,
-                ["gameMinutes"] = l.Time.TotalMinutes,
-                ["text"] = l.Text,
-            }).ToList(),
+            ["lines"] = WriteLines(c.Lines),
         };
+
+        private static List<object> WriteLines(IEnumerable<ConversationLine> lines) => lines.Select(l => (object)new Dictionary<string, object>
+        {
+            ["speakerId"] = l.SpeakerId,
+            ["gameMinutes"] = l.Time.TotalMinutes,
+            ["text"] = l.Text,
+            ["tone"] = l.Tone.ToString(),
+            ["fromAi"] = l.FromAi,
+        }).ToList();
+
+        private static List<ConversationLine> ReadLines(Dictionary<string, object> data, ICollection<string> participants)
+        {
+            var lines = new List<ConversationLine>();
+            foreach (var l in GetList(data, "lines").OfType<Dictionary<string, object>>())
+            {
+                var speaker = GetString(l, "speakerId");
+                var at = GetDouble(l, "gameMinutes", -1);
+                var text = TextRules.Clean(GetString(l, "text"), ConversationLine.MaxTextLength);
+                if (!Enum.TryParse(GetString(l, "tone") ?? string.Empty, out ConversationTone tone) || !Enum.IsDefined(typeof(ConversationTone), tone))
+                {
+                    tone = ConversationTone.Neutral;
+                }
+
+                if (participants.Contains(speaker) && at >= 0 && text.Length > 0)
+                {
+                    lines.Add(new ConversationLine(speaker, new GameTime((long)at), text, tone, GetBool(l, "fromAi", false)));
+                }
+            }
+
+            return lines;
+        }
+
+        private static object WriteRelationship(Relationship r) => new Dictionary<string, object>
+        {
+            ["ownerId"] = r.OwnerId,
+            ["otherId"] = r.OtherId,
+            ["friendship"] = r.Friendship,
+            ["trust"] = r.Trust,
+            ["respect"] = r.Respect,
+            ["dislike"] = r.Dislike,
+            ["interactions"] = r.Interactions,
+            ["lastInteractionMinutes"] = r.LastInteractionMinute,
+        };
+
+        private static void ReadRelationships(List<object> list, TownSimulation simulation, List<string> warnings)
+        {
+            var skipped = 0;
+            foreach (var d in list)
+            {
+                var data = d as Dictionary<string, object>;
+                var owner = data == null ? null : GetString(data, "ownerId");
+                var other = data == null ? null : GetString(data, "otherId");
+                if (simulation.GetResident(owner) == null || simulation.GetResident(other) == null || owner == other
+                    || simulation.Relationships.TryGet(owner, other, out _))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var defaults = simulation.Relationships.Get(owner, other);
+                defaults.Set(
+                    GetDouble(data, "friendship", defaults.Friendship),
+                    GetDouble(data, "trust", defaults.Trust),
+                    GetDouble(data, "respect", defaults.Respect),
+                    GetDouble(data, "dislike", defaults.Dislike));
+                defaults.Interactions = Math.Max(0, GetInt(data, "interactions", 0));
+                var last = GetDouble(data, "lastInteractionMinutes", Relationship.Never);
+                defaults.LastInteractionMinute = last >= 0 && last <= simulation.Time.TotalMinutes && last == Math.Floor(last) ? (long)last : Relationship.Never;
+            }
+
+            if (skipped > 0)
+            {
+                warnings.Add($"{skipped} damaged or duplicate relationship record(s) were skipped.");
+            }
+        }
+
+        private static object WriteSession(ConversationSession c) => new Dictionary<string, object>
+        {
+            ["id"] = c.Id,
+            ["participants"] = c.ParticipantIds.Cast<object>().ToList(),
+            ["startedMinutes"] = c.Started.TotalMinutes,
+            ["maxLines"] = c.MaxLines,
+            ["place"] = c.Place,
+            ["topic"] = c.Topic,
+            ["nextLineMinutes"] = c.NextLineAt,
+            ["lines"] = WriteLines(c.Lines),
+        };
+
+        private static void ReadSessions(List<object> list, TownSimulation simulation, List<string> warnings)
+        {
+            var skipped = 0;
+            foreach (var d in list)
+            {
+                var data = d as Dictionary<string, object>;
+                var id = data == null ? null : GetString(data, "id");
+                var participants = data == null ? new List<string>() : GetList(data, "participants").OfType<string>().ToList();
+                var started = data == null ? -1 : GetDouble(data, "startedMinutes", -1);
+                if (string.IsNullOrWhiteSpace(id) || simulation.GetConversation(id) != null || simulation.Conversations.All.Any(c => c.Id == id)
+                    || participants.Count != 2 || participants[0] == participants[1]
+                    || participants.Any(p => simulation.GetResident(p) == null || !simulation.GetResident(p).IsAlive)
+                    || simulation.ActiveConversations.Any(c => c.ParticipantIds.Intersect(participants).Any())
+                    || started < 0 || started > simulation.Time.TotalMinutes || started != Math.Floor(started))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var maxLines = Math.Max(SocialRules.MinLines, Math.Min(SocialRules.MaxLines, GetInt(data, "maxLines", SocialRules.MinLines)));
+                var session = new ConversationSession(id, participants[0], participants[1], new GameTime((long)started), maxLines, TextRules.Clean(GetString(data, "place"), 60));
+                session.Lines.AddRange(ReadLines(data, participants).Take(maxLines - 1));
+                session.Topic = SocialRules.CleanTopic(GetString(data, "topic"));
+                var next = GetDouble(data, "nextLineMinutes", simulation.Time.TotalMinutes);
+                session.NextLineAt = next >= 0 && next == Math.Floor(next) && next <= simulation.Time.TotalMinutes + SocialRules.MinutesPerLine
+                    ? (long)next
+                    : simulation.Time.TotalMinutes;
+                simulation.RestoreConversation(session, NumberAfter(id));
+            }
+
+            if (skipped > 0)
+            {
+                warnings.Add($"{skipped} damaged conversation(s) in progress were dropped.");
+            }
+        }
+
+        /// <summary>
+        /// Makes residents and live conversations agree: a resident marked as talking must be in a loaded conversation,
+        /// both partners of a conversation must be talking in it, and a resident looking for someone must look for a living
+        /// neighbour. Anything that doesn't fit is dropped with a warning and those residents choose again.
+        /// </summary>
+        private static void ReconcileSocialState(TownSimulation simulation, List<string> warnings)
+        {
+            foreach (var session in simulation.ActiveConversations.ToList())
+            {
+                var members = session.ParticipantIds.Select(simulation.GetResident).ToList();
+                if (members.Any(m => m.State != ResidentState.Talking || m.ConversationId != session.Id))
+                {
+                    simulation.DropConversation(session);
+                    warnings.Add($"Conversation {session.Id} did not match the residents in it, so it was dropped.");
+                }
+            }
+
+            foreach (var r in simulation.Residents)
+            {
+                if (r.State == ResidentState.Talking && simulation.GetConversation(r.ConversationId) == null)
+                {
+                    r.ResetActivity();
+                    warnings.Add($"{r.FullName}: was talking in a conversation that couldn't be restored, so they will choose what to do next.");
+                }
+
+                if (r.TargetResidentId != null)
+                {
+                    var other = simulation.GetResident(r.TargetResidentId);
+                    if (other == null || other == r || !other.IsAlive)
+                    {
+                        r.ResetActivity();
+                        warnings.Add($"{r.FullName}: was looking for someone who isn't in the town, so they will choose what to do next.");
+                    }
+                }
+            }
+        }
 
         private static void ReadMemories(Dictionary<string, object> data, TownSimulation simulation, List<string> warnings)
         {
@@ -490,18 +688,7 @@ namespace TinyTown.Simulation.Persistence
                     continue;
                 }
 
-                var lines = new List<ConversationLine>();
-                foreach (var l in GetList(c, "lines").OfType<Dictionary<string, object>>())
-                {
-                    var speaker = GetString(l, "speakerId");
-                    var at = GetDouble(l, "gameMinutes", -1);
-                    var text = TextRules.Clean(GetString(l, "text"), ConversationLine.MaxTextLength);
-                    if (participants.Contains(speaker) && at >= 0 && text.Length > 0)
-                    {
-                        lines.Add(new ConversationLine(speaker, new GameTime((long)at), text));
-                    }
-                }
-
+                var lines = ReadLines(c, participants);
                 if (lines.Count == 0)
                 {
                     skipped++;
@@ -511,6 +698,8 @@ namespace TinyTown.Simulation.Persistence
                 var record = new ConversationRecord(id, kind, new GameTime((long)started), participants, TextRules.Clean(GetString(c, "context"), 60), lines);
                 simulation.Conversations.Restore(record, Math.Max(next, NumberAfter(id)));
             }
+
+            simulation.Conversations.RestoreNextNumber(next);
 
             if (skipped > 0)
             {

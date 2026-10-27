@@ -4,6 +4,7 @@ using System.Linq;
 using TinyTown.Simulation;
 using TinyTown.Simulation.AI;
 using TinyTown.Simulation.Configuration;
+using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Content;
 using TinyTown.Simulation.Persistence;
 using TinyTown.Simulation.Residents;
@@ -37,14 +38,15 @@ namespace TinyTown.Runtime
         private float confirmNewUntil;
         private bool followResident = true;
         private string viewedMapId;
-        private long lastSeenConversationNumber;
-        private string speech;
-        private float speechUntil;
+        private string selectedId;
+        private Vector2 panelScroll;
+
+        private readonly Dictionary<string, SpriteRenderer> residentRenderers = new Dictionary<string, SpriteRenderer>();
+        private readonly Dictionary<string, Location> previousLocations = new Dictionary<string, Location>();
+        private readonly Dictionary<string, (ConversationLine line, float until)> speech = new Dictionary<string, (ConversationLine, float)>();
 
         private Camera cam;
         private MapView mapView;
-        private SpriteRenderer residentRenderer;
-        private Location previousLocation;
         private GUIStyle titleStyle;
         private GUIStyle textStyle;
         private GUIStyle smallStyle;
@@ -60,7 +62,8 @@ namespace TinyTown.Runtime
 
         public int Speed => Speeds[speedIndex];
 
-        private Resident Resident => Simulation.Residents[0];
+        /// <summary>The resident shown in the inspector and followed by the camera.</summary>
+        private Resident Resident => Simulation.GetResident(selectedId) ?? Simulation.Residents[0];
 
         /// <summary>Advances the town immediately, as if that many minutes had passed. Used by tests.</summary>
         public void AdvanceMinutes(int minutes)
@@ -77,7 +80,6 @@ namespace TinyTown.Runtime
         {
             cam = Camera.main;
             mapView = new GameObject("Map").AddComponent<MapView>();
-            residentRenderer = new GameObject("Resident").AddComponent<SpriteRenderer>();
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyTown] AI: {message}") };
 
             if (!SaveStore.Exists(SaveSlot) || !TryLoad())
@@ -121,7 +123,11 @@ namespace TinyTown.Runtime
 
         private void TickOnce()
         {
-            previousLocation = Resident.Location;
+            foreach (var r in Simulation.Residents)
+            {
+                previousLocations[r.Id] = r.Location;
+            }
+
             Simulation.Tick();
             if (Simulation.Time.TotalMinutes - lastAutosaveMinute >= AutosaveEveryGameMinutes)
             {
@@ -139,9 +145,19 @@ namespace TinyTown.Runtime
         {
             Simulation = simulation;
             Ai?.Attach(simulation);
-            lastSeenConversationNumber = simulation.Conversations.NextNumber;
-            speech = null;
-            previousLocation = Resident.Location;
+            speech.Clear();
+            previousLocations.Clear();
+            foreach (var renderer in residentRenderers.Values)
+            {
+                Destroy(renderer.gameObject);
+            }
+
+            residentRenderers.Clear();
+            if (simulation.GetResident(selectedId) == null)
+            {
+                selectedId = simulation.Residents[0].Id;
+            }
+
             lastAutosaveMinute = simulation.Time.TotalMinutes;
             accumulator = 0f;
             followResident = true;
@@ -188,6 +204,9 @@ namespace TinyTown.Runtime
                     StarterTown.AddLifeHistory(result.Simulation);
                 }
 
+                // Saves from before Phase 3 had only Mabel; her new neighbours move in at home.
+                var newcomers = StarterTown.AddMissingResidents(result.Simulation);
+
                 SetSimulation(result.Simulation);
                 foreach (var warning in result.Warnings)
                 {
@@ -195,7 +214,8 @@ namespace TinyTown.Runtime
                 }
 
                 status = (useBackup ? "Main save was damaged, so the backup was loaded. " : "Loaded saved town. ")
-                    + (result.Warnings.Count > 0 ? $"{result.Warnings.Count} problem(s) were repaired." : string.Empty);
+                    + (result.Warnings.Count > 0 ? $"{result.Warnings.Count} problem(s) were repaired. " : string.Empty)
+                    + (newcomers > 0 ? $"{newcomers} new neighbour(s) moved in." : string.Empty);
                 return true;
             }
 
@@ -225,15 +245,42 @@ namespace TinyTown.Runtime
             cam.rect = new Rect(0f, 0f, Mathf.Clamp01(1f - (PanelWidth / Mathf.Max(1, Screen.width))), 1f);
             FrameCamera(mapView.Map);
 
-            var here = Resident.Location;
-            residentRenderer.enabled = here.MapId == mapId;
-            residentRenderer.sprite = PlaceholderArt.Person(PlaceholderArt.ParseColour(Resident.ColourHex, new Color(0.85f, 0.45f, 0.3f)));
-            var from = previousLocation.MapId == here.MapId ? previousLocation.Position : here.Position;
             var t = Mathf.Clamp01(tickProgress);
-            var x = Mathf.Lerp(from.X, here.Position.X, t);
-            var y = Mathf.Lerp(from.Y, here.Position.Y, t);
-            residentRenderer.transform.position = IsoGrid.TileToWorld(x, y) + new Vector3(0f, -0.05f, 0f);
-            residentRenderer.sortingOrder = IsoGrid.SortingOrder(Mathf.Max(from.X, here.Position.X), Mathf.Max(from.Y, here.Position.Y), 2);
+            var sharing = new Dictionary<Location, int>();
+            foreach (var r in Simulation.Residents)
+            {
+                var renderer = RendererFor(r);
+                var here = r.Location;
+                renderer.enabled = here.MapId == mapId && r.IsAlive;
+                if (!renderer.enabled)
+                {
+                    continue;
+                }
+
+                // Residents on the same tile stand side by side instead of on top of each other.
+                sharing.TryGetValue(here, out var alreadyHere);
+                sharing[here] = alreadyHere + 1;
+                var offset = new Vector3((alreadyHere % 2 == 0 ? 1 : -1) * 0.16f * ((alreadyHere + 1) / 2), -0.05f, 0f);
+
+                var previous = previousLocations.TryGetValue(r.Id, out var p) ? p : here;
+                var from = previous.MapId == here.MapId ? previous.Position : here.Position;
+                var x = Mathf.Lerp(from.X, here.Position.X, t);
+                var y = Mathf.Lerp(from.Y, here.Position.Y, t);
+                renderer.transform.position = IsoGrid.TileToWorld(x, y) + offset;
+                renderer.sortingOrder = IsoGrid.SortingOrder(Mathf.Max(from.X, here.Position.X), Mathf.Max(from.Y, here.Position.Y), 2);
+            }
+        }
+
+        private SpriteRenderer RendererFor(Resident r)
+        {
+            if (!residentRenderers.TryGetValue(r.Id, out var renderer))
+            {
+                renderer = new GameObject($"Resident {r.FirstName}").AddComponent<SpriteRenderer>();
+                renderer.sprite = PlaceholderArt.Person(PlaceholderArt.ParseColour(r.ColourHex, new Color(0.85f, 0.45f, 0.3f)));
+                residentRenderers.Add(r.Id, renderer);
+            }
+
+            return renderer;
         }
 
         private void FrameCamera(TileMap map)
@@ -290,6 +337,9 @@ namespace TinyTown.Runtime
                 case KeyCode.F:
                     followResident = true;
                     break;
+                case KeyCode.N:
+                    SelectNext();
+                    break;
                 default:
                     return;
             }
@@ -304,6 +354,19 @@ namespace TinyTown.Runtime
             {
                 lastSpeedIndex = speedIndex;
             }
+        }
+
+        private void Select(Resident r)
+        {
+            selectedId = r.Id;
+            followResident = true;
+        }
+
+        private void SelectNext()
+        {
+            var list = Simulation.Residents;
+            var index = list.ToList().IndexOf(Resident);
+            Select(list[(index + 1) % list.Count]);
         }
 
         private void CycleMap()
@@ -321,24 +384,31 @@ namespace TinyTown.Runtime
                 Label(IsoGrid.TileToWorld(obj.Location.Position.X, obj.Location.Position.Y) + new Vector3(0f, 0.32f, 0f), obj.Name, smallStyle);
             }
 
-            if (residentRenderer.enabled)
+            foreach (var r in Simulation.Residents)
             {
-                Label(residentRenderer.transform.position + new Vector3(0f, 0.72f, 0f), Resident.FirstName, labelStyle);
-            }
+                if (!residentRenderers.TryGetValue(r.Id, out var renderer) || !renderer.enabled)
+                {
+                    continue;
+                }
 
-            if (Simulation.Conversations.NextNumber != lastSeenConversationNumber)
-            {
-                lastSeenConversationNumber = Simulation.Conversations.NextNumber;
-                speech = Simulation.Conversations.LastLineBy(Resident.Id)?.Text;
-                speechUntil = UnityEngine.Time.unscaledTime + SpeechSeconds;
-            }
+                var position = renderer.transform.position;
+                Label(position + new Vector3(0f, 0.72f, 0f), r.FirstName, labelStyle);
 
-            if (residentRenderer.enabled && !string.IsNullOrEmpty(speech) && UnityEngine.Time.unscaledTime < speechUntil)
-            {
-                var screen = cam.WorldToScreenPoint(residentRenderer.transform.position + new Vector3(0f, 0.95f, 0f));
-                var content = new GUIContent($"“{speech}”");
-                var height = bubbleStyle.CalcHeight(content, 220f);
-                GUI.Box(new Rect(screen.x - 110f, Screen.height - screen.y - height, 220f, height), content, bubbleStyle);
+                // A bubble appears for each new line a resident says, and fades after a few seconds.
+                var line = Simulation.LastLineBy(r.Id);
+                if (line != null && (!speech.TryGetValue(r.Id, out var shown) || shown.line != line))
+                {
+                    var fresh = Simulation.Time.TotalMinutes - line.Time.TotalMinutes <= 2;
+                    speech[r.Id] = (line, fresh ? UnityEngine.Time.unscaledTime + SpeechSeconds : 0f);
+                }
+
+                if (speech.TryGetValue(r.Id, out var bubble) && UnityEngine.Time.unscaledTime < bubble.until)
+                {
+                    var screen = cam.WorldToScreenPoint(position + new Vector3(0f, 0.95f, 0f));
+                    var content = new GUIContent($"“{bubble.line.Text}”");
+                    var height = bubbleStyle.CalcHeight(content, 220f);
+                    GUI.Box(new Rect(screen.x - 110f, Screen.height - screen.y - height, 220f, height), content, bubbleStyle);
+                }
             }
         }
 
@@ -372,7 +442,18 @@ namespace TinyTown.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Space(8f);
+            GUILayout.BeginHorizontal();
+            foreach (var other in Simulation.Residents)
+            {
+                if (GUILayout.Toggle(other == r, other.FirstName, GUI.skin.button) && other != r)
+                {
+                    Select(other);
+                }
+            }
+
+            GUILayout.EndHorizontal();
+            GUILayout.Space(6f);
+            panelScroll = GUILayout.BeginScrollView(panelScroll);
 
             GUILayout.Label($"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", titleStyle);
             GUILayout.Label($"{r.Job?.Title ?? "No job"} · {r.Personality.Describe()}", smallStyle);
@@ -397,8 +478,15 @@ namespace TinyTown.Runtime
             }
 
             GUILayout.Space(6f);
+            GUILayout.Label("People", textStyle);
+            foreach (var other in Simulation.Residents.Where(o => o != r))
+            {
+                GUILayout.Label(DescribeRelationship(r, other), smallStyle);
+            }
+
+            GUILayout.Space(6f);
             GUILayout.Label("Recently", textStyle);
-            foreach (var entry in r.Log.Reverse().Take(5))
+            foreach (var entry in r.Log.Reverse().Take(4))
             {
                 GUILayout.Label($"{entry.Time.ClockText}  {entry.Text}", smallStyle);
             }
@@ -410,7 +498,7 @@ namespace TinyTown.Runtime
                 GUILayout.Label($"Day {memory.Time.Day}: {memory.Summary}", smallStyle);
             }
 
-            GUILayout.FlexibleSpace();
+            GUILayout.EndScrollView();
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Save (F5)"))
             {
@@ -437,7 +525,7 @@ namespace TinyTown.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label(followResident ? "View: following resident (Tab: other map)" : $"View: {Simulation.World.GetMap(viewedMapId).Name} (F: follow resident)", smallStyle);
+            GUILayout.Label(followResident ? $"View: following {r.FirstName} (N: next resident, Tab: other map)" : $"View: {Simulation.World.GetMap(viewedMapId).Name} (F: follow {r.FirstName})", smallStyle);
             GUILayout.Label(Ai.Summary(), smallStyle);
             var lastEvent = Ai.RecentEvents.LastOrDefault();
             if (lastEvent != null)
@@ -481,6 +569,13 @@ namespace TinyTown.Runtime
             {
                 case ResidentState.Performing:
                     return activity?.Verb ?? "something";
+                case ResidentState.Travelling when r.TargetResidentId != null:
+                    return $"looking for {Simulation.GetResident(r.TargetResidentId)?.FirstName ?? "someone"} for a chat";
+                case ResidentState.Talking:
+                    var chat = Simulation.GetConversation(r.ConversationId);
+                    var partner = chat == null ? null : Simulation.GetResident(chat.OtherThan(r.Id));
+                    var topic = string.IsNullOrEmpty(chat?.Topic) ? string.Empty : $" about {chat.Topic}";
+                    return $"chatting with {partner?.FirstName ?? "someone"}{topic}";
                 case ResidentState.Travelling:
                     Simulation.World.TryGetObject(r.TargetObjectId, out var target);
                     return $"walking to the {target?.Name.ToLowerInvariant()} to {activity?.Name.ToLowerInvariant()}";
@@ -491,6 +586,16 @@ namespace TinyTown.Runtime
                 default:
                     return "deciding what to do";
             }
+        }
+
+        private string DescribeRelationship(Resident r, Resident other)
+        {
+            if (!Simulation.Relationships.TryGet(r.Id, other.Id, out var rel) || !rel.HaveMet)
+            {
+                return $"{other.FirstName}: hasn't met yet";
+            }
+
+            return $"{other.FirstName}: {rel.Describe()} (friendship {rel.Friendship:0}, trust {rel.Trust:0}{(rel.Dislike >= 10 ? $", dislike {rel.Dislike:0}" : string.Empty)}), {rel.Interactions} chat(s)";
         }
 
         private static string Words(string pascal) =>

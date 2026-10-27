@@ -101,6 +101,38 @@ namespace TinyTown.Simulation.AI
             }
         }
 
+        /// <summary>Lists the other living residents and how this resident feels about each, by the game's numbers.</summary>
+        public static void AppendPeople(StringBuilder sb, TownSimulation sim, Resident r)
+        {
+            var others = sim.Residents.Where(o => o.Id != r.Id && o.IsAlive).ToList();
+            if (others.Count == 0)
+            {
+                return;
+            }
+
+            sb.AppendLine("People in the village:");
+            foreach (var o in others)
+            {
+                sb.Append("- ").Append(o.FullName).Append(", ").Append(o.AgeYears).Append(": ").AppendLine(Relationship(sim, r, o));
+            }
+        }
+
+        public static string Relationship(TownSimulation sim, Resident r, Resident other)
+        {
+            if (!sim.Relationships.TryGet(r.Id, other.Id, out var rel) || !rel.HaveMet)
+            {
+                return "you have never really met";
+            }
+
+            var text = $"{rel.Describe()} (friendship {rel.Friendship:0}/100, trust {rel.Trust:0}/100";
+            if (rel.Dislike >= 10)
+            {
+                text += $", dislike {rel.Dislike:0}/100";
+            }
+
+            return text + $"), talked {rel.Interactions} time{(rel.Interactions == 1 ? string.Empty : "s")}";
+        }
+
         public static IEnumerable<ActivityLogEntry> RecentLog(Resident r, GameTime since, int max) =>
             r.Log.Where(e => e.Time.TotalMinutes >= since.TotalMinutes).Reverse().Take(max).Reverse();
 

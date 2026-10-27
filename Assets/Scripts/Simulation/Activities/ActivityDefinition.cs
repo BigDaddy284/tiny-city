@@ -13,6 +13,9 @@ namespace TinyTown.Simulation.Activities
         Sleep,
         Work,
         Leisure,
+
+        /// <summary>Talking with another resident. Uses no object; see <see cref="ActivityCatalog.Chat"/>.</summary>
+        Social,
     }
 
     public sealed class ActivityDefinition

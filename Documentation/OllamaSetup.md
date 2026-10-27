@@ -1,6 +1,6 @@
 # Ollama Setup and Troubleshooting
 
-The Tiny Town uses a locally installed [Ollama](https://ollama.com) service for residents' free-time decisions, their spoken lines and their end-of-day reflections. Ollama and the model are not bundled with the game. Without them the game still runs: residents follow their built-in routine.
+The Tiny Town uses a locally installed [Ollama](https://ollama.com) service for residents' free-time decisions, their conversation lines and their end-of-day reflections. Ollama and the model are not bundled with the game. Without them the game still runs: residents follow their built-in routine.
 
 ## Setup (Windows)
 
@@ -38,7 +38,8 @@ Invalid values are reported in `Player.log`, and the game uses the defaults inst
 ## How the AI is used
 
 - The game decides everything that has rules: needs, sleep, work hours, walking, map changes and saving. When a resident has free time, the game lists the activities that are currently valid and the AI picks one, with a short reason and something to say. The game checks the answer against the current situation and ignores anything else.
-- One request is sent at a time. Decisions come before reflections. A bad answer is retried at most `maxRetries` times; after that, or if the answer takes too long, the resident uses the routine.
+- In a conversation the game decides who speaks, how many lines there are and when it ends. For each line the AI writes the words, a tone (warm, playful, neutral or disagree), the topic and whether the speaker wants to wrap up. The tone changes the relationship by fixed game rules. If a line doesn't arrive within 4 game minutes, the resident uses built-in small talk for it.
+- One request is sent at a time. Decisions come first, then conversation lines, then reflections. A bad answer is retried at most `maxRetries` times; after that, or if the answer takes too long, the resident uses the routine.
 - After three connection errors in a row, the game treats Ollama as offline and checks again every 30 seconds.
 - At bedtime each resident reflects on their day once. The AI suggests the memory and how important it was; the game stores it, capped at importance 6.
 

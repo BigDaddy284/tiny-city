@@ -14,6 +14,7 @@ namespace TinyTown.Simulation.World
         GardenTap,
         Bench,
         ExerciseSpot,
+        Workbench,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -39,6 +40,24 @@ namespace TinyTown.Simulation.World
         public ObjectType Type { get; }
 
         public Location Location { get; }
+
+        /// <summary>How many residents can use or head for it at once. Benches seat two; most things serve one.</summary>
+        public int Capacity => CapacityOf(Type);
+
+        public static int CapacityOf(ObjectType type)
+        {
+            switch (type)
+            {
+                case ObjectType.Bench:
+                case ObjectType.ExerciseSpot:
+                case ObjectType.Workbench:
+                    return 2;
+                case ObjectType.GardenPlot:
+                    return 4;
+                default:
+                    return 1;
+            }
+        }
     }
 
     /// <summary>One-way link between two walkable tiles on different maps, such as a front door.</summary>
