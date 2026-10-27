@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation.Activities;
 using TinyTown.Simulation.Economy;
+using TinyTown.Simulation.Health;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Social;
@@ -35,7 +36,7 @@ namespace TinyTown.Simulation
     /// Owns the town's live state and advances it one in-game minute per <see cref="Tick"/>.
     /// Given the same starting state it always produces the same result.
     /// </summary>
-    public sealed class TownSimulation
+    public sealed partial class TownSimulation
     {
         /// <summary>How long a resident waits before re-planning after finding a destination unreachable.</summary>
         public const int UnreachableWaitMinutes = 15;
@@ -186,6 +187,7 @@ namespace TinyTown.Simulation
                 SettleWeek();
             }
 
+            StepLifeEvents();
             foreach (var resident in residents)
             {
                 if (resident.IsAlive)
@@ -217,7 +219,14 @@ namespace TinyTown.Simulation
                 }
             }
 
-            NeedRules.ApplyMinute(r.Needs, r.Personality, r.State == ResidentState.Performing || r.State == ResidentState.Talking ? activity : null);
+            NeedRules.ApplyMinute(r.Needs, r.Personality, r.State == ResidentState.Performing || r.State == ResidentState.Talking ? activity : null, IllnessCatalog.Get(r.IllnessId));
+            StepHealth(r, activity);
+            if (!r.IsAlive)
+            {
+                return;
+            }
+
+            StepSharedHobby(r, activity);
 
             switch (r.State)
             {
@@ -238,6 +247,7 @@ namespace TinyTown.Simulation
 
                     if (Planner.IsComplete(r, activity, Time))
                     {
+                        FinishActivity(r, activity);
                         r.ResetActivity();
                     }
                     else if (Planner.ShouldInterrupt(r, activity, Time))
@@ -303,6 +313,7 @@ namespace TinyTown.Simulation
                     break;
 
                 default:
+                    NoteSickDay(r);
                     StartNextActivity(r);
                     break;
             }
@@ -551,6 +562,11 @@ namespace TinyTown.Simulation
             {
                 BeginPerforming(r, choice.Activity);
             }
+
+            if (choice.IsDiscretionary)
+            {
+                InviteToHobby(r, choice.Activity, choice.Target);
+            }
         }
 
         private static void Relax(Resident r, string goal)
@@ -751,6 +767,7 @@ namespace TinyTown.Simulation
             {
                 Conversations.AddChat(session.Id, session.Started, session.ParticipantIds, string.IsNullOrEmpty(session.Topic) ? session.Place : session.Topic, session.Lines);
                 SocialRules.ApplyConversation(ab, ba, session.Lines, Time);
+                NoteExposure(a, b);
             }
 
             var about = string.IsNullOrEmpty(session.Topic) ? string.Empty : $" about {session.Topic.ToLowerInvariant()}";
@@ -875,7 +892,7 @@ namespace TinyTown.Simulation
 
         private void BeginPerforming(Resident r, ActivityDefinition activity)
         {
-            if (activity.ItemId != null || activity.UsesGroceries)
+            if (activity.ItemId != null || activity.UsesGroceries || activity.NeedsOpenBusiness)
             {
                 World.TryGetObject(r.TargetObjectId, out var target);
                 var price = Economy.PriceOf(activity, target);

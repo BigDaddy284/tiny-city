@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TinyTown.Simulation.Time;
 using TinyTown.Simulation.World;
 
@@ -84,6 +85,7 @@ namespace TinyTown.Simulation.Residents
             Job = job;
             Location = location;
             Needs = needs ?? new Needs();
+            Health = TinyTown.Simulation.Health.HealthRules.StartingHealthFor(AgeYears);
         }
 
         public string Id { get; }
@@ -94,7 +96,8 @@ namespace TinyTown.Simulation.Residents
 
         public string FullName => $"{FirstName} {LastName}".Trim();
 
-        public int AgeYears { get; }
+        /// <summary>Goes up on each birthday; see <see cref="Health.HealthRules.DaysPerYear"/>.</summary>
+        public int AgeYears { get; internal set; }
 
         public int BirthdayDayOfYear { get; }
 
@@ -133,6 +136,39 @@ namespace TinyTown.Simulation.Residents
         public int UnpaidWorkMinutes { get; internal set; }
 
         public bool IsAlive { get; internal set; } = true;
+
+        /// <summary>When they died, for the record; null while alive.</summary>
+        public GameTime? DiedAt { get; internal set; }
+
+        /// <summary>What they died of, e.g. "old age"; empty while alive.</summary>
+        public string CauseOfDeath { get; internal set; } = string.Empty;
+
+        /// <summary>0 (dying) to 100. Worn down by neglect and illness, slowly restored by good care and rest.</summary>
+        public double Health { get; internal set; } = 90;
+
+        /// <summary>The current illness's id from <see cref="Health.IllnessCatalog"/>, or null when well.</summary>
+        public string IllnessId { get; internal set; }
+
+        /// <summary>Minutes of recovery left; resting counts double.</summary>
+        public int IllnessMinutesLeft { get; internal set; }
+
+        /// <summary>Whether the clinic has treated a serious illness, which lets recovery begin.</summary>
+        public bool IllnessTreated { get; internal set; }
+
+        /// <summary>The last day they chatted with someone contagious, or 0.</summary>
+        public int ExposedDay { get; internal set; }
+
+        /// <summary>The last day they called in sick, so it's only said once a day.</summary>
+        public int SickDay { get; internal set; }
+
+        private List<string> hobbies = new List<string>();
+
+        /// <summary>Hobby ids such as "chess", from <see cref="Activities.ActivityDefinition.Hobby"/>.</summary>
+        public IReadOnlyList<string> Hobbies => hobbies;
+
+        internal void SetHobbies(IEnumerable<string> ids) => hobbies = (ids ?? new string[0]).Where(h => !string.IsNullOrWhiteSpace(h)).Distinct().Take(MaxHobbies).ToList();
+
+        public const int MaxHobbies = 4;
 
         public Needs Needs { get; }
 

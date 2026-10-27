@@ -16,6 +16,7 @@ namespace TinyTown.Simulation.AI
             var job = r.Job == null ? "a resident" : $"the {r.Job.Title.ToLowerInvariant()}";
             return $"You are {r.FullName}, aged {r.AgeYears}, {job} in The Tiny Town, a small, cosy village. " +
                 $"Your personality: {r.Personality.Describe().ToLowerInvariant()}. " +
+                (r.Hobbies.Count > 0 ? $"Your hobbies: {string.Join(", ", r.Hobbies)}. " : string.Empty) +
                 "Stay in character: warm, down to earth and a little playful. Never mention being an AI. Answer with JSON only.";
         }
 
@@ -31,7 +32,21 @@ namespace TinyTown.Simulation.AI
                 parts.Add($"{need} {value:0}/100{Word(value)}");
             }
 
-            return string.Join(", ", parts);
+            return string.Join(", ", parts) + "; " + HealthText(r);
+        }
+
+        /// <summary>How the resident's health feels from the inside, for prompts.</summary>
+        public static string HealthText(Resident r)
+        {
+            var illness = Health.IllnessCatalog.Get(r.IllnessId);
+            if (illness != null)
+            {
+                return illness.Serious
+                    ? $"you are seriously ill with {illness.Name}{(r.IllnessTreated ? " but the doctor has treated you" : " and need the doctor")}"
+                    : $"you are poorly with {illness.Name}";
+            }
+
+            return r.Health >= 80 ? "you are in good health" : r.Health >= 50 ? "your health is fair" : "your health is poor";
         }
 
         /// <summary>Work only gets a mention when the resident leaves within this many minutes, so evenings don't sound like work is next.</summary>

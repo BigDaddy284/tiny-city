@@ -43,13 +43,13 @@ namespace TinyTown.Simulation.Activities
             return need == NeedType.Hygiene ? Comfortable + (20 * (personality.Tidy - 0.5)) : Comfortable;
         }
 
-        /// <summary>Applies one minute of decay plus the gains of <paramref name="activity"/> if one is being performed.</summary>
-        public static void ApplyMinute(Needs needs, Personality personality, ActivityDefinition activity)
+        /// <summary>Applies one minute of decay (faster for some needs while ill) plus the gains of <paramref name="activity"/> if one is being performed.</summary>
+        public static void ApplyMinute(Needs needs, Personality personality, ActivityDefinition activity, Health.Illness illness = null)
         {
             for (var i = 0; i < Needs.Count; i++)
             {
                 var need = (NeedType)i;
-                var decay = DecayPerHour(need, personality) / 60.0;
+                var decay = DecayPerHour(need, personality) / 60.0 * (illness?.DecayMultiplier(need) ?? 1.0);
                 var gain = 0.0;
                 if (activity != null)
                 {

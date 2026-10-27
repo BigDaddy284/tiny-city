@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation.Activities;
+using TinyTown.Simulation.Health;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Time;
@@ -82,7 +83,7 @@ namespace TinyTown.Simulation.Social
         public static bool CanJoinConversation(Resident r, GameTime now)
         {
             if (r == null || !r.IsAlive || r.State == ResidentState.Talking || ActivityPlanner.MostUrgentNeed(r) != null
-                || ActivityPlanner.IsSleepTime(now) || ActivityPlanner.IsWorkTime(r, now))
+                || ActivityPlanner.IsSleepTime(now) || ActivityPlanner.ShouldWork(r, now) || HealthRules.KeepsToThemselves(r))
             {
                 return false;
             }
@@ -103,8 +104,8 @@ namespace TinyTown.Simulation.Social
         public static bool CanBeApproached(Resident r, GameTime now, bool isOutdoors)
         {
             return r != null && r.IsAlive && isOutdoors && r.State != ResidentState.Talking
-                && ActivityPlanner.MostUrgentNeed(r) == null && !ActivityPlanner.IsSleepTime(now) && !ActivityPlanner.IsWorkTime(r, now)
-                && !(r.ActivityId == ActivityCatalog.Sleep.Id || r.ActivityId == ActivityCatalog.Work.Id);
+                && ActivityPlanner.MostUrgentNeed(r) == null && !ActivityPlanner.IsSleepTime(now) && !ActivityPlanner.ShouldWork(r, now)
+                && !HealthRules.KeepsToThemselves(r) && !(r.ActivityId == ActivityCatalog.Sleep.Id || r.ActivityId == ActivityCatalog.Work.Id);
         }
 
         /// <summary>A reason this resident must leave a conversation now, or null to stay.</summary>
@@ -116,9 +117,14 @@ namespace TinyTown.Simulation.Social
                 return $"{urgent.Value.ToString().ToLowerInvariant()} couldn't wait";
             }
 
-            if (ActivityPlanner.IsWorkTime(r, now))
+            if (ActivityPlanner.ShouldWork(r, now))
             {
                 return "time for work";
+            }
+
+            if (HealthRules.KeepsToThemselves(r))
+            {
+                return "they felt too unwell";
             }
 
             if (ActivityPlanner.IsSleepTime(now))

@@ -28,7 +28,7 @@ namespace TinyTown.Tests.EditMode
                 template.Job,
                 location ?? template.Location,
                 needs);
-            CopyFinances(template, resident);
+            CopyStarterDetails(template, resident);
             return new TownSimulation(world, new[] { resident }, time);
         }
 
@@ -62,7 +62,7 @@ namespace TinyTown.Tests.EditMode
                     template.Job,
                     place?.Invoke(template) ?? template.Location,
                     needs);
-                CopyFinances(template, resident);
+                CopyStarterDetails(template, resident);
                 residents.Add(resident);
             }
 
@@ -79,14 +79,16 @@ namespace TinyTown.Tests.EditMode
                 r => r.Id == StarterTown.ResidentId || r.Id == StarterTown.ArthurId);
         }
 
-        /// <summary>Money, groceries, rent and income as the starter content gives them.</summary>
-        public static void CopyFinances(Resident from, Resident to)
+        /// <summary>Money, groceries, rent, income, hobbies and health as the starter content gives them.</summary>
+        public static void CopyStarterDetails(Resident from, Resident to)
         {
             to.MoneyPence = from.MoneyPence;
             to.Groceries = from.Groceries;
             to.WeeklyRentPence = from.WeeklyRentPence;
             to.WeeklyIncomePence = from.WeeklyIncomePence;
             to.IncomeLabel = from.IncomeLabel;
+            to.SetHobbies(from.Hobbies);
+            to.Health = from.Health;
         }
 
         public static WorldObject Object(TownSimulation sim, string id)

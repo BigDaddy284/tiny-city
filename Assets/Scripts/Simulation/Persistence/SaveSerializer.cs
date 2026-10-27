@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation.Activities;
 using TinyTown.Simulation.Economy;
+using TinyTown.Simulation.Health;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Social;
@@ -54,9 +55,11 @@ namespace TinyTown.Simulation.Persistence
         /// relationships, conversations in progress, who a resident is talking to or looking for, and the tone of
         /// each line; older saves load with nobody having met and no conversation going on. Version 4 adds money,
         /// groceries, rent and income, job work days and wages, business stock and takings, and the ledger; older
-        /// saves load with no money (the starter content then gives starter residents their finances).
+        /// saves load with no money (the starter content then gives starter residents their finances). Version 5
+        /// adds health, illness, death date and cause, and hobbies; older saves load in health suited to each
+        /// resident's age, well, and without hobbies (the starter content then adds them).
         /// </remarks>
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
 
         public static string Save(TownSimulation simulation)
         {
@@ -234,6 +237,21 @@ namespace TinyTown.Simulation.Persistence
                 ["weeklyIncome"] = r.WeeklyIncomePence,
                 ["incomeLabel"] = r.IncomeLabel,
                 ["unpaidWorkMinutes"] = r.UnpaidWorkMinutes,
+                ["health"] = r.Health,
+                ["illness"] = r.IllnessId == null ? null : new Dictionary<string, object>
+                {
+                    ["id"] = r.IllnessId,
+                    ["minutesLeft"] = r.IllnessMinutesLeft,
+                    ["treated"] = r.IllnessTreated,
+                },
+                ["exposedDay"] = r.ExposedDay,
+                ["sickDay"] = r.SickDay,
+                ["death"] = r.DiedAt == null ? null : new Dictionary<string, object>
+                {
+                    ["gameMinutes"] = r.DiedAt.Value.TotalMinutes,
+                    ["cause"] = r.CauseOfDeath,
+                },
+                ["hobbies"] = r.Hobbies.Cast<object>().ToList(),
                 ["alive"] = r.IsAlive,
                 ["needs"] = needs,
                 ["location"] = new Dictionary<string, object>
@@ -354,6 +372,7 @@ namespace TinyTown.Simulation.Persistence
             resident.WeeklyRentPence = Math.Max(0, GetLong(data, "weeklyRent", 0));
             resident.WeeklyIncomePence = Math.Max(0, GetLong(data, "weeklyIncome", 0));
             resident.IncomeLabel = TextRules.Clean(GetString(data, "incomeLabel"), 40);
+            ReadHealth(resident, data, label, warnings);
             resident.UnpaidWorkMinutes = job == null ? 0 : Math.Max(0, Math.Min(GetInt(data, "unpaidWorkMinutes", 0), GameTime.MinutesPerDay));
             foreach (var entry in GetList(data, "log").OfType<Dictionary<string, object>>().Take(Resident.MaxLogEntries))
             {
@@ -365,6 +384,11 @@ namespace TinyTown.Simulation.Persistence
             }
 
             RestoreActivity(resident, data, world, label, warnings);
+            if (!resident.IsAlive)
+            {
+                resident.ResetActivity();
+            }
+
             return resident;
         }
 
@@ -736,6 +760,49 @@ namespace TinyTown.Simulation.Persistence
             if (skipped > 0)
             {
                 warnings.Add($"{skipped} damaged conversation record(s) were skipped.");
+            }
+        }
+
+        /// <summary>Health, illness, death and hobbies. Missing values (older saves) give a well resident of their age.</summary>
+        private static void ReadHealth(Resident resident, Dictionary<string, object> data, string label, List<string> warnings)
+        {
+            var health = GetDouble(data, "health", double.NaN);
+            resident.Health = double.IsNaN(health) ? HealthRules.StartingHealthFor(resident.AgeYears) : Math.Max(0, Math.Min(HealthRules.MaxHealthFor(resident.AgeYears), health));
+
+            var illness = GetObject(data, "illness");
+            if (illness != null)
+            {
+                var kind = IllnessCatalog.Get(GetString(illness, "id"));
+                if (kind == null)
+                {
+                    warnings.Add($"{label}: an unknown illness was dropped.");
+                }
+                else
+                {
+                    resident.IllnessId = kind.Id;
+                    resident.IllnessMinutesLeft = Math.Max(1, Math.Min(GetInt(illness, "minutesLeft", kind.RecoveryMinutes), kind.RecoveryMinutes));
+                    resident.IllnessTreated = kind.Serious && GetBool(illness, "treated", false);
+                }
+            }
+
+            resident.ExposedDay = Math.Max(0, GetInt(data, "exposedDay", 0));
+            resident.SickDay = Math.Max(0, GetInt(data, "sickDay", 0));
+            resident.SetHobbies(GetList(data, "hobbies").OfType<string>().Where(h => ActivityCatalog.ForHobby(h) != null));
+
+            var death = GetObject(data, "death");
+            if (!resident.IsAlive)
+            {
+                var minute = death == null ? -1 : GetDouble(death, "gameMinutes", -1);
+                resident.DiedAt = new GameTime(minute >= 0 ? (long)minute : 0);
+                resident.CauseOfDeath = TextRules.Clean(death == null ? null : GetString(death, "cause"), 40);
+                if (resident.CauseOfDeath.Length == 0)
+                {
+                    resident.CauseOfDeath = "unknown causes";
+                }
+
+                resident.IllnessId = null;
+                resident.IllnessMinutesLeft = 0;
+                resident.IllnessTreated = false;
             }
         }
 

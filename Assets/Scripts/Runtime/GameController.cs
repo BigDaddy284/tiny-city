@@ -5,6 +5,7 @@ using TinyTown.Simulation;
 using TinyTown.Simulation.AI;
 using TinyTown.Simulation.Configuration;
 using TinyTown.Simulation.Economy;
+using TinyTown.Simulation.Health;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Content;
 using TinyTown.Simulation.Persistence;
@@ -210,6 +211,12 @@ namespace TinyTown.Runtime
                 {
                     // Saves from before the economy: wages for existing jobs, and starting money, food and rent.
                     StarterTown.AddFinancesToOlderSave(result.Simulation);
+                }
+
+                if (result.UpgradedFromVersion > 0 && result.UpgradedFromVersion < 5)
+                {
+                    // Saves from before hobbies: the starter residents get theirs.
+                    StarterTown.AddHobbiesToOlderSave(result.Simulation);
                 }
 
                 // Older saves have fewer residents; the newcomers move in at home.
@@ -480,6 +487,16 @@ namespace TinyTown.Runtime
 
             GUILayout.Label($"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", titleStyle);
             GUILayout.Label($"{DescribeLivelihood(r)} · {r.Personality.Describe()}", smallStyle);
+            GUILayout.Label($"Birthday: day {HealthRules.BirthdayCycleDay(r)} of each {HealthRules.DaysPerYear}-day year · Hobbies: {(r.Hobbies.Count > 0 ? string.Join(", ", r.Hobbies) : "none")}", smallStyle);
+            if (!r.IsAlive)
+            {
+                GUILayout.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}. Remembered by the town.", textStyle);
+            }
+            else
+            {
+                GUILayout.Label($"Health: {r.Health:0}/{HealthRules.MaxHealthFor(r.AgeYears):0}{DescribeIllness(r)}", textStyle);
+            }
+
             GUILayout.Label($"Where: {DescribeLocation(r)}", textStyle);
             GUILayout.Label($"Doing: {DescribeActivity(r)}", textStyle);
             if (!string.IsNullOrEmpty(r.Goal))
@@ -609,6 +626,19 @@ namespace TinyTown.Runtime
             var business = Simulation.World.BusinessOnMap(map.Id);
             var name = business == null ? map.Name : $"{map.Name} ({(business.IsOpen(Simulation.Time) ? "open" : "closed")}, {business.HoursText})";
             return at != null ? $"{name}, at the {at.Name.ToLowerInvariant()}" : name;
+        }
+
+        private static string DescribeIllness(Resident r)
+        {
+            var illness = IllnessCatalog.Get(r.IllnessId);
+            if (illness == null)
+            {
+                return string.Empty;
+            }
+
+            var left = r.IllnessMinutesLeft / 60;
+            var progress = illness.Serious && !r.IllnessTreated ? "needs the doctor" : $"about {left} h of recovery left (half that resting)";
+            return $" · ill with {illness.Name}, {progress}";
         }
 
         private static string DescribeLivelihood(Resident r)

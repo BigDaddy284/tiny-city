@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation.Economy;
+using TinyTown.Simulation.Health;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Time;
 using TinyTown.Simulation.World;
@@ -126,6 +127,9 @@ namespace TinyTown.Simulation.Activities
         /// <summary>How much a pound of cost counts against an activity when choosing.</summary>
         private const double PricePenaltyPerPound = 1.5;
 
+        /// <summary>How much more a resident enjoys their own hobbies than ordinary pastimes.</summary>
+        private const double HobbyPreference = 1.6;
+
         private static readonly NeedType[] UrgentNeeds = { NeedType.Toilet, NeedType.Thirst, NeedType.Hunger, NeedType.Energy };
 
         private readonly TownWorld world;
@@ -203,7 +207,11 @@ namespace TinyTown.Simulation.Activities
 
         /// <summary>Whether the resident can use this object for this activity now: available, and affordable if it costs anything.</summary>
         public bool CanDo(Resident resident, ActivityDefinition activity, WorldObject obj, GameTime time) =>
-            activity.CanUse(obj) && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _));
+            activity.CanUse(obj) && (activity.Hobby == null || resident.Hobbies.Contains(activity.Hobby))
+            && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _));
+
+        /// <summary>A work day and time, and well enough to go: flu and worse keep people at home.</summary>
+        public static bool ShouldWork(Resident resident, GameTime time) => IsWorkTime(resident, time) && HealthRules.CanWork(resident);
 
         public PlanChoice Choose(Resident resident, GameTime time)
         {
@@ -217,6 +225,12 @@ namespace TinyTown.Simulation.Activities
                 }
             }
 
+            var doctor = DoctorChoice(resident, time);
+            if (doctor != null)
+            {
+                return doctor;
+            }
+
             if (IsSleepTime(time))
             {
                 var bed = BedChoice(resident, "It's bedtime", PlanPriority.Bedtime);
@@ -226,10 +240,16 @@ namespace TinyTown.Simulation.Activities
                 }
             }
 
-            if (IsWorkTime(resident, time) && world.TryGetObject(resident.Job.WorkObjectId, out var workplace)
+            if (ShouldWork(resident, time) && world.TryGetObject(resident.Job.WorkObjectId, out var workplace)
                 && pathfinder.Distance(resident.Location, workplace.Location) != Pathfinder.Unreachable)
             {
                 return new PlanChoice(ActivityCatalog.Work, workplace, $"Shift as {resident.Job.Title} until {FormatMinute(resident.Job.EndMinuteOfDay)}", PlanPriority.Work);
+            }
+
+            var rest = RestChoice(resident);
+            if (rest != null)
+            {
+                return rest;
             }
 
             if (resident.Needs[NeedType.Energy] < TiredEnergy)
@@ -245,6 +265,44 @@ namespace TinyTown.Simulation.Activities
             return BestScored(resident, time, comfortOnly: true)
                 ?? ShoppingChoice(resident, time)
                 ?? BestScored(resident, time, comfortOnly: false);
+        }
+
+        /// <summary>A serious illness needs the clinic, as soon as it's open.</summary>
+        private PlanChoice DoctorChoice(Resident resident, GameTime time)
+        {
+            if (!HealthRules.NeedsDoctor(resident))
+            {
+                return null;
+            }
+
+            var clinic = NearestDoable(resident, ActivityCatalog.SeeDoctor, time);
+            return clinic == null ? null : new PlanChoice(ActivityCatalog.SeeDoctor, clinic, $"Needs to see the doctor about {IllnessCatalog.Get(resident.IllnessId).Name}", PlanPriority.UrgentNeed);
+        }
+
+        /// <summary>
+        /// Anyone unwell rests in their own bed, unless food, drink or the toilet need seeing to first. A cold only
+        /// sends people to bed when they're also tired.
+        /// </summary>
+        private PlanChoice RestChoice(Resident resident)
+        {
+            var illness = IllnessCatalog.Get(resident.IllnessId);
+            if (illness == null || (illness == IllnessCatalog.Cold && resident.Needs[NeedType.Energy] >= RestedEnergy))
+            {
+                return null;
+            }
+
+            foreach (var need in new[] { NeedType.Hunger, NeedType.Thirst, NeedType.Toilet })
+            {
+                if (resident.Needs[need] < NeedRules.Comfortable)
+                {
+                    return null;
+                }
+            }
+
+            return world.TryGetObject(resident.BedObjectId, out var bed) && CanDo(resident, ActivityCatalog.Rest, bed, clock())
+                && pathfinder.Distance(resident.Location, bed.Location) != Pathfinder.Unreachable
+                ? new PlanChoice(ActivityCatalog.Rest, bed, $"Feeling poorly with {illness.Name}", PlanPriority.Nap)
+                : null;
         }
 
         /// <summary>A trip to the shop when groceries are running low and the shop can serve them.</summary>
@@ -304,11 +362,16 @@ namespace TinyTown.Simulation.Activities
                 return true;
             }
 
+            if (current != ActivityCatalog.SeeDoctor && current.Kind != ActivityKind.Sleep && urgent == null && DoctorChoice(resident, time) != null)
+            {
+                return true;
+            }
+
             if (current.Kind == ActivityKind.Leisure || current.Kind == ActivityKind.Care || current.Kind == ActivityKind.Social || current.Kind == ActivityKind.Errand)
             {
                 // Finish looking after an urgent need first; otherwise work and bedtime come before leisure.
                 var forUrgent = current.PrimaryNeed != null && current.PrimaryNeed == urgent;
-                if (!forUrgent && current.Kind != ActivityKind.Care && (IsWorkTime(resident, time) || IsSleepTime(time)) && WorkOrBedIsPossible(resident, time))
+                if (!forUrgent && current.Kind != ActivityKind.Care && (ShouldWork(resident, time) || IsSleepTime(time)) && WorkOrBedIsPossible(resident, time))
                 {
                     return true;
                 }
@@ -334,7 +397,7 @@ namespace TinyTown.Simulation.Activities
                 case ActivityKind.Sleep:
                     return !IsSleepTime(time) && resident.Needs[NeedType.Energy] >= RestedEnergy;
                 case ActivityKind.Work:
-                    return resident.MinutesRemaining <= 0 || !IsWorkTime(resident, time);
+                    return resident.MinutesRemaining <= 0 || !ShouldWork(resident, time);
                 default:
                     return resident.MinutesRemaining <= 0
                         || (activity.PrimaryNeed != null && resident.Needs[activity.PrimaryNeed.Value] >= Needs.Max - 0.5);
@@ -481,6 +544,12 @@ namespace TinyTown.Simulation.Activities
             if (activity == ActivityCatalog.Read)
             {
                 return 0.5 + p.Bookish;
+            }
+
+            if (activity.Hobby != null)
+            {
+                // Only residents with the hobby can do it at all, and they love it.
+                return HobbyPreference;
             }
 
             return 1.0;
