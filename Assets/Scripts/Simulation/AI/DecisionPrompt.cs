@@ -48,6 +48,7 @@ namespace TinyTown.Simulation.AI
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are in {map.Name}.");
             sb.AppendLine($"How you feel: {PromptText.Feelings(r)}.");
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
+            sb.AppendLine($"Money: {PromptText.Purse(r)}.");
             PromptText.AppendMemories(sb, memories);
             PromptText.AppendPeople(sb, sim, r);
 
@@ -168,7 +169,8 @@ namespace TinyTown.Simulation.AI
                 return $"go and chat with {o.Partner.FullName} ({walk})";
             }
 
-            return $"{o.Activity.Name.ToLowerInvariant()} at the {o.Target.Name.ToLowerInvariant()} ({walk}, about {o.Activity.DurationMinutes} minutes)";
+            var cost = o.PricePence > 0 ? $", costs {Economy.Money.Format(o.PricePence)}" : string.Empty;
+            return $"{o.Activity.Name.ToLowerInvariant()} at the {o.Target.Name.ToLowerInvariant()} ({walk}, about {o.Activity.DurationMinutes} minutes{cost})";
         }
     }
 }

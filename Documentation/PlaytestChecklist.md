@@ -48,4 +48,18 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 10. **Save mid-chat:** press F5 while two residents are talking, then F9. They are still talking, and what was already said is kept.
 11. **Old save:** a Phase 2 save loads without errors; the status line says two new neighbours moved in, and Mabel keeps her memories.
 
+## Phase 4, build 1: ten residents, jobs, money and shops
+
+1. **The bigger village:** a new town has ten residents. The name buttons wrap onto two rows. On the village map each door is labelled with its building: ten cottages, the General store, the Café, the Bakery and the Clinic. Tab steps through every map, including the four shop interiors.
+2. **Jobs and wages:** pick Rosa (shopkeeper, Mon–Sat 08:00–17:00), Tom (café cook), Priya (café server, Wed–Sun 12:00–20:00), Ivy (baker, Tue–Sun from 07:00), Samuel (doctor) or Mabel/Nell. The line under their name shows their job, days, hours and wage. They walk to work in time, and when the shift ends the log says "Was paid £… in wages" and the money line goes up.
+3. **Days off:** Priya stays home on Monday and Tuesday; Ivy on Monday; Rosa on Sunday.
+4. **Monday bills:** at 07:00 every Monday (including the very first minute of a new game) each resident's rent leaves and Arthur's and Edith's pensions and Felix's allowance arrive. The three latest payments show under the money line.
+5. **Groceries:** cooking at home lowers "food at home". When it gets to two meals or fewer and the store is open, residents go shopping (£12.00 for six meals), and the store's stock goes down.
+6. **Eating out:** during opening hours residents sometimes have a meal or coffee at the café or a pastry at the bakery, and the log says "Paid £… (…)". Outside opening hours nobody buys anything there, and the inspector's "Where" line shows a shop as closed.
+7. **Never stuck hungry:** make a resident who is out of food and money get hungry (or just watch Felix, whose money is tight): they "make do with a snack" at home instead of going without.
+8. **Owing rent:** a resident who can't cover the rent goes below £0 and remembers it under "Remembers".
+9. **AI (Ollama running):** free-time choices still come through; paid options are listed with their prices, and a resident with little money tends to choose free things. The AI status line should not show a growing queue at 4x or 10x with ten residents.
+10. **Old save:** a Phase 3 save loads without errors; the status line says seven new neighbours moved in, and Mabel, Arthur and Nell get their starting money, groceries and wages.
+11. **Save and load:** F5, carry on for a few hours, then F9: money, food at home, shop stock and the recent payments are as they were at the save.
+
 Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\` (`town.json` plus `town.json.bak`).

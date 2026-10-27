@@ -16,6 +16,9 @@ namespace TinyTown.Simulation.Activities
 
         /// <summary>Talking with another resident. Uses no object; see <see cref="ActivityCatalog.Chat"/>.</summary>
         Social,
+
+        /// <summary>A job to get done, such as buying groceries. Chosen when needed, not to restore a need.</summary>
+        Errand,
     }
 
     public sealed class ActivityDefinition
@@ -32,8 +35,12 @@ namespace TinyTown.Simulation.Activities
             IEnumerable<ObjectType> usableObjects,
             int durationMinutes,
             IReadOnlyDictionary<NeedType, double> gainPerMinute,
-            IReadOnlyDictionary<NeedType, double> decayMultiplier = null)
+            IReadOnlyDictionary<NeedType, double> decayMultiplier = null,
+            string itemId = null,
+            bool usesGroceries = false)
         {
+            ItemId = itemId;
+            UsesGroceries = usesGroceries;
             Id = id;
             Name = name;
             Verb = verb;
@@ -72,6 +79,12 @@ namespace TinyTown.Simulation.Activities
         public IReadOnlyList<ObjectType> UsableObjects { get; }
 
         public int DurationMinutes { get; }
+
+        /// <summary>What must be bought from the business where it happens, e.g. "coffee"; null if it's free.</summary>
+        public string ItemId { get; }
+
+        /// <summary>Uses up one meal's worth of the resident's groceries.</summary>
+        public bool UsesGroceries { get; }
 
         public double GainPerMinute(NeedType need) => gainPerMinute[(int)need];
 

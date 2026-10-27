@@ -100,6 +100,11 @@ namespace TinyTown.Runtime
                 case ObjectType.Bench: return new Color(0.58f, 0.4f, 0.26f);
                 case ObjectType.ExerciseSpot: return new Color(0.95f, 0.6f, 0.25f);
                 case ObjectType.Workbench: return new Color(0.72f, 0.52f, 0.3f);
+                case ObjectType.ShopShelf: return new Color(0.85f, 0.45f, 0.35f);
+                case ObjectType.Counter: return new Color(0.5f, 0.32f, 0.2f);
+                case ObjectType.CafeTable: return new Color(0.95f, 0.85f, 0.6f);
+                case ObjectType.BakeryDisplay: return new Color(0.98f, 0.75f, 0.5f);
+                case ObjectType.ClinicBed: return new Color(0.85f, 0.92f, 0.98f);
                 default: return Color.magenta;
             }
         }

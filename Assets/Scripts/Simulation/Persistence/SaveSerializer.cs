@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation.Activities;
+using TinyTown.Simulation.Economy;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Social;
@@ -51,9 +52,11 @@ namespace TinyTown.Simulation.Persistence
         /// Version 1: residents. Version 2 adds memories, conversation history, each resident's decision source
         /// and last reflection day; a version 1 save loads with empty memories and history. Version 3 adds
         /// relationships, conversations in progress, who a resident is talking to or looking for, and the tone of
-        /// each line; older saves load with nobody having met and no conversation going on.
+        /// each line; older saves load with nobody having met and no conversation going on. Version 4 adds money,
+        /// groceries, rent and income, job work days and wages, business stock and takings, and the ledger; older
+        /// saves load with no money (the starter content then gives starter residents their finances).
         /// </remarks>
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
 
         public static string Save(TownSimulation simulation)
         {
@@ -76,6 +79,7 @@ namespace TinyTown.Simulation.Persistence
                 },
                 ["relationships"] = simulation.Relationships.All.Select(WriteRelationship).ToList(),
                 ["activeConversations"] = simulation.ActiveConversations.Select(WriteSession).ToList(),
+                ["economy"] = WriteEconomy(simulation.Economy),
             };
 
             return Json.Write(root);
@@ -175,6 +179,11 @@ namespace TinyTown.Simulation.Persistence
                 ReadSessions(GetList(root, "activeConversations"), simulation, warnings);
             }
 
+            if (version >= 4)
+            {
+                ReadEconomy(GetObject(root, "economy"), simulation, warnings);
+            }
+
             ReconcileSocialState(simulation, warnings);
 
             return new SaveLoadResult(simulation, errors, warnings, version < CurrentVersion ? version : 0);
@@ -216,7 +225,15 @@ namespace TinyTown.Simulation.Persistence
                     ["startMinute"] = r.Job.StartMinuteOfDay,
                     ["endMinute"] = r.Job.EndMinuteOfDay,
                     ["worksWeekends"] = r.Job.WorksWeekends,
+                    ["workDays"] = r.Job.WorkDays,
+                    ["hourlyWage"] = r.Job.HourlyWagePence,
                 },
+                ["money"] = r.MoneyPence,
+                ["groceries"] = r.Groceries,
+                ["weeklyRent"] = r.WeeklyRentPence,
+                ["weeklyIncome"] = r.WeeklyIncomePence,
+                ["incomeLabel"] = r.IncomeLabel,
+                ["unpaidWorkMinutes"] = r.UnpaidWorkMinutes,
                 ["alive"] = r.IsAlive,
                 ["needs"] = needs,
                 ["location"] = new Dictionary<string, object>
@@ -276,7 +293,13 @@ namespace TinyTown.Simulation.Persistence
                 var end = GetInt(jobData, "endMinute", -1);
                 if (start >= 0 && end > start && end <= GameTime.MinutesPerDay)
                 {
-                    job = new Job(GetString(jobData, "title") ?? "Worker", GetString(jobData, "workObjectId"), start, end, GetBool(jobData, "worksWeekends", false));
+                    var days = GetInt(jobData, "workDays", -1);
+                    if (days <= 0 || days > Job.EveryDay)
+                    {
+                        days = GetBool(jobData, "worksWeekends", false) ? Job.EveryDay : Job.Weekdays;
+                    }
+
+                    job = new Job(GetString(jobData, "title") ?? "Worker", GetString(jobData, "workObjectId"), start, end, days, Math.Max(0, GetLong(jobData, "hourlyWage", 0)));
                     if (!world.TryGetObject(job.WorkObjectId, out _))
                     {
                         warnings.Add($"{label}: workplace '{job.WorkObjectId}' no longer exists, so they can't go to work.");
@@ -326,6 +349,12 @@ namespace TinyTown.Simulation.Persistence
 
             resident.IsAlive = GetBool(data, "alive", true);
             resident.LastReflectionDay = Math.Max(0, GetInt(data, "lastReflectionDay", 0));
+            resident.MoneyPence = GetLong(data, "money", 0);
+            resident.Groceries = Math.Max(0, Math.Min(GetInt(data, "groceries", 0), 1000));
+            resident.WeeklyRentPence = Math.Max(0, GetLong(data, "weeklyRent", 0));
+            resident.WeeklyIncomePence = Math.Max(0, GetLong(data, "weeklyIncome", 0));
+            resident.IncomeLabel = TextRules.Clean(GetString(data, "incomeLabel"), 40);
+            resident.UnpaidWorkMinutes = job == null ? 0 : Math.Max(0, Math.Min(GetInt(data, "unpaidWorkMinutes", 0), GameTime.MinutesPerDay));
             foreach (var entry in GetList(data, "log").OfType<Dictionary<string, object>>().Take(Resident.MaxLogEntries))
             {
                 var minute = GetDouble(entry, "gameMinutes", -1);
@@ -710,6 +739,88 @@ namespace TinyTown.Simulation.Persistence
             }
         }
 
+        private static object WriteEconomy(TownEconomy economy) => new Dictionary<string, object>
+        {
+            ["businesses"] = economy.Businesses.Select(b => (object)new Dictionary<string, object>
+            {
+                ["id"] = b.Business.Id,
+                ["takings"] = b.TakingsPence,
+                ["stock"] = b.Business.Items.ToDictionary(i => i.Id, i => (object)b.Stock(i.Id)),
+            }).ToList(),
+            ["ledger"] = new Dictionary<string, object>
+            {
+                ["nextNumber"] = economy.Ledger.NextNumber,
+                ["records"] = economy.Ledger.All.Select(t => (object)new Dictionary<string, object>
+                {
+                    ["id"] = t.Id,
+                    ["gameMinutes"] = t.Time.TotalMinutes,
+                    ["residentId"] = t.ResidentId,
+                    ["amount"] = t.AmountPence,
+                    ["kind"] = t.Kind.ToString(),
+                    ["description"] = t.Description,
+                    ["businessId"] = t.BusinessId,
+                }).ToList(),
+            },
+        };
+
+        private static void ReadEconomy(Dictionary<string, object> data, TownSimulation simulation, List<string> warnings)
+        {
+            if (data == null)
+            {
+                warnings.Add("Shop stock and the money records were missing, so shops were restocked and the records start afresh.");
+                return;
+            }
+
+            foreach (var b in GetList(data, "businesses").OfType<Dictionary<string, object>>())
+            {
+                var shop = simulation.Economy.GetBusiness(GetString(b, "id"));
+                if (shop == null)
+                {
+                    continue;
+                }
+
+                shop.TakingsPence = Math.Max(0, GetLong(b, "takings", 0));
+                var stock = GetObject(b, "stock");
+                foreach (var item in shop.Business.Items)
+                {
+                    var amount = stock == null ? item.MaxStock : GetInt(stock, item.Id, item.MaxStock);
+                    shop.SetStock(item.Id, Math.Max(0, Math.Min(amount, item.MaxStock)));
+                }
+            }
+
+            var ledger = GetObject(data, "ledger");
+            if (ledger == null)
+            {
+                return;
+            }
+
+            var next = Math.Max(1, GetLong(ledger, "nextNumber", 1));
+            var skipped = 0;
+            var seen = new HashSet<string>();
+            foreach (var t in GetList(ledger, "records").Take(Ledger.MaxRecords))
+            {
+                var record = t as Dictionary<string, object>;
+                var id = record == null ? null : GetString(record, "id");
+                var minute = record == null ? -1 : GetDouble(record, "gameMinutes", -1);
+                if (id == null || !id.StartsWith("txn-") || !seen.Add(id) || minute < 0 || minute > simulation.Time.TotalMinutes
+                    || simulation.GetResident(GetString(record, "residentId")) == null
+                    || !Enum.TryParse(GetString(record, "kind"), out TransactionKind kind) || !Enum.IsDefined(typeof(TransactionKind), kind))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var transaction = new Transaction(id, new GameTime((long)minute), GetString(record, "residentId"), GetLong(record, "amount", 0), kind, TextRules.Clean(GetString(record, "description"), 80), GetString(record, "businessId"));
+                simulation.Economy.Ledger.Restore(transaction, Math.Max(next, NumberAfter(id)));
+            }
+
+            simulation.Economy.Ledger.RestoreNextNumber(next);
+            if (skipped > 0)
+            {
+                warnings.Add($"{skipped} damaged money record(s) were skipped.");
+            }
+        }
+
         /// <summary>For an id like "mem-000041", the number after it (42), so new ids never collide with loaded ones.</summary>
         private static long NumberAfter(string id)
         {
@@ -729,6 +840,13 @@ namespace TinyTown.Simulation.Persistence
         {
             var d = GetDouble(obj, key, double.NaN);
             return double.IsNaN(d) || d != Math.Floor(d) || d < int.MinValue || d > int.MaxValue ? fallback : (int)d;
+        }
+
+        private static long GetLong(Dictionary<string, object> obj, string key, long fallback)
+        {
+            var d = GetDouble(obj, key, double.NaN);
+            const double limit = 9e15;
+            return double.IsNaN(d) || d != Math.Floor(d) || d < -limit || d > limit ? fallback : (long)d;
         }
 
         private static bool GetBool(Dictionary<string, object> obj, string key, bool fallback) =>
