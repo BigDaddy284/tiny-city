@@ -32,7 +32,9 @@ namespace TinyTown.Tests.EditMode
 
         private static readonly NeedType[] UrgentNeeds = { NeedType.Hunger, NeedType.Thirst, NeedType.Toilet, NeedType.Energy };
 
+        // About 2 minutes under .NET and 5 under Unity's Mono, beyond Unity's default 3-minute test timeout.
         [Test]
+        [Timeout(900000)]
         public void SixMonths_SavedAndReloadedEveryWeek_MatchesAnUninterruptedRun_AndStaysHealthy()
         {
             var world = StarterTown.CreateWorld();
