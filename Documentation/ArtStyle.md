@@ -4,6 +4,9 @@ The owner approved this style and palette on 28 October 2026 and asked for it to
 The Tiny Town, now and in later builds (residents, animation, effects, menus that show art), follows these rules
 and uses only the colours below. Changing a rule or a colour needs the owner's approval first.
 
+Approved changes: 28 October 2026, the back walls of rooms meet in a clean corner (the left wall no longer overlaps
+the right one).
+
 The lock is enforced by `Assets/Tests/EditMode/ArtStyleTests.cs`. It fingerprints the palette, the style rules and
 the drawn ground, buildings, rooms, trees and furniture. Any change to them makes a test fail. Once the owner
 approves a change, update this guide and the fingerprint in the same commit.
@@ -60,7 +63,7 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
 - **Shops:** taller walls, large display windows with goods in them, a striped awning with a scalloped edge and a
   sign over the door with a picture: an apple (store), a cup (café), a loaf (bakery) or a red cross (clinic, which
   has no awning).
-- **Rooms:** doll's-house cutaways. The two back walls are tall, with wallpaper, a dado rail, a skirting board,
+- **Rooms:** doll's-house cutaways. The two back walls are tall and the same height, meeting in a clean inside corner, with wallpaper, a dado rail, a skirting board,
   windows and pictures. The front walls are low, and walls inside the room are half height. Floors are wooden
   boards in homes and the café, and tiles in the store, bakery and clinic.
 

@@ -103,7 +103,7 @@ namespace TinyTown.Tests.EditMode
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(6345626825935462050UL), Locked);
+            Assert.That(hash.Value, Is.EqualTo(17914511792282034033UL), Locked);
         }
 
         [Test]

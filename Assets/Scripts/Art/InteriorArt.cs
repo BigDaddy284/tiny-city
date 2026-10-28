@@ -51,9 +51,11 @@ namespace TinyTown.Art
                 Slab(p, x, y, Outer, w - Outer, Outer, Inner, BackHeight, paper, Palette.WallCap, x, w);
             }
 
+            // The left back wall starts where the right one ends (v = Inner), so the two meet in a clean inside
+            // corner instead of the left one overlapping the right.
             if (x == 0)
             {
-                Slab(p, x, y, Outer, Inner, Outer, h - Outer, BackHeight, paper, Palette.WallCap, y, h);
+                Slab(p, x, y, Outer, Inner, Inner, h - Outer, BackHeight, paper, Palette.WallCap, y, h);
             }
 
             if (y == h - 1)

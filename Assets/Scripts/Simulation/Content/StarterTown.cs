@@ -95,13 +95,13 @@ namespace TinyTown.Simulation.Content
             "####D####",
         };
 
-        // x shelves, c counter (work).
+        // x shelves, c counter (work). Furniture blocks walking, so nothing may stand right inside a door or close off a corner.
         private static readonly string[] StoreRows =
         {
             "#########",
             "#x......#",
             "#.......#",
-            "#...c...#",
+            "#..c....#",
             "####D####",
         };
 
@@ -111,7 +111,7 @@ namespace TinyTown.Simulation.Content
             "###########",
             "#y...y..#t#",
             "#...q...#.#",
-            "#........u#",
+            "#u........#",
             "#...c...s.#",
             "#####D#####",
         };

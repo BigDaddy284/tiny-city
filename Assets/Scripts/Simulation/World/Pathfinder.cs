@@ -4,7 +4,8 @@ namespace TinyTown.Simulation.World
 {
     /// <summary>
     /// Deterministic tile navigation across maps. Residents ask for one step at a time, so no path needs to be
-    /// stored or saved: the same position and destination always give the same next step.
+    /// stored or saved: the same position and destination always give the same next step. Residents walk around
+    /// furniture (<see cref="TownWorld.IsBlocked"/>) and step onto it only when it is where they are going.
     /// </summary>
     public sealed class Pathfinder
     {
@@ -201,7 +202,12 @@ namespace TinyTown.Simulation.World
                     if (map.IsWalkable(n) && field[Index(map, n)] == Unreachable)
                     {
                         field[Index(map, n)] = d + 1;
-                        queue.Enqueue(n);
+
+                        // Furniture gets a distance, so a resident using it can step off, but no path runs through it.
+                        if (!world.IsBlocked(new Location(map.Id, n)))
+                        {
+                            queue.Enqueue(n);
+                        }
                     }
                 }
             }
