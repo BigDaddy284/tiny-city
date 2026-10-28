@@ -89,4 +89,18 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 9. **Old save:** a build 2 save loads without errors, with nobody in a couple and empty village news. Arthur and Edith are "not looking for romance".
 10. **Save and load:** F5 while a couple exists, then F9: the couple, their stage and the village news are as they were.
 
+## Phase 5, build 1: camera panels and inspector
+
+1. **One panel:** the game opens with one camera panel left of the inspector. Its dark header names who it follows and where ("Mia · Mia's cottage"). Outdoors the camera stays close and moves with them; indoors it shows the whole room. Walk-throughs of doors should switch maps without a jump to the wrong place.
+2. **More panels:** the + and − buttons under the speed controls (or the + and − keys) add and remove panels, from one to ten. Each new panel follows someone nobody is watching yet, and the layout rearranges into a grid. "Watch everyone" gives each living resident their own panel.
+3. **Active panel:** click inside a panel to make it active (orange border when there is more than one). Clicking a resident's figure shows them in the inspector. Picking a name in the roster makes the active panel follow them.
+4. **Header buttons:** ◀ and ▶ move a following panel to the previous or next resident. "Free" turns it into a free camera on the same map; "Follow" puts it back on the resident chosen in the inspector. × closes the panel (not shown when only one is left).
+5. **Free camera:** drag to pan (it stays over its map), and Tab or ◀ ▶ move it to the next map, so you can watch an empty shop or the village green. The mouse wheel zooms any panel; names of objects and doors appear once you zoom in.
+6. **Keys:** N and B are next and previous resident in the active panel, Tab is free camera and next map, F follows the inspector's resident. Space, 1–4, F5 and F9 work as before.
+7. **Inspector tabs:** "Now" has health, where, doing, why, the routine's next step, last words, needs and village news. "People" lists relationships, closest first. "Memories" shows the latest memories and the last three conversations line by line. "Work" has money, rent, income and the last ten payments. "Life" has birthday, hobbies, love life, life events from the village records and the recent log.
+8. **Facts and AI text:** anything the AI wrote (an AI-chosen reason, AI-written lines in conversations, bedtime reflections) sits in a blue-tinted box or is labelled "(AI)"; everything else is game fact.
+9. **Layout kept:** quit with three panels following different people, restart: the same three panels come back.
+10. **Death:** a panel following someone who dies turns into a free camera where they were.
+11. **Performance:** with ten panels at 4x the game should stay smooth. Note it if it doesn't, with roughly how many frames you think you're getting.
+
 Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\` (`town.json` plus `town.json.bak`).

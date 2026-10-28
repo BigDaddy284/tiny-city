@@ -4,17 +4,18 @@ using UnityEngine;
 
 namespace TinyTown.Runtime
 {
-    /// <summary>Draws one map with placeholder sprites. Rebuilt whenever the viewed map changes.</summary>
+    /// <summary>Draws one map with placeholder sprites, at its own place in the world so every map can be on screen at once.</summary>
     public sealed class MapView : MonoBehaviour
     {
         private readonly List<GameObject> spawned = new List<GameObject>();
 
         public TileMap Map { get; private set; }
 
-        public void Show(TownWorld world, TileMap map)
+        public void Show(TownWorld world, TileMap map, Vector3 origin)
         {
             Clear();
             Map = map;
+            transform.localPosition = origin;
             for (var y = 0; y < map.Height; y++)
             {
                 for (var x = 0; x < map.Width; x++)
