@@ -134,5 +134,33 @@ namespace TinyTown.Tests.PlayMode
             var (centre, _, _) = game.View.Bounds(interior.Id);
             Assert.That(Vector2.Distance(panel.Camera.transform.position, centre), Is.LessThan(0.01f), "a free camera starts over the middle of its map");
         }
+
+        [UnityTest]
+        public IEnumerator PlaceMenu_TakesAFollowingPanelOutside_AndStepsBothWays()
+        {
+            var places = CameraPanels.Places(game.Simulation.World);
+            Assert.That(places.Count, Is.EqualTo(game.Simulation.World.Maps.Count()), "every map is a place");
+            Assert.That(places[0].IsExterior, Is.True, "the village comes first");
+
+            var someone = game.Simulation.Residents.First(r => r.IsAlive);
+            game.Select(someone, followInActivePanel: true);
+            var index = game.Panels.ActiveIndex;
+            var panel = game.Panels.All[index];
+            game.Panels.ShowPlace(index, places[0].Id, game.View);
+            yield return null;
+
+            Assert.That(panel.IsFree, Is.True);
+            Assert.That(panel.MapId, Is.EqualTo(places[0].Id));
+            var (centre, _, _) = game.View.Bounds(places[0].Id);
+            Assert.That(Vector2.Distance(panel.Camera.transform.position, centre), Is.LessThan(0.01f));
+
+            game.Panels.CycleMap(index, game.View, game.Simulation, -1);
+            Assert.That(panel.MapId, Is.EqualTo(places[places.Count - 1].Id), "stepping back from the first place wraps to the last");
+            game.Panels.CycleMap(index, game.View, game.Simulation, 1);
+            Assert.That(panel.MapId, Is.EqualTo(places[0].Id));
+
+            game.Panels.ShowPlace(index, "no-such-map", game.View);
+            Assert.That(panel.MapId, Is.EqualTo(places[0].Id), "an unknown place is ignored");
+        }
     }
 }

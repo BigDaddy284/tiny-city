@@ -114,5 +114,6 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 7. **Export:** "Export life story" (Timeline tab or journal) and "Export town history" (journal) write text files. The status line shows where. "Open exports folder" opens it. The files are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Exports\`. In a life story, `[memory]` and `[AI]` mark what didn't come from the village records.
 8. **Old save:** a build 1 save loads normally. Its journal starts with what was recorded before (gatherings, couples, deaths) and fills in from then on.
 9. **Save and load:** F5, then F9: the journal is the same.
+10. **Place menu:** every panel header has a "Place ▾" button. It lists the village (outside) and every building. Picking one turns that panel into a free camera there, even if it was following someone indoors, and you can drag it around. A ✓ marks where a free panel is now. Click elsewhere or press Escape to close the list. In free mode, ◀ and ▶ (or Tab) step back and forward through the same list.
 
 Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\` (`town.json` plus `town.json.bak`).

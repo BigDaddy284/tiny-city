@@ -36,6 +36,10 @@ namespace TinyTown.Runtime
         private TownView view;
         private Inspector inspector;
         private JournalWindow journal;
+        private int placeMenuPanel = -1;
+        private Rect placeMenuButton;
+        private Rect placeMenuArea;
+        private Vector2 placeMenuScroll;
         private GuiStyles styles;
 
         public TownSimulation Simulation { get; private set; }
@@ -353,12 +357,19 @@ namespace TinyTown.Runtime
                 GUIUtility.keyboardControl = 0;
             }
 
+            if (e.type == EventType.MouseDown && placeMenuPanel >= 0 && !placeMenuArea.Contains(e.mousePosition) && !placeMenuButton.Contains(e.mousePosition))
+            {
+                placeMenuPanel = -1;
+            }
+
             HandleKeys(e);
             Panels.DrawOverlays(view, Simulation, styles, DrawPanelHeader);
+            DrawPlaceMenu();
             journal.Draw(CameraArea(), styles);
             Notifications.Draw(CameraArea(), styles, GoTo);
             inspector.Draw(styles);
-            if ((e.isMouse || e.type == EventType.ScrollWheel) && !journal.Area.Contains(e.mousePosition))
+            var overMenu = placeMenuPanel >= 0 && placeMenuArea.Contains(e.mousePosition);
+            if ((e.isMouse || e.type == EventType.ScrollWheel) && !journal.Area.Contains(e.mousePosition) && !overMenu)
             {
                 // After the buttons have had their chance, so header buttons and the inspector win over the panels.
                 Panels.HandleMouse(e, view);
@@ -372,12 +383,16 @@ namespace TinyTown.Runtime
             var y = rect.y + 2f;
             var x = rect.xMax - 4f;
 
+            // An open place list may hang over this header; its buttons mustn't take the list's clicks.
+            GUI.enabled = !(placeMenuPanel >= 0 && placeMenuArea.Contains(Event.current.mousePosition));
             if (Panels.Count > 1)
             {
                 x -= 22f;
                 if (GUI.Button(new Rect(x, y, 20f, 18f), "×", styles.HeaderButton))
                 {
                     Panels.Remove(index);
+                    placeMenuPanel = -1;
+                    GUI.enabled = true;
                     return;
                 }
             }
@@ -396,6 +411,20 @@ namespace TinyTown.Runtime
                 }
             }
 
+            x -= 62f;
+            var placeButton = new Rect(x, y, 60f, 18f);
+            if (GUI.Button(placeButton, "Place ▾", styles.HeaderButton))
+            {
+                Panels.Activate(index);
+                placeMenuPanel = placeMenuPanel == index ? -1 : index;
+                placeMenuScroll = Vector2.zero;
+            }
+
+            if (placeMenuPanel == index)
+            {
+                placeMenuButton = placeButton;
+            }
+
             x -= 22f;
             if (GUI.Button(new Rect(x, y, 20f, 18f), "▶", styles.HeaderButton))
             {
@@ -410,15 +439,55 @@ namespace TinyTown.Runtime
                 Step(index, -1);
             }
 
+            GUI.enabled = true;
             GUI.Label(new Rect(rect.x + 6f, y, Mathf.Max(0f, x - rect.x - 10f), 18f), Panels.Describe(index, Simulation), styles.Header);
         }
 
-        /// <summary>A following panel moves to the next or previous resident; a free one to the next map.</summary>
+        /// <summary>
+        /// The list under a panel's "Place" button: the village and every building. Picking one makes that panel a
+        /// free camera there. Drawn after every header so it sits on top of the panels below.
+        /// </summary>
+        private void DrawPlaceMenu()
+        {
+            if (placeMenuPanel < 0 || placeMenuPanel >= Panels.Count)
+            {
+                placeMenuPanel = -1;
+                return;
+            }
+
+            const float RowHeight = 22f;
+            const float MenuWidth = 220f;
+            var places = CameraPanels.Places(Simulation.World);
+            var area = CameraArea();
+            var x = Mathf.Clamp(placeMenuButton.xMax - MenuWidth, area.x + 4f, area.xMax - MenuWidth - 4f);
+            var y = placeMenuButton.yMax + 2f;
+            var height = Mathf.Min((places.Count * RowHeight) + 8f, area.yMax - y - 6f);
+            placeMenuArea = new Rect(x, y, MenuWidth, height);
+            GUI.Box(placeMenuArea, GUIContent.none, styles.Notice);
+
+            var current = Panels.All[placeMenuPanel];
+            var inner = new Rect(0f, 0f, MenuWidth - 20f, places.Count * RowHeight);
+            placeMenuScroll = GUI.BeginScrollView(new Rect(x + 4f, y + 4f, MenuWidth - 8f, height - 8f), placeMenuScroll, inner);
+            for (var i = 0; i < places.Count; i++)
+            {
+                var map = places[i];
+                var label = (map.IsExterior ? $"{map.Name} (outside)" : map.Name) + (current.IsFree && current.MapId == map.Id ? "  ✓" : string.Empty);
+                if (GUI.Button(new Rect(0f, i * RowHeight, inner.width, RowHeight - 2f), label, styles.Entry))
+                {
+                    Panels.ShowPlace(placeMenuPanel, map.Id, view);
+                    placeMenuPanel = -1;
+                }
+            }
+
+            GUI.EndScrollView();
+        }
+
+        /// <summary>A following panel moves to the next or previous resident; a free one to the next or previous place.</summary>
         private void Step(int index, int step)
         {
             if (Panels.All[index].IsFree)
             {
-                Panels.CycleMap(index, view, Simulation);
+                Panels.CycleMap(index, view, Simulation, step);
             }
             else
             {
@@ -487,6 +556,9 @@ namespace TinyTown.Runtime
                     break;
                 case KeyCode.J:
                     ToggleJournal();
+                    break;
+                case KeyCode.Escape when placeMenuPanel >= 0:
+                    placeMenuPanel = -1;
                     break;
                 case KeyCode.Escape when JournalOpen:
                     ToggleJournal();
