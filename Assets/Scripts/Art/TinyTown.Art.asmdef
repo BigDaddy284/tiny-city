@@ -1,0 +1,16 @@
+{
+    "name": "TinyTown.Art",
+    "rootNamespace": "TinyTown.Art",
+    "references": [
+        "TinyTown.Simulation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

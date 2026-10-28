@@ -4,6 +4,7 @@
     "references": [
         "TinyTown.Runtime",
         "TinyTown.Simulation",
+        "TinyTown.Art",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],

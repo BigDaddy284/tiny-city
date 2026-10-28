@@ -49,3 +49,5 @@ Thumbs.db
 # Local save games and personal settings
 /Saves/
 *.local.json
+/Tools/*/bin/
+/Tools/*/obj/

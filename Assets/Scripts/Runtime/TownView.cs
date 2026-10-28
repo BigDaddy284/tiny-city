@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
+using TinyTown.Art;
 using TinyTown.Simulation;
 using TinyTown.Simulation.Residents;
+using TinyTown.Simulation.Time;
 using TinyTown.Simulation.World;
 using UnityEngine;
 
@@ -10,6 +12,7 @@ namespace TinyTown.Runtime
     /// <summary>
     /// The whole town on screen at once: every map is drawn side by side at its own origin, and every living
     /// resident stands on whichever map they are on. Camera panels then simply look at different places.
+    /// The maps are redrawn when the season changes, and tinted by the time of day.
     /// </summary>
     public sealed class TownView : MonoBehaviour
     {
@@ -21,20 +24,36 @@ namespace TinyTown.Runtime
         private readonly Dictionary<string, SpriteRenderer> residents = new Dictionary<string, SpriteRenderer>();
         private readonly Dictionary<string, Location> previous = new Dictionary<string, Location>();
 
+        private ArtOverrides overrides;
+
         public TownWorld World { get; private set; }
+
+        /// <summary>The season the maps are drawn for.</summary>
+        public Season Season { get; private set; }
+
+        public IReadOnlyDictionary<string, MapView> MapViews => maps;
 
         public IReadOnlyDictionary<string, SpriteRenderer> ResidentRenderers => residents;
 
-        /// <summary>Draws every map of <paramref name="world"/>, the village first. Does nothing if it is already drawn.</summary>
-        public void Build(TownWorld world)
+        /// <summary>Draws every map of <paramref name="world"/>, the village first. Does nothing if it is already drawn for this season.</summary>
+        public void Build(TownWorld world, Season season)
         {
+            if (World == world && Season == season)
+            {
+                return;
+            }
+
             if (World == world)
             {
+                Redraw(season);
                 return;
             }
 
             Clear();
             World = world;
+            Season = season;
+            overrides ??= ArtOverrides.FromStreamingAssets();
+            var palette = Palette.For(season);
             var cursor = 0f;
             foreach (var map in world.Maps.OrderBy(m => m.IsExterior ? 0 : 1).ThenBy(m => m.Id, System.StringComparer.Ordinal))
             {
@@ -43,9 +62,40 @@ namespace TinyTown.Runtime
                 origins[map.Id] = origin;
                 var view = new GameObject($"Map {map.Name}").AddComponent<MapView>();
                 view.transform.SetParent(transform, false);
-                view.Show(world, map, origin);
+                view.Show(world, map, origin, palette, overrides);
                 maps[map.Id] = view;
                 cursor += ((map.Width + map.Height) * IsoGrid.TileWidth * 0.5f) + MapGap;
+            }
+        }
+
+        /// <summary>Follows the clock: redraws the maps when the season turns and sets the light for the time of day.</summary>
+        public void ApplyTime(GameTime time)
+        {
+            if (World == null)
+            {
+                return;
+            }
+
+            Build(World, Seasons.Of(time));
+            foreach (var view in maps.Values)
+            {
+                view.ApplyLight(Lighting.At(time, view.Map.IsExterior));
+            }
+        }
+
+        /// <summary>The colour sprites on a map are tinted with at the moment.</summary>
+        public Color TintOf(string mapId)
+        {
+            return mapId != null && maps.TryGetValue(mapId, out var view) && view.CurrentLight.HasValue ? MapView.ToColor(view.CurrentLight.Value.Tint) : Color.white;
+        }
+
+        private void Redraw(Season season)
+        {
+            Season = season;
+            var palette = Palette.For(season);
+            foreach (var view in maps.Values)
+            {
+                view.Show(World, view.Map, origins[view.Map.Id], palette, overrides);
             }
         }
 
@@ -149,7 +199,8 @@ namespace TinyTown.Runtime
                 var x = Mathf.Lerp(from.X, here.Position.X, t);
                 var y = Mathf.Lerp(from.Y, here.Position.Y, t);
                 renderer.transform.position = TileToWorld(here.MapId, x, y) + offset;
-                renderer.sortingOrder = IsoGrid.SortingOrder(Mathf.Max(from.X, here.Position.X), Mathf.Max(from.Y, here.Position.Y), 2);
+                renderer.sortingOrder = IsoGrid.SortingOrder(Mathf.Max(from.X, here.Position.X), Mathf.Max(from.Y, here.Position.Y), IsoGrid.ResidentLayer);
+                renderer.color = TintOf(here.MapId);
             }
         }
 
