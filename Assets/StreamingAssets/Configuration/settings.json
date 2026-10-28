@@ -7,5 +7,9 @@
         "timeoutSeconds": 60,
         "maxRetries": 1,
         "decisionWaitMinutes": 20
+    },
+    "simulation": {
+        "romance": true,
+        "communityEvents": true
     }
 }

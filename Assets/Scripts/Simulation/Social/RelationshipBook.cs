@@ -35,5 +35,28 @@ namespace TinyTown.Simulation.Social
             byPair.TryGetValue((ownerId, otherId), out relationship);
 
         public IEnumerable<Relationship> Of(string ownerId) => ordered.Where(r => r.OwnerId == ownerId);
+
+        private readonly List<Partnership> partnerships = new List<Partnership>();
+
+        /// <summary>Couples together now. A resident is in at most one.</summary>
+        public IReadOnlyList<Partnership> Partnerships => partnerships;
+
+        public Partnership PartnershipOf(string residentId) => partnerships.FirstOrDefault(p => p.Includes(residentId));
+
+        public string PartnerOf(string residentId) => PartnershipOf(residentId)?.OtherThan(residentId);
+
+        internal Partnership StartPartnership(string aId, string bId, Time.GameTime since)
+        {
+            if (PartnershipOf(aId) != null || PartnershipOf(bId) != null || aId == bId)
+            {
+                throw new InvalidOperationException("Both residents must be single.");
+            }
+
+            var partnership = new Partnership(aId, bId, RomanceStage.Dating, since);
+            partnerships.Add(partnership);
+            return partnership;
+        }
+
+        internal void EndPartnership(Partnership partnership) => partnerships.Remove(partnership);
     }
 }

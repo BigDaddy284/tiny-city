@@ -109,6 +109,7 @@ namespace TinyTown.Runtime
                 case ObjectType.Piano: return new Color(0.2f, 0.18f, 0.2f);
                 case ObjectType.ChessTable: return new Color(0.95f, 0.95f, 0.9f);
                 case ObjectType.FishingSpot: return new Color(0.3f, 0.5f, 0.75f);
+                case ObjectType.GatheringSpot: return new Color(0.95f, 0.75f, 0.3f);
                 default: return Color.magenta;
             }
         }

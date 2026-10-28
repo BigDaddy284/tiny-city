@@ -33,6 +33,13 @@ The Tiny Town uses a locally installed [Ollama](https://ollama.com) service for 
 | `maxRetries` | `1` | Extra attempts after a bad answer, timeout or connection error (0 to 3). |
 | `decisionWaitMinutes` | `20` | Game minutes a resident waits for the AI before deciding by routine (1 to 240). At 1x speed that is 20 real seconds. |
 
+The same file has a `simulation` section for optional parts of the game, which work with or without Ollama:
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `romance` | `true` | `false` stops new romances and changes in feelings. Couples already together stay together. |
+| `communityEvents` | `true` | `false` cancels the get-togethers, quiz nights and the village fête. |
+
 Invalid values are reported in `Player.log`, and the game uses the defaults instead.
 
 ## How the AI is used

@@ -4,6 +4,7 @@ using System.Linq;
 using TinyTown.Simulation.Activities;
 using TinyTown.Simulation.Economy;
 using TinyTown.Simulation.Health;
+using TinyTown.Simulation.History;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Social;
@@ -57,9 +58,11 @@ namespace TinyTown.Simulation.Persistence
         /// groceries, rent and income, job work days and wages, business stock and takings, and the ledger; older
         /// saves load with no money (the starter content then gives starter residents their finances). Version 5
         /// adds health, illness, death date and cause, and hobbies; older saves load in health suited to each
-        /// resident's age, well, and without hobbies (the starter content then adds them).
+        /// resident's age, well, and without hobbies (the starter content then adds them). Version 6 adds romance
+        /// (feelings and break-up times on relationships, couples, and whether each resident is open to romance) and
+        /// the town history; older saves load with nobody in a couple, open to romance, and an empty history.
         /// </remarks>
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
 
         public static string Save(TownSimulation simulation)
         {
@@ -83,6 +86,26 @@ namespace TinyTown.Simulation.Persistence
                 ["relationships"] = simulation.Relationships.All.Select(WriteRelationship).ToList(),
                 ["activeConversations"] = simulation.ActiveConversations.Select(WriteSession).ToList(),
                 ["economy"] = WriteEconomy(simulation.Economy),
+                ["partnerships"] = simulation.Relationships.Partnerships.Select(p => (object)new Dictionary<string, object>
+                {
+                    ["firstId"] = p.FirstId,
+                    ["secondId"] = p.SecondId,
+                    ["stage"] = p.Stage.ToString(),
+                    ["sinceMinutes"] = p.Since.TotalMinutes,
+                    ["stageSinceMinutes"] = p.StageSince.TotalMinutes,
+                }).ToList(),
+                ["history"] = new Dictionary<string, object>
+                {
+                    ["nextNumber"] = simulation.History.NextNumber,
+                    ["records"] = simulation.History.Events.Select(e => (object)new Dictionary<string, object>
+                    {
+                        ["id"] = e.Id,
+                        ["gameMinutes"] = e.Time.TotalMinutes,
+                        ["kind"] = e.Kind.ToString(),
+                        ["summary"] = e.Summary,
+                        ["residentIds"] = e.ResidentIds.Cast<object>().ToList(),
+                    }).ToList(),
+                },
             };
 
             return Json.Write(root);
@@ -187,6 +210,12 @@ namespace TinyTown.Simulation.Persistence
                 ReadEconomy(GetObject(root, "economy"), simulation, warnings);
             }
 
+            if (version >= 6)
+            {
+                ReadPartnerships(GetList(root, "partnerships"), simulation, warnings);
+                ReadHistory(GetObject(root, "history"), simulation, warnings);
+            }
+
             ReconcileSocialState(simulation, warnings);
 
             return new SaveLoadResult(simulation, errors, warnings, version < CurrentVersion ? version : 0);
@@ -252,6 +281,7 @@ namespace TinyTown.Simulation.Persistence
                     ["cause"] = r.CauseOfDeath,
                 },
                 ["hobbies"] = r.Hobbies.Cast<object>().ToList(),
+                ["openToRomance"] = r.OpenToRomance,
                 ["alive"] = r.IsAlive,
                 ["needs"] = needs,
                 ["location"] = new Dictionary<string, object>
@@ -556,6 +586,8 @@ namespace TinyTown.Simulation.Persistence
             ["dislike"] = r.Dislike,
             ["interactions"] = r.Interactions,
             ["lastInteractionMinutes"] = r.LastInteractionMinute,
+            ["romance"] = r.Romance,
+            ["brokeUpMinutes"] = r.BrokeUpMinute,
         };
 
         private static void ReadRelationships(List<object> list, TownSimulation simulation, List<string> warnings)
@@ -578,10 +610,13 @@ namespace TinyTown.Simulation.Persistence
                     GetDouble(data, "friendship", defaults.Friendship),
                     GetDouble(data, "trust", defaults.Trust),
                     GetDouble(data, "respect", defaults.Respect),
-                    GetDouble(data, "dislike", defaults.Dislike));
+                    GetDouble(data, "dislike", defaults.Dislike),
+                    GetDouble(data, "romance", 0));
                 defaults.Interactions = Math.Max(0, GetInt(data, "interactions", 0));
                 var last = GetDouble(data, "lastInteractionMinutes", Relationship.Never);
                 defaults.LastInteractionMinute = last >= 0 && last <= simulation.Time.TotalMinutes && last == Math.Floor(last) ? (long)last : Relationship.Never;
+                var brokeUp = GetDouble(data, "brokeUpMinutes", Relationship.Never);
+                defaults.BrokeUpMinute = brokeUp >= 0 && brokeUp <= simulation.Time.TotalMinutes && brokeUp == Math.Floor(brokeUp) ? (long)brokeUp : Relationship.Never;
             }
 
             if (skipped > 0)
@@ -788,6 +823,7 @@ namespace TinyTown.Simulation.Persistence
             resident.ExposedDay = Math.Max(0, GetInt(data, "exposedDay", 0));
             resident.SickDay = Math.Max(0, GetInt(data, "sickDay", 0));
             resident.SetHobbies(GetList(data, "hobbies").OfType<string>().Where(h => ActivityCatalog.ForHobby(h) != null));
+            resident.OpenToRomance = GetBool(data, "openToRomance", true);
 
             var death = GetObject(data, "death");
             if (!resident.IsAlive)
@@ -885,6 +921,69 @@ namespace TinyTown.Simulation.Persistence
             if (skipped > 0)
             {
                 warnings.Add($"{skipped} damaged money record(s) were skipped.");
+            }
+        }
+
+        /// <summary>Couples. Both must be living residents of this town, neither already in a couple, and the dates in the past.</summary>
+        private static void ReadPartnerships(List<object> list, TownSimulation simulation, List<string> warnings)
+        {
+            var skipped = 0;
+            foreach (var d in list)
+            {
+                var data = d as Dictionary<string, object>;
+                var a = data == null ? null : simulation.GetResident(GetString(data, "firstId"));
+                var b = data == null ? null : simulation.GetResident(GetString(data, "secondId"));
+                var since = data == null ? -1 : GetDouble(data, "sinceMinutes", -1);
+                var stageSince = data == null ? -1 : GetDouble(data, "stageSinceMinutes", since);
+                if (a == null || b == null || a == b || !a.IsAlive || !b.IsAlive
+                    || simulation.Relationships.PartnershipOf(a.Id) != null || simulation.Relationships.PartnershipOf(b.Id) != null
+                    || !Enum.TryParse(GetString(data, "stage"), out RomanceStage stage) || !Enum.IsDefined(typeof(RomanceStage), stage)
+                    || since < 0 || stageSince < since || stageSince > simulation.Time.TotalMinutes)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var couple = simulation.Relationships.StartPartnership(a.Id, b.Id, new GameTime((long)since));
+                couple.Stage = stage;
+                couple.StageSince = new GameTime((long)stageSince);
+            }
+
+            if (skipped > 0)
+            {
+                warnings.Add($"{skipped} damaged couple record(s) were skipped.");
+            }
+        }
+
+        private static void ReadHistory(Dictionary<string, object> data, TownSimulation simulation, List<string> warnings)
+        {
+            if (data == null)
+            {
+                warnings.Add("The town history was missing, so it starts afresh.");
+                return;
+            }
+
+            var skipped = 0;
+            foreach (var e in GetList(data, "records").Take(TownHistory.MaxEvents))
+            {
+                var record = e as Dictionary<string, object>;
+                var id = record == null ? null : GetString(record, "id");
+                var minute = record == null ? -1 : GetDouble(record, "gameMinutes", -1);
+                if (id == null || !id.StartsWith("evt-") || simulation.History.Events.Any(x => x.Id == id) || minute < 0 || minute > simulation.Time.TotalMinutes
+                    || !Enum.TryParse(GetString(record, "kind"), out TownEventKind kind) || !Enum.IsDefined(typeof(TownEventKind), kind))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var ids = GetList(record, "residentIds").OfType<string>().Where(i => simulation.GetResident(i) != null);
+                simulation.History.Restore(new TownEvent(id, new GameTime((long)minute), kind, TextRules.Clean(GetString(record, "summary"), TownHistory.MaxSummaryLength), ids));
+            }
+
+            simulation.History.RestoreNextNumber(Math.Max(1, GetLong(data, "nextNumber", 1)));
+            if (skipped > 0)
+            {
+                warnings.Add($"{skipped} damaged town history record(s) were skipped.");
             }
         }
 

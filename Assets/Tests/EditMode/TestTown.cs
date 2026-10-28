@@ -79,7 +79,7 @@ namespace TinyTown.Tests.EditMode
                 r => r.Id == StarterTown.ResidentId || r.Id == StarterTown.ArthurId);
         }
 
-        /// <summary>Money, groceries, rent, income, hobbies and health as the starter content gives them.</summary>
+        /// <summary>Money, groceries, rent, income, hobbies, health and openness to romance as the starter content gives them.</summary>
         public static void CopyStarterDetails(Resident from, Resident to)
         {
             to.MoneyPence = from.MoneyPence;
@@ -89,6 +89,7 @@ namespace TinyTown.Tests.EditMode
             to.IncomeLabel = from.IncomeLabel;
             to.SetHobbies(from.Hobbies);
             to.Health = from.Health;
+            to.OpenToRomance = from.OpenToRomance;
         }
 
         public static WorldObject Object(TownSimulation sim, string id)

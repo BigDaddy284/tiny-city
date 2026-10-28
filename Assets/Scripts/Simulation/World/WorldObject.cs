@@ -30,6 +30,9 @@ namespace TinyTown.Simulation.World
         Piano,
         ChessTable,
         FishingSpot,
+
+        /// <summary>Where a community event is held. Holds a crowd.</summary>
+        GatheringSpot,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -77,6 +80,8 @@ namespace TinyTown.Simulation.World
                     return 3;
                 case ObjectType.Counter:
                     return 2;
+                case ObjectType.GatheringSpot:
+                    return 12;
                 default:
                     return 1;
             }
