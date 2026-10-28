@@ -20,7 +20,8 @@ namespace TinyTown.Runtime
     /// </summary>
     public sealed class GameController : MonoBehaviour
     {
-        public const string SaveSlot = "town";
+        /// <summary>Remembers which town was being played, so the game reopens it next time.</summary>
+        private const string SlotPrefsKey = "TinyTown.Slot";
 
         /// <summary>Game minutes per real second. At 1x one in-game day lasts 24 real minutes.</summary>
         public static readonly int[] Speeds = { 0, 1, 2, 4, 10 };
@@ -36,6 +37,7 @@ namespace TinyTown.Runtime
         private TownView view;
         private Inspector inspector;
         private JournalWindow journal;
+        private SavesWindow saves;
         private int placeMenuPanel = -1;
         private Rect placeMenuButton;
         private Rect placeMenuArea;
@@ -56,6 +58,16 @@ namespace TinyTown.Runtime
         public Notifications Notifications { get; private set; }
 
         public bool JournalOpen => journal != null && journal.IsOpen;
+
+        public bool SavesOpen => saves != null && saves.IsOpen;
+
+        /// <summary>The save slot this town is saved to: autosaves, F5 and saving on exit all go here.</summary>
+        public string CurrentSlot { get; private set; } = SaveSlotIndex.DefaultSlot;
+
+        /// <summary>The names the player gave their towns.</summary>
+        public SaveSlotIndex SlotNames { get; private set; } = new SaveSlotIndex();
+
+        public string CurrentTownName => SlotNames.NameOf(CurrentSlot);
 
         /// <summary>Where the maps and residents are drawn in the world.</summary>
         public TownView View => view;
@@ -86,11 +98,21 @@ namespace TinyTown.Runtime
             Panels = new CameraPanels(Camera.main) { ResidentClicked = id => Select(Simulation.GetResident(id), followInActivePanel: false) };
             inspector = new Inspector(this);
             journal = new JournalWindow(this);
+            saves = new SavesWindow(this);
             Notifications = new Notifications();
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyTown] AI: {message}") };
 
-            if (!SaveStore.Exists(SaveSlot) || !TryLoad())
+            SlotNames = SaveStore.ReadIndex();
+            var remembered = PlayerPrefs.GetString(SlotPrefsKey, SaveSlotIndex.DefaultSlot);
+            CurrentSlot = SaveSlotIndex.IsValidSlotId(remembered) ? remembered : SaveSlotIndex.DefaultSlot;
+            if (!SaveStore.Exists(CurrentSlot) || !TryLoad(CurrentSlot))
             {
+                // Nothing to load (or it couldn't be loaded): a new town, in a slot of its own if this one holds a damaged save.
+                if (SaveStore.Exists(CurrentSlot))
+                {
+                    UseSlot(SaveSlotIndex.NewSlotId(SaveStore.ListSlots()));
+                }
+
                 StartNewTown(Status.Length == 0 ? "Started a new town." : Status + " Started a new town instead.");
             }
 
@@ -188,7 +210,7 @@ namespace TinyTown.Runtime
         {
             try
             {
-                SaveStore.Write(SaveSlot, SaveSerializer.Save(Simulation));
+                SaveStore.Write(CurrentSlot, SaveSerializer.Save(Simulation));
                 lastAutosaveMinute = Simulation.Time.TotalMinutes;
                 Status = $"Saved ({reason}) at {Simulation.Time}.";
             }
@@ -199,13 +221,17 @@ namespace TinyTown.Runtime
             }
         }
 
-        public bool TryLoad()
+        /// <summary>Loads the current slot again, dropping anything since the last save.</summary>
+        public bool TryLoad() => TryLoad(CurrentSlot);
+
+        /// <summary>Loads <paramref name="slot"/> (its backup if the save is damaged) and makes it the current slot. On failure the town being played carries on.</summary>
+        public bool TryLoad(string slot)
         {
             var world = StarterTown.CreateWorld();
             var problems = new List<string>();
             foreach (var useBackup in new[] { false, true })
             {
-                if (!SaveStore.TryRead(SaveSlot, useBackup, out var json, out var readError))
+                if (!SaveStore.TryRead(slot, useBackup, out var json, out var readError))
                 {
                     problems.Add(readError);
                     continue;
@@ -245,13 +271,14 @@ namespace TinyTown.Runtime
                 // Older saves have fewer residents; the newcomers move in at home.
                 var newcomers = StarterTown.AddMissingResidents(result.Simulation);
 
+                UseSlot(slot);
                 SetSimulation(result.Simulation);
                 foreach (var warning in result.Warnings)
                 {
                     Debug.LogWarning($"[TinyTown] Save repaired: {warning}");
                 }
 
-                Status = (useBackup ? "Main save was damaged, so the backup was loaded. " : "Loaded saved town. ")
+                Status = (useBackup ? $"The save of {CurrentTownName} was damaged, so its backup was loaded. " : $"Loaded {CurrentTownName}. ")
                     + (result.Warnings.Count > 0 ? $"{result.Warnings.Count} problem(s) were repaired. " : string.Empty)
                     + (newcomers > 0 ? $"{newcomers} new neighbour(s) moved in." : string.Empty);
                 return true;
@@ -262,8 +289,134 @@ namespace TinyTown.Runtime
                 Debug.LogWarning($"[TinyTown] Load failed: {problem}");
             }
 
-            Status = $"Couldn't load the save: {problems.LastOrDefault()}";
+            Status = $"Couldn't load {SlotNames.NameOf(slot)}: {problems.LastOrDefault()}";
             return false;
+        }
+
+        private void UseSlot(string slot)
+        {
+            CurrentSlot = slot;
+            PlayerPrefs.SetString(SlotPrefsKey, slot);
+            PlayerPrefs.Save();
+        }
+
+        // ---- Save slots ----
+
+        /// <summary>Saves the town being played, then switches to <paramref name="slot"/>.</summary>
+        public bool LoadSlot(string slot)
+        {
+            if (slot != CurrentSlot)
+            {
+                Save("before switching towns");
+            }
+
+            return TryLoad(slot);
+        }
+
+        /// <summary>Saves the town being played and starts a brand-new one in a new slot.</summary>
+        public string NewTownSlot(string name)
+        {
+            Save("before starting a new town");
+            var slot = SaveSlotIndex.NewSlotId(SaveStore.ListSlots().Append(CurrentSlot));
+            SetSlotName(slot, string.IsNullOrWhiteSpace(name) ? SlotNames.NameOf(slot) : name);
+            UseSlot(slot);
+            StartNewTown(string.Empty);
+            Save("new town");
+            Status = $"Started a new town, {CurrentTownName}.";
+            return slot;
+        }
+
+        /// <summary>Copies a slot into a new one called "Copy of …". The town being played is saved first, so its copy is up to date.</summary>
+        public string DuplicateSlot(string slot)
+        {
+            try
+            {
+                if (slot == CurrentSlot)
+                {
+                    Save("before copying");
+                }
+
+                var slots = SaveStore.ListSlots();
+                var copy = SaveSlotIndex.NewSlotId(slots.Append(CurrentSlot));
+                SaveStore.Copy(slot, copy);
+                SetSlotName(copy, SlotNames.CopyName(slot, slots));
+                Status = $"Copied {SlotNames.NameOf(slot)} to {SlotNames.NameOf(copy)}.";
+                return copy;
+            }
+            catch (Exception e)
+            {
+                Status = $"Couldn't copy {SlotNames.NameOf(slot)}: {e.Message}";
+                Debug.LogError($"[TinyTown] {Status}");
+                return null;
+            }
+        }
+
+        public void RenameSlot(string slot, string name)
+        {
+            SetSlotName(slot, name);
+            Status = $"Renamed to {SlotNames.NameOf(slot)}.";
+        }
+
+        /// <summary>Deletes a saved town. The one being played can't be deleted.</summary>
+        public bool DeleteSlot(string slot)
+        {
+            if (slot == CurrentSlot)
+            {
+                Status = "You can't delete the town you're playing. Load another one first.";
+                return false;
+            }
+
+            try
+            {
+                var name = SlotNames.NameOf(slot);
+                SaveStore.Delete(slot);
+                SlotNames.Forget(slot);
+                SaveStore.WriteIndex(SlotNames);
+                Status = $"Deleted {name}.";
+                return true;
+            }
+            catch (Exception e)
+            {
+                Status = $"Couldn't delete {SlotNames.NameOf(slot)}: {e.Message}";
+                Debug.LogError($"[TinyTown] {Status}");
+                return false;
+            }
+        }
+
+        /// <summary>Copies a slot's save file to the Exports folder, to back it up or share it.</summary>
+        public void ExportSlot(string slot)
+        {
+            try
+            {
+                if (slot == CurrentSlot)
+                {
+                    Save("before exporting");
+                }
+
+                SaveStore.TryRead(slot, false, out var json, out _);
+                var day = json == null ? 0 : SaveSummary.Read(json).Time.Day;
+                var source = System.IO.File.Exists(SaveStore.PathFor(slot)) ? SaveStore.PathFor(slot) : SaveStore.PathFor(slot) + ".bak";
+                var path = ExportStore.CopySave(source, $"{SlotNames.NameOf(slot)} save", day);
+                Status = $"{SlotNames.NameOf(slot)} was exported to {path}";
+            }
+            catch (Exception e)
+            {
+                Status = $"Couldn't export {SlotNames.NameOf(slot)}: {e.Message}";
+                Debug.LogError($"[TinyTown] {Status}");
+            }
+        }
+
+        private void SetSlotName(string slot, string name)
+        {
+            SlotNames.SetName(slot, name);
+            try
+            {
+                SaveStore.WriteIndex(SlotNames);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[TinyTown] Couldn't save the town names: {e.Message}");
+            }
         }
 
         private void UpdateView(float tickProgress)
@@ -306,7 +459,25 @@ namespace TinyTown.Runtime
 
         public void SetPanelCount(int count) => Panels.SetCount(count, view, Simulation);
 
-        public void ToggleJournal() => journal.Toggle();
+        public void ToggleJournal()
+        {
+            if (!journal.IsOpen && saves.IsOpen)
+            {
+                saves.Toggle();
+            }
+
+            journal.Toggle();
+        }
+
+        public void ToggleSaves()
+        {
+            if (!saves.IsOpen && journal.IsOpen)
+            {
+                journal.Toggle();
+            }
+
+            saves.Toggle();
+        }
 
         /// <summary>Opens the journal with only the inspector's resident's entries.</summary>
         public void ShowJournalFor(Resident r)
@@ -351,9 +522,9 @@ namespace TinyTown.Runtime
 
             styles ??= new GuiStyles();
             var e = Event.current;
-            if (e.type == EventType.MouseDown && !journal.Area.Contains(e.mousePosition))
+            if (e.type == EventType.MouseDown && !journal.Area.Contains(e.mousePosition) && !saves.Area.Contains(e.mousePosition))
             {
-                // Clicking anywhere but the journal leaves its search box, so the game's keys work again.
+                // Clicking outside the journal and saves windows leaves their text boxes, so the game's keys work again.
                 GUIUtility.keyboardControl = 0;
             }
 
@@ -366,10 +537,11 @@ namespace TinyTown.Runtime
             Panels.DrawOverlays(view, Simulation, styles, DrawPanelHeader);
             DrawPlaceMenu();
             journal.Draw(CameraArea(), styles);
+            saves.Draw(CameraArea(), styles);
             Notifications.Draw(CameraArea(), styles, GoTo);
             inspector.Draw(styles);
             var overMenu = placeMenuPanel >= 0 && placeMenuArea.Contains(e.mousePosition);
-            if ((e.isMouse || e.type == EventType.ScrollWheel) && !journal.Area.Contains(e.mousePosition) && !overMenu)
+            if ((e.isMouse || e.type == EventType.ScrollWheel) && !journal.Area.Contains(e.mousePosition) && !saves.Area.Contains(e.mousePosition) && !overMenu)
             {
                 // After the buttons have had their chance, so header buttons and the inspector win over the panels.
                 Panels.HandleMouse(e, view);
@@ -562,6 +734,12 @@ namespace TinyTown.Runtime
                     break;
                 case KeyCode.Escape when JournalOpen:
                     ToggleJournal();
+                    break;
+                case KeyCode.S:
+                    ToggleSaves();
+                    break;
+                case KeyCode.Escape when SavesOpen:
+                    ToggleSaves();
                     break;
                 default:
                     return;

@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using TinyTown.Simulation.Persistence;
 using UnityEngine;
 
 namespace TinyTown.Runtime
@@ -30,6 +33,96 @@ namespace TinyTown.Runtime
             {
                 File.Move(temp, path);
             }
+        }
+
+        /// <summary>The slot names, kept beside the saves.</summary>
+        public static string IndexPath => Path.Combine(Folder, "slots.json");
+
+        /// <summary>Every slot with a save or a backup, newest first.</summary>
+        public static List<string> ListSlots()
+        {
+            if (!Directory.Exists(Folder))
+            {
+                return new List<string>();
+            }
+
+            return Directory.GetFiles(Folder)
+                .Select(SlotOf)
+                .Where(SaveSlotIndex.IsValidSlotId)
+                .Distinct()
+                .OrderByDescending(LastWritten)
+                .ThenBy(id => id, StringComparer.Ordinal)
+                .ToList();
+        }
+
+        /// <summary>When the slot was last saved, or <see cref="DateTime.MinValue"/> if it has no file.</summary>
+        public static DateTime LastWritten(string slot)
+        {
+            var path = PathFor(slot);
+            return File.Exists(path) ? File.GetLastWriteTime(path) : File.Exists(path + ".bak") ? File.GetLastWriteTime(path + ".bak") : DateTime.MinValue;
+        }
+
+        public static SaveSlotIndex ReadIndex()
+        {
+            try
+            {
+                return File.Exists(IndexPath) ? SaveSlotIndex.FromJson(File.ReadAllText(IndexPath)) : new SaveSlotIndex();
+            }
+            catch (IOException)
+            {
+                return new SaveSlotIndex();
+            }
+        }
+
+        public static void WriteIndex(SaveSlotIndex index)
+        {
+            Directory.CreateDirectory(Folder);
+            var temp = IndexPath + ".tmp";
+            File.WriteAllText(temp, index.ToJson());
+            if (File.Exists(IndexPath))
+            {
+                File.Delete(IndexPath);
+            }
+
+            File.Move(temp, IndexPath);
+        }
+
+        /// <summary>Copies a slot's save (or its backup, if the save itself is missing) into a new slot.</summary>
+        public static void Copy(string from, string to)
+        {
+            var source = File.Exists(PathFor(from)) ? PathFor(from) : PathFor(from) + ".bak";
+            Directory.CreateDirectory(Folder);
+            File.Copy(source, PathFor(to), overwrite: false);
+        }
+
+        /// <summary>Removes a slot's save, backup and any half-written temporary file.</summary>
+        public static void Delete(string slot)
+        {
+            foreach (var path in new[] { PathFor(slot), PathFor(slot) + ".bak", PathFor(slot) + ".tmp" })
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+
+        /// <summary>Opens the saves folder in the file browser.</summary>
+        public static void OpenFolder()
+        {
+            Directory.CreateDirectory(Folder);
+            Application.OpenURL("file:///" + Folder.Replace('\\', '/'));
+        }
+
+        private static string SlotOf(string file)
+        {
+            var name = Path.GetFileName(file);
+            if (name.EndsWith(".json.bak", StringComparison.OrdinalIgnoreCase))
+            {
+                return name.Substring(0, name.Length - ".json.bak".Length);
+            }
+
+            return name.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? name.Substring(0, name.Length - ".json".Length) : null;
         }
 
         /// <summary>Reads the save text, or the backup when <paramref name="useBackup"/> is true.</summary>

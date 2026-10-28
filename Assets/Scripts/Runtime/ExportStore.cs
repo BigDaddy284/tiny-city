@@ -19,6 +19,15 @@ namespace TinyTown.Runtime
             return path;
         }
 
+        /// <summary>Copies a save file to "&lt;name&gt; - day N.json" in <see cref="Folder"/> and returns the full path.</summary>
+        public static string CopySave(string sourcePath, string name, int day)
+        {
+            Directory.CreateDirectory(Folder);
+            var path = Path.Combine(Folder, $"{SafeFileName(name)} - day {day}.json");
+            File.Copy(sourcePath, path, overwrite: true);
+            return path;
+        }
+
         /// <summary>Opens the exports folder in the file browser.</summary>
         public static void OpenFolder()
         {
