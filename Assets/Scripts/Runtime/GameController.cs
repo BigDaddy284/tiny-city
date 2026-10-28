@@ -38,6 +38,7 @@ namespace TinyTown.Runtime
         private Inspector inspector;
         private JournalWindow journal;
         private SavesWindow saves;
+        private SettingsWindow settingsWindow;
         private int placeMenuPanel = -1;
         private Rect placeMenuButton;
         private Rect placeMenuArea;
@@ -60,6 +61,11 @@ namespace TinyTown.Runtime
         public bool JournalOpen => journal != null && journal.IsOpen;
 
         public bool SavesOpen => saves != null && saves.IsOpen;
+
+        public bool SettingsOpen => settingsWindow != null && settingsWindow.IsOpen;
+
+        /// <summary>The player's choices from the Settings window: AI, volumes, screen and theme.</summary>
+        public PlayerPreferences Preferences { get; private set; } = new PlayerPreferences();
 
         /// <summary>The save slot this town is saved to: autosaves, F5 and saving on exit all go here.</summary>
         public string CurrentSlot { get; private set; } = SaveSlotIndex.DefaultSlot;
@@ -99,7 +105,18 @@ namespace TinyTown.Runtime
             inspector = new Inspector(this);
             journal = new JournalWindow(this);
             saves = new SavesWindow(this);
+            settingsWindow = new SettingsWindow(this);
             Notifications = new Notifications();
+            Preferences = PlayerSettingsStore.Load(out var preferenceProblems);
+            foreach (var problem in preferenceProblems)
+            {
+                Debug.LogWarning($"[TinyTown] {problem}");
+            }
+
+            Preferences.ApplyTo(Settings.ollama);
+            UiTheme.Choose(Preferences.Theme);
+            UiTheme.Changed += ApplyThemeToCameras;
+            ScreenSettings.Apply(Preferences);
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyTown] AI: {message}") };
 
             SlotNames = SaveStore.ReadIndex();
@@ -117,7 +134,23 @@ namespace TinyTown.Runtime
             }
 
             Panels.LoadLayout(view, Simulation);
+            ApplyThemeToCameras();
             UpdateView(1f);
+        }
+
+        private void OnDestroy()
+        {
+            UiTheme.Changed -= ApplyThemeToCameras;
+        }
+
+        /// <summary>Behind the maps, every panel shows the theme's canvas colour.</summary>
+        private void ApplyThemeToCameras()
+        {
+            var colour = UiTheme.ToColor(UiTheme.Palette.Canvas);
+            foreach (var panel in Panels.All)
+            {
+                panel.Camera.backgroundColor = colour;
+            }
         }
 
         private void Update()
@@ -142,6 +175,7 @@ namespace TinyTown.Runtime
 
             UpdateView(Speed > 0 && ticks <= 1 ? accumulator : 1f);
             Notifications?.Update(Simulation, UnityEngine.Time.unscaledTime);
+            settingsWindow?.Update();
         }
 
         private void OnApplicationQuit()
@@ -151,6 +185,8 @@ namespace TinyTown.Runtime
                 Save("on exit");
                 Panels?.SaveLayout();
             }
+
+            settingsWindow?.SaveNow();
         }
 
         private void TickOnce()
@@ -462,9 +498,9 @@ namespace TinyTown.Runtime
 
         public void ToggleJournal()
         {
-            if (!journal.IsOpen && saves.IsOpen)
+            if (!journal.IsOpen)
             {
-                saves.Toggle();
+                CloseWindows();
             }
 
             journal.Toggle();
@@ -472,13 +508,44 @@ namespace TinyTown.Runtime
 
         public void ToggleSaves()
         {
-            if (!saves.IsOpen && journal.IsOpen)
+            if (!saves.IsOpen)
             {
-                journal.Toggle();
+                CloseWindows();
             }
 
             saves.Toggle();
         }
+
+        public void ToggleSettings()
+        {
+            if (!settingsWindow.IsOpen)
+            {
+                CloseWindows();
+            }
+
+            settingsWindow.Toggle();
+        }
+
+        /// <summary>Only one of the journal, saves and settings windows is open at a time.</summary>
+        private void CloseWindows()
+        {
+            if (journal.IsOpen)
+            {
+                journal.Toggle();
+            }
+
+            if (saves.IsOpen)
+            {
+                saves.Toggle();
+            }
+
+            if (settingsWindow.IsOpen)
+            {
+                settingsWindow.Toggle();
+            }
+        }
+
+        private bool OverWindow(Vector2 point) => journal.Area.Contains(point) || saves.Area.Contains(point) || settingsWindow.Area.Contains(point);
 
         /// <summary>Opens the journal with only the inspector's resident's entries.</summary>
         public void ShowJournalFor(Resident r)
@@ -521,9 +588,10 @@ namespace TinyTown.Runtime
                 return;
             }
 
-            styles ??= new GuiStyles();
+            GUI.skin = UiTheme.Skin;
+            styles = UiTheme.Styles;
             var e = Event.current;
-            if (e.type == EventType.MouseDown && !journal.Area.Contains(e.mousePosition) && !saves.Area.Contains(e.mousePosition))
+            if (e.type == EventType.MouseDown && !OverWindow(e.mousePosition))
             {
                 // Clicking outside the journal and saves windows leaves their text boxes, so the game's keys work again.
                 GUIUtility.keyboardControl = 0;
@@ -539,10 +607,11 @@ namespace TinyTown.Runtime
             DrawPlaceMenu();
             journal.Draw(CameraArea(), styles);
             saves.Draw(CameraArea(), styles);
+            settingsWindow.Draw(CameraArea(), styles);
             Notifications.Draw(CameraArea(), styles, GoTo);
             inspector.Draw(styles);
             var overMenu = placeMenuPanel >= 0 && placeMenuArea.Contains(e.mousePosition);
-            if ((e.isMouse || e.type == EventType.ScrollWheel) && !journal.Area.Contains(e.mousePosition) && !saves.Area.Contains(e.mousePosition) && !overMenu)
+            if ((e.isMouse || e.type == EventType.ScrollWheel) && !OverWindow(e.mousePosition) && !overMenu)
             {
                 // After the buttons have had their chance, so header buttons and the inspector win over the panels.
                 Panels.HandleMouse(e, view);
@@ -741,6 +810,9 @@ namespace TinyTown.Runtime
                     break;
                 case KeyCode.Escape when SavesOpen:
                     ToggleSaves();
+                    break;
+                case KeyCode.Escape when SettingsOpen:
+                    ToggleSettings();
                     break;
                 default:
                     return;

@@ -12,7 +12,7 @@ namespace TinyTown.Runtime
     {
         public const string ObjectName = "TinyTownBootstrap";
 
-        private static readonly Color BackgroundColour = new Color(0.98f, 0.91f, 0.78f);
+        private static readonly Color BackgroundColour = new Color(9f / 255f, 12f / 255f, 24f / 255f);
 
         public GameSettings Settings { get; private set; }
 

@@ -57,6 +57,10 @@ namespace TinyTown.Simulation.AI
         private CheckPhase checkPhase;
         private double checkStartedAt;
         private double nextCheckAt;
+        private IAiCall listCall;
+        private double listStartedAt;
+        private bool listWanted;
+        private List<string> installedModels = new List<string>();
 
         public AiService(OllamaSettings settings, IAiTransport transport)
         {
@@ -64,7 +68,7 @@ namespace TinyTown.Simulation.AI
             this.transport = transport ?? throw new ArgumentNullException(nameof(transport));
             Queue = new AiRequestQueue(transport, OllamaProtocol.ChatUrl(this.settings.endpoint), this.settings.timeoutSeconds, 1 + Math.Max(0, this.settings.maxRetries));
             Status = this.settings.enabled ? AiConnectionStatus.Checking : AiConnectionStatus.Disabled;
-            StatusDetail = this.settings.enabled ? "looking for Ollama" : "turned off in settings.json";
+            StatusDetail = this.settings.enabled ? "looking for Ollama" : "turned off in Settings";
         }
 
         public AiRequestQueue Queue { get; }
@@ -78,6 +82,17 @@ namespace TinyTown.Simulation.AI
         public string Model => settings.model;
 
         public string Endpoint => settings.endpoint;
+
+        public bool Enabled => settings.enabled;
+
+        /// <summary>The models Ollama last said it has, sorted by name; empty until a list has been read.</summary>
+        public IReadOnlyList<string> InstalledModels => installedModels;
+
+        /// <summary>Why the last model list could not be read, or null.</summary>
+        public string ModelListError { get; private set; }
+
+        /// <summary>True while a model list asked for with <see cref="RefreshModelList"/> is on its way.</summary>
+        public bool ListingModels => listWanted || listCall != null;
 
         /// <summary>Recent noteworthy AI events, newest last, for the inspector.</summary>
         public IReadOnlyList<string> RecentEvents => events;
@@ -100,8 +115,56 @@ namespace TinyTown.Simulation.AI
             }
         }
 
+        /// <summary>Asks Ollama which models are installed, even while the AI is turned off, for the Settings window.</summary>
+        public void RefreshModelList()
+        {
+            listWanted = true;
+        }
+
+        /// <summary>Turns the AI on or off while the game runs. Turning it off drops every waiting request.</summary>
+        public void SetEnabled(bool enabled)
+        {
+            if (settings.enabled == enabled)
+            {
+                return;
+            }
+
+            settings.enabled = enabled;
+            Restart(enabled ? "AI turned on in Settings" : "AI turned off in Settings");
+            StatusDetail = enabled ? "looking for Ollama" : "turned off in Settings";
+        }
+
+        /// <summary>Switches to another Ollama model, checking and loading it before it is used.</summary>
+        public void UseModel(string model)
+        {
+            model = model?.Trim();
+            if (string.IsNullOrEmpty(model) || model.Length > PlayerPreferences.MaxModelNameLength || model == settings.model)
+            {
+                return;
+            }
+
+            settings.model = model;
+            Restart($"switched to {model}");
+            StatusDetail = $"switching to {model}";
+        }
+
+        private void Restart(string reason)
+        {
+            checkCall?.Cancel();
+            checkCall = null;
+            Queue.CancelAll(reason);
+            requestedDecisions.Clear();
+            requestedReflections.Clear();
+            requestedLines.Clear();
+            SetSimulationEnabled(false);
+            nextCheckAt = 0;
+            Status = settings.enabled ? AiConnectionStatus.Checking : AiConnectionStatus.Disabled;
+            AddEvent(reason);
+        }
+
         public void Update(double now)
         {
+            UpdateModelList(now);
             if (!settings.enabled)
             {
                 Status = AiConnectionStatus.Disabled;
@@ -129,7 +192,7 @@ namespace TinyTown.Simulation.AI
                     var latency = s.LastLatencySeconds > 0 ? $", last answer {s.LastLatencySeconds:0.0}s (avg {s.AverageLatencySeconds:0.0}s)" : string.Empty;
                     return $"AI: connected to {Model}. Queue {Queue.PendingCount + (Queue.Active == null ? 0 : 1)}{latency}. Used {s.Accepted}, fell back {s.GaveUp}.";
                 case AiConnectionStatus.Disabled:
-                    return "AI: off (settings.json). Residents use their built-in routine.";
+                    return "AI: off (Settings). Residents use their built-in routine.";
                 default:
                     return $"AI: {Words(Status)} ({StatusDetail}). Residents use their built-in routine meanwhile.";
             }
@@ -235,6 +298,7 @@ namespace TinyTown.Simulation.AI
                 return;
             }
 
+            Remember(names);
             if (!OllamaProtocol.HasModel(names, Model))
             {
                 if (Status != AiConnectionStatus.ModelMissing)
@@ -263,6 +327,71 @@ namespace TinyTown.Simulation.AI
             StatusDetail = $"{Model} ready";
             Queue.ResetFailureCount();
             AddEvent($"Connected to Ollama ({Model}) in {now - checkStartedAt:0.0}s");
+        }
+
+        private void UpdateModelList(double now)
+        {
+            if (listCall == null)
+            {
+                if (!listWanted)
+                {
+                    return;
+                }
+
+                listWanted = false;
+                listStartedAt = now;
+                try
+                {
+                    listCall = transport.Get(OllamaProtocol.TagsUrl(Endpoint), CheckTimeoutSeconds);
+                }
+                catch (Exception e)
+                {
+                    listCall = null;
+                    ModelListError = $"could not contact {Endpoint}: {e.Message}";
+                    return;
+                }
+
+                if (listCall == null)
+                {
+                    ModelListError = $"could not contact {Endpoint}";
+                }
+
+                return;
+            }
+
+            if (!listCall.IsDone)
+            {
+                if (now - listStartedAt > CheckTimeoutSeconds)
+                {
+                    listCall.Cancel();
+                    listCall = null;
+                    ModelListError = $"no reply from {Endpoint} within {CheckTimeoutSeconds:0}s. Is Ollama running?";
+                }
+
+                return;
+            }
+
+            var call = listCall;
+            listCall = null;
+            if (!call.Succeeded)
+            {
+                ModelListError = OllamaProtocol.ReadError(call.ResponseText) ?? call.Error ?? "no reply";
+                return;
+            }
+
+            if (!OllamaProtocol.TryReadModelNames(call.ResponseText, out var names, out var error))
+            {
+                ModelListError = error;
+                return;
+            }
+
+            Remember(names);
+        }
+
+        private void Remember(List<string> names)
+        {
+            ModelListError = null;
+            installedModels = names.Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         private void GoOffline(string reason, double now)

@@ -45,8 +45,10 @@ namespace TinyTown.Runtime
             styles = guiStyles;
             var r = game.SelectedResident;
             var area = new Rect(Screen.width - Width, 0f, Width, Screen.height);
-            GUI.color = new Color(0.98f, 0.93f, 0.84f);
+            GUI.color = UiTheme.ToColor(UiTheme.Palette.Panel);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
+            GUI.color = UiTheme.ToColor(UiTheme.Palette.BarBorder);
+            GUI.DrawTexture(new Rect(area.x, 0f, 1f, area.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
             GUILayout.BeginArea(new Rect(area.x + 14f, 10f, Width - 28f, Screen.height - 20f));
@@ -81,7 +83,15 @@ namespace TinyTown.Runtime
 
         private void DrawTownControls(Resident r)
         {
+            GUILayout.BeginHorizontal();
             GUILayout.Label("The Tiny Town", styles.Title);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Toggle(game.SettingsOpen, "Settings", GUI.skin.button, GUILayout.Width(90f), GUILayout.Height(28f)) != game.SettingsOpen)
+            {
+                game.ToggleSettings();
+            }
+
+            GUILayout.EndHorizontal();
             GUILayout.Label($"Town: {game.CurrentTownName}", styles.Small);
             GUILayout.Label($"{Simulation.Time.Weekday}, Day {Simulation.Time.Day}   {Simulation.Time.ClockText}", styles.Text);
             GUILayout.Label(DescribeCalendar(), styles.Small);
@@ -356,7 +366,7 @@ namespace TinyTown.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label("Click a panel to make it active. N/B: next/previous resident in it · Tab: free camera, other map · F: follow · drag and wheel: pan and zoom · +/−: panels · J: journal · S: saved towns", styles.Small);
+            GUILayout.Label("Click a panel to make it active. N/B: next/previous resident in it · Tab: free camera, other map · F: follow · drag and wheel: pan and zoom · +/−: panels · J: journal · S: saved towns · Settings: top right", styles.Small);
             GUILayout.Label(game.Ai.Summary(), styles.Small);
             var lastEvent = game.Ai.RecentEvents.LastOrDefault();
             if (lastEvent != null)
@@ -404,10 +414,11 @@ namespace TinyTown.Runtime
             var rect = GUILayoutUtility.GetRect(Width - 28f, 18f);
             GUI.Label(new Rect(rect.x, rect.y, 90f, rect.height), need.ToString(), styles.Small);
             var bar = new Rect(rect.x + 90f, rect.y + 3f, rect.width - 130f, rect.height - 6f);
-            GUI.color = new Color(0.82f, 0.76f, 0.68f);
+            var p = UiTheme.Palette;
+            GUI.color = UiTheme.ToColor(p.Control);
             GUI.DrawTexture(bar, Texture2D.whiteTexture);
             var fraction = (float)(value / Needs.Max);
-            GUI.color = value < 20 ? new Color(0.85f, 0.3f, 0.25f) : value < 50 ? new Color(0.92f, 0.67f, 0.25f) : new Color(0.42f, 0.68f, 0.38f);
+            GUI.color = UiTheme.ToColor(value < 20 ? p.Error : value < 50 ? p.Warning : p.Success);
             GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * fraction, bar.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
             GUI.Label(new Rect(bar.xMax + 6f, rect.y, 40f, rect.height), $"{value:0}", styles.Small);

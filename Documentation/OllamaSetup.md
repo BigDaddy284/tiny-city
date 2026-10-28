@@ -20,7 +20,17 @@ The Tiny Town uses a locally installed [Ollama](https://ollama.com) service for 
    The list should include `qwen2.5:7b`.
 4. Start the game. The AI line at the bottom of the panel shows "connecting", then "loading model", then "connected to qwen2.5:7b".
 
-## Settings
+## Turning the AI on or off and choosing a model in the game
+
+Click **Settings** at the top right of the side panel. Under *Local AI (Ollama)*:
+
+- **Use local AI: On / Off** switches the AI at once. While it is off the game never contacts Ollama and residents use their built-in routine.
+- **Installed models** lists every model Ollama has (the game asks Ollama when the window opens; press **Refresh list** after installing one). Click a model to use it; the game checks and loads it first, and residents use their routine while it loads.
+- If the list can't be read, the window says why. Usually Ollama isn't running: start it and press **Refresh list**.
+
+These choices are kept in `player-settings.json` in the game's data folder (`%USERPROFILE%\AppData\LocalLow\<company>\The Tiny Town\`) and take the place of `enabled` and `model` below. Delete that file to go back to `settings.json`.
+
+## Settings file
 
 `TheTinyTown_Data/StreamingAssets/Configuration/settings.json` in the game folder:
 
@@ -58,6 +68,6 @@ Invalid values are reported in `Player.log`, and the game uses the defaults inst
 | `model missing (... run 'ollama pull ...')` | Run the `ollama pull` command it shows. |
 | `offline (qwen2.5:7b took longer than 60s to load)` | The model is loading slowly, usually on first use or with little free memory. Wait for the next automatic check, or raise `timeoutSeconds`. |
 | Many "no AI answer in time" lines in the log | Answers are slower than the resident's wait. Play at 1x or 2x, or raise `decisionWaitMinutes`. |
-| `off (settings.json)` | Set `"enabled": true` in `settings.json`. |
+| `off (Settings)` | Turn **Use local AI** on in the Settings window (top right). |
 
 `Player.log` is in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\`. Lines starting `[TinyTown] AI:` record each connection change, decision and fallback.
