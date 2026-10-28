@@ -116,4 +116,17 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 9. **Save and load:** F5, then F9: the journal is the same.
 10. **Place menu:** every panel header has a "Place ▾" button. It lists the village (outside) and every building. Picking one turns that panel into a free camera there, even if it was following someone indoors, and you can drag it around. A ✓ marks where a free panel is now. Click elsewhere or press Escape to close the list. In free mode, ◀ and ▶ (or Tab) step back and forward through the same list.
 
-Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\` (`town.json` plus `town.json.bak`).
+## Phase 5, build 3: save slots, copying and export
+
+1. **Your existing town:** it appears as "My first town" in the saved towns list (press S, or "Saved towns" at the bottom of the inspector). The inspector shows "Town: …" under the title.
+2. **Save list:** each town shows its name, the game date, how many residents are alive and when it was last saved. "(playing now)" marks the current one. A damaged file says it can't be read, and its Load button is greyed out.
+3. **New town:** type a name next to "New town:" and click "Start it". The town you were playing is saved first, then a fresh village starts in its own slot. Your old town is untouched.
+4. **Switching:** click Load on another town. The current one is saved first, so nothing is lost. The camera panels and inspector carry on with the loaded town.
+5. **Copy:** makes "Copy of <name>" as a new slot, exactly as the town was at that moment (the town you're playing is saved first). Load the copy and play it differently. The original stays as it was.
+6. **Rename:** type the new name and press Enter or OK. Names are kept after you quit.
+7. **Export:** copies the save file to the Exports folder as "<name> save - day N.json", to back it up or share it. "Open saves folder" and "Open exports folder" open those folders.
+8. **Delete:** click Delete, then "Click again to delete" within 4 seconds. You can't delete the town you're playing.
+9. **Autosave, F5 and quitting** save the town you're playing. When you restart the game, it reopens that town.
+10. **Typing:** while typing a name, the game's keys (S, J, Space and so on) are ignored. Click elsewhere or press Escape to use them again.
+
+Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\`: one `town.json`, `town-2.json`, … per town, each with a `.bak` backup, plus `slots.json` holding the town names.

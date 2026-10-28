@@ -21,7 +21,6 @@ namespace TinyTown.Runtime
     {
         public const float Width = 380f;
         private const int RosterPerRow = 5;
-        private const float ConfirmSeconds = 4f;
         private const int TimelineShown = 40;
 
         private static readonly string[] TabNames = { "Now", "People", "Memories", "Work", "Timeline" };
@@ -30,7 +29,6 @@ namespace TinyTown.Runtime
         private GuiStyles styles;
         private int tab;
         private Vector2 scroll;
-        private float confirmNewUntil;
         private (string residentId, long minute, string text) nextPlan;
         private List<TimelineEntry> timeline = new List<TimelineEntry>();
         private (string residentId, long minute, long history, TownSimulation sim) timelineFor;
@@ -84,6 +82,7 @@ namespace TinyTown.Runtime
         private void DrawTownControls(Resident r)
         {
             GUILayout.Label("The Tiny Town", styles.Title);
+            GUILayout.Label($"Town: {game.CurrentTownName}", styles.Small);
             GUILayout.Label($"{Simulation.Time.Weekday}, Day {Simulation.Time.Day}   {Simulation.Time.ClockText}", styles.Text);
             GUILayout.Label(DescribeCalendar(), styles.Small);
 
@@ -351,22 +350,13 @@ namespace TinyTown.Runtime
                 game.TryLoad();
             }
 
-            var confirming = Time.unscaledTime < confirmNewUntil;
-            if (GUILayout.Button(confirming ? "Click again to restart" : "Start over"))
+            if (GUILayout.Button(game.SavesOpen ? "Close saves (S)" : "Saved towns (S)"))
             {
-                if (confirming)
-                {
-                    game.StartNewTown("Started a new town. Your old save is replaced at the next save.");
-                    confirmNewUntil = 0f;
-                }
-                else
-                {
-                    confirmNewUntil = Time.unscaledTime + ConfirmSeconds;
-                }
+                game.ToggleSaves();
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label("Click a panel to make it active. N/B: next/previous resident in it · Tab: free camera, other map · F: follow · drag and wheel: pan and zoom · +/−: panels", styles.Small);
+            GUILayout.Label("Click a panel to make it active. N/B: next/previous resident in it · Tab: free camera, other map · F: follow · drag and wheel: pan and zoom · +/−: panels · J: journal · S: saved towns", styles.Small);
             GUILayout.Label(game.Ai.Summary(), styles.Small);
             var lastEvent = game.Ai.RecentEvents.LastOrDefault();
             if (lastEvent != null)
