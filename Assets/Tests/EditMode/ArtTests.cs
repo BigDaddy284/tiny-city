@@ -41,7 +41,7 @@ namespace TinyTown.Tests.EditMode
         }
 
         [Test]
-        public void Canvas_RoundTripsThroughTextureBytes()
+        public void Canvas_GivesTextureBytes_BottomRowFirst()
         {
             var canvas = new PixelCanvas(3, 2, 1, 1);
             canvas.Set(0, 0, Rgba.Hex("#112233"));
@@ -49,10 +49,37 @@ namespace TinyTown.Tests.EditMode
             var bytes = canvas.ToBytesBottomUp();
             Assert.That(bytes.Length, Is.EqualTo(3 * 2 * 4));
             Assert.That(bytes[0], Is.EqualTo(0), "the bottom row comes first, and its first pixel is empty");
-            var back = PixelCanvas.FromBytesBottomUp(bytes, 3, 2, 1, 1);
-            Assert.That(back.Get(0, 0), Is.EqualTo(Rgba.Hex("#112233")));
-            Assert.That(back.Get(2, 1), Is.EqualTo(Rgba.Hex("#445566")));
-            Assert.Throws<ArgumentException>(() => PixelCanvas.FromBytesBottomUp(new byte[3], 3, 2, 0, 0));
+            Assert.That(bytes[8] == 0x44 && bytes[9] == 0x55 && bytes[10] == 0x66 && bytes[11] == 255, Is.True);
+            Assert.That(bytes[12] == 0x11 && bytes[13] == 0x22 && bytes[14] == 0x33, Is.True, "the top row comes last");
+        }
+
+        [Test]
+        public void PngReader_ReadsRgbaPictures_WithEveryFilter()
+        {
+            // Saved by an image editor (Pillow, optimised), so its rows use a mix of PNG filters.
+            var canvas = PngReader.Read(Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAUAAAADCAYAAABbNsX4AAAANklEQVR42gXBsRGAMBADwfOMo48VQ3qxa6IQyqMrsUuhlBfK5Or3nG4VBZSJaNgqq8AqkxsNPwLbDPjFzdyNAAAAAElFTkSuQmCC"), (w, h) => (w / 2.0, h - 1.0));
+            Assert.That(canvas.Width == 5 && canvas.Height == 3, Is.True);
+            Assert.That(canvas.AnchorX == 2.5 && canvas.AnchorY == 2.0, Is.True, "the anchor comes from the caller");
+            Assert.That(canvas.Get(0, 0), Is.EqualTo(new Rgba(255, 0, 0)));
+            Assert.That(canvas.Get(1, 0), Is.EqualTo(new Rgba(0, 255, 0, 128)));
+            Assert.That(canvas.Get(2, 0).IsClear, Is.True);
+            Assert.That(canvas.Get(4, 1), Is.EqualTo(new Rgba(240, 140, 90)));
+            Assert.That(canvas.Get(3, 2), Is.EqualTo(new Rgba(90, 100, 110)));
+            Assert.That(canvas.Get(4, 2), Is.EqualTo(new Rgba(24, 180, 130)));
+        }
+
+        [Test]
+        public void PngReader_ReadsPalettePictures_AndRejectsBadFiles()
+        {
+            var canvas = PngReader.Read(Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAUAAAADCAMAAABs6DXKAAACplBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAzAABmAACZAADMAAD/AAAAMwAzMwBmMwCZMwDMMwD/MwAAZgAzZgBmZgCZZgDMZgD/ZgAAmQAzmQBmmQCZmQDMmQD/mQAAzAAzzABmzACZzADMzAD/zAAA/wAz/wBm/wCZ/wDM/wD//wAAADMzADNmADOZADPMADP/ADMAMzMzMzNmMzOZMzPMMzP/MzMAZjMzZjNmZjOZZjPMZjP/ZjMAmTMzmTNmmTOZmTPMmTP/mTMAzDMzzDNmzDOZzDPMzDP/zDMA/zMz/zNm/zOZ/zPM/zP//zMAAGYzAGZmAGaZAGbMAGb/AGYAM2YzM2ZmM2aZM2bMM2b/M2YAZmYzZmZmZmaZZmbMZmb/ZmYAmWYzmWZmmWaZmWbMmWb/mWYAzGYzzGZmzGaZzGbMzGb/zGYA/2Yz/2Zm/2aZ/2bM/2b//2YAAJkzAJlmAJmZAJnMAJn/AJkAM5kzM5lmM5mZM5nMM5n/M5kAZpkzZplmZpmZZpnMZpn/ZpkAmZkzmZlmmZmZmZnMmZn/mZkAzJkzzJlmzJmZzJnMzJn/zJkA/5kz/5lm/5mZ/5nM/5n//5kAAMwzAMxmAMyZAMzMAMz/AMwAM8wzM8xmM8yZM8zMM8z/M8wAZswzZsxmZsyZZszMZsz/ZswAmcwzmcxmmcyZmczMmcz/mcwAzMwzzMxmzMyZzMzMzMz/zMwA/8wz/8xm/8yZ/8zM/8z//8wAAP8zAP9mAP+ZAP/MAP//AP8AM/8zM/9mM/+ZM//MM///M/8AZv8zZv9mZv+ZZv/MZv//Zv8Amf8zmf9mmf+Zmf/Mmf//mf8AzP8zzP9mzP+ZzP/MzP//zP8A//8z//9m//+Z///M//////91g91EAAAAGElEQVR4nGPg19inZ8dgCgSZDKYJpgl9ACOQBFcjXFaCAAAAAElFTkSuQmCC"), (w, h) => (0, 0));
+            Assert.That(canvas.Get(0, 0), Is.EqualTo(new Rgba(255, 0, 0)));
+            Assert.That(canvas.Get(4, 0), Is.EqualTo(new Rgba(204, 102, 51)));
+            Assert.That(canvas.Get(4, 2), Is.EqualTo(new Rgba(0, 204, 153)));
+
+            Assert.Throws<System.IO.InvalidDataException>(() => PngReader.Read(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, (w, h) => (0, 0)));
+            Assert.Throws<System.IO.InvalidDataException>(() => PngReader.Read(null, (w, h) => (0, 0)));
+            var cut = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAUAAAADCAYAAABbNsX4AAAANklEQVR42gXBsRGAMBADwfOMo48VQ3qxa6IQyqMrsUuhlBfK5Or3nG4VBZSJaNgqq8AqkxsNPwLbDPjFzdyNAAAAAElFTkSuQmCC").Take(40).ToArray();
+            Assert.Throws<System.IO.InvalidDataException>(() => PngReader.Read(cut, (w, h) => (0, 0)));
         }
 
         [Test]

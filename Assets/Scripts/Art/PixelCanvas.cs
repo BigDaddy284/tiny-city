@@ -58,28 +58,6 @@ namespace TinyTown.Art
             return bytes;
         }
 
-        /// <summary>A canvas from RGBA bytes stored bottom row first, such as a loaded texture.</summary>
-        public static PixelCanvas FromBytesBottomUp(byte[] bytes, int width, int height, double anchorX, double anchorY)
-        {
-            if (bytes == null || bytes.Length < width * height * 4)
-            {
-                throw new ArgumentException("Not enough pixel data for the picture's size.", nameof(bytes));
-            }
-
-            var canvas = new PixelCanvas(width, height, anchorX, anchorY);
-            var i = 0;
-            for (var y = height - 1; y >= 0; y--)
-            {
-                for (var x = 0; x < width; x++)
-                {
-                    canvas.pixels[(y * width) + x] = new Rgba(bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]);
-                    i += 4;
-                }
-            }
-
-            return canvas;
-        }
-
         public Rgba Get(int x, int y) => x < 0 || y < 0 || x >= Width || y >= Height ? Rgba.Clear : pixels[(y * Width) + x];
 
         /// <summary>Replaces a pixel. Off-canvas pixels are ignored.</summary>

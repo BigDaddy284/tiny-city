@@ -50,37 +50,16 @@ namespace TinyTown.Runtime
                 return null;
             }
 
-            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             try
             {
-                if (!texture.LoadImage(File.ReadAllBytes(path)) || texture.width > 4096 || texture.height > 4096)
-                {
-                    Debug.LogWarning($"[TinyTown] Art: couldn't use {path}; keeping the built-in picture.");
-                    return null;
-                }
-
-                var pixels = texture.GetPixels32();
-                var bytes = new byte[pixels.Length * 4];
-                for (var i = 0; i < pixels.Length; i++)
-                {
-                    bytes[(i * 4) + 0] = pixels[i].r;
-                    bytes[(i * 4) + 1] = pixels[i].g;
-                    bytes[(i * 4) + 2] = pixels[i].b;
-                    bytes[(i * 4) + 3] = pixels[i].a;
-                }
-
-                var (ax, ay) = MapArt.AnchorFor(texture.width, texture.height, request.FootprintWidth, request.FootprintDepth);
+                var canvas = PngReader.Read(File.ReadAllBytes(path), (w, h) => MapArt.AnchorFor(w, h, request.FootprintWidth, request.FootprintDepth));
                 Debug.Log($"[TinyTown] Art: using {path}.");
-                return PixelCanvas.FromBytesBottomUp(bytes, texture.width, texture.height, ax, ay);
+                return canvas;
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[TinyTown] Art: couldn't read {path}: {e.Message}");
+                Debug.LogWarning($"[TinyTown] Art: couldn't use {path} ({e.Message}); keeping the built-in picture.");
                 return null;
-            }
-            finally
-            {
-                UnityEngine.Object.Destroy(texture);
             }
         }
     }
