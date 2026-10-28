@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyTown.Simulation;
 using TinyTown.Simulation.Activities;
 using TinyTown.Simulation.Economy;
 using TinyTown.Simulation.Health;
+using TinyTown.Simulation.History;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Social;
@@ -20,8 +22,9 @@ namespace TinyTown.Runtime
         public const float Width = 380f;
         private const int RosterPerRow = 5;
         private const float ConfirmSeconds = 4f;
+        private const int TimelineShown = 40;
 
-        private static readonly string[] TabNames = { "Now", "People", "Memories", "Work", "Life" };
+        private static readonly string[] TabNames = { "Now", "People", "Memories", "Work", "Timeline" };
 
         private readonly GameController game;
         private GuiStyles styles;
@@ -29,6 +32,8 @@ namespace TinyTown.Runtime
         private Vector2 scroll;
         private float confirmNewUntil;
         private (string residentId, long minute, string text) nextPlan;
+        private List<TimelineEntry> timeline = new List<TimelineEntry>();
+        private (string residentId, long minute, long history, TownSimulation sim) timelineFor;
 
         public Inspector(GameController game)
         {
@@ -64,7 +69,7 @@ namespace TinyTown.Runtime
                     DrawWork(r);
                     break;
                 case 4:
-                    DrawLife(r);
+                    DrawTimeline(r);
                     break;
                 default:
                     DrawNow(r);
@@ -113,6 +118,10 @@ namespace TinyTown.Runtime
             }
 
             GUILayout.EndHorizontal();
+            if (GUILayout.Button(game.JournalOpen ? "Close the town journal (J)" : "Open the town journal (J)"))
+            {
+                game.ToggleJournal();
+            }
 
             // Five names to a row, so a town of any size fits. Picking someone shows them here and in the active panel.
             var roster = Simulation.Residents;
@@ -187,9 +196,10 @@ namespace TinyTown.Runtime
 
             GUILayout.Space(6f);
             GUILayout.Label("Village news", styles.Text);
-            foreach (var news in Simulation.History.Events.Reverse().Take(3))
+            var history = Simulation.History.Events;
+            for (var i = history.Count - 1; i >= Math.Max(0, history.Count - 3); i--)
             {
-                GUILayout.Label($"Day {news.Time.Day}: {news.Summary}", styles.Small);
+                GUILayout.Label($"Day {history[i].Time.Day}: {history[i].Summary}", styles.Small);
             }
         }
 
@@ -267,7 +277,7 @@ namespace TinyTown.Runtime
             }
         }
 
-        private void DrawLife(Resident r)
+        private void DrawTimeline(Resident r)
         {
             GUILayout.Label($"Born on day {HealthRules.BirthdayCycleDay(r)} of each {HealthRules.DaysPerYear}-day year · {r.Personality.Describe()}", styles.Small);
             GUILayout.Label($"Hobbies: {(r.Hobbies.Count > 0 ? string.Join(", ", r.Hobbies) : "none")}", styles.Small);
@@ -277,17 +287,47 @@ namespace TinyTown.Runtime
                 GUILayout.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}.", styles.Text);
             }
 
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Export life story"))
+            {
+                game.ExportLifeStory(r);
+            }
+
+            if (GUILayout.Button("In the journal"))
+            {
+                game.ShowJournalFor(r);
+            }
+
+            GUILayout.EndHorizontal();
+
             GUILayout.Space(4f);
-            GUILayout.Label("Life events", styles.Text);
-            var events = Simulation.History.About(r.Id).Reverse().Take(10).ToList();
-            if (events.Count == 0)
+            GUILayout.Label("Timeline, newest first", styles.Text);
+            var timeline = Timeline(r);
+            if (timeline.Count == 0)
             {
                 GUILayout.Label("Nothing in the village records yet.", styles.Small);
             }
 
-            foreach (var e in events)
+            foreach (var e in Enumerable.Reverse(timeline).Take(TimelineShown))
             {
-                GUILayout.Label($"Day {e.Time.Day}: {e.Summary}", styles.Small);
+                var line = $"Day {e.Time.Day} {e.Time.ClockText}: {e.Text}";
+                switch (e.Source)
+                {
+                    case TimelineSource.AiReflection:
+                        GUILayout.Label("Reflection written by the AI. " + line, styles.AiNote);
+                        break;
+                    case TimelineSource.Memory:
+                        GUILayout.Label(line + " (their memory)", styles.Small);
+                        break;
+                    default:
+                        GUILayout.Label(line, styles.Small);
+                        break;
+                }
+            }
+
+            if (timeline.Count > TimelineShown)
+            {
+                GUILayout.Label($"{timeline.Count - TimelineShown} older entries are in the exported life story.", styles.Small);
             }
 
             GUILayout.Space(4f);
@@ -338,6 +378,19 @@ namespace TinyTown.Runtime
             {
                 GUILayout.Label(game.Status, styles.Small);
             }
+        }
+
+        /// <summary>The resident's timeline, worked out again at most once per game minute or when the records change.</summary>
+        private List<TimelineEntry> Timeline(Resident r)
+        {
+            var key = (r.Id, Simulation.Time.TotalMinutes, Simulation.History.NextNumber, Simulation);
+            if (!key.Equals(timelineFor))
+            {
+                timeline = LifeStory.Timeline(Simulation, r.Id);
+                timelineFor = key;
+            }
+
+            return timeline;
         }
 
         /// <summary>What the routine would have them do if they stopped now. Worked out at most once per game minute.</summary>

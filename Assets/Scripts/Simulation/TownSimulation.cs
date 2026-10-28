@@ -4,6 +4,7 @@ using System.Linq;
 using TinyTown.Simulation.Activities;
 using TinyTown.Simulation.Economy;
 using TinyTown.Simulation.Health;
+using TinyTown.Simulation.History;
 using TinyTown.Simulation.Memory;
 using TinyTown.Simulation.Residents;
 using TinyTown.Simulation.Social;
@@ -773,6 +774,7 @@ namespace TinyTown.Simulation
                 SocialRules.ApplyConversation(ab, ba, session.Lines, Time);
                 NoteExposure(a, b);
                 ApplyRomance(session, a, b, ab, ba);
+                RecordSocialHistory(session, a, b, firstMeeting, friendshipBefore);
             }
 
             var about = string.IsNullOrEmpty(session.Topic) ? string.Empty : $" about {session.Topic.ToLowerInvariant()}";
@@ -806,6 +808,23 @@ namespace TinyTown.Simulation
                 me.AddLog(Time, leaver == null
                     ? $"Finished chatting with {other.FirstName}"
                     : leaver == me ? $"Left the chat with {other.FirstName}: {reason}" : $"{other.FirstName} had to go: {reason}");
+            }
+        }
+
+        /// <summary>First meetings and new friendships go in the town history, once each way the pair crosses the line.</summary>
+        private void RecordSocialHistory(ConversationSession session, Resident a, Resident b, bool firstMeeting, double[] friendshipBefore)
+        {
+            var pair = new[] { a.Id, b.Id };
+            if (firstMeeting)
+            {
+                History.Add(Time, TownEventKind.Met, $"{a.FullName} and {b.FullName} met for the first time at the {session.Place.ToLowerInvariant()}.", pair);
+            }
+
+            var wereFriends = friendshipBefore[0] >= SocialRules.GoodFriendsAt && friendshipBefore[1] >= SocialRules.GoodFriendsAt;
+            var nowFriends = Relationships.Get(a.Id, b.Id).Friendship >= SocialRules.GoodFriendsAt && Relationships.Get(b.Id, a.Id).Friendship >= SocialRules.GoodFriendsAt;
+            if (nowFriends && !wereFriends && !History.Events.Any(e => e.Kind == TownEventKind.Friends && e.ResidentIds.Contains(a.Id) && e.ResidentIds.Contains(b.Id)))
+            {
+                History.Add(Time, TownEventKind.Friends, $"{a.FullName} and {b.FullName} became good friends.", pair);
             }
         }
 

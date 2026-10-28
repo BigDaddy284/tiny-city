@@ -5,6 +5,7 @@ using TinyTown.Simulation;
 using TinyTown.Simulation.AI;
 using TinyTown.Simulation.Configuration;
 using TinyTown.Simulation.Content;
+using TinyTown.Simulation.History;
 using TinyTown.Simulation.Persistence;
 using TinyTown.Simulation.Residents;
 using UnityEngine;
@@ -13,8 +14,9 @@ namespace TinyTown.Runtime
 {
     /// <summary>
     /// Runs the town: advances the simulation with the clock, saves and loads, and hands drawing to the
-    /// <see cref="TownView"/> (the maps and residents), the <see cref="CameraPanels"/> (what each camera watches) and the
-    /// <see cref="Inspector"/> (the panel on the right). All rules live in <see cref="TownSimulation"/>.
+    /// <see cref="TownView"/> (the maps and residents), the <see cref="CameraPanels"/> (what each camera watches), the
+    /// <see cref="Inspector"/> (the panel on the right), the <see cref="JournalWindow"/> and the <see cref="Notifications"/>.
+    /// All rules live in <see cref="TownSimulation"/>.
     /// </summary>
     public sealed class GameController : MonoBehaviour
     {
@@ -33,6 +35,7 @@ namespace TinyTown.Runtime
 
         private TownView view;
         private Inspector inspector;
+        private JournalWindow journal;
         private GuiStyles styles;
 
         public TownSimulation Simulation { get; private set; }
@@ -44,6 +47,11 @@ namespace TinyTown.Runtime
 
         /// <summary>The camera panels, from one to ten. Panel 0 uses the main camera.</summary>
         public CameraPanels Panels { get; private set; }
+
+        /// <summary>Pop-ups for the town's big moments.</summary>
+        public Notifications Notifications { get; private set; }
+
+        public bool JournalOpen => journal != null && journal.IsOpen;
 
         /// <summary>Where the maps and residents are drawn in the world.</summary>
         public TownView View => view;
@@ -73,6 +81,8 @@ namespace TinyTown.Runtime
             view = new GameObject("Town").AddComponent<TownView>();
             Panels = new CameraPanels(Camera.main) { ResidentClicked = id => Select(Simulation.GetResident(id), followInActivePanel: false) };
             inspector = new Inspector(this);
+            journal = new JournalWindow(this);
+            Notifications = new Notifications();
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyTown] AI: {message}") };
 
             if (!SaveStore.Exists(SaveSlot) || !TryLoad())
@@ -105,6 +115,7 @@ namespace TinyTown.Runtime
             }
 
             UpdateView(Speed > 0 && ticks <= 1 ? accumulator : 1f);
+            Notifications?.Update(Simulation, UnityEngine.Time.unscaledTime);
         }
 
         private void OnApplicationQuit()
@@ -145,6 +156,7 @@ namespace TinyTown.Runtime
 
             view.ForgetResidents();
             Panels.ClearSpeech();
+            Notifications.Reset(simulation);
             if (simulation.GetResident(selectedId) == null)
             {
                 selectedId = simulation.Residents[0].Id;
@@ -290,6 +302,40 @@ namespace TinyTown.Runtime
 
         public void SetPanelCount(int count) => Panels.SetCount(count, view, Simulation);
 
+        public void ToggleJournal() => journal.Toggle();
+
+        /// <summary>Opens the journal with only the inspector's resident's entries.</summary>
+        public void ShowJournalFor(Resident r)
+        {
+            Select(r, followInActivePanel: false);
+            journal.ShowOnly(r.Id);
+        }
+
+        /// <summary>Shows whoever a journal entry or notification is about, and points the active panel at them if they're alive.</summary>
+        public void GoTo(TownEvent entry)
+        {
+            var r = entry.ResidentIds.Select(id => Simulation.GetResident(id)).FirstOrDefault(x => x != null);
+            Select(r, followInActivePanel: true);
+        }
+
+        public void ExportLifeStory(Resident r) => Export($"{r.FullName} life story", LifeStory.Write(Simulation, r.Id), $"{r.FirstName}'s life story");
+
+        public void ExportTownHistory() => Export("Town history", LifeStory.WriteTownHistory(Simulation), "The town history");
+
+        private void Export(string name, string text, string what)
+        {
+            try
+            {
+                var path = ExportStore.Write(name, Simulation.Time.Day, text);
+                Status = $"{what} was saved to {path}";
+            }
+            catch (Exception e)
+            {
+                Status = $"Export failed: {e.Message}";
+                Debug.LogError($"[TinyTown] {Status}");
+            }
+        }
+
         public void WatchEveryone() => Panels.WatchEveryone(view, Simulation);
 
         private void OnGUI()
@@ -301,10 +347,18 @@ namespace TinyTown.Runtime
 
             styles ??= new GuiStyles();
             var e = Event.current;
+            if (e.type == EventType.MouseDown && !journal.Area.Contains(e.mousePosition))
+            {
+                // Clicking anywhere but the journal leaves its search box, so the game's keys work again.
+                GUIUtility.keyboardControl = 0;
+            }
+
             HandleKeys(e);
             Panels.DrawOverlays(view, Simulation, styles, DrawPanelHeader);
+            journal.Draw(CameraArea(), styles);
+            Notifications.Draw(CameraArea(), styles, GoTo);
             inspector.Draw(styles);
-            if (e.isMouse || e.type == EventType.ScrollWheel)
+            if ((e.isMouse || e.type == EventType.ScrollWheel) && !journal.Area.Contains(e.mousePosition))
             {
                 // After the buttons have had their chance, so header buttons and the inspector win over the panels.
                 Panels.HandleMouse(e, view);
@@ -380,6 +434,18 @@ namespace TinyTown.Runtime
                 return;
             }
 
+            if (GUIUtility.keyboardControl != 0)
+            {
+                // Typing in the journal's search box: keys are text, and Escape leaves the box.
+                if (e.keyCode == KeyCode.Escape)
+                {
+                    GUIUtility.keyboardControl = 0;
+                    e.Use();
+                }
+
+                return;
+            }
+
             var active = Panels.ActiveIndex;
             switch (e.keyCode)
             {
@@ -418,6 +484,12 @@ namespace TinyTown.Runtime
                 case KeyCode.Minus:
                 case KeyCode.KeypadMinus:
                     SetPanelCount(Panels.Count - 1);
+                    break;
+                case KeyCode.J:
+                    ToggleJournal();
+                    break;
+                case KeyCode.Escape when JournalOpen:
+                    ToggleJournal();
                     break;
                 default:
                     return;

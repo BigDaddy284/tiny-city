@@ -103,4 +103,16 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 10. **Death:** a panel following someone who dies turns into a free camera where they were.
 11. **Performance:** with ten panels at 4x the game should stay smooth. Note it if it doesn't, with roughly how many frames you think you're getting.
 
+## Phase 5, build 2: journal, timelines, notifications and export
+
+1. **Town journal:** press J or click "Open the town journal" in the inspector. It lists the village records newest first, grouped by day: birthdays, new life stages, illness and recovery, first meetings, new good friends, couples, break-ups, gatherings and deaths. Big moments have a ★.
+2. **Search:** type in the search box, for example a name, "flu", "quiz" or "day 3". Every word has to match. While you type, the game's keys (Space, N, J and so on) are ignored. Press Escape or click outside the journal to use them again.
+3. **Filters:** the All / Life / Love / Health / Friends / Gatherings buttons narrow the list. "Only <name>" shows only the resident chosen in the inspector.
+4. **Go to someone:** clicking an entry shows that resident in the inspector, and the active camera panel follows them if they're alive.
+5. **Notifications:** deaths, couples, break-ups, getting back together, committing, a new life stage and serious illness pop up at the top left of the camera area for about 12 seconds (at most four at once). Clicking one goes to that resident. Birthdays and colds don't pop up; they're only in the journal.
+6. **Timeline tab:** the inspector's last tab is now "Timeline": the village records about that resident plus their important memories, newest first. Their own memories say "(their memory)". Reflections the AI wrote are in a blue box.
+7. **Export:** "Export life story" (Timeline tab or journal) and "Export town history" (journal) write text files. The status line shows where. "Open exports folder" opens it. The files are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Exports\`. In a life story, `[memory]` and `[AI]` mark what didn't come from the village records.
+8. **Old save:** a build 1 save loads normally. Its journal starts with what was recorded before (gatherings, couples, deaths) and fills in from then on.
+9. **Save and load:** F5, then F9: the journal is the same.
+
 Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\` (`town.json` plus `town.json.bak`).

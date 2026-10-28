@@ -48,9 +48,11 @@ namespace TinyTown.Simulation
             r.AgeYears++;
             r.AddLog(Time, $"Turned {r.AgeYears} today");
             Memories.Add(r.Id, Time, MemoryType.Event, 4, $"It was my {Ordinal(r.AgeYears)} birthday.", tags: new[] { "birthday", "age" });
+            History.Add(Time, TownEventKind.Birthday, $"{r.FullName} turned {r.AgeYears}.", new[] { r.Id });
             if (r.LifeStage != stage)
             {
                 Memories.Add(r.Id, Time, MemoryType.Event, 6, LifeStageSummary(r.LifeStage), tags: new[] { "age", "life-stage" });
+                History.Add(Time, TownEventKind.LifeStage, $"{r.FullName} is now {StageWords(r.LifeStage)}.", new[] { r.Id });
             }
 
             r.Health = System.Math.Min(r.Health, HealthRules.MaxHealthFor(r.AgeYears));
@@ -64,6 +66,7 @@ namespace TinyTown.Simulation
             r.IllnessTreated = false;
             r.AddLog(Time, $"Woke up with {illness.Name}");
             Memories.Add(r.Id, Time, MemoryType.Event, illness.Serious ? 7 : 4, $"I came down with {illness.Name}.", tags: new[] { "health", "ill", illness.Id });
+            History.Add(Time, illness.Serious ? TownEventKind.SeriousIllness : TownEventKind.Illness, $"{r.FullName} came down with {illness.Name}.", new[] { r.Id });
         }
 
         /// <summary>One minute of health after needs have changed. Sleeping and resting in bed help recovery.</summary>
@@ -76,10 +79,12 @@ namespace TinyTown.Simulation
                 case HealthEvent.Recovered:
                     r.AddLog(Time, $"Felt better: over {illness.Name}");
                     Memories.Add(r.Id, Time, MemoryType.Event, illness.Serious ? 6 : 3, $"I got over {illness.Name}.", tags: new[] { "health", "recovered", illness.Id });
+                    History.Add(Time, TownEventKind.Recovered, $"{r.FullName} got over {illness.Name}.", new[] { r.Id });
                     break;
                 case HealthEvent.Worsened:
                     r.AddLog(Time, $"Got worse: {illness.Name} turned into {IllnessCatalog.Get(r.IllnessId).Name}");
                     Memories.Add(r.Id, Time, MemoryType.Event, 7, $"My {illness.Name} turned into {IllnessCatalog.Get(r.IllnessId).Name}; I need to see the doctor.", tags: new[] { "health", "ill", r.IllnessId });
+                    History.Add(Time, TownEventKind.SeriousIllness, $"{r.FullName}'s {illness.Name} turned into {IllnessCatalog.Get(r.IllnessId).Name}.", new[] { r.Id });
                     break;
                 case HealthEvent.Died:
                     Die(r, illness != null ? IllnessCatalog.Get(r.IllnessId)?.Name ?? illness.Name : "neglect");
@@ -178,6 +183,21 @@ namespace TinyTown.Simulation
                     return "I'm officially elderly now, and I intend to enjoy it.";
                 default:
                     return "A new chapter of life has begun.";
+            }
+        }
+
+        private static string StageWords(LifeStage stage)
+        {
+            switch (stage)
+            {
+                case LifeStage.Adult:
+                    return "a grown adult";
+                case LifeStage.MiddleAged:
+                    return "middle-aged";
+                case LifeStage.Elderly:
+                    return "elderly";
+                default:
+                    return "a young adult";
             }
         }
     }
