@@ -134,6 +134,42 @@ namespace TinyTown.Art
         public static readonly Rgba CafeFloor = Rgba.Hex("#a2603f");
         public static readonly Rgba[] CottageFloors = { Rgba.Hex("#c08a5a"), Rgba.Hex("#b07a4c"), Rgba.Hex("#caa074") };
 
+        // Residents (Phase 6, build 2): skin, hair, clothes and the little mood bubbles.
+        public static readonly Rgba[] Skin = { Rgba.Hex("#f6d9c2"), Rgba.Hex("#ebc19c"), Rgba.Hex("#d29a72"), Rgba.Hex("#b47a52"), Rgba.Hex("#7f5038") };
+        public static readonly Rgba Blush = Rgba.Hex("#e8a29a");
+        public static readonly Rgba HairBlack = Rgba.Hex("#2e2626");
+        public static readonly Rgba HairDarkBrown = Rgba.Hex("#4a3226");
+        public static readonly Rgba HairBrown = Rgba.Hex("#6b4630");
+        public static readonly Rgba HairAuburn = Rgba.Hex("#a4523a");
+        public static readonly Rgba HairGinger = Rgba.Hex("#d0813e");
+        public static readonly Rgba HairBlonde = Rgba.Hex("#e2c27a");
+        public static readonly Rgba HairGrey = Rgba.Hex("#b9b4ad");
+        public static readonly Rgba HairWhite = Rgba.Hex("#ece9e3");
+        public static readonly Rgba Terracotta = Rgba.Hex("#d9734e");
+        public static readonly Rgba Cornflower = Rgba.Hex("#5b7db1");
+        public static readonly Rgba Fern = Rgba.Hex("#6fae5c");
+        public static readonly Rgba Rose = Rgba.Hex("#c2577a");
+        public static readonly Rgba Marigold = Rgba.Hex("#e0a33a");
+        public static readonly Rgba Lavender = Rgba.Hex("#8e6cc0");
+        public static readonly Rgba Buttercup = Rgba.Hex("#d4b44a");
+        public static readonly Rgba Teal = Rgba.Hex("#3e8e8a");
+        public static readonly Rgba Powder = Rgba.Hex("#7fa7d9");
+        public static readonly Rgba Pebble = Rgba.Hex("#b0a8a0");
+        public static readonly Rgba Denim = Rgba.Hex("#4d5f86");
+        public static readonly Rgba Corduroy = Rgba.Hex("#7a5a3e");
+        public static readonly Rgba Khaki = Rgba.Hex("#a8946a");
+
+        /// <summary>Clothes for residents without a look of their own, chosen by their id.</summary>
+        public static readonly Rgba[] Clothes = { Terracotta, Cornflower, Fern, Rose, Marigold, Lavender, Buttercup, Teal, Powder, Pebble };
+
+        /// <summary>Hair for residents without a look of their own, chosen by their id (grey and white come with age).</summary>
+        public static readonly Rgba[] Hair = { HairBlack, HairDarkBrown, HairBrown, HairAuburn, HairGinger, HairBlonde };
+
+        public static readonly Rgba Bubble = Rgba.Hex("#fffaf0");
+        public static readonly Rgba Heart = Rgba.Hex("#e0566a");
+        public static readonly Rgba Sleepy = Rgba.Hex("#6a86c9");
+        public static readonly Rgba Queasy = Rgba.Hex("#8cbf6a");
+
         // Light: sprites are multiplied by these (see Lighting).
         public static readonly Rgba Daylight = Rgba.Hex("#ffffff");
         public static readonly Rgba GoldenHour = Rgba.Hex("#ffd6b0");

@@ -390,10 +390,10 @@ namespace TinyTown.Runtime
                     continue;
                 }
 
-                Label(panel, origin, position + new Vector3(0f, 0.72f, 0f), r.FirstName, styles.Name);
+                Label(panel, origin, position + new Vector3(0f, 0.86f, 0f), r.FirstName, styles.Name);
 
                 // A bubble appears for each new line a resident says, and fades after a few seconds.
-                if (speech.TryGetValue(r.Id, out var bubble) && Time.unscaledTime < bubble.until && panel.TryScreenPoint(position + new Vector3(0f, 0.95f, 0f), out var above))
+                if (speech.TryGetValue(r.Id, out var bubble) && Time.unscaledTime < bubble.until && panel.TryScreenPoint(position + new Vector3(0f, 1.05f, 0f), out var above))
                 {
                     var content = new GUIContent($"“{bubble.line.Text}”");
                     var width = Mathf.Min(220f, panel.ScreenRect.width * 0.8f);

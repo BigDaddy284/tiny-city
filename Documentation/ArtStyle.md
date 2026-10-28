@@ -5,7 +5,8 @@ The Tiny Town, now and in later builds (residents, animation, effects, menus tha
 and uses only the colours below. Changing a rule or a colour needs the owner's approval first.
 
 Approved changes: 28 October 2026, the back walls of rooms meet in a clean corner (the left wall no longer overlaps
-the right one).
+the right one). Phase 6, build 2 added the residents, their mood icons and their colours (skin, hair, clothes,
+bubble), which wait for the owner's approval with that build.
 
 The lock is enforced by `Assets/Tests/EditMode/ArtStyleTests.cs`. It fingerprints the palette, the style rules and
 the drawn ground, buildings, rooms, trees and furniture. Any change to them makes a test fail. Once the owner
@@ -67,11 +68,33 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
   windows and pictures. The front walls are low, and walls inside the room are half height. Floors are wooden
   boards in homes and the café, and tiles in the store, bakery and clinic.
 
-## For the residents (build 2) and later work
+## Residents
+
+![The ten residents in every pose, with the mood icons](Images/residents.png)
+
+- **Size and shape.** A resident is about 33 pixels tall from feet to the top of the head (doors are about 30), with
+  a head 8 pixels wide, a body 8 wide and arms 2 wide each side. They are drawn in three-quarter view and face one
+  of the four walking directions: towards the viewer down-right or down-left, or away up-left or up-right.
+- **Same light as the town.** The light still comes from the upper left whichever way they face, so the right-hand
+  columns are a shade darker. They have the same `Outline` and stand on a soft `Shadow` when standing.
+- **Ten looks.** Each starter resident has their own clothes colour, hair colour and style, and a touch of their
+  own: Mabel's straw hat, Arthur's glasses, Rosa's apron and curls, Tom's beard and apron, Priya's long hair,
+  Ivy's bob and apron, Samuel's glasses and beard, Felix's messy hair, Edith's white bun and glasses. Anyone new
+  gets a look put together from their id, going grey at 65 and white at 75 (`ResidentLook`).
+- **Animation.** Four walking frames (a stride, a lifted foot, the other stride, the other foot) with a one-pixel
+  bob, and two frames each for talking (mouth and a hand gesture), eating, reading, working, cheering and star
+  jumps. Sitting puts the hips on the seat with the legs hanging down; sleeping shows the head on the pillow and the
+  shoulders above the quilt. People use furniture where it is used: sitting in chairs and on benches, standing at
+  the front of cookers, sinks, counters and workbenches, facing them.
+- **Mood icons.** A small cream bubble with a tail over the head, outlined, holding a 7 × 5 symbol: a smile
+  (happy), "z" (asleep), a green face (ill), "!" (needs the toilet), bread (hungry), a drop (thirsty), heavy eyes
+  (tired), wavy lines (grubby), a rain cloud (lonely), "..." (bored) and a heart (talking with their partner).
+  Icons are never darkened by night.
+
+## For later work
 
 - Use only colours from `Palette.cs`. A new colour must be approved and added there by name.
 - Use the same light direction, outline colour, shadows and point-filtered pixels.
-- Keep residents in proportion to the 64 × 32 tile and to doors, which are about 30 pixels tall.
 
 ## Palette
 
@@ -220,6 +243,53 @@ once for each season. This table and `Images/palette.png` are made by `Tools/Art
 | CottageFloors[0] | `#c08a5a` |
 | CottageFloors[1] | `#b07a4c` |
 | CottageFloors[2] | `#caa074` |
+| Skin[0] | `#f6d9c2` |
+| Skin[1] | `#ebc19c` |
+| Skin[2] | `#d29a72` |
+| Skin[3] | `#b47a52` |
+| Skin[4] | `#7f5038` |
+| Blush | `#e8a29a` |
+| HairBlack | `#2e2626` |
+| HairDarkBrown | `#4a3226` |
+| HairBrown | `#6b4630` |
+| HairAuburn | `#a4523a` |
+| HairGinger | `#d0813e` |
+| HairBlonde | `#e2c27a` |
+| HairGrey | `#b9b4ad` |
+| HairWhite | `#ece9e3` |
+| Terracotta | `#d9734e` |
+| Cornflower | `#5b7db1` |
+| Fern | `#6fae5c` |
+| Rose | `#c2577a` |
+| Marigold | `#e0a33a` |
+| Lavender | `#8e6cc0` |
+| Buttercup | `#d4b44a` |
+| Teal | `#3e8e8a` |
+| Powder | `#7fa7d9` |
+| Pebble | `#b0a8a0` |
+| Denim | `#4d5f86` |
+| Corduroy | `#7a5a3e` |
+| Khaki | `#a8946a` |
+| Clothes[0] | `#d9734e` |
+| Clothes[1] | `#5b7db1` |
+| Clothes[2] | `#6fae5c` |
+| Clothes[3] | `#c2577a` |
+| Clothes[4] | `#e0a33a` |
+| Clothes[5] | `#8e6cc0` |
+| Clothes[6] | `#d4b44a` |
+| Clothes[7] | `#3e8e8a` |
+| Clothes[8] | `#7fa7d9` |
+| Clothes[9] | `#b0a8a0` |
+| Hair[0] | `#2e2626` |
+| Hair[1] | `#4a3226` |
+| Hair[2] | `#6b4630` |
+| Hair[3] | `#a4523a` |
+| Hair[4] | `#d0813e` |
+| Hair[5] | `#e2c27a` |
+| Bubble | `#fffaf0` |
+| Heart | `#e0566a` |
+| Sleepy | `#6a86c9` |
+| Queasy | `#8cbf6a` |
 | Daylight | `#ffffff` |
 | GoldenHour | `#ffd6b0` |
 | Moonlight | `#6a77b8` |

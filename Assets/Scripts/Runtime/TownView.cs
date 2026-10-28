@@ -23,6 +23,14 @@ namespace TinyTown.Runtime
         private readonly Dictionary<string, MapView> maps = new Dictionary<string, MapView>();
         private readonly Dictionary<string, SpriteRenderer> residents = new Dictionary<string, SpriteRenderer>();
         private readonly Dictionary<string, Location> previous = new Dictionary<string, Location>();
+        private readonly Dictionary<string, SpriteRenderer> moodIcons = new Dictionary<string, SpriteRenderer>();
+        private readonly Dictionary<string, Facing> facings = new Dictionary<string, Facing>();
+        private readonly Dictionary<string, Sprite> residentSprites = new Dictionary<string, Sprite>();
+        private readonly Dictionary<Mood, Sprite> moodSprites = new Dictionary<Mood, Sprite>();
+        private readonly SpriteFactory residentFactory = new SpriteFactory();
+
+        /// <summary>Mood icons draw above everything else in the town.</summary>
+        private const int MoodIconOrder = 32000;
 
         private ArtOverrides overrides;
 
@@ -127,8 +135,16 @@ namespace TinyTown.Runtime
             }
 
             residents.Clear();
+            moodIcons.Clear();
             previous.Clear();
+            facings.Clear();
+            residentSprites.Clear();
+            moodSprites.Clear();
+            residentFactory.Release();
         }
+
+        /// <summary>The mood icon over each resident, hidden when there is nothing to show.</summary>
+        public IReadOnlyDictionary<string, SpriteRenderer> MoodIcons => moodIcons;
 
         public Vector3 Origin(string mapId) => origins.TryGetValue(mapId ?? string.Empty, out var o) ? o : Vector3.zero;
 
@@ -175,33 +191,121 @@ namespace TinyTown.Runtime
             }
         }
 
-        /// <summary>Places every living resident, <paramref name="tickProgress"/> of the way from their last tile to their current one.</summary>
+        /// <summary>
+        /// Places and animates every living resident, <paramref name="tickProgress"/> of the way from their last tile
+        /// to their current one: walking between tiles, and otherwise sitting, lying or standing at whatever they are
+        /// using, facing it, with their mood over their head.
+        /// </summary>
         public void UpdateResidents(TownSimulation simulation, float tickProgress)
         {
             var t = Mathf.Clamp01(tickProgress);
             var sharing = new Dictionary<Location, int>();
-            foreach (var r in simulation.Residents)
+            for (var i = 0; i < simulation.Residents.Count; i++)
             {
+                var r = simulation.Residents[i];
                 var renderer = RendererFor(r);
                 renderer.enabled = r.IsAlive;
+                var icon = moodIcons[r.Id];
+                icon.enabled = false;
                 if (!r.IsAlive)
                 {
                     continue;
                 }
 
-                // Residents on the same tile stand side by side instead of on top of each other.
                 var here = r.Location;
-                sharing.TryGetValue(here, out var alreadyHere);
-                sharing[here] = alreadyHere + 1;
-                var offset = new Vector3((alreadyHere % 2 == 0 ? 1 : -1) * 0.16f * ((alreadyHere + 1) / 2), -0.05f, 0f);
-
                 var from = previous.TryGetValue(r.Id, out var p) && p.MapId == here.MapId ? p.Position : here.Position;
-                var x = Mathf.Lerp(from.X, here.Position.X, t);
-                var y = Mathf.Lerp(from.Y, here.Position.Y, t);
-                renderer.transform.position = TileToWorld(here.MapId, x, y) + offset;
+                var moving = from != here.Position;
+                var (action, placement) = ResidentPose.Choose(World, r, moving);
+                var facing = FacingOf(simulation, r, from, here, action, placement);
+                facings[r.Id] = facing;
+
+                var look = ResidentLook.For(r.Id, r.AgeYears);
+                var pose = new ResidentPose(action, placement.Stance, facing, FrameOf(action, t, i));
+                renderer.sprite = SpriteFor(r.Id, look, pose);
+
+                var offset = Vector3.zero;
+                if (placement.Stance == Stance.Standing && placement.U == 0.5 && placement.V == 0.5)
+                {
+                    // Residents on the same tile stand side by side instead of on top of each other.
+                    sharing.TryGetValue(here, out var alreadyHere);
+                    sharing[here] = alreadyHere + 1;
+                    offset = new Vector3((alreadyHere % 2 == 0 ? 1 : -1) * 0.16f * ((alreadyHere + 1) / 2), -0.05f * alreadyHere, 0f);
+                }
+
+                var x = Mathf.Lerp(from.X, here.Position.X, t) + (float)(placement.U - 0.5);
+                var y = Mathf.Lerp(from.Y, here.Position.Y, t) + (float)(placement.V - 0.5);
+                renderer.transform.position = TileToWorld(here.MapId, x, y) + offset + new Vector3(0f, (float)placement.Z / SpriteFactory.PixelsPerUnit, 0f);
                 renderer.sortingOrder = IsoGrid.SortingOrder(Mathf.Max(from.X, here.Position.X), Mathf.Max(from.Y, here.Position.Y), IsoGrid.ResidentLayer);
                 renderer.color = TintOf(here.MapId);
+
+                var mood = Moods.Of(simulation, r);
+                if (mood != Mood.None)
+                {
+                    icon.sprite = MoodSprite(mood);
+                    icon.enabled = icon.sprite != null;
+                    icon.transform.localPosition = new Vector3(0f, (ResidentArt.HeadTop(look, pose) + 2f) / SpriteFactory.PixelsPerUnit, 0f);
+                }
             }
+        }
+
+        /// <summary>The frame to show: walking steps with the move between tiles, everything else with the clock.</summary>
+        private static int FrameOf(ResidentAction action, float tickProgress, int index)
+        {
+            if (action == ResidentAction.Walk)
+            {
+                return Mathf.FloorToInt(tickProgress * 4f) % 4;
+            }
+
+            var rate = action == ResidentAction.Read ? 0.3f : action == ResidentAction.Exercise ? 3f : 2f;
+
+            // Each resident is a little out of step with the others.
+            return Mathf.FloorToInt((Time.time + (index * 0.37f)) * rate);
+        }
+
+        private Facing FacingOf(TownSimulation simulation, Resident r, GridPos from, Location here, ResidentAction action, Placement placement)
+        {
+            facings.TryGetValue(r.Id, out var last);
+            if (action == ResidentAction.Walk)
+            {
+                return Facing.OfStep(here.Position.X - from.X, here.Position.Y - from.Y, last);
+            }
+
+            if (action == ResidentAction.Talk && r.ConversationId != null)
+            {
+                foreach (var other in simulation.Residents)
+                {
+                    if (other != r && other.IsAlive && other.ConversationId == r.ConversationId && other.Location.MapId == here.MapId)
+                    {
+                        return Facing.Towards(here.Position, other.Location.Position, last);
+                    }
+                }
+            }
+
+            return r.State == ResidentState.Performing ? placement.Facing : last;
+        }
+
+        private Sprite SpriteFor(string residentId, ResidentLook look, ResidentPose pose)
+        {
+            var key = $"{residentId}|{look.Hair}|{pose.Key}";
+            if (!residentSprites.TryGetValue(key, out var sprite) || sprite == null)
+            {
+                sprite = residentFactory.Create(ResidentArt.Render(look, pose), key);
+                residentSprites[key] = sprite;
+            }
+
+            return sprite;
+        }
+
+        private Sprite MoodSprite(Mood mood)
+        {
+            if (!moodSprites.TryGetValue(mood, out var sprite) || sprite == null)
+            {
+                var canvas = MoodArt.Icon(mood);
+                sprite = canvas == null ? null : residentFactory.Create(canvas, $"Mood {mood}");
+                moodSprites[mood] = sprite;
+            }
+
+            return sprite;
         }
 
         /// <summary>Where a resident's figure is drawn now.</summary>
@@ -223,8 +327,13 @@ namespace TinyTown.Runtime
             {
                 renderer = new GameObject($"Resident {r.FirstName}").AddComponent<SpriteRenderer>();
                 renderer.transform.SetParent(transform, false);
-                renderer.sprite = PlaceholderArt.Person(PlaceholderArt.ParseColour(r.ColourHex, new Color(0.85f, 0.45f, 0.3f)));
                 residents[r.Id] = renderer;
+
+                var icon = new GameObject("Mood").AddComponent<SpriteRenderer>();
+                icon.transform.SetParent(renderer.transform, false);
+                icon.sortingOrder = MoodIconOrder;
+                icon.enabled = false;
+                moodIcons[r.Id] = icon;
             }
 
             return renderer;

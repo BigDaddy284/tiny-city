@@ -144,3 +144,16 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\`
 9. **Performance:** with ten panels at 4x the game should stay as smooth as in Phase 5. Note it if it doesn't.
 10. **Your own pictures (optional):** see `Documentation/ArtOverrides.md`. Put a `tree.png` in the game's `TheTinyTown_Data/StreamingAssets/Art/` folder, restart, and every broadleaf tree uses it.
 11. **Walking around furniture:** watch someone cross a room or the café. They walk around cookers, sinks, tables, beds and benches and only step onto one to use it. The shop counter is now one tile to the left of the door and the café piano stands by the left wall, so neither is in anyone's way.
+
+## Phase 6, build 2: residents
+
+1. **Ten looks:** follow each resident in turn. Everyone is easy to tell apart: Mabel (orange, straw hat, ponytail), Arthur (blue cardigan, bald with glasses), Nell (green, short dark hair), Rosa (pink skirt, black curls, cream apron), Tom (yellow, ginger beard, white apron), Priya (lavender dress, long black hair), Ivy (yellow, blonde bob, white apron), Samuel (teal, beard and glasses), Felix (pale blue, messy hair) and Edith (grey cardigan, white bun, glasses).
+2. **Walking:** at speed 1, legs step and arms swing as they walk, and they face the way they are going in all four directions (down-left, down-right, up-left, up-right).
+3. **Using furniture:** they sit in armchairs, on benches, at café tables, on the piano bench, at the chess table and on the toilet; stand at the front of cookers, sinks, counters, shelves and workbenches facing them; and lie in bed with their head on the pillow when asleep (also in the clinic beds).
+4. **Activities:** eating raises a hand to the mouth, reading holds a red book, work and hobbies move both hands, chatting opens the mouth and gestures, residents at a village gathering cheer, and exercise is star jumps.
+5. **Talking:** two people chatting turn to face each other.
+6. **Mood bubbles:** watch for the little bubbles over heads: "z" when asleep, bread when hungry, a drop when thirsty, heavy eyes when tired, "!" for the toilet, wavy lines when grubby, a rain cloud when lonely, "..." when bored, a green face when ill, a smile when everything is fine and a heart when talking with their partner. Names sit above the bubbles and speech above the names; note any overlap.
+7. **Night:** residents darken with the light like the rest of the place they are in; the mood bubbles stay bright.
+8. **Clicking:** clicking a resident still selects them in the inspector, including someone sitting or lying down.
+9. **Performance:** with ten panels at 4x the game should stay smooth. Note it if it doesn't.
+
