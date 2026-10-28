@@ -26,6 +26,16 @@ namespace TinyTown.Runtime
             AiNote = new GUIStyle(GUI.skin.box) { fontSize = 12, wordWrap = true, alignment = TextAnchor.UpperLeft, padding = new RectOffset(6, 6, 4, 4) };
             AiNote.normal.background = PlaceholderArt.Solid(new Color(0.9f, 0.93f, 1f, 1f));
             AiNote.normal.textColor = new Color(0.2f, 0.25f, 0.45f);
+
+            Notice = new GUIStyle(GUI.skin.button) { fontSize = 13, wordWrap = true, alignment = TextAnchor.UpperLeft, padding = new RectOffset(10, 10, 6, 6) };
+            Notice.normal.background = PlaceholderArt.Solid(new Color(1f, 0.95f, 0.82f, 0.97f));
+            Notice.hover.background = PlaceholderArt.Solid(new Color(1f, 0.9f, 0.7f, 1f));
+            Notice.normal.textColor = Notice.hover.textColor = Ink;
+
+            Entry = new GUIStyle(GUI.skin.label) { fontSize = 13, wordWrap = true, padding = new RectOffset(4, 4, 2, 2) };
+            Entry.normal.textColor = Ink;
+            Entry.hover.background = PlaceholderArt.Solid(new Color(1f, 0.9f, 0.72f, 1f));
+            Entry.hover.textColor = Ink;
         }
 
         public GUIStyle Title { get; }
@@ -46,5 +56,11 @@ namespace TinyTown.Runtime
 
         /// <summary>A tinted box for anything the AI wrote, so it is never mistaken for a game fact.</summary>
         public GUIStyle AiNote { get; }
+
+        /// <summary>A pop-up notification.</summary>
+        public GUIStyle Notice { get; }
+
+        /// <summary>A clickable line in the journal.</summary>
+        public GUIStyle Entry { get; }
     }
 }

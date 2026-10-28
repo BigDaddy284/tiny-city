@@ -5,6 +5,7 @@ using TinyTown.Simulation;
 using TinyTown.Simulation.AI;
 using TinyTown.Simulation.Configuration;
 using TinyTown.Simulation.Content;
+using TinyTown.Simulation.History;
 using TinyTown.Simulation.Persistence;
 using TinyTown.Simulation.Residents;
 using UnityEngine;
@@ -13,8 +14,9 @@ namespace TinyTown.Runtime
 {
     /// <summary>
     /// Runs the town: advances the simulation with the clock, saves and loads, and hands drawing to the
-    /// <see cref="TownView"/> (the maps and residents), the <see cref="CameraPanels"/> (what each camera watches) and the
-    /// <see cref="Inspector"/> (the panel on the right). All rules live in <see cref="TownSimulation"/>.
+    /// <see cref="TownView"/> (the maps and residents), the <see cref="CameraPanels"/> (what each camera watches), the
+    /// <see cref="Inspector"/> (the panel on the right), the <see cref="JournalWindow"/> and the <see cref="Notifications"/>.
+    /// All rules live in <see cref="TownSimulation"/>.
     /// </summary>
     public sealed class GameController : MonoBehaviour
     {
@@ -33,6 +35,11 @@ namespace TinyTown.Runtime
 
         private TownView view;
         private Inspector inspector;
+        private JournalWindow journal;
+        private int placeMenuPanel = -1;
+        private Rect placeMenuButton;
+        private Rect placeMenuArea;
+        private Vector2 placeMenuScroll;
         private GuiStyles styles;
 
         public TownSimulation Simulation { get; private set; }
@@ -44,6 +51,11 @@ namespace TinyTown.Runtime
 
         /// <summary>The camera panels, from one to ten. Panel 0 uses the main camera.</summary>
         public CameraPanels Panels { get; private set; }
+
+        /// <summary>Pop-ups for the town's big moments.</summary>
+        public Notifications Notifications { get; private set; }
+
+        public bool JournalOpen => journal != null && journal.IsOpen;
 
         /// <summary>Where the maps and residents are drawn in the world.</summary>
         public TownView View => view;
@@ -73,6 +85,8 @@ namespace TinyTown.Runtime
             view = new GameObject("Town").AddComponent<TownView>();
             Panels = new CameraPanels(Camera.main) { ResidentClicked = id => Select(Simulation.GetResident(id), followInActivePanel: false) };
             inspector = new Inspector(this);
+            journal = new JournalWindow(this);
+            Notifications = new Notifications();
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyTown] AI: {message}") };
 
             if (!SaveStore.Exists(SaveSlot) || !TryLoad())
@@ -105,6 +119,7 @@ namespace TinyTown.Runtime
             }
 
             UpdateView(Speed > 0 && ticks <= 1 ? accumulator : 1f);
+            Notifications?.Update(Simulation, UnityEngine.Time.unscaledTime);
         }
 
         private void OnApplicationQuit()
@@ -145,6 +160,7 @@ namespace TinyTown.Runtime
 
             view.ForgetResidents();
             Panels.ClearSpeech();
+            Notifications.Reset(simulation);
             if (simulation.GetResident(selectedId) == null)
             {
                 selectedId = simulation.Residents[0].Id;
@@ -290,6 +306,40 @@ namespace TinyTown.Runtime
 
         public void SetPanelCount(int count) => Panels.SetCount(count, view, Simulation);
 
+        public void ToggleJournal() => journal.Toggle();
+
+        /// <summary>Opens the journal with only the inspector's resident's entries.</summary>
+        public void ShowJournalFor(Resident r)
+        {
+            Select(r, followInActivePanel: false);
+            journal.ShowOnly(r.Id);
+        }
+
+        /// <summary>Shows whoever a journal entry or notification is about, and points the active panel at them if they're alive.</summary>
+        public void GoTo(TownEvent entry)
+        {
+            var r = entry.ResidentIds.Select(id => Simulation.GetResident(id)).FirstOrDefault(x => x != null);
+            Select(r, followInActivePanel: true);
+        }
+
+        public void ExportLifeStory(Resident r) => Export($"{r.FullName} life story", LifeStory.Write(Simulation, r.Id), $"{r.FirstName}'s life story");
+
+        public void ExportTownHistory() => Export("Town history", LifeStory.WriteTownHistory(Simulation), "The town history");
+
+        private void Export(string name, string text, string what)
+        {
+            try
+            {
+                var path = ExportStore.Write(name, Simulation.Time.Day, text);
+                Status = $"{what} was saved to {path}";
+            }
+            catch (Exception e)
+            {
+                Status = $"Export failed: {e.Message}";
+                Debug.LogError($"[TinyTown] {Status}");
+            }
+        }
+
         public void WatchEveryone() => Panels.WatchEveryone(view, Simulation);
 
         private void OnGUI()
@@ -301,10 +351,25 @@ namespace TinyTown.Runtime
 
             styles ??= new GuiStyles();
             var e = Event.current;
+            if (e.type == EventType.MouseDown && !journal.Area.Contains(e.mousePosition))
+            {
+                // Clicking anywhere but the journal leaves its search box, so the game's keys work again.
+                GUIUtility.keyboardControl = 0;
+            }
+
+            if (e.type == EventType.MouseDown && placeMenuPanel >= 0 && !placeMenuArea.Contains(e.mousePosition) && !placeMenuButton.Contains(e.mousePosition))
+            {
+                placeMenuPanel = -1;
+            }
+
             HandleKeys(e);
             Panels.DrawOverlays(view, Simulation, styles, DrawPanelHeader);
+            DrawPlaceMenu();
+            journal.Draw(CameraArea(), styles);
+            Notifications.Draw(CameraArea(), styles, GoTo);
             inspector.Draw(styles);
-            if (e.isMouse || e.type == EventType.ScrollWheel)
+            var overMenu = placeMenuPanel >= 0 && placeMenuArea.Contains(e.mousePosition);
+            if ((e.isMouse || e.type == EventType.ScrollWheel) && !journal.Area.Contains(e.mousePosition) && !overMenu)
             {
                 // After the buttons have had their chance, so header buttons and the inspector win over the panels.
                 Panels.HandleMouse(e, view);
@@ -318,12 +383,16 @@ namespace TinyTown.Runtime
             var y = rect.y + 2f;
             var x = rect.xMax - 4f;
 
+            // An open place list may hang over this header; its buttons mustn't take the list's clicks.
+            GUI.enabled = !(placeMenuPanel >= 0 && placeMenuArea.Contains(Event.current.mousePosition));
             if (Panels.Count > 1)
             {
                 x -= 22f;
                 if (GUI.Button(new Rect(x, y, 20f, 18f), "×", styles.HeaderButton))
                 {
                     Panels.Remove(index);
+                    placeMenuPanel = -1;
+                    GUI.enabled = true;
                     return;
                 }
             }
@@ -342,6 +411,20 @@ namespace TinyTown.Runtime
                 }
             }
 
+            x -= 62f;
+            var placeButton = new Rect(x, y, 60f, 18f);
+            if (GUI.Button(placeButton, "Place ▾", styles.HeaderButton))
+            {
+                Panels.Activate(index);
+                placeMenuPanel = placeMenuPanel == index ? -1 : index;
+                placeMenuScroll = Vector2.zero;
+            }
+
+            if (placeMenuPanel == index)
+            {
+                placeMenuButton = placeButton;
+            }
+
             x -= 22f;
             if (GUI.Button(new Rect(x, y, 20f, 18f), "▶", styles.HeaderButton))
             {
@@ -356,15 +439,55 @@ namespace TinyTown.Runtime
                 Step(index, -1);
             }
 
+            GUI.enabled = true;
             GUI.Label(new Rect(rect.x + 6f, y, Mathf.Max(0f, x - rect.x - 10f), 18f), Panels.Describe(index, Simulation), styles.Header);
         }
 
-        /// <summary>A following panel moves to the next or previous resident; a free one to the next map.</summary>
+        /// <summary>
+        /// The list under a panel's "Place" button: the village and every building. Picking one makes that panel a
+        /// free camera there. Drawn after every header so it sits on top of the panels below.
+        /// </summary>
+        private void DrawPlaceMenu()
+        {
+            if (placeMenuPanel < 0 || placeMenuPanel >= Panels.Count)
+            {
+                placeMenuPanel = -1;
+                return;
+            }
+
+            const float RowHeight = 22f;
+            const float MenuWidth = 220f;
+            var places = CameraPanels.Places(Simulation.World);
+            var area = CameraArea();
+            var x = Mathf.Clamp(placeMenuButton.xMax - MenuWidth, area.x + 4f, area.xMax - MenuWidth - 4f);
+            var y = placeMenuButton.yMax + 2f;
+            var height = Mathf.Min((places.Count * RowHeight) + 8f, area.yMax - y - 6f);
+            placeMenuArea = new Rect(x, y, MenuWidth, height);
+            GUI.Box(placeMenuArea, GUIContent.none, styles.Notice);
+
+            var current = Panels.All[placeMenuPanel];
+            var inner = new Rect(0f, 0f, MenuWidth - 20f, places.Count * RowHeight);
+            placeMenuScroll = GUI.BeginScrollView(new Rect(x + 4f, y + 4f, MenuWidth - 8f, height - 8f), placeMenuScroll, inner);
+            for (var i = 0; i < places.Count; i++)
+            {
+                var map = places[i];
+                var label = (map.IsExterior ? $"{map.Name} (outside)" : map.Name) + (current.IsFree && current.MapId == map.Id ? "  ✓" : string.Empty);
+                if (GUI.Button(new Rect(0f, i * RowHeight, inner.width, RowHeight - 2f), label, styles.Entry))
+                {
+                    Panels.ShowPlace(placeMenuPanel, map.Id, view);
+                    placeMenuPanel = -1;
+                }
+            }
+
+            GUI.EndScrollView();
+        }
+
+        /// <summary>A following panel moves to the next or previous resident; a free one to the next or previous place.</summary>
         private void Step(int index, int step)
         {
             if (Panels.All[index].IsFree)
             {
-                Panels.CycleMap(index, view, Simulation);
+                Panels.CycleMap(index, view, Simulation, step);
             }
             else
             {
@@ -377,6 +500,18 @@ namespace TinyTown.Runtime
         {
             if (e.type != EventType.KeyDown)
             {
+                return;
+            }
+
+            if (GUIUtility.keyboardControl != 0)
+            {
+                // Typing in the journal's search box: keys are text, and Escape leaves the box.
+                if (e.keyCode == KeyCode.Escape)
+                {
+                    GUIUtility.keyboardControl = 0;
+                    e.Use();
+                }
+
                 return;
             }
 
@@ -418,6 +553,15 @@ namespace TinyTown.Runtime
                 case KeyCode.Minus:
                 case KeyCode.KeypadMinus:
                     SetPanelCount(Panels.Count - 1);
+                    break;
+                case KeyCode.J:
+                    ToggleJournal();
+                    break;
+                case KeyCode.Escape when placeMenuPanel >= 0:
+                    placeMenuPanel = -1;
+                    break;
+                case KeyCode.Escape when JournalOpen:
+                    ToggleJournal();
                     break;
                 default:
                     return;

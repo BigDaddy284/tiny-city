@@ -13,6 +13,15 @@ namespace TinyTown.Simulation.History
         BreakUp,
         Reconciled,
         Gathering,
+
+        // Added in Phase 5 for the journal. Saved by name, so the order above must not change.
+        Birthday,
+        LifeStage,
+        Illness,
+        SeriousIllness,
+        Recovered,
+        Met,
+        Friends,
     }
 
     /// <summary>Something that happened in the village and belongs to its history, separate from any one resident's memories.</summary>
@@ -39,10 +48,13 @@ namespace TinyTown.Simulation.History
         public IReadOnlyList<string> ResidentIds { get; }
     }
 
-    /// <summary>The village's history: couples, deaths and gatherings. Capped, oldest dropped first.</summary>
+    /// <summary>
+    /// The village's history, which the journal shows: births and deaths, birthdays, illness, friendships, couples and
+    /// gatherings. Capped, oldest dropped first.
+    /// </summary>
     public sealed class TownHistory
     {
-        public const int MaxEvents = 500;
+        public const int MaxEvents = 3000;
 
         public const int MaxSummaryLength = 200;
 
@@ -63,6 +75,11 @@ namespace TinyTown.Simulation.History
 
         public IEnumerable<TownEvent> About(string residentId) => events.Where(e => e.ResidentIds.Contains(residentId));
 
+        /// <summary>Events whose id number is at least <paramref name="number"/>, oldest first: what is new since then.</summary>
+        public IEnumerable<TownEvent> Since(long number) => events.Where(e => NumberOf(e.Id) >= number);
+
+        internal static long NumberOf(string id) => long.TryParse(id.Substring(id.IndexOf('-') + 1), out var n) ? n : 0;
+
         /// <summary>Puts back a saved event. Ids must be new and the counter is kept ahead of them.</summary>
         internal void Restore(TownEvent entry)
         {
@@ -72,7 +89,8 @@ namespace TinyTown.Simulation.History
             }
 
             Append(entry);
-            if (long.TryParse(entry.Id.Substring(entry.Id.IndexOf('-') + 1), out var n) && n >= NextNumber)
+            var n = NumberOf(entry.Id);
+            if (n >= NextNumber)
             {
                 NextNumber = n + 1;
             }

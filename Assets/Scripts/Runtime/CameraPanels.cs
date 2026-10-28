@@ -178,13 +178,31 @@ namespace TinyTown.Runtime
             Follow(index, living[next].Id, simulation);
         }
 
-        /// <summary>Points a free panel at the next map, or turns a following panel free over its current map.</summary>
-        public void CycleMap(int index, TownView view, TownSimulation simulation)
+        /// <summary>Every place a panel can show: the village first, then each building by name.</summary>
+        public static List<TileMap> Places(TownWorld world) =>
+            world.Maps.OrderBy(m => m.IsExterior ? 0 : 1).ThenBy(m => m.Name, StringComparer.OrdinalIgnoreCase).ThenBy(m => m.Id, StringComparer.Ordinal).ToList();
+
+        /// <summary>
+        /// Points a free panel at the next (or, with a negative <paramref name="step"/>, previous) place, or turns a
+        /// following panel free over its current map.
+        /// </summary>
+        public void CycleMap(int index, TownView view, TownSimulation simulation, int step = 1)
         {
             var panel = panels[index];
-            var ids = simulation.World.Maps.OrderBy(m => m.IsExterior ? 0 : 1).ThenBy(m => m.Id, StringComparer.Ordinal).Select(m => m.Id).ToList();
-            var next = panel.IsFree ? ids[(ids.IndexOf(panel.MapId) + 1) % ids.Count] : panel.MapId;
+            var ids = Places(simulation.World).Select(m => m.Id).ToList();
+            var next = panel.IsFree ? ids[(((ids.IndexOf(panel.MapId) + step) % ids.Count) + ids.Count) % ids.Count] : panel.MapId;
             panel.LookAtMap(next, view);
+        }
+
+        /// <summary>Turns a panel into a free camera over <paramref name="mapId"/>, whoever it was following.</summary>
+        public void ShowPlace(int index, string mapId, TownView view)
+        {
+            if (index < 0 || index >= panels.Count || view.World == null || !view.World.TryGetMap(mapId, out _))
+            {
+                return;
+            }
+
+            panels[index].LookAtMap(mapId, view);
         }
 
         /// <summary>Lays the panels out in <paramref name="screenArea"/> and aims every camera. Call once per frame.</summary>
