@@ -12,6 +12,12 @@ namespace TinyTown.Tools.ArtPreview
     {
         private static void Main(string[] args)
         {
+            if (args.Length > 0 && args[0] == "--palette")
+            {
+                WritePalette(args.Length > 1 ? args[1] : "palette.png");
+                return;
+            }
+
             var output = args.Length > 0 ? args[0] : "art-preview";
             Directory.CreateDirectory(output);
             var world = StarterTown.CreateWorld();
@@ -33,6 +39,35 @@ namespace TinyTown.Tools.ArtPreview
                     Png.Write(Path.Combine(output, $"{name}-night.png"), Compose(art, Lighting.At(23 * 60, season, map.IsExterior)));
                     Console.WriteLine($"{name}: {art.Pieces.Count} pieces, drawn in {built} ms");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Writes a swatch sheet of the locked palette (Documentation/Images/palette.png) and prints its table for
+        /// Documentation/ArtStyle.md.
+        /// </summary>
+        private static void WritePalette(string path)
+        {
+            var entries = Palette.Entries().ToList();
+            const int columns = 8;
+            const int cell = 40;
+            var rows = (entries.Count + columns - 1) / columns;
+            var sheet = new PixelCanvas(columns * cell, rows * cell, 0, 0);
+            for (var i = 0; i < entries.Count; i++)
+            {
+                var x = (i % columns) * cell;
+                var y = (i / columns) * cell;
+                sheet.FillRect(x, y, cell, cell, Rgba.Hex("#ffffff"));
+                sheet.FillRect(x + 2, y + 2, cell - 4, cell - 4, entries[i].colour.WithAlpha(255));
+            }
+
+            Png.Write(path, sheet);
+            Console.WriteLine("| Name | Colour |");
+            Console.WriteLine("| --- | --- |");
+            foreach (var (name, colour) in entries)
+            {
+                var hex = colour.A == 255 ? colour.ToString().Substring(0, 7) : colour.ToString();
+                Console.WriteLine($"| {name} | `{hex}` |");
             }
         }
 

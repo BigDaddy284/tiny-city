@@ -50,10 +50,6 @@ namespace TinyTown.Art
         private const int Headroom = 124;
         private const double Inset = 0.12;
 
-        private static readonly Rgba[] CottageWalls = { Rgba.Hex("#f1e3c6"), Rgba.Hex("#f0cfc4"), Rgba.Hex("#f3e1a0"), Rgba.Hex("#d3dfc3"), Rgba.Hex("#d3e2ec"), Rgba.Hex("#ead7e6") };
-        private static readonly Rgba[] CottageRoofs = { Rgba.Hex("#c8623f"), Rgba.Hex("#5f6f8a"), Rgba.Hex("#6f8f55"), Rgba.Hex("#8a5a6e"), Rgba.Hex("#c9a35a"), Rgba.Hex("#a8553a") };
-        private static readonly Rgba[] Doors = { Rgba.Hex("#b8433a"), Rgba.Hex("#3f6a9c"), Rgba.Hex("#4f8a4e"), Rgba.Hex("#e0a93a"), Rgba.Hex("#7a4f8c") };
-
         /// <summary>Finds every block of house tiles on a map, with its door and the place inside.</summary>
         public static IReadOnlyList<BuildingPlan> Find(TownWorld world, TileMap map)
         {
@@ -243,46 +239,46 @@ namespace TinyTown.Art
                 var v = plan.Variant;
                 var look = new Look
                 {
-                    Wall = CottageWalls[v % CottageWalls.Length],
-                    Roof = CottageRoofs[(v / 7) % CottageRoofs.Length],
-                    DoorColour = Doors[(v / 3) % Doors.Length],
+                    Wall = Palette.CottageWalls[v % Palette.CottageWalls.Length],
+                    Roof = Palette.CottageRoofs[(v / 7) % Palette.CottageRoofs.Length],
+                    DoorColour = Palette.CottageDoors[(v / 3) % Palette.CottageDoors.Length],
                     Trim = Palette.White,
                     WallHeight = 42,
                     RoofRise = 42,
                     Timber = (v / 11) % 3 == 0,
                     Kind = plan.Kind,
                 };
-                look.Thatch = look.Roof.Equals(CottageRoofs[4]);
+                look.Thatch = look.Roof.Equals(Palette.Thatch);
                 switch (plan.Kind)
                 {
                     case PlaceKind.Store:
-                        look.Wall = Rgba.Hex("#e9dcc0");
-                        look.Roof = Rgba.Hex("#4f7a5a");
-                        look.DoorColour = Rgba.Hex("#3d6b4a");
-                        look.AwningA = Rgba.Hex("#4e9a5c");
+                        look.Wall = Palette.StoreWall;
+                        look.Roof = Palette.StoreRoof;
+                        look.DoorColour = Palette.StoreDoor;
+                        look.AwningA = Palette.StoreAwning;
                         look.AwningB = Palette.White;
                         break;
                     case PlaceKind.Cafe:
-                        look.Wall = Rgba.Hex("#f2d9b3");
-                        look.Roof = Rgba.Hex("#9c4a3a");
-                        look.DoorColour = Rgba.Hex("#8a3b30");
-                        look.AwningA = Rgba.Hex("#d24b3e");
+                        look.Wall = Palette.CafeWall;
+                        look.Roof = Palette.CafeRoof;
+                        look.DoorColour = Palette.CafeDoor;
+                        look.AwningA = Palette.CafeAwning;
                         look.AwningB = Palette.White;
                         break;
                     case PlaceKind.Bakery:
-                        look.Wall = Rgba.Hex("#f6e3a8");
-                        look.Roof = Rgba.Hex("#b5733f");
-                        look.DoorColour = Rgba.Hex("#7a5232");
-                        look.AwningA = Rgba.Hex("#e7a83a");
-                        look.AwningB = Rgba.Hex("#fff4d6");
+                        look.Wall = Palette.BakeryWall;
+                        look.Roof = Palette.BakeryRoof;
+                        look.DoorColour = Palette.BakeryDoor;
+                        look.AwningA = Palette.BakeryAwning;
+                        look.AwningB = Palette.BakeryAwningStripe;
                         break;
                     case PlaceKind.Clinic:
-                        look.Wall = Rgba.Hex("#f5f6f2");
-                        look.Roof = Rgba.Hex("#5d7a99");
-                        look.DoorColour = Rgba.Hex("#3f6a9c");
+                        look.Wall = Palette.ClinicWall;
+                        look.Roof = Palette.ClinicRoof;
+                        look.DoorColour = Palette.ClinicDoor;
                         break;
                     case PlaceKind.Shop:
-                        look.AwningA = Rgba.Hex("#5a7fb0");
+                        look.AwningA = Palette.ShopAwning;
                         look.AwningB = Palette.White;
                         break;
                 }
@@ -320,7 +316,7 @@ namespace TinyTown.Art
             if (look.Kind == PlaceKind.Cottage)
             {
                 var cu = plan.Width * (0.62 + (Noise.Value(plan.Variant, 5) * 0.15));
-                painter.Box(cu, vm - 0.75, h, 0.45, 0.42, rise + 16, Rgba.Hex("#9a6a55"));
+                painter.Box(cu, vm - 0.75, h, 0.45, 0.42, rise + 16, Palette.Brick);
                 painter.Box(cu - 0.04, vm - 0.79, h + rise + 16, 0.53, 0.5, 4, Palette.StoneDark);
                 if (palette.IsWinter)
                 {
@@ -455,7 +451,7 @@ namespace TinyTown.Art
 
                     if (Math.Abs(local - 0.78) < 0.07 && Math.Abs(up - 0.45) < 0.05)
                     {
-                        return Rgba.Hex("#e8c35a");
+                        return Palette.Brass;
                     }
 
                     return Math.Abs(local - 0.5) < 0.03 ? colour.Shade(0.85) : colour;
@@ -477,7 +473,7 @@ namespace TinyTown.Art
                 {
                     // Goods on display behind the glass.
                     var item = (int)(local * 9);
-                    glass = Noise.Value(item, variant, 3) < 0.6 ? Rgba.Hex(item % 3 == 0 ? "#e0533d" : item % 3 == 1 ? "#f0c05a" : "#8fbf5a").Shade(light) : glass;
+                    glass = Noise.Value(item, variant, 3) < 0.6 ? Palette.WindowGoods[item % 3].Shade(light) : glass;
                 }
 
                 return glass;
@@ -622,13 +618,13 @@ namespace TinyTown.Art
             switch (kind)
             {
                 case PlaceKind.Clinic:
-                    return (Math.Abs(x) < 0.35 && Math.Abs(y) < 1.1) || (Math.Abs(x) < 1.1 && Math.Abs(y) < 0.35) ? Rgba.Hex("#d23c3c") : (Rgba?)null;
+                    return (Math.Abs(x) < 0.35 && Math.Abs(y) < 1.1) || (Math.Abs(x) < 1.1 && Math.Abs(y) < 0.35) ? Palette.SignRed : (Rgba?)null;
                 case PlaceKind.Cafe:
                     return (x > -1.1 && x < 0.7 && y > -0.6 && y < 0.9) || (x >= 0.7 && x < 1.2 && Math.Abs(y) < 0.4) ? Palette.White : (Rgba?)null;
                 case PlaceKind.Bakery:
-                    return ((x * x / 4) + (y * y / 1)) < 1 ? Rgba.Hex("#c98a3e") : (Rgba?)null;
+                    return ((x * x / 4) + (y * y / 1)) < 1 ? Palette.Bread : (Rgba?)null;
                 case PlaceKind.Store:
-                    return ((x * x) + (y * y)) < 1 ? Rgba.Hex("#d23c3c") : Math.Abs(x) < 0.2 && y < -0.9 && y > -1.4 ? Rgba.Hex("#4f8a4e") : (Rgba?)null;
+                    return ((x * x) + (y * y)) < 1 ? Palette.SignRed : Math.Abs(x) < 0.2 && y < -0.9 && y > -1.4 ? Palette.LeafGreen : (Rgba?)null;
                 default:
                     return null;
             }

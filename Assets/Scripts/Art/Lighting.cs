@@ -29,10 +29,10 @@ namespace TinyTown.Art
 
     public static class Lighting
     {
-        public static readonly Rgba Day = Rgba.Hex("#ffffff");
-        public static readonly Rgba Golden = Rgba.Hex("#ffd6b0");
-        public static readonly Rgba Night = Rgba.Hex("#6a77b8");
-        public static readonly Rgba Lamplight = Rgba.Hex("#ffe2b8");
+        public static readonly Rgba Day = Palette.Daylight;
+        public static readonly Rgba Golden = Palette.GoldenHour;
+        public static readonly Rgba Night = Palette.Moonlight;
+        public static readonly Rgba Lamplight = Palette.Lamplight;
 
         /// <summary>How long dawn and dusk take, in minutes.</summary>
         public const int Twilight = 90;

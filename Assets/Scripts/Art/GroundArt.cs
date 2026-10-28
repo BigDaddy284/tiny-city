@@ -172,7 +172,7 @@ namespace TinyTown.Art
             // Buildings throw a soft shadow down and to the right; the light comes from the upper left.
             if (g != Ground.Building && At(grid, gw, gh, cu - 9, cv - 3) == Ground.Building)
             {
-                colour = colour.Mix(Rgba.Hex("#33304a"), 0.22);
+                colour = colour.Mix(Palette.ShadowTint, 0.22);
             }
 
             return colour;
@@ -222,7 +222,7 @@ namespace TinyTown.Art
         {
             if (Near(grid, gw, gh, cu, cv, 1, Ground.Water, true))
             {
-                return p.IsWinter ? Palette.SnowShade : Rgba.Hex("#d8c79a");
+                return p.IsWinter ? Palette.SnowShade : Palette.Sand;
             }
 
             var shallow = Near(grid, gw, gh, cu, cv, 3, Ground.Water, true);
@@ -231,11 +231,11 @@ namespace TinyTown.Art
             if (p.IsWinter)
             {
                 // Ice: pale with a few dark cracks.
-                return Noise.Value(px / 5, py / 2, seed + 21) < 0.04 ? Rgba.Hex("#8fb3cc") : colour;
+                return Noise.Value(px / 5, py / 2, seed + 21) < 0.04 ? Palette.IceCrack : colour;
             }
 
             // Short ripple highlights.
-            return Noise.Value(px / 6, py / 2, seed + 20) < 0.06 ? colour.Mix(Rgba.Hex("#ffffff"), 0.55) : colour;
+            return Noise.Value(px / 6, py / 2, seed + 20) < 0.06 ? colour.Mix(Palette.Highlight, 0.55) : colour;
         }
 
         private static Rgba Soil(double u, double v, double fine, int cu, int cv, Palette p, int seed)
@@ -269,14 +269,13 @@ namespace TinyTown.Art
         {
             switch (kind)
             {
-                case PlaceKind.Store: return Checker(u, v, Rgba.Hex("#efe6cf"), Rgba.Hex("#9cc29a"));
-                case PlaceKind.Clinic: return Checker(u, v, Rgba.Hex("#f4f7f8"), Rgba.Hex("#cfe1ea"));
-                case PlaceKind.Bakery: return Checker(u, v, Rgba.Hex("#d98b5f"), Rgba.Hex("#c57650"));
-                case PlaceKind.Cafe: return Planks(map, u, v, px, py, Rgba.Hex("#a2603f"));
-                case PlaceKind.Shop: return Checker(u, v, Rgba.Hex("#e8e2d6"), Rgba.Hex("#c9c1b3"));
+                case PlaceKind.Store: return Checker(u, v, Palette.StoreFloor[0], Palette.StoreFloor[1]);
+                case PlaceKind.Clinic: return Checker(u, v, Palette.ClinicFloor[0], Palette.ClinicFloor[1]);
+                case PlaceKind.Bakery: return Checker(u, v, Palette.BakeryFloor[0], Palette.BakeryFloor[1]);
+                case PlaceKind.Cafe: return Planks(map, u, v, px, py, Palette.CafeFloor);
+                case PlaceKind.Shop: return Checker(u, v, Palette.ShopFloor[0], Palette.ShopFloor[1]);
                 default:
-                    var woods = new[] { Rgba.Hex("#c08a5a"), Rgba.Hex("#b07a4c"), Rgba.Hex("#caa074") };
-                    return Planks(map, u, v, px, py, woods[PlaceStyle.Variant(map.Id) % woods.Length]);
+                    return Planks(map, u, v, px, py, Palette.CottageFloors[PlaceStyle.Variant(map.Id) % Palette.CottageFloors.Length]);
             }
         }
 

@@ -27,7 +27,7 @@ namespace TinyTown.Art
             var canvas = FurnitureArt.NewCanvas();
             var p = new IsoPainter(canvas);
             var paper = Wallpaper(kind, map.Id);
-            var outside = Rgba.Hex("#efe2c8");
+            var outside = Palette.FrontWallOutside;
             var w = map.Width;
             var h = map.Height;
             var isEdge = x == 0 || y == 0 || x == w - 1 || y == h - 1;
@@ -48,12 +48,12 @@ namespace TinyTown.Art
             // Back walls: the row y = 0 (along u) and the column x = 0 (along v).
             if (y == 0)
             {
-                Slab(p, x, y, Outer, w - Outer, Outer, Inner, BackHeight, paper, Rgba.Hex("#5e4a44"), x, w);
+                Slab(p, x, y, Outer, w - Outer, Outer, Inner, BackHeight, paper, Palette.WallCap, x, w);
             }
 
             if (x == 0)
             {
-                Slab(p, x, y, Outer, Inner, Outer, h - Outer, BackHeight, paper, Rgba.Hex("#5e4a44"), y, h);
+                Slab(p, x, y, Outer, Inner, Outer, h - Outer, BackHeight, paper, Palette.WallCap, y, h);
             }
 
             if (y == h - 1)
@@ -75,14 +75,13 @@ namespace TinyTown.Art
         {
             switch (kind)
             {
-                case PlaceKind.Store: return Rgba.Hex("#cfe0c4");
-                case PlaceKind.Cafe: return Rgba.Hex("#f0d7b8");
-                case PlaceKind.Bakery: return Rgba.Hex("#f6e7b8");
-                case PlaceKind.Clinic: return Rgba.Hex("#e3eef3");
-                case PlaceKind.Shop: return Rgba.Hex("#e6e0d4");
+                case PlaceKind.Store: return Palette.StoreWallpaper;
+                case PlaceKind.Cafe: return Palette.CafeWallpaper;
+                case PlaceKind.Bakery: return Palette.BakeryWallpaper;
+                case PlaceKind.Clinic: return Palette.ClinicWallpaper;
+                case PlaceKind.Shop: return Palette.ShopWallpaper;
                 default:
-                    var papers = new[] { Rgba.Hex("#f2e2c4"), Rgba.Hex("#e9d3d8"), Rgba.Hex("#d7e4d2"), Rgba.Hex("#d9e2ee"), Rgba.Hex("#f0e6b8") };
-                    return papers[PlaceStyle.Variant(mapId) % papers.Length];
+                    return Palette.CottageWallpapers[PlaceStyle.Variant(mapId) % Palette.CottageWallpapers.Length];
             }
         }
 
@@ -147,17 +146,17 @@ namespace TinyTown.Art
                     return Palette.White.Shade(light);
                 }
 
-                return (z > 44 ? Rgba.Hex("#bfe0f2") : Rgba.Hex("#9ccbe6")).Shade(light);
+                return (z > 44 ? Palette.RoomWindowSkyHigh : Palette.RoomWindowSky).Shade(light);
             }
 
             if (picture && s > 0.32 && s < 0.68 && z > 31 && z < 47)
             {
                 if (s < 0.36 || s > 0.64 || z < 33 || z > 45)
                 {
-                    return Rgba.Hex("#c99a3e").Shade(light);
+                    return Palette.PictureFrame.Shade(light);
                 }
 
-                return (z < 38 ? Rgba.Hex("#7fb069") : Rgba.Hex("#a7d0ea")).Shade(light);
+                return (z < 38 ? Palette.PictureLand : Palette.PictureSky).Shade(light);
             }
 
             // Faint vertical stripes in the wallpaper.
@@ -177,7 +176,7 @@ namespace TinyTown.Art
                 }
             }
 
-            p.Top(0.38, 0.38, InnerHeight, 0.24, 0.24, (s, t) => Rgba.Hex("#5e4a44"));
+            p.Top(0.38, 0.38, InnerHeight, 0.24, 0.24, (s, t) => Palette.WallCap);
         }
 
         /// <summary>
@@ -209,7 +208,7 @@ namespace TinyTown.Art
                 v1 = 1 + reach;
             }
 
-            p.Box(u0, v0, 0, u1 - u0, v1 - v0, InnerHeight, Rgba.Hex("#5e4a44"), paper.Shade(IsoPainter.LeftLight), paper.Shade(IsoPainter.RightLight));
+            p.Box(u0, v0, 0, u1 - u0, v1 - v0, InnerHeight, Palette.WallCap, paper.Shade(IsoPainter.LeftLight), paper.Shade(IsoPainter.RightLight));
         }
 
         private static void DoorWay(IsoPainter p, TileMap map, int x, int y)
@@ -218,13 +217,13 @@ namespace TinyTown.Art
             var front = y == map.Height - 1;
             if (front)
             {
-                p.Top(0.2, 0.0, 0.5, 0.6, 0.3, (s, t) => (int)(s * 8) % 2 == 0 ? Rgba.Hex("#a0583a") : Rgba.Hex("#8a4a30"));
+                p.Top(0.2, 0.0, 0.5, 0.6, 0.3, (s, t) => (int)(s * 8) % 2 == 0 ? Palette.Doormat : Palette.DoormatDark);
                 p.Box(0.0, 1 - Inner, 0, 0.12, Inner - Outer, FrontHeight + 4, Palette.WoodDark);
                 p.Box(0.88, 1 - Inner, 0, 0.12, Inner - Outer, FrontHeight + 4, Palette.WoodDark);
             }
             else
             {
-                p.Top(0.0, 0.2, 0.5, 0.3, 0.6, (s, t) => (int)(t * 8) % 2 == 0 ? Rgba.Hex("#a0583a") : Rgba.Hex("#8a4a30"));
+                p.Top(0.0, 0.2, 0.5, 0.3, 0.6, (s, t) => (int)(t * 8) % 2 == 0 ? Palette.Doormat : Palette.DoormatDark);
                 p.Box(1 - Inner, 0.0, 0, Inner - Outer, 0.12, FrontHeight + 4, Palette.WoodDark);
                 p.Box(1 - Inner, 0.88, 0, Inner - Outer, 0.12, FrontHeight + 4, Palette.WoodDark);
             }
