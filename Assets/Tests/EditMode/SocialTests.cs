@@ -590,8 +590,9 @@ namespace TinyTown.Tests.EditMode
         [Test]
         public void AWeekInTheVillage_EveryoneMeetsEveryone()
         {
+            // Eight days: since residents walk around furniture, the last pair (Priya and Samuel) first meet on day 8.
             var sim = StarterTown.CreateNewGame();
-            sim.Advance(7 * 24 * 60);
+            sim.Advance(8 * 24 * 60);
 
             foreach (var r in sim.Residents)
             {

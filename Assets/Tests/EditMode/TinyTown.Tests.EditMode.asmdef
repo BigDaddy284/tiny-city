@@ -3,6 +3,7 @@
     "rootNamespace": "TinyTown.Tests.EditMode",
     "references": [
         "TinyTown.Simulation",
+        "TinyTown.Art",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

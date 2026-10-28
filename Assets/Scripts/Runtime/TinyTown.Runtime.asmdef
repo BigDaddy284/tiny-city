@@ -2,7 +2,8 @@
     "name": "TinyTown.Runtime",
     "rootNamespace": "TinyTown.Runtime",
     "references": [
-        "TinyTown.Simulation"
+        "TinyTown.Simulation",
+        "TinyTown.Art"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

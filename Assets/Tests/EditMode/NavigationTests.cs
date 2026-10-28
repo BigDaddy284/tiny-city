@@ -114,6 +114,63 @@ namespace TinyTown.Tests.EditMode
         }
 
         [Test]
+        public void Furniture_IsWalkedAround_AndOnlySteppedOnToUseIt()
+        {
+            // A cooker in the middle of a 3 x 3 room: crossing the room goes round it, not over it.
+            var room = TileMap.FromRows("r", "R", false, new[] { "...", "...", "..." }, Legend);
+            var world = new TownWorld("t", "T", new[] { room }, new[]
+            {
+                new WorldObject("cooker", "Cooker", ObjectType.Kitchen, new Location("r", 1, 1)),
+                new WorldObject("spot", "Gathering spot", ObjectType.GatheringSpot, new Location("r", 1, 0)),
+            }, new Portal[0]);
+            var pf = new Pathfinder(world);
+
+            Assert.That(world.IsBlocked(new Location("r", 1, 1)), Is.True);
+            Assert.That(world.IsBlocked(new Location("r", 1, 0)), Is.False, "open ground can be crossed");
+            Assert.That(pf.Distance(new Location("r", 1, 2), new Location("r", 1, 0)), Is.EqualTo(4), "round the cooker, not 2 steps over it");
+            Assert.That(pf.Distance(new Location("r", 1, 2), new Location("r", 1, 1)), Is.EqualTo(1), "the cooker itself can be reached to use it");
+            Assert.That(pf.Distance(new Location("r", 1, 1), new Location("r", 0, 0)), Is.EqualTo(2), "and stepped off again");
+
+            var here = new Location("r", 1, 2);
+            var walked = new List<Location>();
+            while (pf.TryGetNextStep(here, new Location("r", 1, 0), out var next))
+            {
+                walked.Add(next);
+                here = next;
+            }
+
+            Assert.That(walked.Contains(new Location("r", 1, 1)), Is.False);
+            Assert.That(here, Is.EqualTo(new Location("r", 1, 0)));
+        }
+
+        [Test]
+        public void StarterTown_FurnitureNeverBlocksTheWay()
+        {
+            // From every open tile, every object and every door can still be reached.
+            var world = StarterTown.CreateWorld();
+            var pf = new Pathfinder(world);
+            foreach (var map in world.Maps)
+            {
+                for (var y = 0; y < map.Height; y++)
+                {
+                    for (var x = 0; x < map.Width; x++)
+                    {
+                        var from = new Location(map.Id, x, y);
+                        if (!world.IsWalkable(from) || world.IsBlocked(from))
+                        {
+                            continue;
+                        }
+
+                        foreach (var target in world.Objects.Select(o => o.Location).Concat(world.Portals.Select(p => p.From)))
+                        {
+                            Assert.That(pf.Distance(from, target), Is.Not.EqualTo(Pathfinder.Unreachable), $"{from} to {target}");
+                        }
+                    }
+                }
+            }
+        }
+
+        [Test]
         public void Map_WithRaggedRows_IsRejected()
         {
             Assert.That(() => TileMap.FromRows("bad", "Bad", true, new[] { "...", ".." }, Legend), Throws.ArgumentException);

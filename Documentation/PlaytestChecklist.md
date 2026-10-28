@@ -130,3 +130,17 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 10. **Typing:** while typing a name, the game's keys (S, J, Space and so on) are ignored. Click elsewhere or press Escape to use them again.
 
 Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\`: one `town.json`, `town-2.json`, … per town, each with a `.bak` backup, plus `slots.json` holding the town names.
+
+## Phase 6, build 1: places
+
+1. **Village:** the village is drawn in pixel art on a little block of earth: grass with flowers, cobbled paths with darker edges, the pond and the fishing pond, the vegetable garden, trees all around (some of them pines), and fourteen buildings. Each cottage has its own wall, roof and door colours, windows with flower boxes and a chimney. The store, café and bakery have striped awnings and a sign with a picture (apple, cup, loaf); the clinic is white with a red cross.
+2. **Walking around buildings:** follow someone along a path behind a building and in front of it. They should disappear behind the building when they are behind it and stay in front of it when they are in front of it (including standing at a door). Note any spot where someone is drawn on top of a roof or hidden when they shouldn't be.
+3. **Rooms:** go inside any cottage or shop (Place menu). The two back walls stand tall with wallpaper, windows and pictures; the two front walls are low so you can see in; the bathroom wall is half height. Both back walls are the same height and meet in a clean corner. Floors differ: wooden boards in cottages and the café, tiles in the store, bakery and clinic. Every piece of furniture has its own picture (bed, kitchen, sink, toilet, shower, armchair, shelves, counter, tables, piano, clinic beds, quiz board and so on).
+4. **Outdoor things:** benches, the garden tap and watering can, the garden plot, the workshop bench, the easel, the chess table, the exercise mat, the jetty by the fishing pond and the maypole on the green.
+5. **Day and night:** at speed 4, watch an evening: the light turns golden, then blue, and the windows light up. Indoors it turns warm lamplight instead of dark. Morning brings it back. Residents are tinted along with the place they're in.
+6. **Seasons:** a year is 28 days, so each season lasts 7 days (days 1–7 spring, 8–14 summer, 15–21 autumn, 22–28 winter). The village changes when a new season starts: blossom and pale flowers in spring, fruit in summer, orange trees and fallen leaves in autumn, snow on the ground, roofs and pines, bare trees and a frozen pond in winter. There may be a short pause (about a second) at the moment the season changes while the village is redrawn. Note it if it's long.
+7. **Zoom:** zoom in close: pixels should stay sharp and square, not blurry.
+8. **Old saves:** any older town loads and shows the right season for its day.
+9. **Performance:** with ten panels at 4x the game should stay as smooth as in Phase 5. Note it if it doesn't.
+10. **Your own pictures (optional):** see `Documentation/ArtOverrides.md`. Put a `tree.png` in the game's `TheTinyTown_Data/StreamingAssets/Art/` folder, restart, and every broadleaf tree uses it.
+11. **Walking around furniture:** watch someone cross a room or the café. They walk around cookers, sinks, tables, beds and benches and only step onto one to use it. The shop counter is now one tile to the left of the door and the café piano stands by the left wall, so neither is in anyone's way.

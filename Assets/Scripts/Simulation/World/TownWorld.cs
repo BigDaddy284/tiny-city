@@ -12,6 +12,7 @@ namespace TinyTown.Simulation.World
         private readonly Dictionary<string, WorldObject> objectsById;
         private readonly List<WorldObject> objects;
         private readonly List<Portal> portals;
+        private readonly HashSet<Location> blocked;
 
         public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals, IEnumerable<Business> businesses = null, Community.CommunityCalendar calendar = null)
         {
@@ -76,6 +77,10 @@ namespace TinyTown.Simulation.World
                     throw new ArgumentException($"Portal '{portal.Id}' does not join two walkable tiles.");
                 }
             }
+
+            // Doorways stay open even if something was placed on one.
+            var doorways = new HashSet<Location>(this.portals.SelectMany(p => new[] { p.From, p.To }));
+            blocked = new HashSet<Location>(this.objects.Where(o => o.BlocksPassing && !doorways.Contains(o.Location)).Select(o => o.Location));
         }
 
         public string TownId { get; }
@@ -128,6 +133,9 @@ namespace TinyTown.Simulation.World
 
             return objectsById.TryGetValue(objectId, out obj);
         }
+
+        /// <summary>True where furniture stands: walkable as a destination, but never walked through.</summary>
+        public bool IsBlocked(Location location) => blocked.Contains(location);
 
         public bool IsWalkable(Location location) => TryGetMap(location.MapId, out var map) && map.IsWalkable(location.Position);
 

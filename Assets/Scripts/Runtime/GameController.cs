@@ -177,7 +177,7 @@ namespace TinyTown.Runtime
             Ai?.Attach(simulation);
             if (view.World == null)
             {
-                view.Build(simulation.World);
+                view.Build(simulation.World, TinyTown.Simulation.Time.Seasons.Of(simulation.Time));
             }
 
             view.ForgetResidents();
@@ -426,6 +426,7 @@ namespace TinyTown.Runtime
                 return;
             }
 
+            view.ApplyTime(Simulation.Time);
             view.UpdateResidents(Simulation, Mathf.Clamp01(tickProgress));
             Panels.Update(CameraArea(), view, Simulation);
         }

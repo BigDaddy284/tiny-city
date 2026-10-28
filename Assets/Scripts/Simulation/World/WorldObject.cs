@@ -62,6 +62,26 @@ namespace TinyTown.Simulation.World
         /// <summary>How many residents can use or head for it at once. Benches seat two; most things serve one.</summary>
         public int Capacity => CapacityOf(Type);
 
+        /// <summary>
+        /// Furniture and fittings stand in the way: residents walk around them and step onto one only to use it.
+        /// Open ground (garden plots, spots for exercise, fishing or gathering) can be crossed.
+        /// </summary>
+        public bool BlocksPassing => BlocksPassingType(Type);
+
+        public static bool BlocksPassingType(ObjectType type)
+        {
+            switch (type)
+            {
+                case ObjectType.GardenPlot:
+                case ObjectType.ExerciseSpot:
+                case ObjectType.FishingSpot:
+                case ObjectType.GatheringSpot:
+                    return false;
+                default:
+                    return true;
+            }
+        }
+
         public static int CapacityOf(ObjectType type)
         {
             switch (type)
