@@ -201,9 +201,19 @@ namespace TinyCity.Simulation
             StepRomanceDaily();
             StepCommunityEvents();
             StepNewcomers();
+            StepBirths();
             foreach (var resident in residents)
             {
-                if (resident.IsAlive)
+                if (!resident.IsAlive)
+                {
+                    continue;
+                }
+
+                if (resident.IsBaby)
+                {
+                    StepBaby(resident);
+                }
+                else
                 {
                     Step(resident);
                 }

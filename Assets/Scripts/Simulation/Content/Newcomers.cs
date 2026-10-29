@@ -14,7 +14,7 @@ namespace TinyCity.Simulation.Content
     /// </summary>
     public static class Newcomers
     {
-        private static readonly string[] FirstNames =
+        internal static readonly string[] FirstNames =
         {
             "Aiko", "Bea", "Callum", "Dara", "Elias", "Freya", "Gus", "Hana", "Idris", "Juno",
             "Kit", "Lena", "Marek", "Nia", "Oscar", "Pia", "Quinn", "Remy", "Suki", "Theo",
@@ -29,7 +29,7 @@ namespace TinyCity.Simulation.Content
             "Underhill", "Vance", "Whitlock", "Yardley", "Zubiri", "Achebe", "Brannigan", "Cole", "Duval", "Egan",
         };
 
-        private static readonly string[] Colours = { "#4E9DD9", "#D95B8E", "#5BC28A", "#C99A3E", "#9A6CD9", "#D9734E", "#3EA7A3", "#B85C5C" };
+        internal static readonly string[] Colours = { "#4E9DD9", "#D95B8E", "#5BC28A", "#C99A3E", "#9A6CD9", "#D9734E", "#3EA7A3", "#B85C5C" };
 
         public static readonly long FlatRent = Money.Pounds(100);
         public static readonly long CottageRent = Money.Pounds(120);

@@ -87,7 +87,7 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
 
 ## Residents
 
-![The ten residents in every pose, with the mood icons](Images/residents.png)
+![The ten residents in every pose, then a child, a teenager and a baby, with the mood icons](Images/residents.png)
 
 - **Size and shape.** A resident is about 33 pixels tall from feet to the top of the head (doors are about 30), with
   a head 8 pixels wide, a body 8 wide and arms 2 wide each side. They are drawn in three-quarter view and face one
@@ -105,10 +105,14 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
   with pink tips and her apron, Samuel's lab coat, glasses and beard, Felix's violet visor and cyan tips, Edith's
   long plum coat, white bun and glasses. Anyone new gets a look put together from their id (piping always, a visor,
   dyed tips under 40 or a coat from 50 now and then), going grey at 65 and white at 75 (`ResidentLook`).
+- **Children.** Children born in the city are the same figure with rows taken out between the neck and the ankles,
+  so the head keeps its size: 9 rows shorter from 3 to 12, 4 rows shorter as a teenager, with a smaller shadow and
+  no beard (`ResidentLook.Shrink`). A baby under 3 is a little bundle in their techwear colour, piped in their neon,
+  held at chest height beside whoever carries them, or tucked up low beside them in bed.
 - **Animation.** Four walking frames (a stride, a lifted foot, the other stride, the other foot) with a one-pixel
   bob, and two frames each for talking (mouth and a hand gesture), eating, reading, working, cheering and star
   jumps. Sitting puts the hips on the seat with the legs hanging down; sleeping shows the head on the pillow and the
-  shoulders above the quilt. People use furniture where it is used: sitting in chairs and on benches, standing at
+  shoulders above the quilt (someone with nowhere to live lies along a park bench). People use furniture where it is used: sitting in chairs and on benches, standing at
   the front of cookers, sinks, counters and workbenches, facing them.
 - **Mood icons.** A small pale bubble with a tail over the head, outlined, holding a 7 × 5 symbol: a smile
   (happy), "z" (asleep), a green face (ill), "!" (needs the toilet), bread (hungry), a drop (thirsty), heavy eyes

@@ -34,6 +34,11 @@ namespace TinyCity.Simulation.Residents
         Adult,
         MiddleAged,
         Elderly,
+
+        // Added with babies. Not saved (it comes from the age), but kept after the others so their order holds.
+        Baby,
+        Child,
+        Teen,
     }
 
     public sealed class ActivityLogEntry
@@ -78,7 +83,7 @@ namespace TinyCity.Simulation.Residents
             Id = id;
             FirstName = firstName ?? string.Empty;
             LastName = lastName ?? string.Empty;
-            AgeYears = Math.Max(18, ageYears);
+            AgeYears = Math.Max(0, ageYears);
             BirthdayDayOfYear = Math.Max(1, Math.Min(birthdayDayOfYear, 365));
             ColourHex = colourHex ?? "#C8643C";
             Personality = personality ?? new Personality(0.5, 0.5, 0.5, 0.5);
@@ -106,7 +111,30 @@ namespace TinyCity.Simulation.Residents
         public LifeStage LifeStage => AgeYears >= 65 ? LifeStage.Elderly
             : AgeYears >= 45 ? LifeStage.MiddleAged
             : AgeYears >= 30 ? LifeStage.Adult
-            : LifeStage.YoungAdult;
+            : AgeYears >= PopulationRules.AdultAge ? LifeStage.YoungAdult
+            : AgeYears >= 13 ? LifeStage.Teen
+            : AgeYears >= PopulationRules.WalkingAge ? LifeStage.Child
+            : LifeStage.Baby;
+
+        /// <summary>Under <see cref="PopulationRules.WalkingAge"/>: carried about by a parent rather than living their own day.</summary>
+        public bool IsBaby => AgeYears < PopulationRules.WalkingAge;
+
+        /// <summary>Under <see cref="PopulationRules.AdultAge"/>: no work, no romance, no bar, and an early bedtime.</summary>
+        public bool IsMinor => AgeYears < PopulationRules.AdultAge;
+
+        /// <summary>The day they were born in the city, or 0 for someone who wasn't.</summary>
+        public int BornDay { get; internal set; }
+
+        private List<string> parentIds = new List<string>();
+
+        /// <summary>The ids of their parents, for someone born in the city.</summary>
+        public IReadOnlyList<string> ParentIds => parentIds;
+
+        internal void SetParents(IEnumerable<string> ids) => parentIds = (ids ?? new string[0]).Where(p => !string.IsNullOrWhiteSpace(p) && p != Id).Distinct().Take(2).ToList();
+
+        /// <summary>Parent and child, or brothers and sisters (sharing a parent).</summary>
+        public bool IsFamilyOf(Resident other) =>
+            other != null && (parentIds.Contains(other.Id) || other.parentIds.Contains(Id) || parentIds.Any(p => other.parentIds.Contains(p)));
 
         public string ColourHex { get; }
 

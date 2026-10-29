@@ -19,8 +19,10 @@ namespace TinyCity.Art
     public sealed class ResidentLook
     {
         public ResidentLook(Rgba skin, Rgba hair, HairStyle style, Rgba top, Rgba bottom, bool skirt = false, bool beard = false, bool glasses = false, Rgba? apron = null, Rgba? hat = null,
-            Rgba? trim = null, Rgba? visor = null, Rgba? hairTips = null, bool coat = false)
+            Rgba? trim = null, Rgba? visor = null, Rgba? hairTips = null, bool coat = false, int shrink = 0, bool baby = false)
         {
+            Shrink = shrink;
+            IsBaby = baby;
             Trim = trim;
             Visor = visor;
             HairTips = hairTips;
@@ -72,6 +74,16 @@ namespace TinyCity.Art
         /// <summary>A long coat, open at the front, that hangs to the knees.</summary>
         public bool Coat { get; }
 
+        /// <summary>How many rows shorter than an adult the figure is: children and teenagers are smaller, with the same size head.</summary>
+        public int Shrink { get; }
+
+        /// <summary>A baby, drawn as a bundle in their carer's arms instead of a figure.</summary>
+        public bool IsBaby { get; }
+
+        /// <summary>Rows shorter than an adult: a child of 3 to 12, and a teenager.</summary>
+        public const int ChildShrink = 9;
+        public const int TeenShrink = 4;
+
         private static readonly Dictionary<string, ResidentLook> Starters = new Dictionary<string, ResidentLook>
         {
             // Mabel, the gardener: auburn ponytail with mint tips, a cap and an olive utility jacket piped in mint.
@@ -107,7 +119,8 @@ namespace TinyCity.Art
 
         /// <summary>
         /// The starter residents each have their own look. Anyone else gets one put together from their id, so it is
-        /// always the same for them, with grey or white hair from 65.
+        /// always the same for them, with grey or white hair from 65. Children are smaller (and have no beard), and a
+        /// baby under 3 is a bundle.
         /// </summary>
         public static ResidentLook For(string residentId, int age)
         {
@@ -120,7 +133,7 @@ namespace TinyCity.Art
             int Pick(int salt, int count) => (int)(Noise.Hash(salt, 7, h) % (uint)count);
             var hair = age >= 75 ? Palette.HairWhite : age >= 65 ? Palette.HairGrey : Palette.Hair[Pick(1, Palette.Hair.Length)];
             var styles = new[] { HairStyle.Short, HairStyle.Messy, HairStyle.Curly, HairStyle.Bob, HairStyle.Long, HairStyle.Ponytail, HairStyle.Bun };
-            var visor = age < 55 && Pick(9, 5) == 0;
+            var visor = age >= 13 && age < 55 && Pick(9, 5) == 0;
             return new ResidentLook(
                 Palette.Skin[Pick(2, Palette.Skin.Length)],
                 hair,
@@ -128,12 +141,14 @@ namespace TinyCity.Art
                 Palette.Clothes[Pick(4, Palette.Clothes.Length)],
                 Palette.Bottoms[Pick(5, Palette.Bottoms.Length)],
                 skirt: Pick(6, 3) == 0,
-                beard: Pick(7, 5) == 0,
+                beard: age >= 18 && Pick(7, 5) == 0,
                 glasses: !visor && (age >= 55 || Pick(8, 4) == 0),
                 trim: Palette.Neons[Pick(10, Palette.Neons.Length)],
                 visor: visor ? Palette.Neons[Pick(11, Palette.Neons.Length)] : (Rgba?)null,
                 hairTips: age < 40 && Pick(12, 3) == 0 ? Palette.Neons[Pick(13, Palette.Neons.Length)] : (Rgba?)null,
-                coat: age >= 50 && Pick(14, 2) == 0);
+                coat: age >= 50 && Pick(14, 2) == 0,
+                shrink: age < 13 ? ChildShrink : age < 18 ? TeenShrink : 0,
+                baby: age < 3);
         }
     }
 }

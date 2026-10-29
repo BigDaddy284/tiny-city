@@ -160,9 +160,21 @@ namespace TinyCity.Simulation.Activities
             }
 
             var mapId = obj.Location.MapId;
-            if (!world.GetMap(mapId).IsExterior && mapId != resident.HomeMapId && world.BusinessOnMap(mapId) == null)
+            var business = world.BusinessOnMap(mapId);
+            if (!world.GetMap(mapId).IsExterior && mapId != resident.HomeMapId && business == null)
             {
                 return false;
+            }
+
+            if (business != null && business.AdultsOnly && resident.IsMinor)
+            {
+                return false;
+            }
+
+            // A family shares the bed at home: children sleep with their parent.
+            if (obj.Type == ObjectType.Bed && mapId == resident.HomeMapId)
+            {
+                return true;
             }
 
             return UsersOf(resident, obj) < obj.Capacity;
@@ -488,7 +500,7 @@ namespace TinyCity.Simulation.Activities
         /// <summary>A trip to the shop when groceries are running low and the shop can serve them.</summary>
         private PlanChoice ShoppingChoice(Resident resident, GameTime time)
         {
-            if (resident.Groceries > LowGroceries || resident.IsHomeless)
+            if (resident.Groceries > LowGroceries || resident.IsHomeless || resident.IsMinor)
             {
                 return null;
             }

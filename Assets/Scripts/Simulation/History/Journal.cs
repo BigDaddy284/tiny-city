@@ -64,6 +64,8 @@ namespace TinyCity.Simulation.History
                 case TownEventKind.MovedIn:
                 case TownEventKind.Housed:
                 case TownEventKind.Homeless:
+                case TownEventKind.Born:
+                case TownEventKind.MovedOut:
                     return true;
                 default:
                     return false;

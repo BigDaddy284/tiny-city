@@ -84,6 +84,18 @@ namespace TinyCity.Runtime
                 GUILayout.Label($"Moved to the city on day {r.MovedInDay}", styles.Text);
             }
 
+            if (r.BornDay > 0)
+            {
+                var parents = string.Join(" and ", r.ParentIds.Select(id => Simulation.GetResident(id)?.FullName).Where(n => n != null));
+                GUILayout.Label($"Born in the city on day {r.BornDay}{(parents.Length > 0 ? ", to " + parents : string.Empty)}", styles.Text);
+            }
+
+            if (r.IsBaby && r.IsAlive)
+            {
+                var carer = Simulation.CarerOf(r);
+                GUILayout.Label(carer == null ? "A baby, looked after at home" : $"A baby, carried about by {carer.FirstName}", styles.Text);
+            }
+
             if (r.IsHomeless && r.IsAlive)
             {
                 GUILayout.Label("Nowhere to live: sleeps on a park bench until a home comes free", styles.Text);

@@ -13,6 +13,7 @@
     "simulation": {
         "romance": true,
         "communityEvents": true,
-        "newcomers": true
+        "newcomers": true,
+        "babies": true
     }
 }

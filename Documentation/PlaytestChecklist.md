@@ -238,6 +238,16 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 1. **Someone arrives:** start a new town and run it at 10x for a few days. From day 3, about two days a week, someone new appears at 10:00 on the path at the bottom edge of the city, a notification says they moved in, and they walk to an empty cottage or flat.
 2. **Their own life:** select them. The inspector says "Moved to the city on day N" under their name, they have hobbies and a weekly income ("Works remotely" or "Jobseeker's allowance"), and they sleep in their new home at night.
 3. **Journal:** the Town journal lists "… moved to the city, into …" under Life.
-4. **Limits:** however long it runs, no more than ten people ever move in, and nobody arrives once every home is taken or fifty people live in the city.
+4. **Limits:** however long it runs, no more than ten people ever move in, and nobody arrives once fifty people live in the city. Someone who arrives when every home is taken sleeps on a park bench until one comes free.
 5. **Save and load:** save, quit and reload. The newcomers are still there with the same day they moved in.
 6. **Settings:** set `"newcomers": false` in `settings.json` and restart: nobody new arrives.
+
+## Babies, children and homelessness
+
+1. **A baby:** let a town run at 10x until two residents become a committed couple (the journal says so). Within a few weeks they have a baby: a notification, a journal entry under Life, and a little bundle in one parent's arms that goes everywhere with them, tucked up beside them in bed at night. The inspector says who the baby was born to and who carries them.
+2. **Growing up:** a child ages a year every 3 days. From 3 they walk about on their own, smaller than adults, go to bed earlier, sleep in their parent's bed, never work and never go into the bar. Teenagers are a little taller.
+3. **Moving out:** at 18 they move into an empty cottage or flat, with a notification. If every home is taken they sleep on a park bench instead.
+4. **Homeless:** someone with nowhere to live lies along a park bench at night (nobody sits on it with them), eats leftovers at the market stalls, and moves into the first home that comes free, at 09:00.
+5. **Limits:** no baby is born while fifty people are alive, a couple has at most three children, and parents are never older than 50. Family never fall for each other.
+6. **Save and load:** save with a baby and a child in town, then reload: they're still there with the same parents and birthdays.
+7. **Settings:** set `"babies": false` in `settings.json` and restart: no more babies.

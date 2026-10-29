@@ -56,6 +56,10 @@ namespace TinyCity.Simulation
             }
 
             r.Health = System.Math.Min(r.Health, HealthRules.MaxHealthFor(r.AgeYears));
+            if (r.BornDay > 0)
+            {
+                GrowingUp(r);
+            }
         }
 
         /// <summary>Starts an illness. Used by the daily check, and by tests and future events.</summary>
@@ -182,6 +186,12 @@ namespace TinyCity.Simulation
                     return "I've reached middle age. Where did the years go?";
                 case LifeStage.Elderly:
                     return "I'm officially elderly now, and I intend to enjoy it.";
+                case LifeStage.Child:
+                    return "I'm big enough to go about on my own now.";
+                case LifeStage.Teen:
+                    return "I'm a teenager now.";
+                case LifeStage.YoungAdult:
+                    return "I'm eighteen: grown up, and ready for a place of my own.";
                 default:
                     return "A new chapter of life has begun.";
             }
@@ -197,6 +207,10 @@ namespace TinyCity.Simulation
                     return "middle-aged";
                 case LifeStage.Elderly:
                     return "elderly";
+                case LifeStage.Child:
+                    return "a child";
+                case LifeStage.Teen:
+                    return "a teenager";
                 default:
                     return "a young adult";
             }

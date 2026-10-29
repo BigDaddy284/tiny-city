@@ -237,6 +237,7 @@ namespace TinyCity.Runtime
             simulation.RomanceEnabled = Settings.Simulation.romance;
             simulation.CommunityEventsEnabled = Settings.Simulation.communityEvents;
             simulation.NewcomersEnabled = Settings.Simulation.newcomers;
+            simulation.BabiesEnabled = Settings.Simulation.babies;
             Ai?.Attach(simulation);
             if (view.World == null)
             {

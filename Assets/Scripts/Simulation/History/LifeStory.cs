@@ -175,6 +175,12 @@ namespace TinyCity.Simulation.History
                     return "middle-aged";
                 case LifeStage.Elderly:
                     return "elderly";
+                case LifeStage.Baby:
+                    return "a baby";
+                case LifeStage.Child:
+                    return "a child";
+                case LifeStage.Teen:
+                    return "a teenager";
                 default:
                     return "an adult";
             }

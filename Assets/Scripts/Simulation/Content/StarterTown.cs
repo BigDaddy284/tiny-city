@@ -500,7 +500,7 @@ namespace TinyCity.Simulation.Content
             yield return new Business(BarId, "Neon bar", BarMapId, BarOpens, BarCloses, WedToSun, new[]
             {
                 new ShopItem("cocktail", "A cocktail", Money.Pounds(5.5), 40),
-            });
+            }, adultsOnly: true);
 
             // Nobody in town works at these yet, so they keep to their hours (see TownEconomy.IsOpen).
             yield return new Business(CueClubId, "Cue club", CueClubMapId, GameTime.MinuteOfDayFor(12, 0), GameTime.MinuteOfDayFor(23, 30), Job.EveryDay, new[]

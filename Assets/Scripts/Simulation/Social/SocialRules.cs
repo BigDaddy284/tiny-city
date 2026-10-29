@@ -82,7 +82,7 @@ namespace TinyCity.Simulation.Social
         /// <summary>Free and willing to start talking right now: awake, off work, nothing urgent, not busy with care or another chat.</summary>
         public static bool CanJoinConversation(Resident r, GameTime now)
         {
-            if (r == null || !r.IsAlive || r.State == ResidentState.Talking || ActivityPlanner.MostUrgentNeed(r) != null
+            if (r == null || !r.IsAlive || r.IsBaby || r.State == ResidentState.Talking || ActivityPlanner.MostUrgentNeed(r) != null
                 || SleepSchedule.IsSleepTime(r, now) || ActivityPlanner.ShouldWork(r, now) || HealthRules.KeepsToThemselves(r))
             {
                 return false;
@@ -103,7 +103,7 @@ namespace TinyCity.Simulation.Social
         /// <summary>Someone worth walking over to: outdoors (homes are private), awake and not working, sleeping or chatting.</summary>
         public static bool CanBeApproached(Resident r, GameTime now, bool isOutdoors)
         {
-            return r != null && r.IsAlive && isOutdoors && r.State != ResidentState.Talking
+            return r != null && r.IsAlive && !r.IsBaby && isOutdoors && r.State != ResidentState.Talking
                 && ActivityPlanner.MostUrgentNeed(r) == null && !SleepSchedule.IsSleepTime(r, now) && !ActivityPlanner.ShouldWork(r, now)
                 && !HealthRules.KeepsToThemselves(r) && !(r.ActivityId == ActivityCatalog.Sleep.Id || r.ActivityId == ActivityCatalog.Work.Id);
         }

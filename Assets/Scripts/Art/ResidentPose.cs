@@ -177,6 +177,7 @@ namespace TinyCity.Art
             switch (type)
             {
                 case ObjectType.Bench when seat == 1: return new Placement(0.68, 0.5, 12, Stance.Sitting, Facing.DownLeft);
+                case ObjectType.Bed when seat == 1: return new Placement(0.6, 0.74, 0, Stance.Lying, Facing.DownRight);
                 case ObjectType.CafeTable when seat == 1: return new Placement(0.5, 0.14, 12, Stance.Sitting, Facing.DownLeft, behind: true);
                 case ObjectType.BarTable when seat == 1: return new Placement(0.5, 0.14, 17, Stance.Sitting, Facing.DownLeft, behind: true);
                 case ObjectType.DanceFloor when seat == 1: return new Placement(0.7, 0.7, 1, Stance.Standing, Facing.UpLeft);
