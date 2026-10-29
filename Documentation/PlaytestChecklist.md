@@ -216,3 +216,9 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 4. **Opening hours:** the inspector shows the bar as "closed" on Monday, Tuesday and in the daytime. From 18:00 it is "open" once Felix is in.
 5. **A night out:** on open evenings from 19:00, a few residents go for a drink at the high tables (paid, about £5.50) or to dance on the floor (free, arms up). Friends are sometimes invited along. Nobody heads out within an hour of their bedtime or with less than £30 to spend.
 6. **Club night:** on Fridays from 20:00 to 23:00, a "Club night" event gathers people at the DJ booth. It appears in the journal like the quiz night does.
+
+## Several AI requests at once and waiting longer at high speed
+
+1. **High speed:** with the AI on, play at 4x and then 10x. Fewer residents log "no AI answer in time" than before, and residents in the Deciding state wait up to about 8 real seconds before the routine takes over.
+2. **Parallel requests:** set `OLLAMA_NUM_PARALLEL` to 2, restart Ollama, set `"parallelRequests": 2` in `settings.json`, then start the game. The AI line in the inspector can show a queue count that includes two requests being answered. More free-time choices come from the AI at 4x than with 1.
+3. **Too many at once:** with `parallelRequests` higher than Ollama's `OLLAMA_NUM_PARALLEL`, the game still works. The extra requests simply wait inside Ollama.

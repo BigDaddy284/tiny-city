@@ -110,6 +110,27 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void AtHighSpeed_ResidentsWaitLongerInGameTime_SoTheAiStillHasTimeToAnswer()
+        {
+            var sim = FreeAfternoon();
+            var ai = new AiService(new OllamaSettings { decisionWaitMinutes = 20, decisionWaitSeconds = 8 }, new FakeAiTransport());
+            ai.Attach(sim);
+
+            Assert.That(sim.DecisionWaitMinutes, Is.EqualTo(20), "at 1x the game-minute wait is the longer one");
+            ai.SetGameSpeed(2);
+            Assert.That(sim.DecisionWaitMinutes, Is.EqualTo(20));
+            ai.SetGameSpeed(4);
+            Assert.That(sim.DecisionWaitMinutes, Is.EqualTo(32), "8 real seconds at 4x");
+            ai.SetGameSpeed(10);
+            Assert.That(sim.DecisionWaitMinutes, Is.EqualTo(80));
+            ai.SetGameSpeed(0);
+            Assert.That(sim.DecisionWaitMinutes, Is.EqualTo(80), "pausing keeps the last wait");
+
+            var off = new AiService(new OllamaSettings { decisionWaitSeconds = 0 }, new FakeAiTransport());
+            Assert.That(off.DecisionWaitMinutesAt(10), Is.EqualTo(OllamaSettings.DefaultDecisionWaitMinutes), "0 seconds keeps the old game-minute wait");
+        }
+
+        [Test]
         public void SlowAi_TheRoutineDecidesAtTheDeadline_AndTheRequestIsDropped()
         {
             var sim = FreeAfternoon();

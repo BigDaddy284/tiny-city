@@ -6,7 +6,9 @@
         "model": "qwen2.5:7b",
         "timeoutSeconds": 60,
         "maxRetries": 1,
-        "decisionWaitMinutes": 20
+        "decisionWaitMinutes": 20,
+        "decisionWaitSeconds": 8,
+        "parallelRequests": 1
     },
     "simulation": {
         "romance": true,

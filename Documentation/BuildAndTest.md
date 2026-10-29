@@ -70,7 +70,7 @@ dotnet run -c Release -- report.md 56 1     # a shorter run
 dotnet run -c Release -- report.md 0 0 2 9  # only the big city: 2 game days per speed, 9 districts (90 residents)
 ```
 
-The fourth argument is the big city's game days per speed (0 skips it) and the fifth how many copies of the starter town it has, ten residents each (10 by default).
+The fourth argument is the big city's game days per speed (0 skips it) and the fifth how many copies of the starter town it has, ten residents each (10 by default). The sixth is how many requests are sent at once, with the stand-in Ollama given that many parallel slots (1 by default), and the seventh the settings' `decisionWaitSeconds` (8 by default; 0 gives the old game-minute wait only).
 
 It takes about 15 minutes in the cloud container and exits with 1 if a check fails. The latest results are in `Documentation/StressTest.md`. The numbers come from .NET; Unity's Mono is roughly 2–3 times slower.
 

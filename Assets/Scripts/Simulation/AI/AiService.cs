@@ -61,12 +61,14 @@ namespace TinyCity.Simulation.AI
         private double listStartedAt;
         private bool listWanted;
         private List<string> installedModels = new List<string>();
+        private double gameMinutesPerSecond = 1;
 
         public AiService(OllamaSettings settings, IAiTransport transport)
         {
             this.settings = settings ?? new OllamaSettings();
             this.transport = transport ?? throw new ArgumentNullException(nameof(transport));
-            Queue = new AiRequestQueue(transport, OllamaProtocol.ChatUrl(this.settings.endpoint), this.settings.timeoutSeconds, 1 + Math.Max(0, this.settings.maxRetries));
+            Queue = new AiRequestQueue(transport, OllamaProtocol.ChatUrl(this.settings.endpoint), this.settings.timeoutSeconds, 1 + Math.Max(0, this.settings.maxRetries),
+                maxConcurrent: this.settings.parallelRequests);
             Status = this.settings.enabled ? AiConnectionStatus.Checking : AiConnectionStatus.Disabled;
             StatusDetail = this.settings.enabled ? "looking for Ollama" : "turned off in Settings";
         }
@@ -110,10 +112,35 @@ namespace TinyCity.Simulation.AI
             Simulation = simulation;
             if (simulation != null)
             {
-                simulation.DecisionWaitMinutes = settings.decisionWaitMinutes;
+                simulation.DecisionWaitMinutes = DecisionWaitMinutesAt(gameMinutesPerSecond);
                 simulation.AiDecisionsEnabled = Status == AiConnectionStatus.Connected;
             }
         }
+
+        /// <summary>
+        /// Tells the service how fast the game runs (game minutes per real second: 1 at 1x, 4 at 4x), so a resident
+        /// waits long enough in real time for the AI's answer. Pausing keeps the last wait.
+        /// </summary>
+        public void SetGameSpeed(double minutesPerSecond)
+        {
+            if (minutesPerSecond <= 0)
+            {
+                return;
+            }
+
+            gameMinutesPerSecond = minutesPerSecond;
+            if (Simulation != null)
+            {
+                Simulation.DecisionWaitMinutes = DecisionWaitMinutesAt(minutesPerSecond);
+            }
+        }
+
+        /// <summary>
+        /// Game minutes a resident waits for a decision at this speed: the setting's minutes, or its real seconds
+        /// turned into game minutes if that is longer.
+        /// </summary>
+        public int DecisionWaitMinutesAt(double minutesPerSecond) =>
+            Math.Min(OllamaSettings.MaxDecisionWaitMinutes, Math.Max(settings.decisionWaitMinutes, (int)Math.Ceiling(settings.decisionWaitSeconds * Math.Max(0, minutesPerSecond))));
 
         /// <summary>Asks Ollama which models are installed, even while the AI is turned off, for the Settings window.</summary>
         public void RefreshModelList()
@@ -190,7 +217,7 @@ namespace TinyCity.Simulation.AI
             {
                 case AiConnectionStatus.Connected:
                     var latency = s.LastLatencySeconds > 0 ? $", last answer {s.LastLatencySeconds:0.0}s (avg {s.AverageLatencySeconds:0.0}s)" : string.Empty;
-                    return $"AI: connected to {Model}. Queue {Queue.PendingCount + (Queue.Active == null ? 0 : 1)}{latency}. Used {s.Accepted}, fell back {s.GaveUp}.";
+                    return $"AI: connected to {Model}. Queue {Queue.PendingCount + Queue.ActiveCount}{latency}. Used {s.Accepted}, fell back {s.GaveUp}.";
                 case AiConnectionStatus.Disabled:
                     return "AI: off (Settings). Residents use their built-in routine.";
                 default:
