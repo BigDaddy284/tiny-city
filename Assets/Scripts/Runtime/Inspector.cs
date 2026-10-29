@@ -22,6 +22,7 @@ namespace TinyCity.Runtime
         public const float Width = 380f;
         private const int SearchMatchesShown = 6;
         private const float PeopleListHeight = 180f;
+        private const int GridColumns = 2;
         private const string SearchControl = "inspector-people-search";
         private const int TimelineShown = 40;
 
@@ -34,6 +35,8 @@ namespace TinyCity.Runtime
         private int tab;
         private Vector2 scroll;
         private bool peopleOpen;
+        private bool expanded;
+        private Vector2 gridScroll;
         private PeopleFilter peopleFilter;
         private PeopleOrder peopleOrder;
         private Vector2 peopleScroll;
@@ -64,6 +67,14 @@ namespace TinyCity.Runtime
 
             GUILayout.BeginArea(new Rect(area.x + 14f, 10f, Width - 28f, Screen.height - 20f));
             DrawTownControls(r);
+            if (expanded)
+            {
+                DrawPeopleGrid(r);
+                DrawFooter();
+                GUILayout.EndArea();
+                return;
+            }
+
             GUILayout.Space(6f);
             tab = GUILayout.Toolbar(tab, TabNames);
             scroll = GUILayout.BeginScrollView(scroll);
@@ -100,6 +111,11 @@ namespace TinyCity.Runtime
             if (GUILayout.Toggle(game.SettingsOpen, "Settings", GUI.skin.button, GUILayout.Width(90f), GUILayout.Height(28f)) != game.SettingsOpen)
             {
                 game.ToggleSettings();
+            }
+
+            if (GUILayout.Button("Hide ▶", GUILayout.Width(70f), GUILayout.Height(28f)))
+            {
+                game.ToggleSidebar();
             }
 
             GUILayout.EndHorizontal();
@@ -179,11 +195,20 @@ namespace TinyCity.Runtime
 
             if (!peopleOpen)
             {
+                expanded = false;
                 return;
             }
 
+            GUILayout.BeginHorizontal();
             peopleFilter = (PeopleFilter)GUILayout.Toolbar((int)peopleFilter, FilterNames);
+            expanded = GUILayout.Toggle(expanded, expanded ? "Back" : "Expand", GUI.skin.button, GUILayout.Width(70f));
+            GUILayout.EndHorizontal();
             peopleOrder = (PeopleOrder)GUILayout.Toolbar((int)peopleOrder, OrderNames);
+            if (expanded)
+            {
+                return;
+            }
+
             peopleScroll = GUILayout.BeginScrollView(peopleScroll, GUILayout.Height(PeopleListHeight));
             var shown = PeopleList.Of(Simulation.Residents, peopleFilter, peopleOrder);
             if (shown.Count == 0)
@@ -197,6 +222,30 @@ namespace TinyCity.Runtime
                 {
                     Pick(other);
                 }
+            }
+
+            GUILayout.EndScrollView();
+        }
+
+        /// <summary>
+        /// The expanded people view: everyone (as filtered and sorted above, first name A–Z to start with) in a grid
+        /// that fills the rest of the side panel instead of the resident's tabs. Picking someone keeps the grid open.
+        /// </summary>
+        private void DrawPeopleGrid(Resident r)
+        {
+            GUILayout.Space(4f);
+            var shown = PeopleList.Of(Simulation.Residents, peopleFilter, peopleOrder);
+            gridScroll = GUILayout.BeginScrollView(gridScroll);
+            if (shown.Count == 0)
+            {
+                GUILayout.Label("Nobody here.", styles.Small);
+            }
+
+            var labels = shown.Select(Describe).ToArray();
+            var picked = GUILayout.SelectionGrid(shown.IndexOf(r), labels, GridColumns, GUILayout.Height(Mathf.Ceil(labels.Length / (float)GridColumns) * 30f));
+            if (picked >= 0 && picked < shown.Count && shown[picked] != r)
+            {
+                Pick(shown[picked]);
             }
 
             GUILayout.EndScrollView();
@@ -436,7 +485,7 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label("Click a panel to make it active. N/B: next/previous resident in it · Tab: free camera, other map · F: follow · drag and wheel: pan and zoom · +/−: panels · J: journal · S: saved towns · Settings: top right", styles.Small);
+            GUILayout.Label("Click a panel to make it active. N/B: next/previous resident in it · Tab: free camera, other map · F: follow · drag and wheel: pan and zoom · +/−: panels · J: journal · S: saved towns · H: hide this panel · Settings: top right", styles.Small);
             GUILayout.Label(game.Ai.Summary(), styles.Small);
             var lastEvent = game.Ai.RecentEvents.LastOrDefault();
             if (lastEvent != null)
@@ -499,8 +548,18 @@ namespace TinyCity.Runtime
             var map = Simulation.World.GetMap(r.Location.MapId);
             var at = Simulation.World.Objects.FirstOrDefault(o => o.Location == r.Location);
             var business = Simulation.World.BusinessOnMap(map.Id);
-            var name = business == null ? map.Name : $"{map.Name} ({(business.IsOpen(Simulation.Time) ? "open" : "closed")}, {business.HoursText})";
+            var name = business == null ? map.Name : $"{map.Name} ({OpenText(business)}, {business.HoursText})";
             return at != null ? $"{name}, at the {at.Name.ToLowerInvariant()}" : name;
+        }
+
+        private string OpenText(Business business)
+        {
+            if (Simulation.Economy.IsOpen(business, Simulation.Time))
+            {
+                return "open";
+            }
+
+            return business.IsOpen(Simulation.Time) ? "closed, nobody at work" : "closed";
         }
 
         private static string DescribeIllness(Resident r)

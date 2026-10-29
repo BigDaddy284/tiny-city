@@ -10,9 +10,10 @@ namespace TinyCity.Simulation.Memory
     {
         /// <summary>
         /// Upper bound on stored records so a very long game cannot grow without limit. One resident makes a few
-        /// remarks a day, so this keeps years of history; the oldest record is dropped first.
+        /// remarks and chats a day (a busy town has well over a hundred chats a day), so this keeps the last week or so;
+        /// important moments live on as memories. The oldest record is dropped first.
         /// </summary>
-        public const int MaxRecords = 5000;
+        public const int MaxRecords = 1500;
 
         private readonly List<ConversationRecord> records = new List<ConversationRecord>();
 

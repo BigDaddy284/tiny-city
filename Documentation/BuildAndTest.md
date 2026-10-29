@@ -59,6 +59,18 @@ dotnet test DotNetTests --filter "FullyQualifiedName~GameSettingsTests.Defaults_
 
 The .NET SDK may need installing first (`sudo apt-get install -y dotnet-sdk-8.0` on Ubuntu). Edit Mode tests must not use `UnityEngine` so that they compile in both runners; tests that need Unity go in `Assets/Tests/PlayMode`, which only CI runs.
 
+## Stress test
+
+`Tools/StressTest` runs the town for a long time without Unity and writes what it measured as Markdown. It covers months of play with autosaves, the game loop at every speed against a slow and unreliable stand-in for Ollama, and an Ollama outage:
+
+```bash
+cd Tools/StressTest
+dotnet run -c Release -- report.md          # 336 game days, then 3 game days at each speed for each AI profile
+dotnet run -c Release -- report.md 56 1     # a shorter run
+```
+
+It takes about 15 minutes in the cloud container and exits with 1 if a check fails. The latest results are in `Documentation/StressTest.md`. The numbers come from .NET; Unity's Mono is roughly 2–3 times slower.
+
 ## Building locally (optional)
 
 With Unity 6000.3.27f1 installed, open the project and use **Tiny City → Build Windows**, or run:

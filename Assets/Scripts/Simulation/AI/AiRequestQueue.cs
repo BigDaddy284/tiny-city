@@ -34,6 +34,9 @@ namespace TinyCity.Simulation.AI
 
         public double AverageLatencySeconds => completedCalls == 0 ? 0 : totalLatency / completedCalls;
 
+        /// <summary>How many calls have finished (answered or failed) and count towards the average.</summary>
+        public int CompletedCalls => completedCalls;
+
         public string LastError { get; internal set; } = string.Empty;
 
         private int completedCalls;
@@ -61,6 +64,17 @@ namespace TinyCity.Simulation.AI
         public const double AgingSecondsPerClass = 20;
 
         public const double RetryDelaySeconds = 2;
+
+        /// <summary>
+        /// Once the model has answered a few times, a request is given up after this many times its average answer
+        /// time (but never sooner than <see cref="MinAdaptiveTimeoutSeconds"/>, nor later than the configured
+        /// timeout), so one lost reply from a fast model doesn't hold up everyone else for the whole timeout.
+        /// </summary>
+        public const double AdaptiveTimeoutFactor = 6;
+
+        public const double MinAdaptiveTimeoutSeconds = 10;
+
+        public const int AdaptiveTimeoutAfterCalls = 5;
 
         /// <summary>A resident whose request was sent this recently waits behind other residents' requests of the same priority.</summary>
         public const double RecentlyServedSeconds = 15;
@@ -92,6 +106,11 @@ namespace TinyCity.Simulation.AI
         public int MaxAttempts { get; }
 
         public int MaxPending { get; }
+
+        /// <summary>How long the request being answered now may take: see <see cref="AdaptiveTimeoutFactor"/>.</summary>
+        public double CurrentTimeoutSeconds => Stats.CompletedCalls < AdaptiveTimeoutAfterCalls
+            ? TimeoutSeconds
+            : Math.Min(TimeoutSeconds, Math.Max(MinAdaptiveTimeoutSeconds, AdaptiveTimeoutFactor * Stats.AverageLatencySeconds));
 
         public AiQueueStats Stats { get; } = new AiQueueStats();
 
@@ -205,12 +224,13 @@ namespace TinyCity.Simulation.AI
 
             if (!activeCall.IsDone)
             {
-                if (now - activeSentAt > TimeoutSeconds)
+                var limit = CurrentTimeoutSeconds;
+                if (now - activeSentAt > limit)
                 {
                     activeCall.Cancel();
                     ClearActive();
                     Stats.TimedOut++;
-                    RetryOrGiveUp(request, $"no answer within {TimeoutSeconds:0} seconds", now);
+                    RetryOrGiveUp(request, $"no answer within {limit:0} seconds", now);
                 }
 
                 return;

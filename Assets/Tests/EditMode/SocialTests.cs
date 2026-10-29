@@ -250,8 +250,13 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void CafeTables_SeatTwo_AndNewcomersPreferAnEmptyOne()
         {
-            var window = TestTown.Object(StarterTown.CreateNewGame(), "obj-cafe-table-window");
-            var sim = TestTown.WithResidents(TestTown.WeekendAfternoon, r => r.Id == StarterTown.ResidentId ? window.Location : (Location?)null, needsLevel: 60);
+            var town = StarterTown.CreateNewGame();
+            var window = TestTown.Object(town, "obj-cafe-table-window");
+            var counter = TestTown.Object(town, "obj-cafe-counter");
+            var sim = TestTown.WithResidents(
+                TestTown.WeekendAfternoon,
+                r => r.Id == StarterTown.ResidentId ? window.Location : r.Id == StarterTown.PriyaId ? counter.Location : (Location?)null,
+                needsLevel: 60);
             var mabel = Mabel(sim);
             Assert.That(window.Capacity, Is.EqualTo(2), "one chair each side");
 

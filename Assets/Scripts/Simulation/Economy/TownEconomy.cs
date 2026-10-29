@@ -19,10 +19,13 @@ namespace TinyCity.Simulation.Economy
 
         private readonly TownWorld world;
         private readonly List<BusinessState> businesses;
+        private readonly IReadOnlyList<Resident> residents;
 
-        public TownEconomy(TownWorld world)
+        /// <param name="residents">The town's people, to see who is at work; without them businesses keep to the clock alone.</param>
+        public TownEconomy(TownWorld world, IReadOnlyList<Resident> residents = null)
         {
             this.world = world ?? throw new ArgumentNullException(nameof(world));
+            this.residents = residents;
             businesses = world.Businesses.Select(b => new BusinessState(b)).ToList();
         }
 
@@ -33,6 +36,42 @@ namespace TinyCity.Simulation.Economy
         public BusinessState GetBusiness(string businessId) => businesses.FirstOrDefault(b => b.Business.Id == businessId);
 
         public BusinessState BusinessAt(Location location) => businesses.FirstOrDefault(b => b.Business.MapId == location.MapId);
+
+        /// <summary>
+        /// A business opens only within its hours and while one of its staff (a resident whose job is on the business's
+        /// map) is there, alive, during their shift. Nobody at work, or only staff who have died, means closed; a
+        /// business nobody in town works at keeps to the clock alone.
+        /// </summary>
+        public bool IsOpen(Business business, GameTime time) => business.IsOpen(time) && IsStaffed(business, time);
+
+        /// <summary>Whether one of the business's staff is in, on shift, now.</summary>
+        public bool IsStaffed(Business business, GameTime time)
+        {
+            if (residents == null)
+            {
+                return true;
+            }
+
+            var hasStaff = false;
+            foreach (var r in residents)
+            {
+                if (!WorksAt(r, business))
+                {
+                    continue;
+                }
+
+                hasStaff = true;
+                if (r.IsAlive && r.Location.MapId == business.MapId && ActivityPlanner.IsWorkTime(r, time))
+                {
+                    return true;
+                }
+            }
+
+            return !hasStaff;
+        }
+
+        private bool WorksAt(Resident r, Business business) =>
+            r.Job != null && world.TryGetObject(r.Job.WorkObjectId, out var workplace) && workplace.Location.MapId == business.MapId;
 
         /// <summary>
         /// Whether the resident can do this activity at this object now, as far as money and food go: groceries for
@@ -58,7 +97,7 @@ namespace TinyCity.Simulation.Economy
             }
 
             var shop = obj == null ? null : BusinessAt(obj.Location);
-            if (shop != null && !shop.Business.IsOpen(time))
+            if (shop != null && !IsOpen(shop.Business, time))
             {
                 reason = $"the {shop.Business.Name.ToLowerInvariant()} was closed";
                 return false;

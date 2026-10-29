@@ -21,10 +21,28 @@ namespace TinyCity.Simulation.World
 
         private readonly TownWorld world;
         private readonly Dictionary<Location, int[]> distanceFields = new Dictionary<Location, int[]>();
+        private readonly Dictionary<Location, int[]> doorCosts = new Dictionary<Location, int[]>();
+        private readonly Dictionary<string, List<int>> portalsFrom = new Dictionary<string, List<int>>();
+        private readonly Dictionary<string, List<int>> portalsInto = new Dictionary<string, List<int>>();
 
         public Pathfinder(TownWorld world)
         {
             this.world = world;
+            for (var i = 0; i < world.Portals.Count; i++)
+            {
+                Add(portalsFrom, world.Portals[i].From.MapId, i);
+                Add(portalsInto, world.Portals[i].To.MapId, i);
+            }
+        }
+
+        private static void Add(Dictionary<string, List<int>> byMap, string mapId, int portal)
+        {
+            if (!byMap.TryGetValue(mapId, out var list))
+            {
+                byMap[mapId] = list = new List<int>();
+            }
+
+            list.Add(portal);
         }
 
         /// <summary>Total walking steps from one location to another, including door transitions, or <see cref="Unreachable"/>.</summary>
@@ -77,21 +95,54 @@ namespace TinyCity.Simulation.World
                 best = SameMapDistance(from, to);
             }
 
-            // Dijkstra over doors. Maps are few and small, so a simple O(n^2) search is enough.
+            // Through a door on this map: walk to it, then the cached cost from that door to the target.
+            if (portalsFrom.TryGetValue(from.MapId, out var doors))
+            {
+                var viaDoor = DoorCosts(to);
+                var portals = world.Portals;
+                foreach (var i in doors)
+                {
+                    if (viaDoor[i] == Unreachable)
+                    {
+                        continue;
+                    }
+
+                    var d = SameMapDistance(from, portals[i].From);
+                    if (d != Unreachable && (best == Unreachable || d + viaDoor[i] < best))
+                    {
+                        best = d + viaDoor[i];
+                        firstPortal = portals[i];
+                    }
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// For each door, the steps from standing on it to <paramref name="target"/>, going through it (one step) and
+        /// on through any further doors, or <see cref="Unreachable"/>. Dijkstra backwards from the target over the
+        /// doors, cached per target like the distance fields, so a route costs only the doors on the walker's map.
+        /// </summary>
+        private int[] DoorCosts(Location target)
+        {
+            if (doorCosts.TryGetValue(target, out var cached))
+            {
+                return cached;
+            }
+
             var portals = world.Portals;
-            var arrival = new int[portals.Count];
-            var firstHop = new Portal[portals.Count];
+            var cost = new int[portals.Count];
             var done = new bool[portals.Count];
             for (var i = 0; i < portals.Count; i++)
             {
-                arrival[i] = Unreachable;
-                if (portals[i].From.MapId == from.MapId)
+                cost[i] = Unreachable;
+                if (portals[i].To.MapId == target.MapId)
                 {
-                    var d = SameMapDistance(from, portals[i].From);
+                    var d = SameMapDistance(portals[i].To, target);
                     if (d != Unreachable)
                     {
-                        arrival[i] = d + 1;
-                        firstHop[i] = portals[i];
+                        cost[i] = d + 1;
                     }
                 }
             }
@@ -101,7 +152,7 @@ namespace TinyCity.Simulation.World
                 var current = -1;
                 for (var i = 0; i < portals.Count; i++)
                 {
-                    if (!done[i] && arrival[i] != Unreachable && (current < 0 || arrival[i] < arrival[current]))
+                    if (!done[i] && cost[i] != Unreachable && (current < 0 || cost[i] < cost[current]))
                     {
                         current = i;
                     }
@@ -113,40 +164,36 @@ namespace TinyCity.Simulation.World
                 }
 
                 done[current] = true;
-                var landing = portals[current].To;
-                if (landing.MapId == to.MapId)
+
+                // Doors that land on the map this one leaves from can reach the target through it.
+                if (!portalsInto.TryGetValue(portals[current].From.MapId, out var feeding))
                 {
-                    var d = SameMapDistance(landing, to);
-                    if (d != Unreachable && (best == Unreachable || arrival[current] + d < best))
-                    {
-                        best = arrival[current] + d;
-                        firstPortal = firstHop[current];
-                    }
+                    continue;
                 }
 
-                for (var i = 0; i < portals.Count; i++)
+                foreach (var i in feeding)
                 {
-                    if (done[i] || portals[i].From.MapId != landing.MapId)
+                    if (done[i])
                     {
                         continue;
                     }
 
-                    var d = SameMapDistance(landing, portals[i].From);
+                    var d = SameMapDistance(portals[i].To, portals[current].From);
                     if (d == Unreachable)
                     {
                         continue;
                     }
 
-                    var candidate = arrival[current] + d + 1;
-                    if (arrival[i] == Unreachable || candidate < arrival[i])
+                    var candidate = cost[current] + d + 1;
+                    if (cost[i] == Unreachable || candidate < cost[i])
                     {
-                        arrival[i] = candidate;
-                        firstHop[i] = firstHop[current];
+                        cost[i] = candidate;
                     }
                 }
             }
 
-            return best;
+            doorCosts[target] = cost;
+            return cost;
         }
 
         private int SameMapDistance(Location from, Location to)

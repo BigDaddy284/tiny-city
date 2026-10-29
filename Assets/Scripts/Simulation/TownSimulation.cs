@@ -75,7 +75,7 @@ namespace TinyCity.Simulation
 
             Time = time;
             Pathfinder = new Pathfinder(world);
-            Economy = new TownEconomy(world);
+            Economy = new TownEconomy(world, this.residents);
             Planner = new ActivityPlanner(world, Pathfinder, this.residents, Economy, () => Time);
         }
 

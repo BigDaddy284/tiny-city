@@ -200,3 +200,10 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 1. **Techwear:** every resident wears dark techwear with neon piping on the collar, down the front, at the cuffs, on the belt or skirt hem and on their trainer toes. From behind, a neon stripe crosses the shoulders.
 2. **Touches:** Nell and Felix wear glowing visors (cyan and violet); Mabel, Rosa, Priya, Ivy and Felix have neon hair tips; Arthur, Samuel (white lab coat) and Edith wear long coats that hang to the knees; Tom wears a white chef's jacket.
 3. **Readable:** everyone is easy to tell apart on the dark streets by day and at night, sitting and walking.
+
+## Shop staff, the expanded people view and hiding the side panel
+
+1. **Shops need staff:** on a weekday morning, watch Rosa walk to the general store. Before she arrives, inspecting someone in the store shows "closed, nobody at work", and nobody can buy groceries. Once she is in, it says "open". The same goes for the café (Tom and Priya), the bakery (Ivy) and the clinic (Samuel).
+2. **Off sick:** when a shopkeeper is too ill to work and stays home, their shop stays shut for the day. If the only person who worked there dies, it stays shut for good.
+3. **Expand:** open People ▼ and click Expand at the end of the Everyone / Living / Died row. The side panel shows the speed and panel controls, the filter and order buttons, and everyone's names in a two-column grid, A–Z by first name. Click a name to pick that person; the grid stays open. Click Back to return to the normal view.
+4. **Hide the side panel:** click "Hide ▶" beside Settings, or press H. The city fills the whole window, and a "◀ Panel" button sits in the top-right corner. Click it, or press H again, to bring the panel back. The choice is remembered the next time you start the game.

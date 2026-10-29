@@ -28,6 +28,34 @@ namespace TinyCity.Tests.PlayMode
             game?.SetPanelCount(1);
         }
 
+        [UnityTest]
+        public IEnumerator HidingTheSidePanel_LetsTheCityFillTheWindow()
+        {
+            var wasHidden = game.SidebarHidden;
+            if (wasHidden)
+            {
+                game.ToggleSidebar();
+            }
+
+            yield return null;
+            var withPanel = game.Panels.All[0].ScreenRect.width;
+            Assert.That(withPanel, Is.LessThan(Screen.width - 300f), "the side panel takes its share");
+
+            game.ToggleSidebar();
+            yield return null;
+            Assert.That(game.SidebarHidden, Is.True);
+            Assert.That(game.Panels.All[0].ScreenRect.width, Is.GreaterThan(withPanel + 300f), "the camera takes the whole width");
+            Assert.That(PlayerPrefs.GetInt("TinyCity.SidebarHidden", 0), Is.EqualTo(1), "remembered for next time");
+
+            game.ToggleSidebar();
+            yield return null;
+            Assert.That(game.Panels.All[0].ScreenRect.width, Is.EqualTo(withPanel).Within(1f));
+            if (wasHidden)
+            {
+                game.ToggleSidebar();
+            }
+        }
+
         [Test]
         public void Layout_FitsEveryPanelInTheArea_WithoutOverlap()
         {

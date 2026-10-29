@@ -148,6 +148,36 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void AFastModel_GivesUpOnALostReplySooner_ButNeverPastTheSetting()
+        {
+            var slowQueue = new AiRequestQueue(transport, "http://ollama/api/chat", timeoutSeconds: 60, maxAttempts: 1, maxPending: 8);
+            Assert.That(slowQueue.CurrentTimeoutSeconds, Is.EqualTo(60), "until the model has answered a few times, the setting applies");
+
+            var now = 0.0;
+            for (var i = 0; i < AiRequestQueue.AdaptiveTimeoutAfterCalls; i++)
+            {
+                slowQueue.Enqueue(Request($"quick-{i}", residentId: $"res-{i}"), now);
+                slowQueue.Update(now);
+                now += 0.4;
+                transport.Calls.Last().Succeed("{}");
+                slowQueue.Update(now);
+            }
+
+            Assert.That(slowQueue.CurrentTimeoutSeconds, Is.EqualTo(AiRequestQueue.MinAdaptiveTimeoutSeconds), "0.4 s answers: 6 × 0.4 is under the 10 s floor");
+
+            slowQueue.Enqueue(Request("lost"), now);
+            slowQueue.Update(now);
+            slowQueue.Update(now + 9);
+            Assert.That(slowQueue.Active, Is.Not.Null, "still waiting at 9 s");
+            slowQueue.Update(now + 10.5);
+            Assert.That(slowQueue.Active, Is.Null, "a lost reply holds the queue for 10 s, not the 60 s setting");
+            Assert.That(gaveUp.Single(), Does.Contain("no answer within 10 seconds"));
+
+            var cautious = new AiRequestQueue(transport, "http://ollama/api/chat", timeoutSeconds: 5, maxAttempts: 1);
+            Assert.That(cautious.CurrentTimeoutSeconds, Is.EqualTo(5));
+        }
+
+        [Test]
         public void InvalidReply_IsRetried_ThenGivenUp()
         {
             var attempts = 0;
