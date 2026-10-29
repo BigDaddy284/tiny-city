@@ -145,6 +145,7 @@ namespace TinyCity.Simulation
             }
 
             r.ResetActivity();
+            r.ClearPlan();
             r.IsAlive = false;
             r.DiedAt = Time;
             r.CauseOfDeath = cause;

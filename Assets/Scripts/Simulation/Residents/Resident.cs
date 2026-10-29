@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TinyCity.Simulation.Activities;
 using TinyCity.Simulation.Time;
 using TinyCity.Simulation.World;
 
@@ -53,6 +54,7 @@ namespace TinyCity.Simulation.Residents
         public const int MaxLogEntries = 40;
 
         private readonly List<ActivityLogEntry> log = new List<ActivityLogEntry>();
+        private readonly List<PlanStep> plannedSteps = new List<PlanStep>();
 
         public Resident(
             string id,
@@ -205,6 +207,18 @@ namespace TinyCity.Simulation.Residents
         /// <summary>While deciding, the game minute at which the built-in routine takes over.</summary>
         public long DecisionDeadline { get; internal set; }
 
+        /// <summary>
+        /// The rest of the resident's AI plan for free time, in order. It lives only while the game runs: like an
+        /// unanswered decision it is not saved, so after loading the resident simply asks again.
+        /// </summary>
+        public IReadOnlyList<PlanStep> PlannedSteps => plannedSteps;
+
+        /// <summary>The game minute after which the rest of the plan is dropped.</summary>
+        public long PlanExpires { get; internal set; }
+
+        /// <summary>How many planned steps the resident has carried out since the game started (for diagnostics, not saved).</summary>
+        public int PlanStepsTaken { get; internal set; }
+
         /// <summary>The last day the resident reflected on, so each day gets at most one reflection.</summary>
         public int LastReflectionDay { get; internal set; }
 
@@ -218,6 +232,22 @@ namespace TinyCity.Simulation.Residents
                 log.RemoveRange(0, log.Count - MaxLogEntries);
             }
         }
+
+        internal void SetPlan(IEnumerable<PlanStep> steps, long expires)
+        {
+            plannedSteps.Clear();
+            plannedSteps.AddRange(steps);
+            PlanExpires = expires;
+        }
+
+        internal PlanStep TakePlannedStep()
+        {
+            var step = plannedSteps[0];
+            plannedSteps.RemoveAt(0);
+            return step;
+        }
+
+        internal void ClearPlan() => plannedSteps.Clear();
 
         internal void ResetActivity()
         {

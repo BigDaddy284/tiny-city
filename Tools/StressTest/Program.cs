@@ -254,6 +254,12 @@ namespace TinyCity.Tools.StressTest
 
             public int Calls { get; private set; }
 
+            /// <summary>
+            /// A decision answer that plans two more steps is about 40 tokens longer, so it is taken to need this much
+            /// more time. An assumption to check against a real model.
+            /// </summary>
+            public const double PlanReplyExtra = 0.25;
+
             /// <summary>Slot-seconds spent working on requests, finished or not, divided by the number of slots.</summary>
             public double BusySeconds { get; private set; }
 
@@ -282,6 +288,7 @@ namespace TinyCity.Tools.StressTest
                 number++;
                 Calls++;
                 string content;
+                var extra = 1.0;
                 if (number % 30 == 5)
                 {
                     content = "Hmm, let me think about that.";
@@ -297,10 +304,11 @@ namespace TinyCity.Tools.StressTest
                 else
                 {
                     content = PickFreeTimeOption(call.Body);
+                    extra += PlanReplyExtra;
                 }
 
                 var spread = profile.MaxSeconds - profile.MinSeconds;
-                var latency = profile.MinSeconds + spread * (((number * 7919) % 101) / 100.0);
+                var latency = (profile.MinSeconds + spread * (((number * 7919) % 101) / 100.0)) * extra;
                 waiting.Enqueue(new Job { Call = call, Arrived = Now, Seconds = latency, Reply = FakeAiTransport.ChatReply(content), Lost = number % 50 == 17 });
                 return null;
             }
@@ -314,8 +322,10 @@ namespace TinyCity.Tools.StressTest
                     return "{\"action\":\"relax\",\"target_id\":\"none\",\"reason\":\"Resting\",\"say\":\"Ahh.\"}";
                 }
 
+                string Step(Match m) => "{\"action\":\"" + m.Groups[1].Value + "\",\"target_id\":\"" + m.Groups[2].Value + "\"}";
                 var pick = options[number % options.Count];
-                return "{\"action\":\"" + pick.Groups[1].Value + "\",\"target_id\":\"" + pick.Groups[2].Value + "\",\"reason\":\"Feels right\",\"say\":\"Right then.\"}";
+                var then = Step(options[(number + 3) % options.Count]) + "," + Step(options[(number + 7) % options.Count]);
+                return "{\"action\":\"" + pick.Groups[1].Value + "\",\"target_id\":\"" + pick.Groups[2].Value + "\",\"reason\":\"Feels right\",\"say\":\"Right then.\",\"then\":[" + then + "]}";
             }
 
             /// <summary>Works through the requests up to <see cref="Now"/>.</summary>
@@ -381,6 +391,9 @@ namespace TinyCity.Tools.StressTest
         {
             public int Decisions;
             public int AiDecisions;
+
+            /// <summary>Of <see cref="AiDecisions"/>, the ones that were later steps of an AI plan, with no request of their own.</summary>
+            public int PlanSteps;
             public int WaitingMinutes;
             public int WorstWait;
 
@@ -430,7 +443,7 @@ namespace TinyCity.Tools.StressTest
                 : $"decisions wait up to {OllamaSettings.DefaultDecisionWaitMinutes} game minutes";
             Line($"The stand-in Ollama takes {profile.Description}, and {parallel}. One reply in 30 is not JSON and one in 50 never arrives (it times out). Frames run at 60 a second as in the game, with ticks, autosaves and AI updates where the game does them. Settings: {wait}, requests time out after {OllamaSettings.DefaultTimeoutSeconds} s, {OllamaSettings.DefaultMaxRetries} retry. {days} game days at each speed.");
             Line();
-            Line("| Speed | Real time | Free-time choices | Chosen by AI | AI lines in chats | Avg / longest queue | Avg reply (s) | Timed out | Not JSON | Stale | Dropped | Longest wait (game min) | AI share of each resident's choices (lowest / highest) | Model busy | Slowest frame (ms) |");
+            Line("| Speed | Real time | Free-time choices | Chosen by AI (of which later plan steps) | AI lines in chats | Avg / longest queue | Avg reply (s) | Timed out | Not JSON | Stale | Dropped | Longest wait (game min) | AI share of each resident's choices (lowest / highest) | Model busy | Slowest frame (ms) |");
             Line("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
 
             var ok = true;
@@ -440,7 +453,7 @@ namespace TinyCity.Tools.StressTest
                 var share = result.Decisions == 0 ? 0 : 100.0 * result.AiDecisions / result.Decisions;
                 var lineShare = result.Lines == 0 ? 0 : 100.0 * result.AiLines / result.Lines;
                 var s = result.Stats;
-                Line($"| {speed}x | {Hours(result.RealSeconds)} | {result.Decisions} | {share:0}% | {lineShare:0}% | {result.QueueSum / Math.Max(1, result.QueueSamples):0.0} / {result.LongestQueue} | {s.AverageLatencySeconds:0.0} | {s.TimedOut} | {s.InvalidReplies} | {s.Stale} | {s.Dropped} | {result.WorstWait} | {result.ShareRange().low:0}% / {result.ShareRange().high:0}% | {100 * result.BusySeconds / result.RealSeconds:0}% | {result.WorstFrameMs:0.0} |");
+                Line($"| {speed}x | {Hours(result.RealSeconds)} | {result.Decisions} | {share:0}% ({(result.Decisions == 0 ? 0 : 100.0 * result.PlanSteps / result.Decisions):0}%) | {lineShare:0}% | {result.QueueSum / Math.Max(1, result.QueueSamples):0.0} / {result.LongestQueue} | {s.AverageLatencySeconds:0.0} | {s.TimedOut} | {s.InvalidReplies} | {s.Stale} | {s.Dropped} | {result.WorstWait} | {result.ShareRange().low:0}% / {result.ShareRange().high:0}% | {100 * result.BusySeconds / result.RealSeconds:0}% | {result.WorstFrameMs:0.0} |");
                 if (!result.Connected)
                 {
                     Line($"**At {speed}x the AI went offline.**");
@@ -476,6 +489,7 @@ namespace TinyCity.Tools.StressTest
             var result = new LoopResult { WaitLimit = ai.DecisionWaitMinutesAt(speed) };
             var deciding = new Dictionary<string, int>();
             var waiting = new HashSet<string>();
+            var planSteps = new Dictionary<string, int>();
             var seenLines = new HashSet<string>();
             var accumulator = 0.0;
             var lastAutosave = sim.Time.TotalMinutes;
@@ -510,6 +524,18 @@ namespace TinyCity.Tools.StressTest
 
                     foreach (var r in sim.Residents)
                     {
+                        var stepsBefore = planSteps.TryGetValue(r.Id, out var p) ? p : 0;
+                        if (r.PlanStepsTaken > stepsBefore)
+                        {
+                            var taken = r.PlanStepsTaken - stepsBefore;
+                            planSteps[r.Id] = r.PlanStepsTaken;
+                            result.PlanSteps += taken;
+                            result.Decisions += taken;
+                            result.AiDecisions += taken;
+                            result.DecisionsPerResident[r.Id] = (result.DecisionsPerResident.TryGetValue(r.Id, out var dp) ? dp : 0) + taken;
+                            result.AiPerResident[r.Id] = (result.AiPerResident.TryGetValue(r.Id, out var ap) ? ap : 0) + taken;
+                        }
+
                         if (r.State == ResidentState.Deciding)
                         {
                             waiting.Add(r.Id);

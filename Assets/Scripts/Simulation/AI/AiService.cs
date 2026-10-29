@@ -546,11 +546,11 @@ namespace TinyCity.Simulation.AI
                         return AiReplyCheck.Invalid(error);
                     }
 
-                    var outcome = sim.ApplyDecision(r.Id, decisionId, reply.Action, reply.TargetId, reply.Reason, reply.Say);
+                    var outcome = sim.ApplyDecision(r.Id, decisionId, reply.Action, reply.TargetId, reply.Reason, reply.Say, reply.Then);
                     switch (outcome)
                     {
                         case DecisionOutcome.Applied:
-                            AddEvent($"{r.FirstName} chose '{reply.Action}' ({Queue.Stats.LastLatencySeconds:0.0}s)");
+                            AddEvent($"{r.FirstName} chose '{reply.Action}'{(r.PlannedSteps.Count > 0 ? $" then {string.Join(", ", r.PlannedSteps.Select(s => s.ActionId))}" : string.Empty)} ({Queue.Stats.LastLatencySeconds:0.0}s)");
                             return AiReplyCheck.Accepted();
                         case DecisionOutcome.Stale:
                         case DecisionOutcome.NotAlive:

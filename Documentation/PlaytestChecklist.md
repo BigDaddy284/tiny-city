@@ -32,7 +32,8 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 9. **AI turned off:** set `"enabled": false` in `settings.json` and restart. The AI line says the AI is off, and the game behaves like Phase 1.
 10. **Memories survive saving:** press F5, then F9. "Remembers" and "Last said" are unchanged. Close and reopen the game: they are still there.
 11. **Speed:** at 10x the AI often can't answer within her short wait, so she falls back to her routine more often ("no AI answer in time" in the log). At 1x most free-time decisions should come from the AI.
-12. **Old save:** a Phase 1 save loads without errors, and Mabel gains her two background memories.
+12. **Plans:** after an AI decision the inspector often shows "Planned next" with one or two more activities. When the first one ends, the next starts straight away without "thinking about what to do", and the log line ends with "(AI plan)". If something gets in the way (she is hungry, it's bedtime, the café shut), the plan gives way: hunger comes first, bedtime clears the plan, and a step that no longer fits is skipped.
+13. **Old save:** a Phase 1 save loads without errors, and Mabel gains her two background memories.
 
 ## Phase 3: social simulation
 

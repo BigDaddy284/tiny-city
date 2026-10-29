@@ -294,6 +294,11 @@ namespace TinyCity.Runtime
                     GUILayout.Label("Why: chosen with the AI. In their own words (the AI's explanation, not a game fact):", styles.Small);
                     GUILayout.Label(r.Goal, styles.AiNote);
                 }
+
+                if (r.PlannedSteps.Count > 0)
+                {
+                    GUILayout.Label($"Planned next (checked again when it's time): {string.Join(", then ", r.PlannedSteps.Select(DescribePlanStep))}", styles.Small);
+                }
                 else
                 {
                     GUILayout.Label($"Why (game routine): {r.Goal}", styles.Small);
@@ -585,6 +590,29 @@ namespace TinyCity.Runtime
             }
 
             return string.IsNullOrEmpty(r.IncomeLabel) ? "No job" : $"No job ({r.IncomeLabel.ToLowerInvariant()})";
+        }
+
+        private string DescribePlanStep(PlanStep step)
+        {
+            if (step.ActionId == FreeTimeOption.RelaxActionId)
+            {
+                return "take it easy";
+            }
+
+            if (!ActivityCatalog.TryGet(step.ActionId, out var activity))
+            {
+                return step.ActionId;
+            }
+
+            if (activity == ActivityCatalog.Chat)
+            {
+                var partner = Simulation.GetResident(step.TargetId);
+                return partner == null ? "a chat" : $"a chat with {partner.FirstName}";
+            }
+
+            return Simulation.World.TryGetObject(step.TargetId ?? string.Empty, out var obj)
+                ? $"{activity.Name.ToLowerInvariant()} at the {obj.Name.ToLowerInvariant()}"
+                : activity.Name.ToLowerInvariant();
         }
 
         private string DescribeActivity(Resident r)
