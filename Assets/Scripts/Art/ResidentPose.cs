@@ -167,10 +167,7 @@ namespace TinyCity.Art
                 case ObjectType.Bench when seat == 1: return new Placement(0.68, 0.5, 12, Stance.Sitting, Facing.DownLeft);
                 case ObjectType.CafeTable when seat == 1: return new Placement(0.5, 0.14, 12, Stance.Sitting, Facing.DownLeft, behind: true);
                 case ObjectType.BarTable when seat == 1: return new Placement(0.5, 0.14, 17, Stance.Sitting, Facing.DownLeft, behind: true);
-                case ObjectType.DanceFloor when seat <= 3:
-                    return seat == 1 ? new Placement(0.7, 0.3, 1, Stance.Standing, Facing.DownLeft)
-                        : seat == 2 ? new Placement(0.3, 0.7, 1, Stance.Standing, Facing.UpRight)
-                        : new Placement(0.7, 0.7, 1, Stance.Standing, Facing.UpLeft);
+                case ObjectType.DanceFloor when seat == 1: return new Placement(0.7, 0.7, 1, Stance.Standing, Facing.UpLeft);
                 case ObjectType.ChessTable when seat == 1: return new Placement(0.06, 0.5, 10, Stance.Sitting, Facing.DownRight, behind: true);
                 case ObjectType.FishingSpot when seat == 1: return new Placement(0.7, 0.26, 4, Stance.Standing, Facing.DownRight);
                 case ObjectType.ExerciseSpot when seat == 1: return new Placement(0.28, 0.66, 1, Stance.Standing, Facing.DownRight);

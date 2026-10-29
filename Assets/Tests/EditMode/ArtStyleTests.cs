@@ -129,7 +129,7 @@ namespace TinyCity.Tests.EditMode
             }
 
             Assert.That(trees.Value, Is.EqualTo(16681692374567243500UL), "Trees. " + Locked);
-            Assert.That(furniture.Value, Is.EqualTo(13372078795054272379UL), "Furniture. " + Locked);
+            Assert.That(furniture.Value, Is.EqualTo(2233961772708468399UL), "Furniture. " + Locked);
         }
 
         [Test]

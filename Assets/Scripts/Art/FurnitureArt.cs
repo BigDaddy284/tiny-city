@@ -233,7 +233,7 @@ namespace TinyCity.Art
                     break;
                 case ObjectType.DanceFloor:
                     // Light-up squares in the city's neons, each one picked by the tile and the square.
-                    p.Top(0.04, 0.04, 0.5, 0.92, 0.92, (s, t) =>
+                    p.Top(0, 0, 0.5, 1, 1, (s, t) =>
                     {
                         var square = ((int)(s * 4) * 4) + (int)(t * 4);
                         var edge = (s * 4) - Math.Floor(s * 4) < 0.1 || (t * 4) - Math.Floor(t * 4) < 0.1;

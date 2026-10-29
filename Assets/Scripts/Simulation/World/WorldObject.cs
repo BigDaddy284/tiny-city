@@ -37,7 +37,7 @@ namespace TinyCity.Simulation.World
         /// <summary>A high table at the bar, for two.</summary>
         BarTable,
 
-        /// <summary>The bar's dance floor: open floor that holds a few dancers.</summary>
+        /// <summary>A square of the bar's dance floor: open floor with room for two dancers.</summary>
         DanceFloor,
     }
 
@@ -100,9 +100,9 @@ namespace TinyCity.Simulation.World
                 case ObjectType.Workbench:
                 case ObjectType.CafeTable:
                 case ObjectType.BarTable:
+                case ObjectType.DanceFloor:
                     return 2;
                 case ObjectType.GardenPlot:
-                case ObjectType.DanceFloor:
                     return 4;
                 case ObjectType.ShopShelf:
                 case ObjectType.BakeryDisplay:

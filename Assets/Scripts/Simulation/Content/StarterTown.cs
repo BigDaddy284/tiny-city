@@ -141,14 +141,14 @@ namespace TinyCity.Simulation.Content
             "####D####",
         };
 
-        // c bar counter (work), o high tables, d dance floor, q club corner (gathering spot), t toilet, s sink.
+        // c bar counter (work), o high tables, d and e the 3 x 3 dance floor (d is its first square), q club corner (gathering spot), t toilet, s sink.
         private static readonly string[] BarRows =
         {
             "###########",
             "#...c...#t#",
-            "#o......#.#",
-            "#...d.q...#",
-            "#o......s.#",
+            "#oeee...#.#",
+            "#.eed.q...#",
+            "#oeee...s.#",
             "#####D#####",
         };
 
@@ -305,6 +305,10 @@ namespace TinyCity.Simulation.Content
             });
             objects.Add(new WorldObject("obj-bar-table-1", "High table", ObjectType.BarTable, Find(BarMapId, BarRows, 'o', 0)));
             objects.Add(new WorldObject("obj-bar-table-2", "Corner table", ObjectType.BarTable, Find(BarMapId, BarRows, 'o', 1)));
+            for (var i = 0; i < 8; i++)
+            {
+                objects.Add(new WorldObject($"obj-bar-dance-floor-{i + 2}", "Dance floor", ObjectType.DanceFloor, Find(BarMapId, BarRows, 'e', i)));
+            }
 
             return new TownWorld(TownId, "Tiny City", maps, objects, portals, CreateBusinesses(), new CommunityCalendar(CreateCommunityEvents()));
         }

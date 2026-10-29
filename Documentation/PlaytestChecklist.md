@@ -211,7 +211,7 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 ## Staggered sleep and the neon bar
 
 1. **Bed and wake times:** at night, watch the whole town. People go to bed over about two hours rather than all at once. Younger people stay up later and older people turn in earlier. Mornings stagger the same way. Morning workers are always up in time for their shift.
-2. **The bar:** there is a violet building with a cocktail-glass sign east of the lower cottages, with its door onto the bottom street. Inside are a bar counter, two high tables with stools, a light-up dance floor, a DJ booth, a toilet and a sink.
+2. **The bar:** there is a violet building with a cocktail-glass sign east of the lower cottages, with its door onto the bottom street. Inside are a bar counter, two high tables with stools, a 3 × 3 light-up dance floor, a DJ booth, a toilet and a sink.
 3. **Felix's job:** from Wednesday to Sunday, Felix walks to the bar by 17:30 and works until 23:30. He goes to bed after his shift (about 00:15) and sleeps in. His inspector shows the job "Bar host" and his wages. An older save gives him the job when it is loaded, and his jobseeker's allowance stops.
 4. **Opening hours:** the inspector shows the bar as "closed" on Monday, Tuesday and in the daytime. From 18:00 it is "open" once Felix is in.
 5. **A night out:** on open evenings from 19:00, a few residents go for a drink at the high tables (paid, about £5.50) or to dance on the floor (free, arms up). Friends are sometimes invited along. Nobody heads out within an hour of their bedtime or with less than £30 to spend.
