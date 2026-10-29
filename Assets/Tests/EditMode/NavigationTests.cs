@@ -33,6 +33,80 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void StarterTown_Distances_MatchAPlainSearchOverEveryTileAndDoor()
+        {
+            var world = StarterTown.CreateWorld();
+            var pf = new Pathfinder(world);
+            var places = world.Objects.Select(o => o.Location).Concat(world.Portals.Select(p => p.From)).Distinct().ToList();
+            var checkedPairs = 0;
+            for (var a = 0; a < places.Count; a += 7)
+            {
+                var reference = Search(world, places[a]);
+                for (var b = 0; b < places.Count; b += 3)
+                {
+                    var expected = reference.TryGetValue(places[b], out var d) ? d : Pathfinder.Unreachable;
+                    Assert.That(pf.Distance(places[a], places[b]), Is.EqualTo(expected), $"{places[a]} to {places[b]}");
+                    checkedPairs++;
+                }
+            }
+
+            Assert.That(checkedPairs, Is.GreaterThan(500));
+
+            // Walking it one step at a time takes exactly that many steps.
+            var from = places[0];
+            foreach (var to in places.Where((_, i) => i % 11 == 5))
+            {
+                var expected = pf.Distance(from, to);
+                var at = from;
+                var steps = 0;
+                while (pf.TryGetNextStep(at, to, out var next) && steps <= expected)
+                {
+                    at = next;
+                    steps++;
+                }
+
+                Assert.That(at, Is.EqualTo(expected == Pathfinder.Unreachable ? from : to), $"walking {from} to {to}");
+                Assert.That(steps, Is.EqualTo(expected == Pathfinder.Unreachable ? 0 : expected));
+            }
+        }
+
+        /// <summary>
+        /// Breadth-first over every walkable tile of every map, a door being one step to where it leads. Furniture can
+        /// be started from or arrived at but not walked through, as in the game.
+        /// </summary>
+        private static Dictionary<Location, int> Search(TownWorld world, Location start)
+        {
+            var distance = new Dictionary<Location, int> { [start] = 0 };
+            var queue = new Queue<Location>();
+            queue.Enqueue(start);
+            var doors = world.Portals.ToLookup(p => p.From);
+            var steps = new[] { new GridPos(0, -1), new GridPos(1, 0), new GridPos(0, 1), new GridPos(-1, 0) };
+            while (queue.Count > 0)
+            {
+                var here = queue.Dequeue();
+                if (here != start && world.IsBlocked(here))
+                {
+                    continue;
+                }
+
+                var map = world.GetMap(here.MapId);
+                var next = steps.Select(s => new Location(here.MapId, here.Position.X + s.X, here.Position.Y + s.Y))
+                    .Where(l => map.IsWalkable(l.Position))
+                    .Concat(doors[here].Select(p => p.To));
+                foreach (var n in next)
+                {
+                    if (!distance.ContainsKey(n))
+                    {
+                        distance[n] = distance[here] + 1;
+                        queue.Enqueue(n);
+                    }
+                }
+            }
+
+            return distance;
+        }
+
+        [Test]
         public void Distance_SameMap_GoesAroundWalls()
         {
             var pf = new Pathfinder(TwoRooms());

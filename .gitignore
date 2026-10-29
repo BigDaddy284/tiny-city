@@ -29,6 +29,7 @@
 *.opendb
 *.VC.db
 !/DotNetTests/*.csproj
+!/Tools/*/*.csproj
 
 # .NET test project output
 /DotNetTests/bin/

@@ -22,6 +22,7 @@ namespace TinyCity.Runtime
     {
         /// <summary>Remembers which town was being played, so the game reopens it next time.</summary>
         private const string SlotPrefsKey = "TinyCity.Slot";
+        private const string SidebarPrefsKey = "TinyCity.SidebarHidden";
 
         /// <summary>Game minutes per real second. At 1x one in-game day lasts 24 real minutes.</summary>
         public static readonly int[] Speeds = { 0, 1, 2, 4, 10 };
@@ -63,6 +64,9 @@ namespace TinyCity.Runtime
         public bool SavesOpen => saves != null && saves.IsOpen;
 
         public bool SettingsOpen => settingsWindow != null && settingsWindow.IsOpen;
+
+        /// <summary>Whether the side panel is put away so the city fills the window (H, or the button in its top row).</summary>
+        public bool SidebarHidden { get; private set; }
 
         /// <summary>The player's choices from the Settings window: AI, volumes, screen and theme.</summary>
         public PlayerPreferences Preferences { get; private set; } = new PlayerPreferences();
@@ -122,6 +126,7 @@ namespace TinyCity.Runtime
             ScreenSettings.Apply(Preferences);
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyCity] AI: {message}") };
 
+            SidebarHidden = PlayerPrefs.GetInt(SidebarPrefsKey, 0) == 1;
             SlotNames = SaveStore.ReadIndex();
             var remembered = PlayerPrefs.GetString(SlotPrefsKey, SaveSlotIndex.DefaultSlot);
             CurrentSlot = SaveSlotIndex.IsValidSlotId(remembered) ? remembered : SaveSlotIndex.DefaultSlot;
@@ -489,7 +494,23 @@ namespace TinyCity.Runtime
         }
 
         /// <summary>The part of the window left of the inspector, in GUI coordinates (origin top left).</summary>
-        private static Rect CameraArea() => new Rect(0f, 0f, Mathf.Max(1f, Screen.width - Inspector.Width), Screen.height);
+        private Rect CameraArea() => new Rect(0f, 0f, Mathf.Max(1f, Screen.width - (SidebarHidden ? 0f : Inspector.Width)), Screen.height);
+
+        public void ToggleSidebar()
+        {
+            SidebarHidden = !SidebarHidden;
+            PlayerPrefs.SetInt(SidebarPrefsKey, SidebarHidden ? 1 : 0);
+            PlayerPrefs.Save();
+        }
+
+        /// <summary>While the side panel is hidden, a small button in the top-right corner brings it back.</summary>
+        private void DrawShowSidebarButton()
+        {
+            if (GUI.Button(new Rect(Screen.width - 96f, 8f, 88f, 28f), "◀ Panel"))
+            {
+                ToggleSidebar();
+            }
+        }
 
         public void SetSpeed(int index)
         {
@@ -630,7 +651,15 @@ namespace TinyCity.Runtime
             saves.Draw(CameraArea(), styles);
             settingsWindow.Draw(CameraArea(), styles);
             Notifications.Draw(CameraArea(), styles, GoTo);
-            inspector.Draw(styles);
+            if (SidebarHidden)
+            {
+                DrawShowSidebarButton();
+            }
+            else
+            {
+                inspector.Draw(styles);
+            }
+
             var overMenu = placeMenuPanel >= 0 && placeMenuArea.Contains(e.mousePosition);
             if ((e.isMouse || e.type == EventType.ScrollWheel) && !OverWindow(e.mousePosition) && !overMenu)
             {
@@ -816,6 +845,9 @@ namespace TinyCity.Runtime
                 case KeyCode.Minus:
                 case KeyCode.KeypadMinus:
                     SetPanelCount(Panels.Count - 1);
+                    break;
+                case KeyCode.H:
+                    ToggleSidebar();
                     break;
                 case KeyCode.J:
                     ToggleJournal();

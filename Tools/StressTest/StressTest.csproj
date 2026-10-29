@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Runs the whole town for a long time, at every game speed, against a slow and unreliable stand-in for Ollama,
+    and writes what it measured as a Markdown report. Nothing here runs in Unity or CI.
+    Run: dotnet run -c Release (in Tools/StressTest), optionally with the report path and the number of days.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Assets/Scripts/Simulation/**/*.cs" />
+    <Compile Include="../../Assets/Tests/EditMode/FakeAiTransport.cs" />
+    <Compile Include="*.cs" />
+  </ItemGroup>
+
+</Project>

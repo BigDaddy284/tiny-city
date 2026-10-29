@@ -22,6 +22,30 @@ namespace TinyCity.Tests.EditMode
         private static GameTime SaturdayMorning => GameTime.FromDayAndTime(6, 10, 0);
 
         [Test]
+        public void Shops_OpenOnlyWhileTheirStaffAreIn()
+        {
+            var counter = TestTown.Object(StarterTown.CreateNewGame(), "obj-store-counter");
+            var store = StarterTown.CreateWorld().Businesses.Single(b => b.Id == StarterTown.StoreId);
+
+            var athome = TestTown.WithResidents(SaturdayMorning);
+            Assert.That(store.IsOpen(athome.Time), Is.True, "within opening hours");
+            Assert.That(athome.Economy.IsOpen(store, athome.Time), Is.False, "but Rosa is still at home");
+            Assert.That(athome.Economy.CanAfford(Mabel(athome), ActivityCatalog.BuyGroceries, TestTown.Object(athome, "obj-store-shelves"), athome.Time, out var reason), Is.False);
+            Assert.That(reason, Does.Contain("closed"));
+
+            var atWork = TestTown.WithResidents(SaturdayMorning, r => r.Id == StarterTown.RosaId ? counter.Location : (Location?)null);
+            Assert.That(atWork.Economy.IsOpen(store, atWork.Time), Is.True, "Rosa is behind the counter");
+            Assert.That(atWork.Economy.IsOpen(store, GameTime.FromDayAndTime(6, 18, 0)), Is.False, "she's there, but it's after closing time");
+            Assert.That(atWork.Economy.IsOpen(store, GameTime.FromDayAndTime(7, 10, 0)), Is.False, "she doesn't work Sundays");
+
+            atWork.Die(atWork.GetResident(StarterTown.RosaId), "test");
+            Assert.That(atWork.Economy.IsOpen(store, atWork.Time), Is.False, "with nobody left to run it, the store stays shut");
+
+            var noStaff = TestTown.WithResident(SaturdayMorning);
+            Assert.That(noStaff.Economy.IsOpen(store, noStaff.Time), Is.True, "a town with nobody employed there keeps to the clock");
+        }
+
+        [Test]
         public void Money_IsFormattedInPounds()
         {
             Assert.That(Money.Format(1250), Is.EqualTo("£12.50"));
