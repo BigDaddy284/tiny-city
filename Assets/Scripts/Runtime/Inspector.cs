@@ -188,12 +188,14 @@ namespace TinyCity.Runtime
         }
 
         /// <summary>
-        /// A button that opens a list of everyone (filtered and sorted), and a box to find someone by name, whose
-        /// matches appear underneath as you type. Picking someone shows them here and in the active panel.
+        /// How many people live in the city (in a box like the panel count), a button that opens a list of everyone
+        /// (filtered and sorted), and a box to find someone by name, whose matches appear underneath as you type.
+        /// Picking someone shows them here and in the active panel.
         /// </summary>
         private void DrawPeopleFinder(Resident r)
         {
             GUILayout.BeginHorizontal();
+            GUILayout.Box(Simulation.LivingCount.ToString(), CountStyle(), GUILayout.Width(28f));
             peopleOpen = GUILayout.Toggle(peopleOpen, peopleOpen ? "People ▲" : "People ▼", GUI.skin.button, GUILayout.Width(110f));
             GUI.SetNextControlName(SearchControl);
             search = GUILayout.TextField(search ?? string.Empty, 40);
