@@ -79,6 +79,11 @@ namespace TinyCity.Runtime
             tab = GUILayout.Toolbar(tab, TabNames);
             scroll = GUILayout.BeginScrollView(scroll);
             GUILayout.Label($"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", styles.Title);
+            if (r.IsNewcomer)
+            {
+                GUILayout.Label($"Moved to the city on day {r.MovedInDay}", styles.Text);
+            }
+
             switch (tab)
             {
                 case 1:

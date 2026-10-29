@@ -12,6 +12,7 @@
     },
     "simulation": {
         "romance": true,
-        "communityEvents": true
+        "communityEvents": true,
+        "newcomers": true
     }
 }

@@ -172,6 +172,11 @@ namespace TinyCity.Simulation.Residents
 
         public const int MaxHobbies = 4;
 
+        /// <summary>The day they moved to the city from out of town, or 0 for someone who has always lived here.</summary>
+        public int MovedInDay { get; internal set; }
+
+        public bool IsNewcomer => MovedInDay > 0;
+
         /// <summary>Whether they're open to romance at all. Some residents simply aren't looking.</summary>
         public bool OpenToRomance { get; internal set; } = true;
 

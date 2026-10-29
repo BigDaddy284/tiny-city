@@ -232,3 +232,12 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 4. **Venues:** the cue club (eight-ball sign), Strike Lanes (skittle), the Pixel Arcade (space invader) and the Pulse Gym (dumbbell) sit right of the old shops. In the daytime and evening, residents with money to spare head out to play pool or snooker, bowl, play the arcade games or work out, and pay for it. They're shut at night.
 5. **Market and park:** the market square has five striped stalls that residents browse, and a "Saturday market" event on Saturday mornings in the journal. The park below has a fountain residents sit round, plus more benches.
 6. **Older saves:** load a town saved before this build. Everyone is where they were and carries on, and the new parts of the city are there around them.
+
+## Newcomers
+
+1. **Someone arrives:** start a new town and run it at 10x for a few days. From day 3, about two days a week, someone new appears at 10:00 on the path at the bottom edge of the city, a notification says they moved in, and they walk to an empty cottage or flat.
+2. **Their own life:** select them. The inspector says "Moved to the city on day N" under their name, they have hobbies and a weekly income ("Works remotely" or "Jobseeker's allowance"), and they sleep in their new home at night.
+3. **Journal:** the Town journal lists "… moved to the city, into …" under Life.
+4. **Limits:** however long it runs, no more than ten people ever move in, and nobody arrives once every home is taken or fifty people live in the city.
+5. **Save and load:** save, quit and reload. The newcomers are still there with the same day they moved in.
+6. **Settings:** set `"newcomers": false` in `settings.json` and restart: nobody new arrives.

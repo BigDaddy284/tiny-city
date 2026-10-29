@@ -51,6 +51,7 @@ The same file has a `simulation` section for optional parts of the game, which w
 | --- | --- | --- |
 | `romance` | `true` | `false` stops new romances and changes in feelings. Couples already together stay together. |
 | `communityEvents` | `true` | `false` cancels the get-togethers, quiz nights and the village fête. |
+| `newcomers` | `true` | `false` stops people moving to the city from out of town (at most 10 ever, never past 50 residents). |
 
 Invalid values are reported in `Player.log`, and the game uses the defaults instead.
 

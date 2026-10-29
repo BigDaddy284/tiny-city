@@ -22,6 +22,9 @@ namespace TinyCity.Simulation.History
         Recovered,
         Met,
         Friends,
+
+        // Added with newcomers (save version 7).
+        MovedIn,
     }
 
     /// <summary>Something that happened in the village and belongs to its history, separate from any one resident's memories.</summary>
