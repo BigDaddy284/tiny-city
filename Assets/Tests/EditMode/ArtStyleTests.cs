@@ -32,8 +32,8 @@ namespace TinyCity.Tests.EditMode
                 hash.Add(colour);
             }
 
-            Assert.That(entries.Count, Is.EqualTo(251), Locked);
-            Assert.That(hash.Value, Is.EqualTo(13564815567059430809UL), Locked);
+            Assert.That(entries.Count, Is.EqualTo(271), Locked);
+            Assert.That(hash.Value, Is.EqualTo(11191823668855753653UL), Locked);
         }
 
         [Test]
@@ -148,7 +148,7 @@ namespace TinyCity.Tests.EditMode
                 hash.Add(MoodArt.Icon(mood));
             }
 
-            Assert.That(hash.Value, Is.EqualTo(2378288113772359027UL), "Residents. " + Locked);
+            Assert.That(hash.Value, Is.EqualTo(8545702447285596364UL), "Residents. " + Locked);
         }
 
         [Test]

@@ -155,8 +155,33 @@ namespace TinyCity.Art
         public static readonly Rgba Corduroy = Rgba.Hex("#7a5a3e");
         public static readonly Rgba Khaki = Rgba.Hex("#a8946a");
 
+        // Techwear: dark jackets, coats and trousers that the neon trim stands out against.
+        public static readonly Rgba TechCharcoal = Rgba.Hex("#2c2e48");
+        public static readonly Rgba TechNavy = Rgba.Hex("#283a70");
+        public static readonly Rgba TechPlum = Rgba.Hex("#4e2860");
+        public static readonly Rgba TechOlive = Rgba.Hex("#2f5048");
+        public static readonly Rgba TechViolet = Rgba.Hex("#45348a");
+        public static readonly Rgba TechWine = Rgba.Hex("#62223f");
+        public static readonly Rgba TechPants = Rgba.Hex("#1f2136");
+        public static readonly Rgba CargoGrey = Rgba.Hex("#41455c");
+        public static readonly Rgba LabCoat = Rgba.Hex("#e2e8f6");
+
+        // Neon trim on clothes, visors and dyed hair tips.
+        public static readonly Rgba NeonCyan = Rgba.Hex("#35e0ff");
+        public static readonly Rgba NeonPink = Rgba.Hex("#ff4fb0");
+        public static readonly Rgba NeonLime = Rgba.Hex("#a6ff4d");
+        public static readonly Rgba NeonAmber = Rgba.Hex("#ffb52e");
+        public static readonly Rgba NeonViolet = Rgba.Hex("#b45cff");
+        public static readonly Rgba NeonMint = Rgba.Hex("#3dffb4");
+
         /// <summary>Clothes for residents without a look of their own, chosen by their id.</summary>
-        public static readonly Rgba[] Clothes = { Terracotta, Cornflower, Fern, Rose, Marigold, Lavender, Buttercup, Teal, Powder, Pebble };
+        public static readonly Rgba[] Clothes = { TechCharcoal, TechNavy, TechPlum, TechOlive, TechViolet, TechWine };
+
+        /// <summary>Trousers and skirts for residents without a look of their own.</summary>
+        public static readonly Rgba[] Bottoms = { TechPants, CargoGrey, TechCharcoal };
+
+        /// <summary>Neon trims for residents without a look of their own.</summary>
+        public static readonly Rgba[] Neons = { NeonCyan, NeonPink, NeonLime, NeonAmber, NeonViolet, NeonMint };
 
         /// <summary>Hair for residents without a look of their own, chosen by their id (grey and white come with age).</summary>
         public static readonly Rgba[] Hair = { HairBlack, HairDarkBrown, HairBrown, HairAuburn, HairGinger, HairBlonde };
