@@ -70,6 +70,16 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
 - **Shops:** taller blocks with large display windows (goods behind the glass), a neon tube along the shopfront and
   a neon sign flat above the door with a picture: an apple (store), a cup (café), a loaf (bakery), a red cross
   (clinic) or a cocktail glass (the violet neon bar). Each shop has its own neon colour.
+- **Apartment towers:** six floors (three times a home's height, `BuildingArt.TowerHeight`) of navy or charcoal
+  panels with a line between floors and a window for each room on every floor, lit one by one at night. A glass
+  door to each ground-floor flat along the front and up the right side, in cyan or violet neon, and no sign.
+- **Venues:** shop-style blocks with their own neon and sign: an eight ball on olive (the lime cue club), a red-banded
+  skittle on wine (amber Strike Lanes), a lime space invader on plum (the pink Pixel Arcade) and a dumbbell on slate
+  (the mint Pulse Gym). Inside: olive walls and dark boards with teal pool tables and a moss snooker table; wine
+  walls and pale boards with three lanes ending in pins and a ball return; navy walls, a plum checker floor and four
+  cabinets with glowing screens and neon marquees; a slate gym with treadmills.
+- **Outdoors:** striped market stalls laid out with goods, and a stone fountain with water in the season's colour
+  (snow in winter).
 - **Rooms:** doll's-house cutaways. The two back walls are tall and the same height, meeting in a clean inside
   corner, with dark wall panels, a pink neon rail at waist height, a cyan LED skirting, windows showing the lit
   city outside, and pictures. The front walls are low with a cyan top edge, and walls inside the room are half

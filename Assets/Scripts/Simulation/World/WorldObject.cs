@@ -39,6 +39,27 @@ namespace TinyCity.Simulation.World
 
         /// <summary>A square of the bar's dance floor: open floor with room for two dancers.</summary>
         DanceFloor,
+
+        /// <summary>A pool table at the cue club, for a game between two.</summary>
+        PoolTable,
+
+        /// <summary>The cue club's full-size snooker table, for two.</summary>
+        SnookerTable,
+
+        /// <summary>A bowling lane, for two to bowl together.</summary>
+        BowlingLane,
+
+        /// <summary>An arcade cabinet, one player at a time.</summary>
+        ArcadeMachine,
+
+        /// <summary>A treadmill or weights machine at the gym, one at a time.</summary>
+        GymMachine,
+
+        /// <summary>The park fountain, with room round its rim for four to sit.</summary>
+        Fountain,
+
+        /// <summary>A stall on the market square, browsed by two at a time.</summary>
+        MarketStall,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -101,7 +122,13 @@ namespace TinyCity.Simulation.World
                 case ObjectType.CafeTable:
                 case ObjectType.BarTable:
                 case ObjectType.DanceFloor:
+                case ObjectType.PoolTable:
+                case ObjectType.SnookerTable:
+                case ObjectType.BowlingLane:
+                case ObjectType.MarketStall:
                     return 2;
+                case ObjectType.Fountain:
+                    return 4;
                 case ObjectType.GardenPlot:
                     return 4;
                 case ObjectType.ShopShelf:

@@ -283,6 +283,10 @@ namespace TinyCity.Art
                 case PlaceKind.Cafe: return Planks(map, u, v, px, py, Palette.CafeFloor);
                 case PlaceKind.Shop: return Checker(u, v, Palette.ShopFloor[0], Palette.ShopFloor[1]);
                 case PlaceKind.Bar: return Checker(u, v, Palette.Slate, Palette.Iron);
+                case PlaceKind.CueClub: return Planks(map, u, v, px, py, Palette.WoodDark);
+                case PlaceKind.Bowling: return Planks(map, u, v, px, py, Palette.WoodLight);
+                case PlaceKind.Arcade: return Checker(u, v, Palette.Charcoal, Palette.TechPlum);
+                case PlaceKind.Gym: return Checker(u, v, Palette.Slate, Palette.Charcoal);
                 default:
                     return Planks(map, u, v, px, py, Palette.CottageFloors[PlaceStyle.Variant(map.Id) % Palette.CottageFloors.Length]);
             }

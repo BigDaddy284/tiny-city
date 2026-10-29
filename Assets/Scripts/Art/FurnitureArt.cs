@@ -240,6 +240,72 @@ namespace TinyCity.Art
                         return edge ? Palette.Iron : Noise.Value(square, variant, 7) < 0.8 ? Palette.Neons[(int)(Noise.Value(square, variant, 8) * Palette.Neons.Length)] : Palette.SlateLight;
                     });
                     break;
+                case ObjectType.PoolTable:
+                case ObjectType.SnookerTable:
+                    CueTable(p, type == ObjectType.SnookerTable);
+                    break;
+                case ObjectType.BowlingLane:
+                    // The far end of a lane: polished boards between two gutters, the pins, and the ball return.
+                    p.Top(0.12, 0, 0.5, 0.08, 1, (s, t) => Palette.Iron);
+                    p.Top(0.6, 0, 0.5, 0.08, 1, (s, t) => Palette.Iron);
+                    p.Top(0.2, 0, 0.6, 0.4, 1, (s, t) => (int)(s * 6) % 2 == 0 ? Palette.WoodLight : Palette.WoodLight.Shade(0.92));
+                    foreach (var (pu, pv) in new[] { (0.4, 0.12), (0.3, 0.12), (0.5, 0.12), (0.35, 0.22), (0.45, 0.22), (0.4, 0.32) })
+                    {
+                        p.Post(pu, pv, 0.6, 0.03, 7, Palette.White);
+                        p.Post(pu, pv, 4.5, 0.032, 1, Palette.SignRed);
+                    }
+
+                    p.Box(0.76, 0.55, 0, 0.18, 0.35, 9, Palette.Charcoal);
+                    p.Post(0.85, 0.72, 9, 0.06, 3, Palette.Neons[variant % Palette.Neons.Length]);
+                    break;
+                case ObjectType.ArcadeMachine:
+                {
+                    // A cabinet with a glowing screen, a control panel and a marquee in one of the city's neons.
+                    var neon = Palette.Neons[variant % Palette.Neons.Length];
+                    p.Box(0.22, 0.25, 0, 0.56, 0.45, 44, Palette.Charcoal, Palette.Charcoal.Shade(0.85), Palette.Charcoal.Shade(0.7));
+                    p.LeftWall(0.26, 0.705, 22, 0.48, 14, (s, t) => s < 0.08 || s > 0.92 || t < 0.1 || t > 0.9 ? Palette.Iron : Noise.Value((int)(s * 8), (int)(t * 6), variant) < 0.25 ? neon : Palette.TechNavy);
+                    p.Box(0.24, 0.7, 14, 0.52, 0.14, 4, Palette.Slate);
+                    p.Post(0.36, 0.77, 18, 0.025, 4, Palette.Ebony);
+                    p.Post(0.58, 0.77, 18, 0.03, 1, Palette.SignRed);
+                    p.Post(0.66, 0.77, 18, 0.03, 1, Palette.NeonCyan);
+                    p.LeftWall(0.22, 0.705, 38, 0.56, 6, (s, t) => neon);
+                    break;
+                }
+
+                case ObjectType.GymMachine:
+                    // A treadmill: a running belt on a low base, two uprights and a console with a light.
+                    p.Box(0.15, 0.2, 0, 0.7, 0.65, 4, Palette.Charcoal);
+                    p.Top(0.2, 0.25, 4, 0.6, 0.55, (s, t) => (int)(t * 10) % 2 == 0 ? Palette.Iron : Palette.Iron.Shade(0.9));
+                    p.Post(0.2, 0.25, 4, 0.03, 26, Palette.Metal);
+                    p.Post(0.8, 0.25, 4, 0.03, 26, Palette.Metal);
+                    p.Box(0.25, 0.16, 28, 0.5, 0.14, 5, Palette.Slate);
+                    p.Post(0.5, 0.2, 33, 0.04, 1, Palette.NeonMint);
+                    break;
+                case ObjectType.Fountain:
+                    // A round stone basin of water with a column and a little top bowl spilling over.
+                    p.Post(0.5, 0.5, 0, 0.46, 8, Palette.Stone);
+                    p.FlatDisc(0.5, 0.5, 8, 0.4, palette.IsWinter ? Palette.Snow : palette.Water);
+                    p.Post(0.5, 0.5, 8, 0.08, 16, Palette.StoneDark);
+                    p.FlatDisc(0.5, 0.5, 24, 0.2, Palette.Stone);
+                    p.FlatDisc(0.5, 0.5, 25, 0.16, palette.IsWinter ? Palette.Snow : palette.Water);
+                    p.Post(0.5, 0.5, 25, 0.03, 8, Palette.GlassLight);
+                    break;
+                case ObjectType.MarketStall:
+                {
+                    // A wooden stall under a striped awning, its counter laid out with goods.
+                    var stripe = Palette.Bunting[variant % Palette.Bunting.Length];
+                    foreach (var (su, sv) in new[] { (0.12, 0.3), (0.84, 0.3), (0.12, 0.72), (0.84, 0.72) })
+                    {
+                        p.Post(su, sv, 0, 0.03, 40, Palette.WoodDark);
+                    }
+
+                    p.Box(0.1, 0.4, 0, 0.8, 0.36, 16, Palette.Wood);
+                    p.Top(0.12, 0.42, 16, 0.76, 0.32, (s, t) => Noise.Value((int)(s * 6), (int)(t * 3), variant) < 0.7 ? Palette.Goods[((int)(s * 6) + variant) % Palette.Goods.Length] : Palette.WoodLight);
+                    p.Top(0.04, 0.24, 40, 0.92, 0.6, (s, t) => (int)(s * 6) % 2 == 0 ? stripe : Palette.White);
+                    SnowOn(p, palette, outdoors, 0.04, 0.24, 40.5, 0.92, 0.6);
+                    break;
+                }
+
                 default:
                     p.Box(0.3, 0.3, 0, 0.4, 0.4, 12, Palette.Stone);
                     break;
@@ -252,6 +318,26 @@ namespace TinyCity.Art
             }
 
             return canvas;
+        }
+
+        /// <summary>A pool table, or the bigger snooker table, with a couple of balls on the cloth.</summary>
+        private static void CueTable(IsoPainter p, bool snooker)
+        {
+            var (u, v, du, dv) = snooker ? (0.02, 0.12, 0.96, 0.76) : (0.1, 0.2, 0.8, 0.6);
+            foreach (var (lu, lv) in new[] { (u + 0.04, v + 0.04), (u + du - 0.1, v + 0.04), (u + 0.04, v + dv - 0.1), (u + du - 0.1, v + dv - 0.1) })
+            {
+                p.Box(lu, lv, 0, 0.06, 0.06, 13, Palette.WoodDark);
+            }
+
+            p.Box(u, v, 13, du, dv, 4, Palette.Wood);
+            p.Top(u + 0.05, v + 0.05, 17, du - 0.1, dv - 0.1, (s, t) => snooker ? Palette.Moss : Palette.Teal);
+            var balls = snooker
+                ? new[] { (0.3, 0.45, Palette.SignRed), (0.34, 0.5, Palette.SignRed), (0.3, 0.55, Palette.SignRed), (0.7, 0.5, Palette.White), (0.55, 0.35, Palette.Ebony) }
+                : new[] { (0.35, 0.45, Palette.Yellow), (0.4, 0.55, Palette.SignRed), (0.65, 0.5, Palette.White) };
+            foreach (var (bu, bv, colour) in balls)
+            {
+                p.Post(bu, bv, 17, 0.03, 2, colour);
+            }
         }
 
         private static void Plant(IsoPainter p, Palette palette, double u, double v, int variant)

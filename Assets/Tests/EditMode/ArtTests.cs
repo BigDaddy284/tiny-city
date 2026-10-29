@@ -106,23 +106,35 @@ namespace TinyCity.Tests.EditMode
         {
             World.TryGetMap(StarterTown.VillageMapId, out var village);
             var buildings = BuildingArt.Find(World, village);
-            Assert.That(buildings.Count, Is.EqualTo(15));
-            Assert.That(buildings.Count(b => b.Kind == PlaceKind.Cottage), Is.EqualTo(10));
-            foreach (var kind in new[] { PlaceKind.Store, PlaceKind.Cafe, PlaceKind.Bakery, PlaceKind.Clinic, PlaceKind.Bar })
+            Assert.That(buildings.Count, Is.EqualTo(27));
+            Assert.That(buildings.Count(b => b.Kind == PlaceKind.Cottage), Is.EqualTo(16));
+            Assert.That(buildings.Count(b => b.Kind == PlaceKind.Apartments), Is.EqualTo(2));
+            foreach (var kind in new[] { PlaceKind.Store, PlaceKind.Cafe, PlaceKind.Bakery, PlaceKind.Clinic, PlaceKind.Bar, PlaceKind.CueClub, PlaceKind.Bowling, PlaceKind.Arcade, PlaceKind.Gym })
             {
                 Assert.That(buildings.Count(b => b.Kind == kind), Is.EqualTo(1), kind.ToString());
             }
 
             foreach (var b in buildings)
             {
-                Assert.That(b.Width == 5 && b.Depth >= 3 && b.Depth <= 4, Is.True, $"{b.InteriorMapId} is {b.Width}x{b.Depth}");
+                if (b.Kind == PlaceKind.Apartments)
+                {
+                    Assert.That(b.Width == 6 && b.Depth == 6, Is.True, $"{b.InteriorMapId} is {b.Width}x{b.Depth}");
+                    Assert.That(b.Doors.Count, Is.EqualTo(8), "a door to each flat");
+                    Assert.That(b.Doors.Select(d => World.Portals.First(p => p.From.MapId == village.Id && p.From.Position.Equals(d)).To.MapId).Distinct().Count(), Is.EqualTo(8));
+                }
+                else
+                {
+                    Assert.That(b.Width >= 5 && b.Width <= 8 && b.Depth >= 3 && b.Depth <= 4, Is.True, $"{b.InteriorMapId} is {b.Width}x{b.Depth}");
+                    Assert.That(b.Doors.Count, Is.EqualTo(1));
+                }
+
                 Assert.That(b.Contains(b.Door.X, b.Door.Y), Is.True, $"{b.InteriorMapId}'s door is part of the building");
                 Assert.That(b.Door.Y, Is.EqualTo(b.Y + b.Depth - 1), "doors are on the front row");
                 Assert.That(village.GetTile(b.Door), Is.EqualTo(TileType.Door));
                 Assert.That(World.TryGetMap(b.InteriorMapId, out _), Is.True);
             }
 
-            Assert.That(buildings.Select(b => b.InteriorMapId).Distinct().Count(), Is.EqualTo(15));
+            Assert.That(buildings.Select(b => b.InteriorMapId).Distinct().Count(), Is.EqualTo(27));
         }
 
         [Test]

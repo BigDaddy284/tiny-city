@@ -294,6 +294,7 @@ namespace TinyCity.Simulation.Activities
             return BestScored(resident, time, comfortOnly: true)
                 ?? ShoppingChoice(resident, time)
                 ?? EventChoice(resident, time)
+                ?? OutingChoice(resident, time)
                 ?? NightOutChoice(resident, time)
                 ?? BestScored(resident, time, comfortOnly: false);
         }
@@ -372,6 +373,56 @@ namespace TinyCity.Simulation.Activities
         /// resident fancies it or not by <see cref="Chance"/>, likelier for the sociable and the young; the active
         /// ones prefer to dance. Only while somewhere is open, with money to spare and time before bed.
         /// </summary>
+        /// <summary>From late morning until the night out begins, residents now and then head out to one of the city's venues.</summary>
+        public static readonly int OutingFrom = GameTime.MinuteOfDayFor(10, 0);
+
+        /// <summary>The chance, each daytime hour, that a resident fancies an outing, before personality.</summary>
+        public const double OutingChance = 0.15;
+
+        /// <summary>Outings cost a few pounds, so residents keep something back.</summary>
+        public const long OutingMinimumPence = 2000;
+
+        /// <summary>Enough time to get there, play and get home before bed.</summary>
+        public const int OutingBeforeBedMinutes = 90;
+
+        /// <summary>The city's places for an outing; each resident tries them in an order of their own for the hour, favourites first.</summary>
+        private static readonly ActivityDefinition[] Outings =
+        {
+            ActivityCatalog.PlayPool, ActivityCatalog.PlaySnooker, ActivityCatalog.Bowling, ActivityCatalog.PlayArcade, ActivityCatalog.GymWorkout, ActivityCatalog.BrowseMarket,
+        };
+
+        /// <summary>
+        /// A daytime outing to the cue club, the bowling alley, the arcade, the gym or the market, by chance for each
+        /// hour (likelier for the sociable and active) and only with money to spare. Without it the venues, being further
+        /// from most homes than an armchair or the park, would hardly ever be chosen.
+        /// </summary>
+        private PlanChoice OutingChoice(Resident resident, GameTime time)
+        {
+            if (time.MinuteOfDay < OutingFrom || time.MinuteOfDay >= NightOutFrom || resident.MoneyPence < OutingMinimumPence
+                || SleepSchedule.MinutesToBed(resident, time) < OutingBeforeBedMinutes)
+            {
+                return null;
+            }
+
+            var hour = time.MinuteOfDay / 60;
+            var p = resident.Personality;
+            if (Chance.Roll(resident.Id, time.Day, 80 + hour) >= OutingChance * (0.5 + ((p.Sociable + p.Active) / 2)))
+            {
+                return null;
+            }
+
+            foreach (var activity in Outings.OrderBy(a => Chance.Roll(resident.Id, time.Day, 100 + (hour * 8) + Array.IndexOf(Outings, a)) / Preference(p, a)))
+            {
+                var place = NearestDoable(resident, activity, time);
+                if (place != null)
+                {
+                    return new PlanChoice(activity, place, $"Fancies an outing: {activity.Verb}", PlanPriority.Leisure);
+                }
+            }
+
+            return null;
+        }
+
         private PlanChoice NightOutChoice(Resident resident, GameTime time)
         {
             if (time.MinuteOfDay < NightOutFrom || resident.MoneyPence < NightOutMinimumPence
@@ -629,17 +680,18 @@ namespace TinyCity.Simulation.Activities
 
         private static double Preference(Personality p, ActivityDefinition activity)
         {
-            if (activity == ActivityCatalog.Exercise)
+            if (activity == ActivityCatalog.Exercise || activity == ActivityCatalog.GymWorkout)
             {
                 return 0.5 + p.Active;
             }
 
-            if (activity == ActivityCatalog.WatchTown || activity == ActivityCatalog.Coffee || activity == ActivityCatalog.CafeMeal || activity == ActivityCatalog.BarDrink)
+            if (activity == ActivityCatalog.WatchTown || activity == ActivityCatalog.Coffee || activity == ActivityCatalog.CafeMeal || activity == ActivityCatalog.BarDrink
+                || activity == ActivityCatalog.PlayPool || activity == ActivityCatalog.PlaySnooker || activity == ActivityCatalog.BrowseMarket)
             {
                 return 0.5 + p.Sociable;
             }
 
-            if (activity == ActivityCatalog.Dance)
+            if (activity == ActivityCatalog.Dance || activity == ActivityCatalog.Bowling)
             {
                 return 0.5 + ((p.Active + p.Sociable) / 2);
             }

@@ -8,8 +8,9 @@ namespace TinyCity.Art
     /// <summary>A building in the village: a block of house tiles and the door that leads inside.</summary>
     public sealed class BuildingPlan
     {
-        public BuildingPlan(int x, int y, int width, int depth, GridPos door, PlaceKind kind, int variant, string interiorMapId)
+        public BuildingPlan(int x, int y, int width, int depth, GridPos door, PlaceKind kind, int variant, string interiorMapId, IReadOnlyList<GridPos> doors = null)
         {
+            Doors = doors ?? new[] { door };
             X = x;
             Y = y;
             Width = width;
@@ -31,7 +32,11 @@ namespace TinyCity.Art
         /// <summary>Footprint size along the map's y.</summary>
         public int Depth { get; }
 
+        /// <summary>The main door: the front-most, then left-most door tile.</summary>
         public GridPos Door { get; }
+
+        /// <summary>Every door tile, the main one included. Only the apartment towers have more than one (a door to each flat).</summary>
+        public IReadOnlyList<GridPos> Doors { get; }
 
         public PlaceKind Kind { get; }
 
@@ -48,6 +53,12 @@ namespace TinyCity.Art
     {
         private const int Margin = 10;
         private const int Headroom = 124;
+
+        /// <summary>The apartment towers stand three times as tall as a cottage: six floors.</summary>
+        public const int TowerHeight = 174;
+
+        /// <summary>Each floor of a tower.</summary>
+        private const int TowerFloor = 29;
         private const double Inset = 0.12;
 
         /// <summary>Finds every block of house tiles on a map, with its door and the place inside.</summary>
@@ -110,7 +121,7 @@ namespace TinyCity.Art
                         kind = PlaceStyle.Of(world, interior);
                     }
 
-                    result.Add(new BuildingPlan(minX, minY, maxX - minX + 1, maxY - minY + 1, door, kind, PlaceStyle.Variant(inside ?? $"{map.Id}:{minX},{minY}"), inside));
+                    result.Add(new BuildingPlan(minX, minY, maxX - minX + 1, maxY - minY + 1, door, kind, PlaceStyle.Variant(inside ?? $"{map.Id}:{minX},{minY}"), inside, doors.Count > 0 ? doors : null));
                 }
             }
 
@@ -121,8 +132,9 @@ namespace TinyCity.Art
         public static PixelCanvas NewCanvas(BuildingPlan plan)
         {
             var w = ((plan.Width + plan.Depth) * IsoPainter.HalfTileWidth) + (Margin * 2);
-            var h = Headroom + ((plan.Width + plan.Depth - 1) * IsoPainter.HalfTileHeight) + Margin;
-            return new PixelCanvas(w, h, (plan.Depth * IsoPainter.HalfTileWidth) + Margin, Headroom);
+            var headroom = Headroom + (plan.Kind == PlaceKind.Apartments ? TowerHeight - 58 : 0);
+            var h = headroom + ((plan.Width + plan.Depth - 1) * IsoPainter.HalfTileHeight) + Margin;
+            return new PixelCanvas(w, h, (plan.Depth * IsoPainter.HalfTileWidth) + Margin, headroom);
         }
 
         /// <summary>The building by day, and the light in its windows for night (drawn on top, fading in at dusk).</summary>
@@ -275,9 +287,42 @@ namespace TinyCity.Art
                         look.DoorColour = Palette.NeonPink;
                         look.Neon = Palette.NeonViolet;
                         break;
+                    case PlaceKind.CueClub:
+                        look.Wall = Palette.TechOlive;
+                        look.Roof = Palette.Iron;
+                        look.DoorColour = Palette.NeonLime;
+                        look.Neon = Palette.NeonLime;
+                        break;
+                    case PlaceKind.Bowling:
+                        look.Wall = Palette.TechWine;
+                        look.Roof = Palette.Charcoal;
+                        look.DoorColour = Palette.NeonAmber;
+                        look.Neon = Palette.NeonAmber;
+                        break;
+                    case PlaceKind.Arcade:
+                        look.Wall = Palette.TechPlum;
+                        look.Roof = Palette.Iron;
+                        look.DoorColour = Palette.NeonPink;
+                        look.Neon = Palette.NeonPink;
+                        break;
+                    case PlaceKind.Gym:
+                        look.Wall = Palette.Slate;
+                        look.Roof = Palette.Charcoal;
+                        look.DoorColour = Palette.NeonMint;
+                        look.Neon = Palette.NeonMint;
+                        break;
+                    case PlaceKind.Apartments:
+                        look.Wall = v % 2 == 0 ? Palette.TechNavy : Palette.TechCharcoal;
+                        look.Roof = Palette.Iron;
+                        look.DoorColour = v % 2 == 0 ? Palette.NeonCyan : Palette.NeonViolet;
+                        break;
                 }
 
-                if (plan.Kind != PlaceKind.Cottage)
+                if (plan.Kind == PlaceKind.Apartments)
+                {
+                    look.WallHeight = TowerHeight;
+                }
+                else if (plan.Kind != PlaceKind.Cottage)
                 {
                     look.WallHeight = 66;
                 }
@@ -333,7 +378,7 @@ namespace TinyCity.Art
             var (tx, ty) = painter.Project(au, av, h + 30 + (Noise.Value(plan.Variant, 9) * 14));
             painter.Canvas.FillRect((int)tx - 1, (int)ty - 2, 2, 2, Palette.SignRed);
             glow.Canvas.FillRect((int)tx - 1, (int)ty - 2, 2, 2, Palette.SignRed);
-            if (look.Kind != PlaceKind.Cottage)
+            if (look.Kind != PlaceKind.Cottage && look.Kind != PlaceKind.Apartments)
             {
                 NeonSign(painter, glow, look, plan.Door.X - plan.X + 0.5, v1, h, neon);
             }
@@ -362,7 +407,17 @@ namespace TinyCity.Art
         {
             var door = plan.Door.X - plan.X + 0.5;
             var list = new List<Opening> { new Opening(OpeningKind.Door, door, 0.5, 0, 30) };
-            if (look.Kind == PlaceKind.Cottage)
+            if (look.Kind == PlaceKind.Apartments)
+            {
+                // A door to each ground-floor flat along the front, and strip windows on every floor above.
+                foreach (var d in plan.Doors.Where(d => d.Y == plan.Y + plan.Depth - 1 && !d.Equals(plan.Door)))
+                {
+                    list.Add(new Opening(OpeningKind.Door, d.X - plan.X + 0.5, 0.5, 0, 26));
+                }
+
+                TowerWindows(list, u0, u1);
+            }
+            else if (look.Kind == PlaceKind.Cottage)
             {
                 foreach (var a in new[] { u0 + 0.75, u1 - 0.75, (u0 + u1) / 2 })
                 {
@@ -396,6 +451,17 @@ namespace TinyCity.Art
         private static List<Opening> SideOpenings(BuildingPlan plan, Look look, double v0, double v1)
         {
             var list = new List<Opening>();
+            if (look.Kind == PlaceKind.Apartments)
+            {
+                foreach (var d in plan.Doors.Where(d => d.X == plan.X + plan.Width - 1 && d.Y < plan.Y + plan.Depth - 1))
+                {
+                    list.Add(new Opening(OpeningKind.Door, d.Y - plan.Y + 0.5, 0.5, 0, 26));
+                }
+
+                TowerWindows(list, v0, v1);
+                return list;
+            }
+
             if (v1 - v0 > 2.5)
             {
                 list.Add(new Opening(OpeningKind.Window, v0 + ((v1 - v0) * 0.33), 0.6, 14, 26));
@@ -409,6 +475,18 @@ namespace TinyCity.Art
             list.Add(new Opening(OpeningKind.Window, (v0 + v1) / 2, (v1 - v0) - 0.6, 39, 50));
 
             return list;
+        }
+
+        /// <summary>A window for each flat's room on every floor of a tower above the ground floor, each lit on its own at night.</summary>
+        private static void TowerWindows(List<Opening> list, double a0, double a1)
+        {
+            for (var floor = 1; floor * TowerFloor < TowerHeight - 12; floor++)
+            {
+                for (var a = Math.Floor(a0) + 0.5; a < a1; a += 1)
+                {
+                    list.Add(new Opening(OpeningKind.Window, a, 0.56, (floor * TowerFloor) + 8, (floor * TowerFloor) + 20));
+                }
+            }
         }
 
         private static Rgba WallPixel(Look look, Palette palette, bool front, double along, double z, double s, List<Opening> openings, int variant, double light, Rgba neon)
@@ -476,7 +554,8 @@ namespace TinyCity.Art
             {
                 return neon.Shade(0.8);
             }
-            else if (Math.Abs(z - 34) < 0.8 && look.Kind == PlaceKind.Cottage)
+            else if ((Math.Abs(z - 34) < 0.8 && look.Kind == PlaceKind.Cottage)
+                || (look.Kind == PlaceKind.Apartments && z > TowerFloor - 1 && Math.Abs(z - (Math.Round(z / TowerFloor) * TowerFloor)) < 0.8))
             {
                 // The line between floors.
                 wall = wall.Shade(0.7);
@@ -546,6 +625,18 @@ namespace TinyCity.Art
                 case PlaceKind.Bar:
                     // A cocktail glass: a bowl narrowing to a stem on a foot.
                     return (y < 0 && y > -1.2 && Math.Abs(x) < 0.2 - (y * 0.9)) || (Math.Abs(x) < 0.18 && y >= 0 && y < 0.9) || (Math.Abs(x) < 0.6 && y >= 0.9 && y < 1.2) ? Palette.NeonCyan : (Rgba?)null;
+                case PlaceKind.CueClub:
+                    // An eight ball: black, with a white spot.
+                    return ((x * x) + (y * y)) < 0.25 ? Palette.White : ((x * x) + (y * y)) < 1.2 ? Palette.Ebony : (Rgba?)null;
+                case PlaceKind.Bowling:
+                    // A skittle with a red band.
+                    return Math.Abs(x) < 0.35 + (0.35 * Math.Max(0, 1 - Math.Abs(y - 0.5))) && Math.Abs(y) < 1.2 ? (Math.Abs(y + 0.4) < 0.15 ? Palette.SignRed : Palette.White) : (Rgba?)null;
+                case PlaceKind.Arcade:
+                    // A little space invader.
+                    return (Math.Abs(x) < 1.6 && Math.Abs(y) < 0.6 && !(Math.Abs(x) > 0.4 && Math.Abs(x) < 0.9 && y < -0.1)) || (Math.Abs(Math.Abs(x) - 1.2) < 0.25 && y >= 0.6 && y < 1.1) ? Palette.NeonLime : (Rgba?)null;
+                case PlaceKind.Gym:
+                    // A dumbbell: two weights on a bar.
+                    return (Math.Abs(x) < 1.6 && Math.Abs(y) < 0.15) || (Math.Abs(Math.Abs(x) - 1.3) < 0.3 && Math.Abs(y) < 0.8) ? Palette.Metal : (Rgba?)null;
                 case PlaceKind.Store:
                     return ((x * x) + (y * y)) < 1 ? Palette.SignRed : Math.Abs(x) < 0.2 && y < -0.9 && y > -1.4 ? Palette.LeafGreen : (Rgba?)null;
                 default:

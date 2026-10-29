@@ -14,6 +14,13 @@ namespace TinyCity.Art
         Clinic,
         Shop,
         Bar,
+
+        /// <summary>A flat in one of the apartment towers: furnished like a cottage, in a tall tower from outside.</summary>
+        Apartments,
+        CueClub,
+        Bowling,
+        Arcade,
+        Gym,
     }
 
     public static class PlaceStyle
@@ -33,6 +40,15 @@ namespace TinyCity.Art
                 case StarterTown.BakeryMapId: return PlaceKind.Bakery;
                 case StarterTown.ClinicMapId: return PlaceKind.Clinic;
                 case StarterTown.BarMapId: return PlaceKind.Bar;
+                case StarterTown.CueClubMapId: return PlaceKind.CueClub;
+                case StarterTown.BowlingMapId: return PlaceKind.Bowling;
+                case StarterTown.ArcadeMapId: return PlaceKind.Arcade;
+                case StarterTown.GymMapId: return PlaceKind.Gym;
+            }
+
+            if (map.Id.StartsWith(StarterTown.FlatMapPrefix, System.StringComparison.Ordinal))
+            {
+                return PlaceKind.Apartments;
             }
 
             return world?.BusinessOnMap(map.Id) != null ? PlaceKind.Shop : PlaceKind.Cottage;
