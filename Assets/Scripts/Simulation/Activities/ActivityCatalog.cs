@@ -71,7 +71,7 @@ namespace TinyCity.Simulation.Activities
             new Dictionary<NeedType, double> { [NeedType.Fun] = 1.0 });
 
         public static readonly ActivityDefinition WatchTown = new ActivityDefinition(
-            "watch-town", "Sit in the park", "sitting in the park watching the town", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.Bench }, 45,
+            "watch-town", "Sit in the park", "sitting in the park watching the town", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.Bench, ObjectType.Fountain }, 45,
             new Dictionary<NeedType, double> { [NeedType.Fun] = 0.6, [NeedType.Social] = 0.7 });
 
         public static readonly ActivityDefinition Coffee = new ActivityDefinition(
@@ -144,11 +144,49 @@ namespace TinyCity.Simulation.Activities
             new Dictionary<NeedType, double> { [NeedType.Energy] = 2.0, [NeedType.Hygiene] = 2.0, [NeedType.Thirst] = 1.5 },
             shared: true, needsOpenBusiness: true);
 
+        /// <summary>A game of pool at the cue club, paid by the game; better with an opponent.</summary>
+        public static readonly ActivityDefinition PlayPool = new ActivityDefinition(
+            "play-pool", "Play pool", "playing pool at the cue club", ActivityKind.Leisure, NeedType.Fun, new[] { ObjectType.PoolTable }, 45,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.1, [NeedType.Social] = 0.6 },
+            itemId: "pool-game", shared: true);
+
+        /// <summary>A frame of snooker: slower than pool, and the full-size table costs a little more.</summary>
+        public static readonly ActivityDefinition PlaySnooker = new ActivityDefinition(
+            "play-snooker", "Play snooker", "playing snooker at the cue club", ActivityKind.Leisure, NeedType.Fun, new[] { ObjectType.SnookerTable }, 60,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.0, [NeedType.Social] = 0.5 },
+            itemId: "snooker-frame", shared: true);
+
+        /// <summary>A game of bowling: fun, sociable and a little exercise.</summary>
+        public static readonly ActivityDefinition Bowling = new ActivityDefinition(
+            "bowling", "Go bowling", "bowling at Strike Lanes", ActivityKind.Leisure, NeedType.Fun, new[] { ObjectType.BowlingLane }, 60,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.2, [NeedType.Social] = 0.8, [NeedType.Exercise] = 0.5 },
+            new Dictionary<NeedType, double> { [NeedType.Energy] = 1.3, [NeedType.Thirst] = 1.2 },
+            itemId: "bowling-game", shared: true);
+
+        /// <summary>A go on the arcade cabinets: quick, cheap and great fun, on your own.</summary>
+        public static readonly ActivityDefinition PlayArcade = new ActivityDefinition(
+            "play-arcade", "Play the arcade games", "playing games at the arcade", ActivityKind.Leisure, NeedType.Fun, new[] { ObjectType.ArcadeMachine }, 30,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.5 },
+            itemId: "arcade-credits");
+
+        /// <summary>A session at the gym: the best exercise in town, and tiring.</summary>
+        public static readonly ActivityDefinition GymWorkout = new ActivityDefinition(
+            "gym", "Work out at the gym", "working out at the gym", ActivityKind.Leisure, NeedType.Exercise, new[] { ObjectType.GymMachine }, 50,
+            new Dictionary<NeedType, double> { [NeedType.Exercise] = 2.6, [NeedType.Fun] = 0.3 },
+            new Dictionary<NeedType, double> { [NeedType.Energy] = 2.2, [NeedType.Hygiene] = 3.2, [NeedType.Thirst] = 1.6 },
+            itemId: "gym-pass");
+
+        /// <summary>A wander round the market stalls: free, and a chance to see people.</summary>
+        public static readonly ActivityDefinition BrowseMarket = new ActivityDefinition(
+            "browse-market", "Browse the market", "browsing the market stalls", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.MarketStall }, 30,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.7, [NeedType.Social] = 0.8 });
+
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
             Sleep, Eat, Snack, CafeMeal, Pastry, Drink, UseToilet, Shower, Work, Exercise, Read, WatchTown, Coffee, BuyGroceries, Chat,
             Rest, SeeDoctor, Paint, PlayPiano, Chess, Fish, Garden, Bake, Knit, AttendEvent, BarDrink, Dance,
+            PlayPool, PlaySnooker, Bowling, PlayArcade, GymWorkout, BrowseMarket,
         };
 
         /// <summary>Every hobby id, from the hobby activities.</summary>

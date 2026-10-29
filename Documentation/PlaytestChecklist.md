@@ -223,3 +223,12 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 1. **High speed:** with the AI on, play at 4x and then 10x. Fewer residents log "no AI answer in time" than before, and residents in the Deciding state wait up to about 8 real seconds before the routine takes over.
 2. **Parallel requests:** set `OLLAMA_NUM_PARALLEL` to 2, restart Ollama, set `"parallelRequests": 2` in `settings.json`, then start the game. The AI line in the inspector can show a queue count that includes two requests being answered. More free-time choices come from the AI at 4x than with 1.
 3. **Too many at once:** with `parallelRequests` higher than Ollama's `OLLAMA_NUM_PARALLEL`, the game still works. The extra requests simply wait inside Ollama.
+
+## The bigger city
+
+1. **More room:** a new town is twice the size. The old streets and buildings are where they were, with new streets running on to the right and below.
+2. **Apartment towers:** two tall six-floor towers stand along the back edge at the top right, behind everything else, so they don't hide anything. Each has four glass doors along its front and four up its right side, one per flat. At night their windows light up one by one.
+3. **New homes:** six new cottages below the old ones, and sixteen flats in the towers. Nobody lives in them yet, and nobody wanders in to use them.
+4. **Venues:** the cue club (eight-ball sign), Strike Lanes (skittle), the Pixel Arcade (space invader) and the Pulse Gym (dumbbell) sit right of the old shops. In the daytime and evening, residents with money to spare head out to play pool or snooker, bowl, play the arcade games or work out, and pay for it. They're shut at night.
+5. **Market and park:** the market square has five striped stalls that residents browse, and a "Saturday market" event on Saturday mornings in the journal. The park below has a fountain residents sit round, plus more benches.
+6. **Older saves:** load a town saved before this build. Everyone is where they were and carries on, and the new parts of the city are there around them.

@@ -155,6 +155,15 @@ namespace TinyCity.Art
                     return new Placement(0.5, 1.0, 0, Stance.Standing, Facing.UpRight);
                 case ObjectType.FishingSpot: return new Placement(0.7, 0.5, 4, Stance.Standing, Facing.DownRight);
                 case ObjectType.ExerciseSpot: return new Placement(0.5, 0.5, 1, Stance.Standing, Facing.DownRight);
+                case ObjectType.PoolTable:
+                case ObjectType.SnookerTable:
+                    return new Placement(0.5, 0.96, 0, Stance.Standing, Facing.UpRight);
+                case ObjectType.BowlingLane: return new Placement(0.4, 0.86, 0.6, Stance.Standing, Facing.UpRight);
+                case ObjectType.ArcadeMachine:
+                case ObjectType.MarketStall:
+                    return new Placement(0.5, 1.0, 0, Stance.Standing, Facing.UpRight);
+                case ObjectType.GymMachine: return new Placement(0.5, 0.62, 4, Stance.Standing, Facing.UpRight);
+                case ObjectType.Fountain: return new Placement(0.5, 0.95, 8, Stance.Sitting, Facing.DownLeft);
                 default: return Centre;
             }
         }
@@ -171,6 +180,14 @@ namespace TinyCity.Art
                 case ObjectType.ChessTable when seat == 1: return new Placement(0.06, 0.5, 10, Stance.Sitting, Facing.DownRight, behind: true);
                 case ObjectType.FishingSpot when seat == 1: return new Placement(0.7, 0.26, 4, Stance.Standing, Facing.DownRight);
                 case ObjectType.ExerciseSpot when seat == 1: return new Placement(0.28, 0.66, 1, Stance.Standing, Facing.DownRight);
+                case ObjectType.PoolTable when seat == 1:
+                case ObjectType.SnookerTable when seat == 1:
+                    return new Placement(0.5, 0.04, 0, Stance.Standing, Facing.DownLeft, behind: true);
+                case ObjectType.BowlingLane when seat == 1: return new Placement(0.65, 0.95, 0.6, Stance.Standing, Facing.UpLeft);
+                case ObjectType.MarketStall when seat == 1: return new Placement(0.2, 1.0, 0, Stance.Standing, Facing.UpRight);
+                case ObjectType.Fountain when seat == 1: return new Placement(0.95, 0.5, 8, Stance.Sitting, Facing.DownRight);
+                case ObjectType.Fountain when seat == 2: return new Placement(0.5, 0.05, 8, Stance.Sitting, Facing.UpRight, behind: true);
+                case ObjectType.Fountain when seat == 3: return new Placement(0.05, 0.5, 8, Stance.Sitting, Facing.UpLeft, behind: true);
                 case ObjectType.Counter:
                 case ObjectType.Workbench:
                 case ObjectType.ShopShelf:
@@ -318,12 +335,12 @@ namespace TinyCity.Art
                 return ResidentAction.Read;
             }
 
-            if (activityId == ActivityCatalog.Exercise.Id)
+            if (activityId == ActivityCatalog.Exercise.Id || activityId == ActivityCatalog.GymWorkout.Id)
             {
                 return ResidentAction.Exercise;
             }
 
-            if (activityId == ActivityCatalog.AttendEvent.Id || activityId == ActivityCatalog.Dance.Id)
+            if (activityId == ActivityCatalog.AttendEvent.Id || activityId == ActivityCatalog.Dance.Id || activityId == ActivityCatalog.Bowling.Id)
             {
                 return ResidentAction.Cheer;
             }
@@ -335,7 +352,9 @@ namespace TinyCity.Art
 
             if (activityId == ActivityCatalog.Work.Id || activityId == ActivityCatalog.Paint.Id || activityId == ActivityCatalog.PlayPiano.Id
                 || activityId == ActivityCatalog.Chess.Id || activityId == ActivityCatalog.Fish.Id || activityId == ActivityCatalog.Garden.Id
-                || activityId == ActivityCatalog.Bake.Id || activityId == ActivityCatalog.BuyGroceries.Id)
+                || activityId == ActivityCatalog.Bake.Id || activityId == ActivityCatalog.BuyGroceries.Id
+                || activityId == ActivityCatalog.PlayPool.Id || activityId == ActivityCatalog.PlaySnooker.Id || activityId == ActivityCatalog.PlayArcade.Id
+                || activityId == ActivityCatalog.BrowseMarket.Id)
             {
                 return ResidentAction.Work;
             }

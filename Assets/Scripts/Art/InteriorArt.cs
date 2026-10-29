@@ -83,6 +83,10 @@ namespace TinyCity.Art
                 case PlaceKind.Clinic: return Palette.ClinicWallpaper;
                 case PlaceKind.Shop: return Palette.ShopWallpaper;
                 case PlaceKind.Bar: return Palette.Charcoal;
+                case PlaceKind.CueClub: return Palette.TechOlive;
+                case PlaceKind.Bowling: return Palette.TechWine;
+                case PlaceKind.Arcade: return Palette.TechNavy;
+                case PlaceKind.Gym: return Palette.SlateLight;
                 default:
                     return Palette.CottageWallpapers[PlaceStyle.Variant(mapId) % Palette.CottageWallpapers.Length];
             }
