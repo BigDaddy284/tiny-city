@@ -10,7 +10,8 @@ using TinyCity.Simulation.World;
 namespace TinyCity.Simulation.Content
 {
     /// <summary>
-    /// The starter town: a village with ten cottages, a general store, café, bakery and clinic, and ten residents.
+    /// The starter town: a city with sixteen cottages and two apartment towers of eight flats, a general store, café,
+    /// bakery, clinic, neon bar, cue club, bowling alley, arcade, gym and market square, and ten residents.
     /// Ids here are stable because save files refer to them; new content is added around existing ids so older saves
     /// still fit.
     /// </summary>
@@ -51,42 +52,70 @@ namespace TinyCity.Simulation.Content
         public const string PondLawnId = "obj-village-pond-lawn";
         public const string QuizCornerId = "obj-cafe-quiz-corner";
         public const string ClubCornerId = "obj-bar-club-corner";
+        public const string CueClubMapId = "map-cue-club";
+        public const string CueClubId = "biz-cue-club";
+        public const string BowlingMapId = "map-bowling";
+        public const string BowlingId = "biz-bowling";
+        public const string ArcadeMapId = "map-arcade";
+        public const string ArcadeId = "biz-arcade";
+        public const string GymMapId = "map-gym";
+        public const string GymId = "biz-gym";
+        public const string MarketSquareId = "obj-village-market-square";
+        public const string FountainId = "obj-village-fountain";
+
+        /// <summary>The two apartment towers' flats: "map-flat-a1" to "map-flat-a8" and "map-flat-b1" to "map-flat-b8".</summary>
+        public const string FlatMapPrefix = "map-flat-";
 
         // T tree, . grass, = path, H house wall, ~ pond, g garden bed, G garden plot (work), w garden tap,
         // b/p park bench, e/r exercise spot, W workshop bench (work), a easel, h chess table, f fishing spot,
         // q village green and j pond-side lawn (gathering spots for community events). Doors: D the first three cottages (in reading
         // order), 4-9 and 0 cottages 4-10, S store, C cafe, K bakery, L clinic, N neon bar.
-        // The top-left 27 x 15 corner is the Phase 3 village, unchanged so saved positions stay valid.
+        // The top-left 27 x 15 corner is the Phase 3 village, and the top-left 43 x 27 the town before it grew, both unchanged so
+        // saved positions stay valid. The bigger city added: the two apartment towers along the back (U and V, each with eight
+        // flat doors, four along the front and four up the right side), Z the six new cottages, P the cue club, O the bowling alley,
+        // X the arcade, Y the gym, the market square (M stalls, Q its gathering spot), F the park fountain and n more benches.
         private static readonly string[] VillageRows =
         {
-            "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-            "T..........................................T",
-            "T.HHHHH.....~~~.....HHHHH....HHHHH..HHHHH..T",
-            "T.HHHHH.....~~~..e..HHHHH....HHHHH..HHHHH..T",
-            "T.HHHHH..b..~~~.....HHHHH....HHHHH..HHHHH..T",
-            "T.HHDHH....a........HHDHH....HHSHH..HHCHH..T",
-            "T...=.................=........=......=....T",
-            "T...======================================.T",
-            "T..............=.........................=.T",
-            "T.gggGg.w......=.................ph......=.T",
-            "T.ggggg........=.b...........HHHHH..HHHHH=.T",
-            "T.HHHHH........=.............HHHHH..HHHHH=.T",
-            "T.HHHHH........=......W......HHHHH..HHHHH=.T",
-            "T.HHDHH........=.............HHKHH..HHLHH=.T",
-            "T...======================================.T",
-            "T..............=.........................=.T",
-            "T..............=........q.........T......=.T",
-            "T.HHHHH..HHHHH.=HHHHH..HHHHH.......HHHHH.=.T",
-            "T.HHHHH..HHHHH.=HHHHH..HHHHH..T....HHHHH.=.T",
-            "T.HHHHH..HHHHH.=HHHHH..HHHHH.......HHHHH.=.T",
-            "T.HH4HH..HH5HH.=HH6HH..HH7HH.......HHNHH.=.T",
-            "T.========================================.T",
-            "T.HHHHH..HHHHH..HHHHH.=................T...T",
-            "T.HHHHH..HHHHH..HHHHH.=.....r...~f.........T",
-            "T.HHHHH..HHHHH..HHHHH.=........~~~...j.....T",
-            "T.HH8HH..HH9HH..HH0HH.=.............p...T..T",
-            "T.=====================....................T",
-            "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+            "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+            "T.............................................HHHHHU...HHHHHV..T",
+            "T.HHHHH.....~~~.....HHHHH....HHHHH..HHHHH.....HHHHHU...HHHHHV..T",
+            "T.HHHHH.....~~~..e..HHHHH....HHHHH..HHHHH.....HHHHHU...HHHHHV..T",
+            "T.HHHHH..b..~~~.....HHHHH....HHHHH..HHHHH.....HHHHHU...HHHHHV..T",
+            "T.HHDHH....a........HHDHH....HHSHH..HHCHH.....HHHHHH...HHHHHH..T",
+            "T...=.................=........=......=.......UUUUHH...VVVVHH..T",
+            "T...======================================.....................T",
+            "T..............=.........................=.....................T",
+            "T.gggGg.w......=.................ph......======================T",
+            "T.ggggg........=.b...........HHHHH..HHHHH=...HHHHHHH..HHHHHHHH.T",
+            "T.HHHHH........=.............HHHHH..HHHHH=...HHHHHHH..HHHHHHHH.T",
+            "T.HHHHH........=......W......HHHHH..HHHHH=...HHHHHHH..HHHHHHHH.T",
+            "T.HHDHH........=.............HHKHH..HHLHH=...HHHPHHH..HHHOHHHH.T",
+            "T...===========================================================T",
+            "T..............=.........................=.....................T",
+            "T..............=........q.........T......=...HHHHHHH..HHHHHHH..T",
+            "T.HHHHH..HHHHH.=HHHHH..HHHHH.......HHHHH.=...HHHHHHH..HHHHHHH..T",
+            "T.HHHHH..HHHHH.=HHHHH..HHHHH..T....HHHHH.=...HHHHHHH..HHHHHHH..T",
+            "T.HHHHH..HHHHH.=HHHHH..HHHHH.......HHHHH.=...HHHXHHH..HHHYHHH..T",
+            "T.HH4HH..HH5HH.=HH6HH..HH7HH.......HHNHH.=.....................T",
+            "T.=============================================================T",
+            "T.HHHHH..HHHHH..HHHHH.=................T.=..T.................TT",
+            "T.HHHHH..HHHHH..HHHHH.=.....r...~f.......=...==M==M==M==M==M==.T",
+            "T.HHHHH..HHHHH..HHHHH.=........~~~...j...=...=================.T",
+            "T.HH8HH..HH9HH..HH0HH.=.............p...T=...=n======Q======n=.T",
+            "T.=====================..................=...=================.T",
+            "T.....................=..................=.....................T",
+            "T.HHHHH..HHHHH.HHHHH..=..T......=.......T=...T.........T.......T",
+            "T.HHHHH..HHHHH.HHHHH..=.....T..n=....T...=.....................T",
+            "T.HHHHH..HHHHH.HHHHH..=.........=........=.......T..n.......T..T",
+            "T.HHZHH..HHZHH.HHZHH..=......n..=........=.....................T",
+            "T.==============================F=========.....................T",
+            "T.HHHHH..HHHHH.HHHHH..=.........=..n.....==========n===========T",
+            "T.HHHHH..HHHHH.HHHHH..=.........=........=.....................T",
+            "T.HHHHH..HHHHH.HHHHH..=.....T...=n...T...=.............n.....T.T",
+            "T.HHZHH..HHZHH.HHZHH..=.........=........=....T.....T..........T",
+            "T.=====================..T......=.......T=................T....T",
+            "T........................................=.....................T",
+            "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
         };
 
         // # wall, . floor, D front door, b bed, k kitchen, s sink, t toilet, h shower, a armchair.
@@ -152,6 +181,48 @@ namespace TinyCity.Simulation.Content
             "#####D#####",
         };
 
+        // o pool tables, x snooker table, c counter, s sink, t toilet.
+        private static readonly string[] CueClubRows =
+        {
+            "###########",
+            "#.........#",
+            "#.o..o..x.#",
+            "#.........#",
+            "#c......st#",
+            "#####D#####",
+        };
+
+        // l bowling lanes, c counter, s sink, t toilet.
+        private static readonly string[] BowlingRows =
+        {
+            "###########",
+            "#.l..l..l.#",
+            "#.........#",
+            "#.........#",
+            "#c.....s.t#",
+            "#####D#####",
+        };
+
+        // z arcade machines, c change counter, s sink.
+        private static readonly string[] ArcadeRows =
+        {
+            "#########",
+            "#z.z.z.z#",
+            "#.......#",
+            "#c....s.#",
+            "####D####",
+        };
+
+        // m exercise machines, c front desk, t toilet, s sink, h shower.
+        private static readonly string[] GymRows =
+        {
+            "#########",
+            "#m.m.m.t#",
+            "#.......#",
+            "#c....sh#",
+            "####D####",
+        };
+
         private static readonly Dictionary<char, TileType> VillageLegend = new Dictionary<char, TileType>
         {
             ['T'] = TileType.Tree,
@@ -178,6 +249,17 @@ namespace TinyCity.Simulation.Content
             ['K'] = TileType.Door,
             ['L'] = TileType.Door,
             ['N'] = TileType.Door,
+            ['U'] = TileType.Door,
+            ['V'] = TileType.Door,
+            ['Z'] = TileType.Door,
+            ['P'] = TileType.Door,
+            ['O'] = TileType.Door,
+            ['X'] = TileType.Door,
+            ['Y'] = TileType.Door,
+            ['M'] = TileType.Path,
+            ['Q'] = TileType.Path,
+            ['F'] = TileType.Path,
+            ['n'] = TileType.Path,
             ['0'] = TileType.Door,
             ['1'] = TileType.Door,
             ['2'] = TileType.Door,
@@ -210,7 +292,28 @@ namespace TinyCity.Simulation.Content
             ("map-cottage-8", "Heather Cottage", "obj-cottage8", '8', 0),
             ("map-cottage-9", "Clover Cottage", "obj-cottage9", '9', 0),
             ("map-cottage-10", "Juniper Cottage", "obj-cottage10", '0', 0),
+            ("map-cottage-11", "Birch Cottage", "obj-cottage11", 'Z', 0),
+            ("map-cottage-12", "Elm Cottage", "obj-cottage12", 'Z', 1),
+            ("map-cottage-13", "Hazel Cottage", "obj-cottage13", 'Z', 2),
+            ("map-cottage-14", "Larch Cottage", "obj-cottage14", 'Z', 3),
+            ("map-cottage-15", "Rowan Cottage", "obj-cottage15", 'Z', 4),
+            ("map-cottage-16", "Aspen Cottage", "obj-cottage16", 'Z', 5),
         };
+
+        /// <summary>
+        /// The flats in the two towers: each tower's eight doors in reading order (four up its right side, then four
+        /// along its front), each a home laid out like a cottage.
+        /// </summary>
+        private static IEnumerable<(string mapId, string name, string prefix, char doorMarker, int door)> Flats()
+        {
+            foreach (var (letter, marker, tower) in new[] { ('a', 'U', "Skyline Tower"), ('b', 'V', "Aurora Tower") })
+            {
+                for (var i = 0; i < 8; i++)
+                {
+                    yield return ($"{FlatMapPrefix}{letter}{i + 1}", $"{tower}, flat {i + 1}", $"obj-flat-{letter}{i + 1}", marker, i);
+                }
+            }
+        }
 
         public static GameTime StartTime => GameTime.FromDayAndTime(1, 7, 0);
 
@@ -246,9 +349,10 @@ namespace TinyCity.Simulation.Content
             objects.Add(new WorldObject("obj-village-bench-garden", "Garden bench", ObjectType.Bench, Find(VillageMapId, VillageRows, 'b', 1)));
             objects.Add(new WorldObject("obj-village-bench-square", "Square bench", ObjectType.Bench, Find(VillageMapId, VillageRows, 'p', 0)));
             objects.Add(new WorldObject("obj-village-bench-park", "Park bench", ObjectType.Bench, Find(VillageMapId, VillageRows, 'p', 1)));
+            AddNewerVillageObjects(objects);
 
             var portals = new List<Portal>();
-            foreach (var cottage in Cottages)
+            foreach (var cottage in Cottages.Concat(Flats()))
             {
                 maps.Add(TileMap.FromRows(cottage.mapId, cottage.name, false, CottageRows, InteriorLegendFor(CottageRows)));
                 AddObjects(objects, cottage.mapId, CottageRows, new Dictionary<char, (string id, string name, ObjectType type)>
@@ -261,8 +365,7 @@ namespace TinyCity.Simulation.Content
                     ['a'] = (cottage.prefix + "-armchair", "Armchair", ObjectType.Armchair),
                 });
 
-                var number = cottage.prefix.Substring("obj-cottage".Length);
-                AddDoor(portals, $"cottage{number}", Find(VillageMapId, VillageRows, cottage.doorMarker, cottage.door), Find(cottage.mapId, CottageRows, 'D', 0));
+                AddDoor(portals, cottage.prefix.Substring("obj-".Length), Find(VillageMapId, VillageRows, cottage.doorMarker, cottage.door), Find(cottage.mapId, CottageRows, 'D', 0));
             }
 
             AddBuilding(maps, objects, portals, StoreMapId, "General store", StoreRows, 'S', "store", new Dictionary<char, (string id, string name, ObjectType type)>
@@ -310,7 +413,68 @@ namespace TinyCity.Simulation.Content
                 objects.Add(new WorldObject($"obj-bar-dance-floor-{i + 2}", "Dance floor", ObjectType.DanceFloor, Find(BarMapId, BarRows, 'e', i)));
             }
 
+            AddBuilding(maps, objects, portals, CueClubMapId, "Cue club", CueClubRows, 'P', "cue-club", new Dictionary<char, (string id, string name, ObjectType type)>
+            {
+                ['x'] = ("obj-cue-club-snooker", "Snooker table", ObjectType.SnookerTable),
+                ['c'] = ("obj-cue-club-counter", "Club counter", ObjectType.Counter),
+                ['s'] = ("obj-cue-club-sink", "Club sink", ObjectType.Sink),
+                ['t'] = ("obj-cue-club-toilet", "Club toilet", ObjectType.Toilet),
+            });
+            objects.Add(new WorldObject("obj-cue-club-pool-1", "Pool table", ObjectType.PoolTable, Find(CueClubMapId, CueClubRows, 'o', 0)));
+            objects.Add(new WorldObject("obj-cue-club-pool-2", "Pool table", ObjectType.PoolTable, Find(CueClubMapId, CueClubRows, 'o', 1)));
+            AddBuilding(maps, objects, portals, BowlingMapId, "Strike Lanes", BowlingRows, 'O', "bowling", new Dictionary<char, (string id, string name, ObjectType type)>
+            {
+                ['c'] = ("obj-bowling-counter", "Shoe counter", ObjectType.Counter),
+                ['s'] = ("obj-bowling-sink", "Bowling alley sink", ObjectType.Sink),
+                ['t'] = ("obj-bowling-toilet", "Bowling alley toilet", ObjectType.Toilet),
+            });
+            for (var i = 0; i < 3; i++)
+            {
+                objects.Add(new WorldObject($"obj-bowling-lane-{i + 1}", $"Lane {i + 1}", ObjectType.BowlingLane, Find(BowlingMapId, BowlingRows, 'l', i)));
+            }
+
+            AddBuilding(maps, objects, portals, ArcadeMapId, "Pixel Arcade", ArcadeRows, 'X', "arcade", new Dictionary<char, (string id, string name, ObjectType type)>
+            {
+                ['c'] = ("obj-arcade-counter", "Change counter", ObjectType.Counter),
+                ['s'] = ("obj-arcade-sink", "Arcade sink", ObjectType.Sink),
+            });
+            for (var i = 0; i < 4; i++)
+            {
+                objects.Add(new WorldObject($"obj-arcade-machine-{i + 1}", "Arcade machine", ObjectType.ArcadeMachine, Find(ArcadeMapId, ArcadeRows, 'z', i)));
+            }
+
+            AddBuilding(maps, objects, portals, GymMapId, "Pulse Gym", GymRows, 'Y', "gym", new Dictionary<char, (string id, string name, ObjectType type)>
+            {
+                ['c'] = ("obj-gym-desk", "Gym desk", ObjectType.Counter),
+                ['t'] = ("obj-gym-toilet", "Gym toilet", ObjectType.Toilet),
+                ['s'] = ("obj-gym-sink", "Gym sink", ObjectType.Sink),
+                ['h'] = ("obj-gym-shower", "Gym shower", ObjectType.Shower),
+            });
+            for (var i = 0; i < 3; i++)
+            {
+                objects.Add(new WorldObject($"obj-gym-machine-{i + 1}", "Exercise machine", ObjectType.GymMachine, Find(GymMapId, GymRows, 'm', i)));
+            }
+
             return new TownWorld(TownId, "Tiny City", maps, objects, portals, CreateBusinesses(), new CommunityCalendar(CreateCommunityEvents()));
+        }
+
+        /// <summary>The market square, the fountain and the benches the bigger city added outdoors.</summary>
+        private static void AddNewerVillageObjects(List<WorldObject> objects)
+        {
+            objects.Add(new WorldObject(MarketSquareId, "Market square", ObjectType.GatheringSpot, Find(VillageMapId, VillageRows, 'Q', 0)));
+            objects.Add(new WorldObject(FountainId, "Fountain", ObjectType.Fountain, Find(VillageMapId, VillageRows, 'F', 0)));
+            var stalls = new[] { "Fruit stall", "Street food stall", "Record stall", "Flower stall", "Gadget stall" };
+            for (var i = 0; i < stalls.Length; i++)
+            {
+                objects.Add(new WorldObject($"obj-village-market-stall-{i + 1}", stalls[i], ObjectType.MarketStall, Find(VillageMapId, VillageRows, 'M', i)));
+            }
+
+            for (var i = 0; i < VillageRows.Sum(r => r.Count(c => c == 'n')); i++)
+            {
+                var at = Find(VillageMapId, VillageRows, 'n', i);
+                var name = at.Position.X > 42 ? (at.Position.Y < 27 ? "Market bench" : "Picnic bench") : "Fountain bench";
+                objects.Add(new WorldObject($"obj-village-bench-{i + 5}", name, ObjectType.Bench, at));
+            }
         }
 
         /// <summary>The neon bar's evening hours, which are also Felix's shift.</summary>
@@ -336,18 +500,38 @@ namespace TinyCity.Simulation.Content
             yield return new Business(BarId, "Neon bar", BarMapId, BarOpens, BarCloses, WedToSun, new[]
             {
                 new ShopItem("cocktail", "A cocktail", Money.Pounds(5.5), 40),
+            }, adultsOnly: true);
+
+            // Nobody in town works at these yet, so they keep to their hours (see TownEconomy.IsOpen).
+            yield return new Business(CueClubId, "Cue club", CueClubMapId, GameTime.MinuteOfDayFor(12, 0), GameTime.MinuteOfDayFor(23, 30), Job.EveryDay, new[]
+            {
+                new ShopItem("pool-game", "A game of pool", Money.Pounds(2), 60),
+                new ShopItem("snooker-frame", "A frame of snooker", Money.Pounds(3), 40),
+            });
+            yield return new Business(BowlingId, "Strike Lanes", BowlingMapId, GameTime.MinuteOfDayFor(10, 0), GameTime.MinuteOfDayFor(22, 0), Job.EveryDay, new[]
+            {
+                new ShopItem("bowling-game", "A game of bowling", Money.Pounds(4.5), 60),
+            });
+            yield return new Business(ArcadeId, "Pixel Arcade", ArcadeMapId, GameTime.MinuteOfDayFor(10, 0), GameTime.MinuteOfDayFor(22, 0), Job.EveryDay, new[]
+            {
+                new ShopItem("arcade-credits", "Arcade credits", Money.Pounds(1.5), 80),
+            });
+            yield return new Business(GymId, "Pulse Gym", GymMapId, GameTime.MinuteOfDayFor(6, 0), GameTime.MinuteOfDayFor(22, 0), Job.EveryDay, new[]
+            {
+                new ShopItem("gym-pass", "A day at the gym", Money.Pounds(3.5), 60),
             });
         }
 
         /// <summary>
         /// The village calendar: a Sunday afternoon get-together by the pond, a Wednesday quiz night at the café, a
-        /// Friday club night at the neon bar, and the village fête once a year (which replaces that Sunday's get-together).
+        /// Friday club night at the neon bar, a Saturday morning market on the market square, and the village fête once a year (which replaces that Sunday's get-together).
         /// </summary>
         public static IEnumerable<CommunityEvent> CreateCommunityEvents()
         {
             yield return new CommunityEvent("get-together", "Sunday get-together", PondLawnId, Minute(15), Minute(17), days: 1 << (int)Weekday.Sunday, turnout: 0.45);
             yield return new CommunityEvent("quiz-night", "Quiz night", QuizCornerId, Minute(18), Minute(20), days: 1 << (int)Weekday.Wednesday, turnout: 0.4);
             yield return new CommunityEvent("club-night", "Club night", ClubCornerId, Minute(20), Minute(23), days: 1 << (int)Weekday.Friday, turnout: 0.35);
+            yield return new CommunityEvent("street-market", "Saturday market", MarketSquareId, Minute(10), Minute(13), days: 1 << (int)Weekday.Saturday, turnout: 0.4);
             yield return new CommunityEvent("village-fete", "City festival", VillageGreenId, Minute(14), Minute(17), yearDay: FeteDayOfYear, turnout: 0.8);
         }
 

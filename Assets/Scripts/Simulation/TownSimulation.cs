@@ -53,6 +53,15 @@ namespace TinyCity.Simulation
         public const int MaxReasonLength = 100;
 
         /// <summary>
+        /// One AI answer plans up to this many free-time activities: the one to do now and the rest afterwards, so the
+        /// model is asked less often. Each later step is checked again when it is due (see <see cref="PlanStep"/>).
+        /// </summary>
+        public const int MaxPlanSteps = 3;
+
+        /// <summary>A plan's later steps are dropped this many game minutes after it was made.</summary>
+        public const int PlanMinutes = 180;
+
+        /// <summary>
         /// A resident's day for reflection purposes runs from noon to noon, so going to bed after midnight, or still
         /// sleeping early the next morning, counts as the same day.
         /// </summary>
@@ -191,9 +200,20 @@ namespace TinyCity.Simulation
             StepLifeEvents();
             StepRomanceDaily();
             StepCommunityEvents();
+            StepNewcomers();
+            StepBirths();
             foreach (var resident in residents)
             {
-                if (resident.IsAlive)
+                if (!resident.IsAlive)
+                {
+                    continue;
+                }
+
+                if (resident.IsBaby)
+                {
+                    StepBaby(resident);
+                }
+                else
                 {
                     Step(resident);
                 }
@@ -327,7 +347,7 @@ namespace TinyCity.Simulation
         /// the answer must be for the decision the resident is waiting on, and the action and target must be one of
         /// <see cref="ActivityPlanner.FreeTimeOptions"/> right now. Reason and speech are cleaned and shortened.
         /// </summary>
-        public DecisionOutcome ApplyDecision(string residentId, long decisionId, string actionId, string targetId, string reason, string say)
+        public DecisionOutcome ApplyDecision(string residentId, long decisionId, string actionId, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null)
         {
             var r = GetResident(residentId);
             if (r == null)
@@ -365,23 +385,62 @@ namespace TinyCity.Simulation
             }
 
             r.ResetActivity();
+            StartOption(r, option, why, "(AI)");
+            var actions = new HashSet<string>(options.Select(o => o.ActionId));
+            r.SetPlan((then ?? Array.Empty<PlanStep>()).Where(step => step != null && actions.Contains(step.ActionId)).Take(MaxPlanSteps - 1), Time.TotalMinutes + PlanMinutes);
+            Conversations.AddRemark(r.Id, Time, say, option.ActionId);
+            return DecisionOutcome.Applied;
+        }
+
+        private void StartOption(Resident r, FreeTimeOption option, string why, string sourceNote)
+        {
             if (option.Activity == null)
             {
                 Relax(r, why);
-                r.AddLog(Time, $"Decided to take it easy: {why} (AI)");
+                r.AddLog(Time, $"Decided to take it easy: {why} {sourceNote}");
             }
             else if (option.Partner != null)
             {
-                StartChoice(r, new PlanChoice(option.Partner, why, PlanPriority.Leisure), "(AI)");
+                StartChoice(r, new PlanChoice(option.Partner, why, PlanPriority.Leisure), sourceNote);
             }
             else
             {
-                StartChoice(r, new PlanChoice(option.Activity, option.Target, why), "(AI)");
+                StartChoice(r, new PlanChoice(option.Activity, option.Target, why), sourceNote);
             }
 
             r.GoalSource = DecisionSource.Ai;
-            Conversations.AddRemark(r.Id, Time, say, option.ActionId);
-            return DecisionOutcome.Applied;
+        }
+
+        /// <summary>
+        /// Starts the next step of the resident's AI plan if it is still possible: it must be one of their free-time
+        /// options right now, at the planned target or, if that has gone (full, shut, too far), the nearest one for
+        /// the same activity. Steps that no longer fit are skipped, and an old plan is dropped.
+        /// </summary>
+        private bool TryFollowPlan(Resident r)
+        {
+            if (r.PlannedSteps.Count > 0 && Time.TotalMinutes > r.PlanExpires)
+            {
+                r.ClearPlan();
+            }
+
+            while (r.PlannedSteps.Count > 0)
+            {
+                var step = r.TakePlannedStep();
+                var options = FreeTimeOptionsFor(r);
+                var option = options.FirstOrDefault(o => o.ActionId == step.ActionId && o.TargetId == step.TargetId)
+                    ?? (step.ActionId == ActivityCatalog.Chat.Id ? null : options.FirstOrDefault(o => o.ActionId == step.ActionId));
+                if (option == null)
+                {
+                    continue;
+                }
+
+                var why = option.Activity == null ? "Planned to take it easy for a bit" : $"Planned on {option.Activity.Verb} next";
+                StartOption(r, option, why, "(AI plan)");
+                r.PlanStepsTaken++;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>Gives up on an AI suggestion, for example after failed retries, and lets the routine decide now.</summary>
@@ -517,6 +576,15 @@ namespace TinyCity.Simulation
                 }
             }
 
+            if (!AiDecisionsEnabled)
+            {
+                r.ClearPlan();
+            }
+            else if ((choice == null || choice.IsDiscretionary) && TryFollowPlan(r))
+            {
+                return;
+            }
+
             if (AiDecisionsEnabled && (choice == null || choice.IsDiscretionary) && FreeTimeOptionsFor(r).Count >= 2)
             {
                 r.ResetActivity();
@@ -537,6 +605,11 @@ namespace TinyCity.Simulation
                 r.ResetActivity();
                 Relax(r, "Taking it easy");
                 return;
+            }
+
+            if (choice.Priority == PlanPriority.Bedtime || choice.Priority == PlanPriority.Work || choice.Priority == PlanPriority.Nap)
+            {
+                r.ClearPlan();
             }
 
             if (choice.Priority == PlanPriority.UrgentNeed && choice.Activity.PrimaryNeed != null)

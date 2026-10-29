@@ -70,6 +70,16 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
 - **Shops:** taller blocks with large display windows (goods behind the glass), a neon tube along the shopfront and
   a neon sign flat above the door with a picture: an apple (store), a cup (café), a loaf (bakery), a red cross
   (clinic) or a cocktail glass (the violet neon bar). Each shop has its own neon colour.
+- **Apartment towers:** six floors (three times a home's height, `BuildingArt.TowerHeight`) of navy or charcoal
+  panels with a line between floors and a window for each room on every floor, lit one by one at night. A glass
+  door to each ground-floor flat along the front and up the right side, in cyan or violet neon, and no sign.
+- **Venues:** shop-style blocks with their own neon and sign: an eight ball on olive (the lime cue club), a red-banded
+  skittle on wine (amber Strike Lanes), a lime space invader on plum (the pink Pixel Arcade) and a dumbbell on slate
+  (the mint Pulse Gym). Inside: olive walls and dark boards with teal pool tables and a moss snooker table; wine
+  walls and pale boards with three lanes ending in pins and a ball return; navy walls, a plum checker floor and four
+  cabinets with glowing screens and neon marquees; a slate gym with treadmills.
+- **Outdoors:** striped market stalls laid out with goods, and a stone fountain with water in the season's colour
+  (snow in winter).
 - **Rooms:** doll's-house cutaways. The two back walls are tall and the same height, meeting in a clean inside
   corner, with dark wall panels, a pink neon rail at waist height, a cyan LED skirting, windows showing the lit
   city outside, and pictures. The front walls are low with a cyan top edge, and walls inside the room are half
@@ -77,7 +87,7 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
 
 ## Residents
 
-![The ten residents in every pose, with the mood icons](Images/residents.png)
+![The ten residents in every pose, then a child, a teenager and a baby, with the mood icons](Images/residents.png)
 
 - **Size and shape.** A resident is about 33 pixels tall from feet to the top of the head (doors are about 30), with
   a head 8 pixels wide, a body 8 wide and arms 2 wide each side. They are drawn in three-quarter view and face one
@@ -95,10 +105,14 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
   with pink tips and her apron, Samuel's lab coat, glasses and beard, Felix's violet visor and cyan tips, Edith's
   long plum coat, white bun and glasses. Anyone new gets a look put together from their id (piping always, a visor,
   dyed tips under 40 or a coat from 50 now and then), going grey at 65 and white at 75 (`ResidentLook`).
+- **Children.** Children born in the city are the same figure with rows taken out between the neck and the ankles,
+  so the head keeps its size: 9 rows shorter from 3 to 12, 4 rows shorter as a teenager, with a smaller shadow and
+  no beard (`ResidentLook.Shrink`). A baby under 3 is a little bundle in their techwear colour, piped in their neon,
+  held at chest height beside whoever carries them, or tucked up low beside them in bed.
 - **Animation.** Four walking frames (a stride, a lifted foot, the other stride, the other foot) with a one-pixel
   bob, and two frames each for talking (mouth and a hand gesture), eating, reading, working, cheering and star
   jumps. Sitting puts the hips on the seat with the legs hanging down; sleeping shows the head on the pillow and the
-  shoulders above the quilt. People use furniture where it is used: sitting in chairs and on benches, standing at
+  shoulders above the quilt (someone with nowhere to live lies along a park bench). People use furniture where it is used: sitting in chairs and on benches, standing at
   the front of cookers, sinks, counters and workbenches, facing them.
 - **Mood icons.** A small pale bubble with a tail over the head, outlined, holding a 7 × 5 symbol: a smile
   (happy), "z" (asleep), a green face (ill), "!" (needs the toilet), bread (hungry), a drop (thirsty), heavy eyes

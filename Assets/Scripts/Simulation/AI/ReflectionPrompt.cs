@@ -50,7 +50,7 @@ namespace TinyCity.Simulation.AI
                 sb.AppendLine("Things you said: " + string.Join(" / ", said.Select(PromptText.Quote)));
             }
 
-            PromptText.AppendMemories(sb, sim.Memories.Recall(r.Id, sim.Time, new[] { r.HomeMapId }, 3));
+            PromptText.AppendMemories(sb, sim.Memories.Recall(r.Id, sim.Time, r.IsHomeless ? new[] { "home" } : new[] { r.HomeMapId }, 3));
             sb.Append("Write one short diary-style memory of today in the first person, under 30 words, as \"summary\". ")
               .Append("Rate how much today mattered to you as \"importance\" from 1 (an ordinary day) to 10 (life-changing); most days are 1 to 3.");
 

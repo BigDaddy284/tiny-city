@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TinyCity.Simulation.Activities;
 using TinyCity.Simulation.Time;
 using TinyCity.Simulation.World;
 
@@ -33,6 +34,11 @@ namespace TinyCity.Simulation.Residents
         Adult,
         MiddleAged,
         Elderly,
+
+        // Added with babies. Not saved (it comes from the age), but kept after the others so their order holds.
+        Baby,
+        Child,
+        Teen,
     }
 
     public sealed class ActivityLogEntry
@@ -53,6 +59,7 @@ namespace TinyCity.Simulation.Residents
         public const int MaxLogEntries = 40;
 
         private readonly List<ActivityLogEntry> log = new List<ActivityLogEntry>();
+        private readonly List<PlanStep> plannedSteps = new List<PlanStep>();
 
         public Resident(
             string id,
@@ -76,7 +83,7 @@ namespace TinyCity.Simulation.Residents
             Id = id;
             FirstName = firstName ?? string.Empty;
             LastName = lastName ?? string.Empty;
-            AgeYears = Math.Max(18, ageYears);
+            AgeYears = Math.Max(0, ageYears);
             BirthdayDayOfYear = Math.Max(1, Math.Min(birthdayDayOfYear, 365));
             ColourHex = colourHex ?? "#C8643C";
             Personality = personality ?? new Personality(0.5, 0.5, 0.5, 0.5);
@@ -104,15 +111,43 @@ namespace TinyCity.Simulation.Residents
         public LifeStage LifeStage => AgeYears >= 65 ? LifeStage.Elderly
             : AgeYears >= 45 ? LifeStage.MiddleAged
             : AgeYears >= 30 ? LifeStage.Adult
-            : LifeStage.YoungAdult;
+            : AgeYears >= PopulationRules.AdultAge ? LifeStage.YoungAdult
+            : AgeYears >= 13 ? LifeStage.Teen
+            : AgeYears >= PopulationRules.WalkingAge ? LifeStage.Child
+            : LifeStage.Baby;
+
+        /// <summary>Under <see cref="PopulationRules.WalkingAge"/>: carried about by a parent rather than living their own day.</summary>
+        public bool IsBaby => AgeYears < PopulationRules.WalkingAge;
+
+        /// <summary>Under <see cref="PopulationRules.AdultAge"/>: no work, no romance, no bar, and an early bedtime.</summary>
+        public bool IsMinor => AgeYears < PopulationRules.AdultAge;
+
+        /// <summary>The day they were born in the city, or 0 for someone who wasn't.</summary>
+        public int BornDay { get; internal set; }
+
+        private List<string> parentIds = new List<string>();
+
+        /// <summary>The ids of their parents, for someone born in the city.</summary>
+        public IReadOnlyList<string> ParentIds => parentIds;
+
+        internal void SetParents(IEnumerable<string> ids) => parentIds = (ids ?? new string[0]).Where(p => !string.IsNullOrWhiteSpace(p) && p != Id).Distinct().Take(2).ToList();
+
+        /// <summary>Parent and child, or brothers and sisters (sharing a parent).</summary>
+        public bool IsFamilyOf(Resident other) =>
+            other != null && (parentIds.Contains(other.Id) || other.parentIds.Contains(Id) || parentIds.Any(p => other.parentIds.Contains(p)));
 
         public string ColourHex { get; }
 
         public Personality Personality { get; }
 
-        public string HomeMapId { get; }
+        /// <summary>The home they live in, or null for someone with nowhere to live; see <see cref="IsHomeless"/>.</summary>
+        public string HomeMapId { get; internal set; }
 
-        public string BedObjectId { get; }
+        /// <summary>Their bed at home, or null when homeless.</summary>
+        public string BedObjectId { get; internal set; }
+
+        /// <summary>Nowhere to live: they sleep on a park bench and get by on what's free.</summary>
+        public bool IsHomeless => string.IsNullOrEmpty(HomeMapId);
 
         /// <summary>Null for the retired and the unemployed. Replaced only by game logic, e.g. upgrading an old save.</summary>
         public Job Job { get; internal set; }
@@ -170,6 +205,11 @@ namespace TinyCity.Simulation.Residents
 
         public const int MaxHobbies = 4;
 
+        /// <summary>The day they moved to the city from out of town, or 0 for someone who has always lived here.</summary>
+        public int MovedInDay { get; internal set; }
+
+        public bool IsNewcomer => MovedInDay > 0;
+
         /// <summary>Whether they're open to romance at all. Some residents simply aren't looking.</summary>
         public bool OpenToRomance { get; internal set; } = true;
 
@@ -205,6 +245,18 @@ namespace TinyCity.Simulation.Residents
         /// <summary>While deciding, the game minute at which the built-in routine takes over.</summary>
         public long DecisionDeadline { get; internal set; }
 
+        /// <summary>
+        /// The rest of the resident's AI plan for free time, in order. It lives only while the game runs: like an
+        /// unanswered decision it is not saved, so after loading the resident simply asks again.
+        /// </summary>
+        public IReadOnlyList<PlanStep> PlannedSteps => plannedSteps;
+
+        /// <summary>The game minute after which the rest of the plan is dropped.</summary>
+        public long PlanExpires { get; internal set; }
+
+        /// <summary>How many planned steps the resident has carried out since the game started (for diagnostics, not saved).</summary>
+        public int PlanStepsTaken { get; internal set; }
+
         /// <summary>The last day the resident reflected on, so each day gets at most one reflection.</summary>
         public int LastReflectionDay { get; internal set; }
 
@@ -218,6 +270,22 @@ namespace TinyCity.Simulation.Residents
                 log.RemoveRange(0, log.Count - MaxLogEntries);
             }
         }
+
+        internal void SetPlan(IEnumerable<PlanStep> steps, long expires)
+        {
+            plannedSteps.Clear();
+            plannedSteps.AddRange(steps);
+            PlanExpires = expires;
+        }
+
+        internal PlanStep TakePlannedStep()
+        {
+            var step = plannedSteps[0];
+            plannedSteps.RemoveAt(0);
+            return step;
+        }
+
+        internal void ClearPlan() => plannedSteps.Clear();
 
         internal void ResetActivity()
         {

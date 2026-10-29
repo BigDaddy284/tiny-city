@@ -129,29 +129,34 @@ namespace TinyCity.Tools.ArtPreview
                 poses.Add(new ResidentPose(action, Stance.Sitting, Facing.UpRight, 1));
             }
 
+            // The starter residents, then children born in the city: a child, a teenager and a baby.
+            var looks = residents.Select(r => ResidentLook.For(r.Id, r.AgeYears)).ToList();
+            looks.Add(ResidentLook.For("res-0021", 7));
+            looks.Add(ResidentLook.For("res-0022", 15));
+            looks.Add(ResidentLook.For("res-0023", 1));
+
             const int scale = 2;
             var cellW = ResidentArt.Width;
             var cellH = ResidentArt.Height;
-            var sheet = new PixelCanvas(poses.Count * cellW * scale, (residents.Count * cellH + 16) * scale, 0, 0);
+            var sheet = new PixelCanvas(poses.Count * cellW * scale, (looks.Count * cellH + 16) * scale, 0, 0);
             sheet.FillRect(0, 0, sheet.Width, sheet.Height, Palette.WoodLight);
-            for (var r = 0; r < residents.Count; r++)
+            for (var r = 0; r < looks.Count; r++)
             {
-                var look = ResidentLook.For(residents[r].Id, residents[r].AgeYears);
                 for (var i = 0; i < poses.Count; i++)
                 {
-                    Stamp(sheet, ResidentArt.Render(look, poses[i]), i * cellW * scale, r * cellH * scale, scale);
+                    Stamp(sheet, ResidentArt.Render(looks[r], poses[i]), i * cellW * scale, r * cellH * scale, scale);
                 }
             }
 
             var x = 0;
             foreach (var mood in MoodArt.Shown)
             {
-                Stamp(sheet, MoodArt.Icon(mood), x, residents.Count * cellH * scale + scale, scale);
+                Stamp(sheet, MoodArt.Icon(mood), x, looks.Count * cellH * scale + scale, scale);
                 x += (MoodArt.Width + 3) * scale;
             }
 
             Png.Write(path, sheet);
-            Console.WriteLine($"{residents.Count} residents x {poses.Count} poses");
+            Console.WriteLine($"{looks.Count} looks x {poses.Count} poses");
         }
 
         private static void Stamp(PixelCanvas target, PixelCanvas source, int ox, int oy, int scale)

@@ -11,5 +11,11 @@ namespace TinyCity.Simulation.Configuration
 
         /// <summary>Whether the calendar's community events (get-togethers, quiz nights, the fête) take place.</summary>
         public bool communityEvents = true;
+
+        /// <summary>Whether people move to the city from out of town (see PopulationRules).</summary>
+        public bool newcomers = true;
+
+        /// <summary>Whether committed couples have babies, who grow up in the city (see PopulationRules).</summary>
+        public bool babies = true;
     }
 }

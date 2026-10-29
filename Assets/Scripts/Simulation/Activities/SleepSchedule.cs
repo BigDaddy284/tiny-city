@@ -52,9 +52,9 @@ namespace TinyCity.Simulation.Activities
         public static int MinutesToBed(Resident r, GameTime time) =>
             ((BedtimeOf(r) - time.MinuteOfDay) + GameTime.MinutesPerDay) % GameTime.MinutesPerDay;
 
-        /// <summary>The usual bedtime, as minutes after midnight of the day before: young adults 23:15, then 22:30, and 21:45 from 60.</summary>
+        /// <summary>The usual bedtime, as minutes after midnight of the day before: children 20:00, teenagers 21:30, young adults 23:15, then 22:30, and 21:45 from 60.</summary>
         private static int UsualBedtime(int age) =>
-            age < 30 ? GameTime.MinuteOfDayFor(23, 15) : age < 60 ? GameTime.MinuteOfDayFor(22, 30) : GameTime.MinuteOfDayFor(21, 45);
+            age < 13 ? GameTime.MinuteOfDayFor(20, 0) : age < PopulationRules.AdultAge ? GameTime.MinuteOfDayFor(21, 30) : age < 30 ? GameTime.MinuteOfDayFor(23, 15) : age < 60 ? GameTime.MinuteOfDayFor(22, 30) : GameTime.MinuteOfDayFor(21, 45);
 
         /// <summary>−30 to +30 minutes, in fives.</summary>
         private static int PersonalShift(string residentId)

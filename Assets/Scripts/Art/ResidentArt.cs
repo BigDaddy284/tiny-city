@@ -18,17 +18,32 @@ namespace TinyCity.Art
         public static int HeadTop(ResidentLook look, ResidentPose pose)
         {
             var extra = look.Hat != null ? 3 : look.Style == HairStyle.Bun ? 2 : 0;
+            if (look.IsBaby)
+            {
+                return BabyHeight;
+            }
+
             switch (pose.Stance)
             {
-                case Stance.Sitting: return 22 + extra;
+                case Stance.Sitting: return 22 + extra - (look.Shrink / 2);
                 case Stance.Lying: return 22;
-                default: return 32 + extra;
+                default: return 32 + extra - look.Shrink;
             }
         }
+
+        /// <summary>How far above the anchor a carried baby's head is: about chest height on whoever carries them.</summary>
+        public const int BabyHeight = 24;
 
         public static PixelCanvas Render(ResidentLook look, ResidentPose pose)
         {
             var canvas = new PixelCanvas(Width, Height, AnchorX, AnchorY);
+            if (look.IsBaby)
+            {
+                Baby(canvas, look, pose.Facing.Away, pose.Stance == Stance.Lying);
+                canvas.Outline(Palette.Outline);
+                return canvas;
+            }
+
             if (pose.Stance == Stance.Lying)
             {
                 Lying(canvas, look);
@@ -39,12 +54,84 @@ namespace TinyCity.Art
             var f = new Figure(canvas, look, pose);
             f.Draw();
             canvas.Outline(Palette.Outline);
+            if (look.Shrink > 0)
+            {
+                // A child: the same figure with rows taken out between the neck and the ankles, so the head stays its
+                // size and the feet stay on the ground (or, sitting, on the seat).
+                var seated = pose.Stance == Stance.Sitting;
+                Shorten(canvas, seated ? look.Shrink / 2 : look.Shrink, AnchorY - (seated ? 11 : 21), AnchorY - (seated ? 1 : 4));
+            }
+
             if (pose.Stance == Stance.Standing)
             {
-                canvas.Ellipse(AnchorX, AnchorY - 0.5, 7, 2.4, Palette.Shadow, under: true);
+                canvas.Ellipse(AnchorX, AnchorY - 0.5, look.Shrink > 0 ? 5 : 7, look.Shrink > 0 ? 2 : 2.4, Palette.Shadow, under: true);
             }
 
             return canvas;
+        }
+
+        /// <summary>Takes <paramref name="rows"/> evenly spaced rows out of [top, bottom], moving everything above down to close the gap.</summary>
+        private static void Shorten(PixelCanvas canvas, int rows, int top, int bottom)
+        {
+            var span = bottom - top + 1;
+            rows = Math.Max(0, Math.Min(rows, span - 1));
+            var removed = new bool[canvas.Height];
+            for (var k = 0; k < rows; k++)
+            {
+                removed[top + (int)((k + 0.5) * span / rows)] = true;
+            }
+
+            var target = bottom;
+            for (var y = bottom; y >= 0; y--)
+            {
+                if (y >= top && removed[y])
+                {
+                    continue;
+                }
+
+                for (var x = 0; x < canvas.Width; x++)
+                {
+                    canvas.Set(x, target, canvas.Get(x, y));
+                }
+
+                target--;
+            }
+
+            for (; target >= 0; target--)
+            {
+                for (var x = 0; x < canvas.Width; x++)
+                {
+                    canvas.Set(x, target, Rgba.Clear);
+                }
+            }
+        }
+
+        /// <summary>
+        /// A baby wrapped in a blanket, held at chest height a little to the side of whoever carries them, or tucked
+        /// up low beside them when they're lying down.
+        /// </summary>
+        private static void Baby(PixelCanvas canvas, ResidentLook look, bool away, bool tuckedUp)
+        {
+            var side = tuckedUp ? 7 : away ? -4 : 4;
+            var cx = AnchorX + side;
+            var cy = AnchorY - (tuckedUp ? 8 : 17);
+            canvas.Ellipse(cx, cy, 4.2, 2.6, look.Top);
+            if (look.Trim != null)
+            {
+                canvas.Set(cx - 1, cy + 1, look.Trim.Value);
+                canvas.Set(cx, cy + 1, look.Trim.Value);
+                canvas.Set(cx + 1, cy + 1, look.Trim.Value);
+            }
+
+            var hx = cx + (away ? 2.5 : -2.5);
+            var hy = cy - 3.0;
+            canvas.Disc(hx, hy, 2.4, look.Skin);
+            canvas.Disc(hx, hy - 1.6, 1.3, look.Hair);
+            if (!away)
+            {
+                canvas.Set((int)Math.Round(hx - 1), (int)Math.Round(hy), Palette.Ebony);
+                canvas.Set((int)Math.Round(hx + 1), (int)Math.Round(hy), Palette.Ebony);
+            }
         }
 
         /// <summary>Tucked up in bed: the head on the pillow and the shoulders above the quilt (the bed draws itself).</summary>

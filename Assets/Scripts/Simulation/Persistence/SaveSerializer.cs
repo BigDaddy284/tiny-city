@@ -61,9 +61,11 @@ namespace TinyCity.Simulation.Persistence
         /// adds health, illness, death date and cause, and hobbies; older saves load in health suited to each
         /// resident's age, well, and without hobbies (the starter content then adds them). Version 6 adds romance
         /// (feelings and break-up times on relationships, couples, and whether each resident is open to romance) and
-        /// the town history; older saves load with nobody in a couple, open to romance, and an empty history.
+        /// the town history; older saves load with nobody in a couple, open to romance, and an empty history. Version 7 adds the day
+        /// each newcomer moved in; in older saves everyone has always lived here. Version 8 adds the day each child was
+        /// born and their parents, and a home may be missing (someone sleeping rough); older saves have neither.
         /// </remarks>
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 8;
 
         public static string Save(TownSimulation simulation)
         {
@@ -283,6 +285,9 @@ namespace TinyCity.Simulation.Persistence
                 },
                 ["hobbies"] = r.Hobbies.Cast<object>().ToList(),
                 ["openToRomance"] = r.OpenToRomance,
+                ["movedInDay"] = r.MovedInDay,
+                ["bornDay"] = r.BornDay,
+                ["parents"] = r.ParentIds.Cast<object>().ToList(),
                 ["alive"] = r.IsAlive,
                 ["needs"] = needs,
                 ["location"] = new Dictionary<string, object>
@@ -825,6 +830,9 @@ namespace TinyCity.Simulation.Persistence
             resident.SickDay = Math.Max(0, GetInt(data, "sickDay", 0));
             resident.SetHobbies(GetList(data, "hobbies").OfType<string>().Where(h => ActivityCatalog.ForHobby(h) != null));
             resident.OpenToRomance = GetBool(data, "openToRomance", true);
+            resident.MovedInDay = Math.Max(0, GetInt(data, "movedInDay", 0));
+            resident.BornDay = Math.Max(0, GetInt(data, "bornDay", 0));
+            resident.SetParents(GetList(data, "parents").OfType<string>());
 
             var death = GetObject(data, "death");
             if (!resident.IsAlive)

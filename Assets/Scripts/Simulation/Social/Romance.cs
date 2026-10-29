@@ -87,7 +87,7 @@ namespace TinyCity.Simulation.Social
         /// <summary>Both adults, alive, open to romance and close enough in age.</summary>
         public static bool Compatible(Resident a, Resident b) =>
             a != null && b != null && a != b && a.IsAlive && b.IsAlive && a.OpenToRomance && b.OpenToRomance
-            && a.AgeYears >= 18 && b.AgeYears >= 18 && Math.Abs(a.AgeYears - b.AgeYears) <= MaxAgeGap;
+            && !a.IsMinor && !b.IsMinor && !a.IsFamilyOf(b) && Math.Abs(a.AgeYears - b.AgeYears) <= MaxAgeGap;
 
         /// <summary>Whether <paramref name="from"/> could ever fall for <paramref name="to"/>. Fixed for the pair, and can be one-sided.</summary>
         public static bool HasChemistry(Resident from, Resident to) => Spark(from, to) > 0;

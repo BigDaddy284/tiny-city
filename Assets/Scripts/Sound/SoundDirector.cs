@@ -122,7 +122,17 @@ namespace TinyCity.Sound
                 return SoundEffect.Till;
             }
 
-            if (id == ActivityCatalog.Chess.Id)
+            if (id == ActivityCatalog.PlayArcade.Id)
+            {
+                return SoundEffect.Typing;
+            }
+
+            if (id == ActivityCatalog.BrowseMarket.Id)
+            {
+                return SoundEffect.Till;
+            }
+
+            if (id == ActivityCatalog.Chess.Id || id == ActivityCatalog.PlayPool.Id || id == ActivityCatalog.PlaySnooker.Id)
             {
                 return SoundEffect.ChessMove;
             }

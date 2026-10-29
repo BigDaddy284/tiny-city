@@ -79,6 +79,28 @@ namespace TinyCity.Runtime
             tab = GUILayout.Toolbar(tab, TabNames);
             scroll = GUILayout.BeginScrollView(scroll);
             GUILayout.Label($"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", styles.Title);
+            if (r.IsNewcomer)
+            {
+                GUILayout.Label($"Moved to the city on day {r.MovedInDay}", styles.Text);
+            }
+
+            if (r.BornDay > 0)
+            {
+                var parents = string.Join(" and ", r.ParentIds.Select(id => Simulation.GetResident(id)?.FullName).Where(n => n != null));
+                GUILayout.Label($"Born in the city on day {r.BornDay}{(parents.Length > 0 ? ", to " + parents : string.Empty)}", styles.Text);
+            }
+
+            if (r.IsBaby && r.IsAlive)
+            {
+                var carer = Simulation.CarerOf(r);
+                GUILayout.Label(carer == null ? "A baby, looked after at home" : $"A baby, carried about by {carer.FirstName}", styles.Text);
+            }
+
+            if (r.IsHomeless && r.IsAlive)
+            {
+                GUILayout.Label("Nowhere to live: sleeps on a park bench until a home comes free", styles.Text);
+            }
+
             switch (tab)
             {
                 case 1:
@@ -166,12 +188,14 @@ namespace TinyCity.Runtime
         }
 
         /// <summary>
-        /// A button that opens a list of everyone (filtered and sorted), and a box to find someone by name, whose
-        /// matches appear underneath as you type. Picking someone shows them here and in the active panel.
+        /// How many people live in the city (in a box like the panel count), a button that opens a list of everyone
+        /// (filtered and sorted), and a box to find someone by name, whose matches appear underneath as you type.
+        /// Picking someone shows them here and in the active panel.
         /// </summary>
         private void DrawPeopleFinder(Resident r)
         {
             GUILayout.BeginHorizontal();
+            GUILayout.Box(Simulation.LivingCount.ToString(), CountStyle(), GUILayout.Width(28f));
             peopleOpen = GUILayout.Toggle(peopleOpen, peopleOpen ? "People ▲" : "People ▼", GUI.skin.button, GUILayout.Width(110f));
             GUI.SetNextControlName(SearchControl);
             search = GUILayout.TextField(search ?? string.Empty, 40);
@@ -293,6 +317,11 @@ namespace TinyCity.Runtime
                 {
                     GUILayout.Label("Why: chosen with the AI. In their own words (the AI's explanation, not a game fact):", styles.Small);
                     GUILayout.Label(r.Goal, styles.AiNote);
+                }
+
+                if (r.PlannedSteps.Count > 0)
+                {
+                    GUILayout.Label($"Planned next (checked again when it's time): {string.Join(", then ", r.PlannedSteps.Select(DescribePlanStep))}", styles.Small);
                 }
                 else
                 {
@@ -585,6 +614,29 @@ namespace TinyCity.Runtime
             }
 
             return string.IsNullOrEmpty(r.IncomeLabel) ? "No job" : $"No job ({r.IncomeLabel.ToLowerInvariant()})";
+        }
+
+        private string DescribePlanStep(PlanStep step)
+        {
+            if (step.ActionId == FreeTimeOption.RelaxActionId)
+            {
+                return "take it easy";
+            }
+
+            if (!ActivityCatalog.TryGet(step.ActionId, out var activity))
+            {
+                return step.ActionId;
+            }
+
+            if (activity == ActivityCatalog.Chat)
+            {
+                var partner = Simulation.GetResident(step.TargetId);
+                return partner == null ? "a chat" : $"a chat with {partner.FirstName}";
+            }
+
+            return Simulation.World.TryGetObject(step.TargetId ?? string.Empty, out var obj)
+                ? $"{activity.Name.ToLowerInvariant()} at the {obj.Name.ToLowerInvariant()}"
+                : activity.Name.ToLowerInvariant();
         }
 
         private string DescribeActivity(Resident r)

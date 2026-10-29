@@ -10,12 +10,13 @@ namespace TinyCity.Simulation.AI
     /// <summary>What the AI answered for a free-time decision, before the game validates it.</summary>
     public sealed class DecisionReply
     {
-        public DecisionReply(string action, string targetId, string reason, string say)
+        public DecisionReply(string action, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null)
         {
             Action = action;
             TargetId = targetId;
             Reason = reason;
             Say = say;
+            Then = then ?? new List<PlanStep>();
         }
 
         public string Action { get; }
@@ -25,6 +26,9 @@ namespace TinyCity.Simulation.AI
         public string Reason { get; }
 
         public string Say { get; }
+
+        /// <summary>What the resident means to do afterwards, in order; checked again by the game when each is due.</summary>
+        public IReadOnlyList<PlanStep> Then { get; }
     }
 
     /// <summary>Builds the free-time decision prompt and reads the answer. Only offered options can be chosen.</summary>
@@ -32,7 +36,7 @@ namespace TinyCity.Simulation.AI
     {
         public const int MemoryCount = 4;
         public const int RecentLogCount = 4;
-        public const int MaxTokens = 160;
+        public const int MaxTokens = 220;
         public const double Temperature = 0.8;
 
         public static string BuildBody(string model, TownSimulation sim, Resident r, IReadOnlyList<FreeTimeOption> options)
@@ -49,6 +53,10 @@ namespace TinyCity.Simulation.AI
             sb.AppendLine($"How you feel: {PromptText.Feelings(r)}.");
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
             sb.AppendLine($"Money: {PromptText.Purse(r)}.");
+            if (r.IsHomeless)
+            {
+                sb.AppendLine("You have nowhere to live yet, so you sleep on a park bench.");
+            }
             PromptText.AppendMemories(sb, memories);
             PromptText.AppendPeople(sb, sim, r);
 
@@ -62,31 +70,45 @@ namespace TinyCity.Simulation.AI
                 }
             }
 
-            sb.AppendLine("You have some free time. Choose exactly one option:");
+            sb.AppendLine("You have some free time. Choose one option to do now:");
             foreach (var o in options)
             {
                 sb.AppendLine($"- action {PromptText.Quote(o.ActionId)}, target_id {PromptText.Quote(o.TargetId)}: {Describe(o)}");
             }
 
-            sb.Append("Reply as JSON with \"action\" and \"target_id\" copied from one option, \"reason\" (why, in your own words, under 15 words) ")
-              .Append("and \"say\" (something you say or think out loud, under 15 words).");
+            sb.Append("Reply as JSON with \"action\" and \"target_id\" copied from one option, \"reason\" (why, in your own words, under 15 words), ")
+              .Append("\"say\" (something you say or think out loud, under 15 words) ")
+              .Append($"and \"then\": up to {TownSimulation.MaxPlanSteps - 1} more options from the list to do afterwards, in order, each with \"action\" and \"target_id\".");
             return sb.ToString();
         }
 
         /// <summary>Constrains the model to the offered ids; the game still checks the pair is a real option.</summary>
         public static Dictionary<string, object> Schema(IReadOnlyList<FreeTimeOption> options)
         {
+            var actions = options.Select(o => (object)o.ActionId).Distinct().ToList();
+            var targets = options.Select(o => (object)o.TargetId).Distinct().ToList();
+            var step = new Dictionary<string, object>
+            {
+                ["type"] = "object",
+                ["properties"] = new Dictionary<string, object>
+                {
+                    ["action"] = new Dictionary<string, object> { ["type"] = "string", ["enum"] = actions },
+                    ["target_id"] = new Dictionary<string, object> { ["type"] = "string", ["enum"] = targets },
+                },
+                ["required"] = new List<object> { "action", "target_id" },
+            };
             return new Dictionary<string, object>
             {
                 ["type"] = "object",
                 ["properties"] = new Dictionary<string, object>
                 {
-                    ["action"] = new Dictionary<string, object> { ["type"] = "string", ["enum"] = options.Select(o => (object)o.ActionId).Distinct().ToList() },
-                    ["target_id"] = new Dictionary<string, object> { ["type"] = "string", ["enum"] = options.Select(o => (object)o.TargetId).Distinct().ToList() },
+                    ["action"] = new Dictionary<string, object> { ["type"] = "string", ["enum"] = actions },
+                    ["target_id"] = new Dictionary<string, object> { ["type"] = "string", ["enum"] = targets },
                     ["reason"] = new Dictionary<string, object> { ["type"] = "string" },
                     ["say"] = new Dictionary<string, object> { ["type"] = "string" },
+                    ["then"] = new Dictionary<string, object> { ["type"] = "array", ["items"] = step, ["maxItems"] = TownSimulation.MaxPlanSteps - 1 },
                 },
-                ["required"] = new List<object> { "action", "target_id", "reason", "say" },
+                ["required"] = new List<object> { "action", "target_id", "reason", "say", "then" },
             };
         }
 
@@ -122,8 +144,39 @@ namespace TinyCity.Simulation.AI
                 target = candidates[0].TargetId;
             }
 
-            reply = new DecisionReply(action, target, AiJson.GetString(obj, "reason"), AiJson.GetString(obj, "say"));
+            reply = new DecisionReply(action, target, AiJson.GetString(obj, "reason"), AiJson.GetString(obj, "say"), ReadSteps(obj));
             return true;
+        }
+
+        /// <summary>
+        /// Reads the optional "then" list. Steps without an action, or past <see cref="TownSimulation.MaxPlanSteps"/>,
+        /// are dropped rather than failing the whole answer; the game checks the rest when each step is due.
+        /// </summary>
+        private static List<PlanStep> ReadSteps(Dictionary<string, object> obj)
+        {
+            var steps = new List<PlanStep>();
+            if (!obj.TryGetValue("then", out var value) || !(value is IList<object> list))
+            {
+                return steps;
+            }
+
+            foreach (var item in list)
+            {
+                var action = AiJson.GetString(item as Dictionary<string, object>, "action")?.Trim();
+                if (string.IsNullOrEmpty(action))
+                {
+                    continue;
+                }
+
+                var target = AiJson.GetString((Dictionary<string, object>)item, "target_id")?.Trim();
+                steps.Add(new PlanStep(action, string.IsNullOrEmpty(target) ? null : target));
+                if (steps.Count >= TownSimulation.MaxPlanSteps - 1)
+                {
+                    break;
+                }
+            }
+
+            return steps;
         }
 
         /// <summary>Words that help recall memories relevant to these options.</summary>

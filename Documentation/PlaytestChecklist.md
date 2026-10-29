@@ -32,7 +32,8 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 9. **AI turned off:** set `"enabled": false` in `settings.json` and restart. The AI line says the AI is off, and the game behaves like Phase 1.
 10. **Memories survive saving:** press F5, then F9. "Remembers" and "Last said" are unchanged. Close and reopen the game: they are still there.
 11. **Speed:** at 10x the AI often can't answer within her short wait, so she falls back to her routine more often ("no AI answer in time" in the log). At 1x most free-time decisions should come from the AI.
-12. **Old save:** a Phase 1 save loads without errors, and Mabel gains her two background memories.
+12. **Plans:** after an AI decision the inspector often shows "Planned next" with one or two more activities. When the first one ends, the next starts straight away without "thinking about what to do", and the log line ends with "(AI plan)". If something gets in the way (she is hungry, it's bedtime, the café shut), the plan gives way: hunger comes first, bedtime clears the plan, and a step that no longer fits is skipped.
+13. **Old save:** a Phase 1 save loads without errors, and Mabel gains her two background memories.
 
 ## Phase 3: social simulation
 
@@ -183,7 +184,7 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 2. **Benches and chess:** two people on a bench sit side by side; two chess players sit at either end of the board. When one leaves, the other stays put.
 3. **Inspector top row:** "Town journal" (J still works), then −, + and Watch everyone, with the number of camera panels in a box on the far right. The row of name buttons is gone.
 4. **People list:** click "People ▼". A scrolling list shows each person's name and age († for those who have died). Filter by Everyone, Living or Died and sort by first name, surname, oldest or youngest. Clicking a name shows them in the inspector and the active panel.
-5. **Find a person:** click the "Find a person…" box and type. Matching names appear underneath as you type (case doesn't matter, surnames count). Clicking one shows that person and clears the box. While typing, the game's keys (J, S, F5 and so on) don't fire; Escape or clicking the town leaves the box.
+5. **Find a person:** the box left of "People ▼" shows how many people live in the city, like the panel count above it, and goes up when someone moves in or is born. Click the "Find a person…" box and type. Matching names appear underneath as you type (case doesn't matter, surnames count). Clicking one shows that person and clears the box. While typing, the game's keys (J, S, F5 and so on) don't fire; Escape or clicking the town leaves the box.
 
 ## Phase 6, build 3: sound and the themed window
 
@@ -207,3 +208,46 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 2. **Off sick:** when a shopkeeper is too ill to work and stays home, their shop stays shut for the day. If the only person who worked there dies, it stays shut for good.
 3. **Expand:** open People ▼ and click Expand at the end of the Everyone / Living / Died row. The side panel shows the speed and panel controls, the filter and order buttons, and everyone's names in a two-column grid, A–Z by first name. Click a name to pick that person; the grid stays open. Click Back to return to the normal view.
 4. **Hide the side panel:** click "Hide ▶" beside Settings, or press H. The city fills the whole window, and a "◀ Panel" button sits in the top-right camera panel's header, in line with its other buttons and not over them. Click it, or press H again, to bring the panel back. The choice is remembered the next time you start the game.
+
+## Staggered sleep and the neon bar
+
+1. **Bed and wake times:** at night, watch the whole town. People go to bed over about two hours rather than all at once. Younger people stay up later and older people turn in earlier. Mornings stagger the same way. Morning workers are always up in time for their shift.
+2. **The bar:** there is a violet building with a cocktail-glass sign east of the lower cottages, with its door onto the bottom street. Inside are a bar counter, two high tables with stools, a 3 × 3 light-up dance floor, a DJ booth, a toilet and a sink.
+3. **Felix's job:** from Wednesday to Sunday, Felix walks to the bar by 17:30 and works until 23:30. He goes to bed after his shift (about 00:15) and sleeps in. His inspector shows the job "Bar host" and his wages. An older save gives him the job when it is loaded, and his jobseeker's allowance stops.
+4. **Opening hours:** the inspector shows the bar as "closed" on Monday, Tuesday and in the daytime. From 18:00 it is "open" once Felix is in.
+5. **A night out:** on open evenings from 19:00, a few residents go for a drink at the high tables (paid, about £5.50) or to dance on the floor (free, arms up). Friends are sometimes invited along. Nobody heads out within an hour of their bedtime or with less than £30 to spend.
+6. **Club night:** on Fridays from 20:00 to 23:00, a "Club night" event gathers people at the DJ booth. It appears in the journal like the quiz night does.
+
+## Several AI requests at once and waiting longer at high speed
+
+1. **High speed:** with the AI on, play at 4x and then 10x. Fewer residents log "no AI answer in time" than before, and residents in the Deciding state wait up to about 8 real seconds before the routine takes over.
+2. **Parallel requests:** set `OLLAMA_NUM_PARALLEL` to 2, restart Ollama, set `"parallelRequests": 2` in `settings.json`, then start the game. The AI line in the inspector can show a queue count that includes two requests being answered. More free-time choices come from the AI at 4x than with 1.
+3. **Too many at once:** with `parallelRequests` higher than Ollama's `OLLAMA_NUM_PARALLEL`, the game still works. The extra requests simply wait inside Ollama.
+
+## The bigger city
+
+1. **More room:** a new town is twice the size. The old streets and buildings are where they were, with new streets running on to the right and below.
+2. **Apartment towers:** two tall six-floor towers stand along the back edge at the top right, behind everything else, so they don't hide anything. Each has four glass doors along its front and four up its right side, one per flat. At night their windows light up one by one.
+3. **New homes:** six new cottages below the old ones, and sixteen flats in the towers. Nobody lives in them yet, and nobody wanders in to use them.
+4. **Venues:** the cue club (eight-ball sign), Strike Lanes (skittle), the Pixel Arcade (space invader) and the Pulse Gym (dumbbell) sit right of the old shops. In the daytime and evening, residents with money to spare head out to play pool or snooker, bowl, play the arcade games or work out, and pay for it. They're shut at night.
+5. **Market and park:** the market square has five striped stalls that residents browse, and a "Saturday market" event on Saturday mornings in the journal. The park below has a fountain residents sit round, plus more benches.
+6. **Older saves:** load a town saved before this build. Everyone is where they were and carries on, and the new parts of the city are there around them.
+
+## Newcomers
+
+1. **Someone arrives:** start a new town and run it at 10x for a few days. From day 3, about two days a week, someone new appears at 10:00 on the path at the bottom edge of the city, a notification says they moved in, and they walk to an empty cottage or flat.
+2. **Their own life:** select them. The inspector says "Moved to the city on day N" under their name, they have hobbies and a weekly income ("Works remotely" or "Jobseeker's allowance"), and they sleep in their new home at night.
+3. **Journal:** the Town journal lists "… moved to the city, into …" under Life.
+4. **Limits:** however long it runs, no more than ten people ever move in, and nobody arrives once fifty people live in the city. Someone who arrives when every home is taken sleeps on a park bench until one comes free.
+5. **Save and load:** save, quit and reload. The newcomers are still there with the same day they moved in.
+6. **Settings:** set `"newcomers": false` in `settings.json` and restart: nobody new arrives.
+
+## Babies, children and homelessness
+
+1. **A baby:** let a town run at 10x until two residents become a committed couple (the journal says so). Within a few weeks they have a baby: a notification, a journal entry under Life, and a little bundle in one parent's arms that goes everywhere with them, tucked up beside them in bed at night. The inspector says who the baby was born to and who carries them.
+2. **Growing up:** a child ages a year every 14 days, twice as fast as adults. From 3 they walk about on their own, smaller than adults, go to bed earlier, sleep in their parent's bed, never work and never go into the bar. Teenagers are a little taller.
+3. **Moving out:** at 18 they move into an empty cottage or flat, with a notification. If every home is taken they sleep on a park bench instead.
+4. **Homeless:** someone with nowhere to live lies along a park bench at night (nobody sits on it with them), eats leftovers at the market stalls, and moves into the first home that comes free, at 09:00.
+5. **Limits:** no baby is born while fifty people are alive, a couple has at most three children, and parents are never older than 50. Family never fall for each other.
+6. **Save and load:** save with a baby and a child in town, then reload: they're still there with the same parents and birthdays.
+7. **Settings:** set `"babies": false` in `settings.json` and restart: no more babies.

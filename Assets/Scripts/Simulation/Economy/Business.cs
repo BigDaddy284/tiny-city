@@ -38,7 +38,10 @@ namespace TinyCity.Simulation.Economy
     /// <summary>A shop, café, bakery or clinic: its building, opening hours and what it sells. Static content.</summary>
     public sealed class Business
     {
-        public Business(string id, string name, string mapId, int openMinuteOfDay, int closeMinuteOfDay, int openDays, IEnumerable<ShopItem> items)
+        /// <summary>Somewhere children can't go, such as the bar.</summary>
+        public bool AdultsOnly { get; }
+
+        public Business(string id, string name, string mapId, int openMinuteOfDay, int closeMinuteOfDay, int openDays, IEnumerable<ShopItem> items, bool adultsOnly = false)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -56,6 +59,7 @@ namespace TinyCity.Simulation.Economy
             OpenMinuteOfDay = openMinuteOfDay;
             CloseMinuteOfDay = closeMinuteOfDay;
             OpenDays = openDays;
+            AdultsOnly = adultsOnly;
             Items = (items ?? Enumerable.Empty<ShopItem>()).ToList();
             if (Items.Select(i => i.Id).Distinct().Count() != Items.Count)
             {

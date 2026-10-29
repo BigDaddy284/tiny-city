@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TinyCity.Art;
 using TinyCity.Simulation;
+using TinyCity.Simulation.Activities;
 using TinyCity.Simulation.Residents;
 using TinyCity.Simulation.Time;
 using TinyCity.Simulation.World;
@@ -215,6 +216,11 @@ namespace TinyCity.Runtime
                     continue;
                 }
 
+                if (r.IsBaby && PlaceBaby(simulation, r, renderer))
+                {
+                    continue;
+                }
+
                 var here = r.Location;
                 var from = previous.TryGetValue(r.Id, out var p) && p.MapId == here.MapId ? p.Position : here.Position;
                 var moving = from != here.Position;
@@ -250,6 +256,29 @@ namespace TinyCity.Runtime
                     icon.transform.localPosition = new Vector3(0f, (ResidentArt.HeadTop(look, pose) + 2f) / SpriteFactory.PixelsPerUnit, 0f);
                 }
             }
+        }
+
+        /// <summary>
+        /// A baby is drawn in their carer's arms, just in front of them, wherever they are. False when nobody is
+        /// carrying them (both parents gone), and they're drawn on their own tile like anyone else.
+        /// </summary>
+        private bool PlaceBaby(TownSimulation simulation, Resident baby, SpriteRenderer renderer)
+        {
+            var carer = simulation.CarerOf(baby);
+            if (carer == null || !residents.TryGetValue(carer.Id, out var carried) || carried == null || !carried.enabled)
+            {
+                return false;
+            }
+
+            facings.TryGetValue(carer.Id, out var facing);
+            var look = ResidentLook.For(baby.Id, baby.AgeYears);
+            // Asleep in bed, the carer has the baby tucked up beside them.
+            var lying = carer.State == ResidentState.Performing && (carer.ActivityId == ActivityCatalog.Sleep.Id || carer.ActivityId == ActivityCatalog.Rest.Id);
+            renderer.sprite = SpriteFor(baby.Id, look, new ResidentPose(ResidentAction.Stand, lying ? Stance.Lying : Stance.Standing, facing, 0));
+            renderer.transform.position = carried.transform.position;
+            renderer.sortingOrder = carried.sortingOrder + 1;
+            renderer.color = carried.color;
+            return true;
         }
 
         /// <summary>The frame to show: walking steps with the move between tiles, everything else with the clock.</summary>
@@ -290,7 +319,7 @@ namespace TinyCity.Runtime
 
         private Sprite SpriteFor(string residentId, ResidentLook look, ResidentPose pose)
         {
-            var key = $"{residentId}|{look.Hair}|{pose.Key}";
+            var key = $"{residentId}|{look.Hair}|{look.Shrink}|{look.IsBaby}|{pose.Key}";
             if (!residentSprites.TryGetValue(key, out var sprite) || sprite == null)
             {
                 sprite = residentFactory.Create(ResidentArt.Render(look, pose), key);

@@ -160,9 +160,21 @@ namespace TinyCity.Simulation.Activities
             }
 
             var mapId = obj.Location.MapId;
-            if (!world.GetMap(mapId).IsExterior && mapId != resident.HomeMapId && world.BusinessOnMap(mapId) == null)
+            var business = world.BusinessOnMap(mapId);
+            if (!world.GetMap(mapId).IsExterior && mapId != resident.HomeMapId && business == null)
             {
                 return false;
+            }
+
+            if (business != null && business.AdultsOnly && resident.IsMinor)
+            {
+                return false;
+            }
+
+            // A family shares the bed at home: children sleep with their parent.
+            if (obj.Type == ObjectType.Bed && mapId == resident.HomeMapId)
+            {
+                return true;
             }
 
             return UsersOf(resident, obj) < obj.Capacity;
@@ -224,7 +236,41 @@ namespace TinyCity.Simulation.Activities
         public bool CanDo(Resident resident, ActivityDefinition activity, WorldObject obj, GameTime time) =>
             activity.CanUse(obj) && (activity.Hobby == null || resident.Hobbies.Contains(activity.Hobby))
             && (activity != ActivityCatalog.AttendEvent || EventAt(obj, time) != null)
-            && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _));
+            && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _))
+            && SuitsHousing(resident, activity, obj);
+
+        /// <summary>
+        /// Only someone with nowhere to live sleeps on a bench, and only on one nobody else is using; nobody joins
+        /// them there. Market leftovers are for them alone too.
+        /// </summary>
+        private bool SuitsHousing(Resident resident, ActivityDefinition activity, WorldObject obj)
+        {
+            if (activity == ActivityCatalog.Leftovers)
+            {
+                return resident.IsHomeless;
+            }
+
+            if (obj.Type != ObjectType.Bench)
+            {
+                return true;
+            }
+
+            if (activity == ActivityCatalog.Sleep)
+            {
+                return resident.IsHomeless && UsersOf(resident, obj) == 0;
+            }
+
+            foreach (var other in residents)
+            {
+                if (other != resident && other.IsAlive && other.TargetObjectId == obj.Id && other.ActivityId == ActivityCatalog.Sleep.Id
+                    && (other.State == ResidentState.Travelling || other.State == ResidentState.Performing))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         /// <summary>Whether the calendar's community events take place. Turned off in settings, nobody can attend one.</summary>
         public bool CommunityEventsEnabled { get; set; } = true;
@@ -294,6 +340,7 @@ namespace TinyCity.Simulation.Activities
             return BestScored(resident, time, comfortOnly: true)
                 ?? ShoppingChoice(resident, time)
                 ?? EventChoice(resident, time)
+                ?? OutingChoice(resident, time)
                 ?? NightOutChoice(resident, time)
                 ?? BestScored(resident, time, comfortOnly: false);
         }
@@ -372,6 +419,56 @@ namespace TinyCity.Simulation.Activities
         /// resident fancies it or not by <see cref="Chance"/>, likelier for the sociable and the young; the active
         /// ones prefer to dance. Only while somewhere is open, with money to spare and time before bed.
         /// </summary>
+        /// <summary>From late morning until the night out begins, residents now and then head out to one of the city's venues.</summary>
+        public static readonly int OutingFrom = GameTime.MinuteOfDayFor(10, 0);
+
+        /// <summary>The chance, each daytime hour, that a resident fancies an outing, before personality.</summary>
+        public const double OutingChance = 0.15;
+
+        /// <summary>Outings cost a few pounds, so residents keep something back.</summary>
+        public const long OutingMinimumPence = 2000;
+
+        /// <summary>Enough time to get there, play and get home before bed.</summary>
+        public const int OutingBeforeBedMinutes = 90;
+
+        /// <summary>The city's places for an outing; each resident tries them in an order of their own for the hour, favourites first.</summary>
+        private static readonly ActivityDefinition[] Outings =
+        {
+            ActivityCatalog.PlayPool, ActivityCatalog.PlaySnooker, ActivityCatalog.Bowling, ActivityCatalog.PlayArcade, ActivityCatalog.GymWorkout, ActivityCatalog.BrowseMarket,
+        };
+
+        /// <summary>
+        /// A daytime outing to the cue club, the bowling alley, the arcade, the gym or the market, by chance for each
+        /// hour (likelier for the sociable and active) and only with money to spare. Without it the venues, being further
+        /// from most homes than an armchair or the park, would hardly ever be chosen.
+        /// </summary>
+        private PlanChoice OutingChoice(Resident resident, GameTime time)
+        {
+            if (time.MinuteOfDay < OutingFrom || time.MinuteOfDay >= NightOutFrom || resident.MoneyPence < OutingMinimumPence
+                || SleepSchedule.MinutesToBed(resident, time) < OutingBeforeBedMinutes)
+            {
+                return null;
+            }
+
+            var hour = time.MinuteOfDay / 60;
+            var p = resident.Personality;
+            if (Chance.Roll(resident.Id, time.Day, 80 + hour) >= OutingChance * (0.5 + ((p.Sociable + p.Active) / 2)))
+            {
+                return null;
+            }
+
+            foreach (var activity in Outings.OrderBy(a => Chance.Roll(resident.Id, time.Day, 100 + (hour * 8) + Array.IndexOf(Outings, a)) / Preference(p, a)))
+            {
+                var place = NearestDoable(resident, activity, time);
+                if (place != null)
+                {
+                    return new PlanChoice(activity, place, $"Fancies an outing: {activity.Verb}", PlanPriority.Leisure);
+                }
+            }
+
+            return null;
+        }
+
         private PlanChoice NightOutChoice(Resident resident, GameTime time)
         {
             if (time.MinuteOfDay < NightOutFrom || resident.MoneyPence < NightOutMinimumPence
@@ -403,7 +500,7 @@ namespace TinyCity.Simulation.Activities
         /// <summary>A trip to the shop when groceries are running low and the shop can serve them.</summary>
         private PlanChoice ShoppingChoice(Resident resident, GameTime time)
         {
-            if (resident.Groceries > LowGroceries)
+            if (resident.Groceries > LowGroceries || resident.IsHomeless || resident.IsMinor)
             {
                 return null;
             }
@@ -629,17 +726,18 @@ namespace TinyCity.Simulation.Activities
 
         private static double Preference(Personality p, ActivityDefinition activity)
         {
-            if (activity == ActivityCatalog.Exercise)
+            if (activity == ActivityCatalog.Exercise || activity == ActivityCatalog.GymWorkout)
             {
                 return 0.5 + p.Active;
             }
 
-            if (activity == ActivityCatalog.WatchTown || activity == ActivityCatalog.Coffee || activity == ActivityCatalog.CafeMeal || activity == ActivityCatalog.BarDrink)
+            if (activity == ActivityCatalog.WatchTown || activity == ActivityCatalog.Coffee || activity == ActivityCatalog.CafeMeal || activity == ActivityCatalog.BarDrink
+                || activity == ActivityCatalog.PlayPool || activity == ActivityCatalog.PlaySnooker || activity == ActivityCatalog.BrowseMarket)
             {
                 return 0.5 + p.Sociable;
             }
 
-            if (activity == ActivityCatalog.Dance)
+            if (activity == ActivityCatalog.Dance || activity == ActivityCatalog.Bowling)
             {
                 return 0.5 + ((p.Active + p.Sociable) / 2);
             }

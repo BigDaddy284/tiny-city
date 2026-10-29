@@ -52,7 +52,29 @@ namespace TinyCity.Simulation.Health
 
         public static int CycleDay(int day) => ((day - 1) % DaysPerYear) + 1;
 
-        public static bool IsBirthday(Resident r, int day) => CycleDay(day) == BirthdayCycleDay(r);
+        /// <summary>
+        /// Adults have a birthday once every 28-day year. Children born in the city have one every
+        /// <see cref="PopulationRules.ChildDaysPerYear"/> days from the day they were born, until they're grown up.
+        /// </summary>
+        public static bool IsBirthday(Resident r, int day) =>
+            r.BornDay > 0 && r.IsMinor
+                ? day > r.BornDay && (day - r.BornDay) % PopulationRules.ChildDaysPerYear == 0
+                : CycleDay(day) == BirthdayCycleDay(r);
+
+        /// <summary>A <see cref="Resident.BirthdayDayOfYear"/> whose birthday falls on this day of each 28-day year.</summary>
+        public static int BirthdayDayOfYearFor(int day)
+        {
+            var cycleDay = CycleDay(day);
+            for (var d = 1; d <= 365; d++)
+            {
+                if (1 + ((d - 1) * DaysPerYear / 365) == cycleDay)
+                {
+                    return d;
+                }
+            }
+
+            return 1;
+        }
 
         public static bool CanWork(Resident r) => IllnessCatalog.Get(r.IllnessId)?.CanWork ?? true;
 
@@ -153,7 +175,7 @@ namespace TinyCity.Simulation.Health
         /// <summary>The daily check: whether the resident falls ill today, and with what. Null if they stay well.</summary>
         public static Illness CatchesIllness(Resident r, int day)
         {
-            if (r.IllnessId != null || Chance.Roll(r.Id, day, 1) >= IllnessRisk(r, day))
+            if (r.IllnessId != null || r.IsBaby || Chance.Roll(r.Id, day, 1) >= IllnessRisk(r, day))
             {
                 return null;
             }
