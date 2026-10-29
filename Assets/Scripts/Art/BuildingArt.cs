@@ -269,6 +269,12 @@ namespace TinyCity.Art
                     case PlaceKind.Shop:
                         look.Neon = Palette.ShopNeon;
                         break;
+                    case PlaceKind.Bar:
+                        look.Wall = Palette.TechViolet;
+                        look.Roof = Palette.Iron;
+                        look.DoorColour = Palette.NeonPink;
+                        look.Neon = Palette.NeonViolet;
+                        break;
                 }
 
                 if (plan.Kind != PlaceKind.Cottage)
@@ -537,6 +543,9 @@ namespace TinyCity.Art
                     return (x > -1.1 && x < 0.7 && y > -0.6 && y < 0.9) || (x >= 0.7 && x < 1.2 && Math.Abs(y) < 0.4) ? Palette.White : (Rgba?)null;
                 case PlaceKind.Bakery:
                     return ((x * x / 4) + (y * y / 1)) < 1 ? Palette.Bread : (Rgba?)null;
+                case PlaceKind.Bar:
+                    // A cocktail glass: a bowl narrowing to a stem on a foot.
+                    return (y < 0 && y > -1.2 && Math.Abs(x) < 0.2 - (y * 0.9)) || (Math.Abs(x) < 0.18 && y >= 0 && y < 0.9) || (Math.Abs(x) < 0.6 && y >= 0.9 && y < 1.2) ? Palette.NeonCyan : (Rgba?)null;
                 case PlaceKind.Store:
                     return ((x * x) + (y * y)) < 1 ? Palette.SignRed : Math.Abs(x) < 0.2 && y < -0.9 && y > -1.4 ? Palette.LeafGreen : (Rgba?)null;
                 default:

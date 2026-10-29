@@ -333,6 +333,9 @@ namespace TinyCity.Runtime
                 // Older saves have fewer residents; the newcomers move in at home.
                 var newcomers = StarterTown.AddMissingResidents(result.Simulation);
 
+                // The neon bar opened after older saves were made; Felix takes the job if he is still looking for work.
+                StarterTown.AddBarJobToOlderSave(result.Simulation);
+
                 UseSlot(slot);
                 SetSimulation(result.Simulation);
                 foreach (var warning in result.Warnings)

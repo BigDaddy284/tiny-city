@@ -14,12 +14,13 @@ namespace TinyCity.Tools.StressTest
 {
     public static partial class Program
     {
-        private const int Districts = 10;
+        /// <summary>How many copies of the starter town the big city has (ten residents each).</summary>
+        private static int Districts = 10;
 
         /// <summary>
-        /// One city ten times the size of the starter town: ten copies of every map, object, door, business and
-        /// event side by side (not joined up), and ten copies of the residents, 100 people in one simulation.
-        /// District 1 keeps the starter ids; the others add "-d2" … "-d10".
+        /// One city several times the size of the starter town (<see cref="Districts"/> copies, ten by default): a copy
+        /// of every map, object, door, business and event per district, side by side (not joined up), and a copy of the
+        /// residents, ten people per district in one simulation. District 1 keeps the starter ids; the others add "-d2" and so on.
         /// </summary>
         internal static TownSimulation CreateBigCity()
         {
@@ -93,10 +94,10 @@ namespace TinyCity.Tools.StressTest
         private static bool BigCity(int section, int days)
         {
             var probe = CreateBigCity();
-            var about = $"The owner's test: the starter town copied ten times side by side into one city ({probe.World.Maps.Count()} maps, {probe.World.Objects.Count} objects, {probe.World.Businesses.Count} businesses), " +
+            var about = $"The owner's test: the starter town copied {Districts} times side by side into one city ({probe.World.Maps.Count()} maps, {probe.World.Objects.Count} objects, {probe.World.Businesses.Count} businesses), " +
                 $"with {probe.Residents.Count} residents in one simulation and one AI queue, all served by one model. The districts are not joined up, so people only meet their own neighbours. " +
                 "Copied residents start without the starter residents' background memories.";
-            var ok = AiAtEachSpeed($"## {section}. A city ten times the size: 100 residents and one qwen2.5:0.5b", AiProfile.All.Last(), days, CreateBigCity, about);
+            var ok = AiAtEachSpeed($"## {section}. A city {Districts} times the size: {probe.Residents.Count} residents and one qwen2.5:0.5b", AiProfile.All.Last(), days, CreateBigCity, about);
 
             // The game ticks once per game minute; at 10x that is ten ticks a real second, all on the main thread.
             var sim = CreateBigCity();
@@ -115,7 +116,7 @@ namespace TinyCity.Tools.StressTest
             s.Restart();
             var loaded = SaveSerializer.Load(json, CreateBigCity().World);
             var load = s.Elapsed.TotalMilliseconds;
-            Line($"Without the AI, two game days of the 100-resident city: ticks take {ticks.Average():0.00} ms on average, 99.9% under {ticks[(int)(ticks.Count * 0.999)]:0.0} ms, slowest {ticks[ticks.Count - 1]:0.0} ms. " +
+            Line($"Without the AI, two game days of the {sim.Residents.Count}-resident city: ticks take {ticks.Average():0.00} ms on average, 99.9% under {ticks[(int)(ticks.Count * 0.999)]:0.0} ms, slowest {ticks[ticks.Count - 1]:0.0} ms. " +
                 $"At 10x that is about {ticks.Average():0.0}% of one core. The save is {json.Length / 1024} KB; saving takes {save:0} ms and loading {load:0} ms.");
             Line();
             if (!loaded.Success)
