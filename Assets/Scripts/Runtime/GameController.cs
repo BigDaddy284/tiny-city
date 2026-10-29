@@ -509,13 +509,14 @@ namespace TinyCity.Runtime
             PlayerPrefs.Save();
         }
 
-        /// <summary>While the side panel is hidden, a small button in the top-right corner brings it back.</summary>
-        private void DrawShowSidebarButton()
+        /// <summary>
+        /// While the side panel is hidden, the top-right camera panel's header starts with a button that brings it back,
+        /// so it sits in line with that panel's own buttons instead of over them.
+        /// </summary>
+        private bool ShowsSidebarButton(Rect panel)
         {
-            if (GUI.Button(new Rect(Screen.width - 96f, 8f, 88f, 28f), "◀ Panel"))
-            {
-                ToggleSidebar();
-            }
+            var area = CameraArea();
+            return SidebarHidden && panel.yMin <= area.yMin + 1f && panel.xMax >= area.xMax - 1f;
         }
 
         public void SetSpeed(int index)
@@ -660,11 +661,7 @@ namespace TinyCity.Runtime
             saves.Draw(CameraArea(), styles);
             settingsWindow.Draw(CameraArea(), styles);
             Notifications.Draw(CameraArea(), styles, GoTo);
-            if (SidebarHidden)
-            {
-                DrawShowSidebarButton();
-            }
-            else
+            if (!SidebarHidden)
             {
                 inspector.Draw(styles);
             }
@@ -686,6 +683,17 @@ namespace TinyCity.Runtime
 
             // An open place list may hang over this header; its buttons mustn't take the list's clicks.
             GUI.enabled = !(placeMenuPanel >= 0 && placeMenuArea.Contains(Event.current.mousePosition));
+            if (ShowsSidebarButton(rect))
+            {
+                x -= 62f;
+                if (GUI.Button(new Rect(x, y, 60f, 18f), "◀ Panel", styles.HeaderButton))
+                {
+                    ToggleSidebar();
+                    GUI.enabled = true;
+                    return;
+                }
+            }
+
             if (Panels.Count > 1)
             {
                 x -= 22f;
