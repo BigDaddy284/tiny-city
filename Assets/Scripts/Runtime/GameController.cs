@@ -125,6 +125,7 @@ namespace TinyCity.Runtime
             UiTheme.Changed += ApplyThemeToCameras;
             ScreenSettings.Apply(Preferences);
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyCity] AI: {message}") };
+            Ai.SetGameSpeed(Speed);
 
             SidebarHidden = PlayerPrefs.GetInt(SidebarPrefsKey, 0) == 1;
             SlotNames = SaveStore.ReadIndex();
@@ -522,6 +523,9 @@ namespace TinyCity.Runtime
             {
                 lastSpeedIndex = SpeedIndex;
             }
+
+            // At 1x the clock runs one game minute per real second, so the speed is game minutes per second.
+            Ai?.SetGameSpeed(Speed);
         }
 
         /// <summary>Shows <paramref name="r"/> in the inspector, and optionally points the active panel at them.</summary>
