@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Persistence;
+using TinyCity.Simulation.Persistence;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// The saved towns: load, copy, rename, export or delete each one, start a new town, or open the saves folder.

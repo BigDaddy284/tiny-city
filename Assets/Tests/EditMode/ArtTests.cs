@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Art;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Art;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>Phase 6, build 1: the generated art for places, seasons and the light.</summary>
     public class ArtTests

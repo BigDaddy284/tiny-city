@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Economy;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Economy;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// The panel on the right: town controls at the top, the chosen resident in tabs, and saving and AI status at the
@@ -84,7 +84,7 @@ namespace TinyTown.Runtime
         private void DrawTownControls(Resident r)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label("The Tiny Town", styles.Title);
+            GUILayout.Label("Tiny City", styles.Title);
             GUILayout.FlexibleSpace();
             if (GUILayout.Toggle(game.SettingsOpen, "Settings", GUI.skin.button, GUILayout.Width(90f), GUILayout.Height(28f)) != game.SettingsOpen)
             {
@@ -204,7 +204,7 @@ namespace TinyTown.Runtime
             }
 
             GUILayout.Space(6f);
-            GUILayout.Label("Village news", styles.Text);
+            GUILayout.Label("City news", styles.Text);
             var history = Simulation.History.Events;
             for (var i = history.Count - 1; i >= Math.Max(0, history.Count - 3); i--)
             {
@@ -314,7 +314,7 @@ namespace TinyTown.Runtime
             var timeline = Timeline(r);
             if (timeline.Count == 0)
             {
-                GUILayout.Label("Nothing in the village records yet.", styles.Small);
+                GUILayout.Label("Nothing in the city records yet.", styles.Small);
             }
 
             foreach (var e in Enumerable.Reverse(timeline).Take(TimelineShown))
@@ -530,7 +530,7 @@ namespace TinyTown.Runtime
             }
 
             var next = Simulation.World.Calendar.Next(Simulation.Time);
-            return next == null ? "Nothing on the village calendar" : $"Next: {next.Value.evt.Name}, {next.Value.start.Weekday} (day {next.Value.start.Day}) at {next.Value.start.ClockText}";
+            return next == null ? "Nothing on the city calendar" : $"Next: {next.Value.evt.Name}, {next.Value.start.Weekday} (day {next.Value.start.Day}) at {next.Value.start.ClockText}";
         }
 
         private static string Words(string pascal) =>

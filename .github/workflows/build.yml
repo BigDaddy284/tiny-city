@@ -103,12 +103,12 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: StandaloneWindows64
-          buildName: TheTinyTown
-          buildMethod: TinyTown.Editor.BuildScript.BuildWindows
+          buildName: TinyCity
+          buildMethod: TinyCity.Editor.BuildScript.BuildWindows
           versioning: Custom
           version: 0.0.${{ github.run_number }}
       - uses: actions/upload-artifact@v4
         with:
-          name: TheTinyTown-Windows-0.0.${{ github.run_number }}
+          name: TinyCity-Windows-0.0.${{ github.run_number }}
           path: build/StandaloneWindows64
           if-no-files-found: error

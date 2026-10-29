@@ -1,12 +1,12 @@
 using System;
 using System.IO;
 using System.Linq;
-using TinyTown.Art;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Art;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tools.ArtPreview
+namespace TinyCity.Tools.ArtPreview
 {
     /// <summary>Writes every map (the village in every season, interiors in summer), by day and by night, as PNG files.</summary>
     internal static class Program

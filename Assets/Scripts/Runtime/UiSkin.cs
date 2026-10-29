@@ -1,7 +1,7 @@
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.Configuration;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// Builds an IMGUI skin from a <see cref="UiPalette"/>, in the Stills &amp; Reels look: rounded controls, a
@@ -15,7 +15,7 @@ namespace TinyTown.Runtime
         public static GUISkin Build(UiPalette p)
         {
             var skin = Object.Instantiate(GUI.skin);
-            skin.name = p.Dark ? "TinyTown Dark" : "TinyTown Light";
+            skin.name = p.Dark ? "TinyCity Dark" : "TinyCity Light";
             skin.hideFlags = HideFlags.HideAndDontSave;
             var text = UiTheme.ToColor(p.Text);
             var selected = UiTheme.ToColor(p.SelectedText);

@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using TinyTown.Simulation;
-using TinyTown.Simulation.History;
+using TinyCity.Simulation;
+using TinyCity.Simulation.History;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// The town journal: the village records newest first, with a search box, topic filters and an option to show

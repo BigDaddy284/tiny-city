@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.World;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// One to ten camera panels sharing the screen to the left of the inspector. The layout adapts to how many
@@ -17,7 +17,7 @@ namespace TinyTown.Runtime
     {
         public const int MaxPanels = 10;
         public const float HeaderHeight = 22f;
-        private const string PrefsKey = "TinyTown.Panels";
+        private const string PrefsKey = "TinyCity.Panels";
         private const float SpeechSeconds = 8f;
 
         /// <summary>Object names are only drawn when the camera is close enough for them to fit.</summary>

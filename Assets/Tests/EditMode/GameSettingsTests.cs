@@ -1,7 +1,7 @@
 using NUnit.Framework;
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.Configuration;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     // Plain NUnit with no UnityEngine usage, so these also run under `dotnet test` (see DotNetTests/).
     public class GameSettingsTests

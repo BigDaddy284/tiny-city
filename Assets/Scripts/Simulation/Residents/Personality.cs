@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Residents
+namespace TinyCity.Simulation.Residents
 {
     /// <summary>
     /// Core traits from 0 to 1. They change how quickly some needs fall and which leisure a resident prefers.

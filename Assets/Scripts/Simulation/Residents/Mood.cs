@@ -1,6 +1,6 @@
 using System.Linq;
 
-namespace TinyTown.Simulation.Residents
+namespace TinyCity.Simulation.Residents
 {
     /// <summary>What a resident's face would say at a glance, shown as a little icon over their head.</summary>
     public enum Mood

@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation;
-using TinyTown.Simulation.AI;
-using TinyTown.Simulation.Configuration;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Residents;
+using TinyCity.Simulation;
+using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Configuration;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Residents;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// Runs the town: advances the simulation with the clock, saves and loads, and hands drawing to the
@@ -21,7 +21,7 @@ namespace TinyTown.Runtime
     public sealed class GameController : MonoBehaviour
     {
         /// <summary>Remembers which town was being played, so the game reopens it next time.</summary>
-        private const string SlotPrefsKey = "TinyTown.Slot";
+        private const string SlotPrefsKey = "TinyCity.Slot";
 
         /// <summary>Game minutes per real second. At 1x one in-game day lasts 24 real minutes.</summary>
         public static readonly int[] Speeds = { 0, 1, 2, 4, 10 };
@@ -110,14 +110,14 @@ namespace TinyTown.Runtime
             Preferences = PlayerSettingsStore.Load(out var preferenceProblems);
             foreach (var problem in preferenceProblems)
             {
-                Debug.LogWarning($"[TinyTown] {problem}");
+                Debug.LogWarning($"[TinyCity] {problem}");
             }
 
             Preferences.ApplyTo(Settings.ollama);
             UiTheme.Choose(Preferences.Theme);
             UiTheme.Changed += ApplyThemeToCameras;
             ScreenSettings.Apply(Preferences);
-            Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyTown] AI: {message}") };
+            Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyCity] AI: {message}") };
 
             SlotNames = SaveStore.ReadIndex();
             var remembered = PlayerPrefs.GetString(SlotPrefsKey, SaveSlotIndex.DefaultSlot);
@@ -213,7 +213,7 @@ namespace TinyTown.Runtime
             Ai?.Attach(simulation);
             if (view.World == null)
             {
-                view.Build(simulation.World, TinyTown.Simulation.Time.Seasons.Of(simulation.Time));
+                view.Build(simulation.World, TinyCity.Simulation.Time.Seasons.Of(simulation.Time));
             }
 
             view.ForgetResidents();
@@ -253,7 +253,7 @@ namespace TinyTown.Runtime
             catch (Exception e)
             {
                 Status = $"Save failed: {e.Message}";
-                Debug.LogError($"[TinyTown] {Status}");
+                Debug.LogError($"[TinyCity] {Status}");
             }
         }
 
@@ -311,7 +311,7 @@ namespace TinyTown.Runtime
                 SetSimulation(result.Simulation);
                 foreach (var warning in result.Warnings)
                 {
-                    Debug.LogWarning($"[TinyTown] Save repaired: {warning}");
+                    Debug.LogWarning($"[TinyCity] Save repaired: {warning}");
                 }
 
                 Status = (useBackup ? $"The save of {CurrentTownName} was damaged, so its backup was loaded. " : $"Loaded {CurrentTownName}. ")
@@ -322,7 +322,7 @@ namespace TinyTown.Runtime
 
             foreach (var problem in problems)
             {
-                Debug.LogWarning($"[TinyTown] Load failed: {problem}");
+                Debug.LogWarning($"[TinyCity] Load failed: {problem}");
             }
 
             Status = $"Couldn't load {SlotNames.NameOf(slot)}: {problems.LastOrDefault()}";
@@ -382,7 +382,7 @@ namespace TinyTown.Runtime
             catch (Exception e)
             {
                 Status = $"Couldn't copy {SlotNames.NameOf(slot)}: {e.Message}";
-                Debug.LogError($"[TinyTown] {Status}");
+                Debug.LogError($"[TinyCity] {Status}");
                 return null;
             }
         }
@@ -414,7 +414,7 @@ namespace TinyTown.Runtime
             catch (Exception e)
             {
                 Status = $"Couldn't delete {SlotNames.NameOf(slot)}: {e.Message}";
-                Debug.LogError($"[TinyTown] {Status}");
+                Debug.LogError($"[TinyCity] {Status}");
                 return false;
             }
         }
@@ -438,7 +438,7 @@ namespace TinyTown.Runtime
             catch (Exception e)
             {
                 Status = $"Couldn't export {SlotNames.NameOf(slot)}: {e.Message}";
-                Debug.LogError($"[TinyTown] {Status}");
+                Debug.LogError($"[TinyCity] {Status}");
             }
         }
 
@@ -451,7 +451,7 @@ namespace TinyTown.Runtime
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[TinyTown] Couldn't save the town names: {e.Message}");
+                Debug.LogWarning($"[TinyCity] Couldn't save the town names: {e.Message}");
             }
         }
 
@@ -575,7 +575,7 @@ namespace TinyTown.Runtime
             catch (Exception e)
             {
                 Status = $"Export failed: {e.Message}";
-                Debug.LogError($"[TinyTown] {Status}");
+                Debug.LogError($"[TinyCity] {Status}");
             }
         }
 

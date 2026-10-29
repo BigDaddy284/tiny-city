@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.Configuration;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// Keeps the Settings window's choices in <c>player-settings.json</c> in the player's data folder, next to the

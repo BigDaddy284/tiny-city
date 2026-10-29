@@ -1,12 +1,12 @@
 using System.Collections;
 using System.IO;
 using NUnit.Framework;
-using TinyTown.Runtime;
-using TinyTown.Simulation.Configuration;
+using TinyCity.Runtime;
+using TinyCity.Simulation.Configuration;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace TinyTown.Tests.PlayMode
+namespace TinyCity.Tests.PlayMode
 {
     /// <summary>The Settings window in the running game: opening it, the theme, and the settings file.</summary>
     public class SettingsPlayTests

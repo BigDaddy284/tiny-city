@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using TinyTown.Simulation.AI;
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Configuration;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// The Settings window, opened from the button beside the town's name: local AI on or off and which installed
@@ -72,7 +72,7 @@ namespace TinyTown.Runtime
             SaveError = PlayerSettingsStore.Save(Prefs);
             if (SaveError != null)
             {
-                Debug.LogWarning($"[TinyTown] Settings could not be saved: {SaveError}");
+                Debug.LogWarning($"[TinyCity] Settings could not be saved: {SaveError}");
             }
         }
 

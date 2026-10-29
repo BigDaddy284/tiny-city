@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace TinyTown.Simulation.Configuration
+namespace TinyCity.Simulation.Configuration
 {
     /// <summary>
     /// Connection settings for the player's locally installed Ollama service.

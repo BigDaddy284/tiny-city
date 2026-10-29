@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>Converts map tiles to isometric world positions and draw order. One tile is 1 unit wide and 0.5 tall.</summary>
     public static class IsoGrid

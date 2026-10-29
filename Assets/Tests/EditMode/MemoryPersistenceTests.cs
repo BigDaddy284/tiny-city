@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Residents;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Residents;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>Save version 2: memories, conversation history and AI decision details.</summary>
     public class MemoryPersistenceTests

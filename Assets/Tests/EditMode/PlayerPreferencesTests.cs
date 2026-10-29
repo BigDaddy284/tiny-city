@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.Configuration;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>The Settings window's choices: saved and read back exactly, and damaged files never break the game.</summary>
     public class PlayerPreferencesTests

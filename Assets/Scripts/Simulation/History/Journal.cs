@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.History
+namespace TinyCity.Simulation.History
 {
     /// <summary>The journal's filter buttons. Each <see cref="TownEventKind"/> belongs to one.</summary>
     public enum JournalTopic

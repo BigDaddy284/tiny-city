@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Community;
-using TinyTown.Simulation.Economy;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Community;
+using TinyCity.Simulation.Economy;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Simulation.Activities
+namespace TinyCity.Simulation.Activities
 {
     /// <summary>Why the planner picked something, from most to least pressing.</summary>
     public enum PlanPriority

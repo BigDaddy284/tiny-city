@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Memory
+namespace TinyCity.Simulation.Memory
 {
     /// <summary>The town's searchable history of things residents said, oldest first.</summary>
     public sealed class ConversationHistory

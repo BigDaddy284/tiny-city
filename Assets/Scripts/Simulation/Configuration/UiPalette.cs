@@ -1,6 +1,6 @@
 using System;
 
-namespace TinyTown.Simulation.Configuration
+namespace TinyCity.Simulation.Configuration
 {
     /// <summary>An opaque colour for the interface, 0–255 per channel.</summary>
     public readonly struct UiColour : IEquatable<UiColour>

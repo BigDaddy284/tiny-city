@@ -1,12 +1,12 @@
 using System.Collections;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Runtime;
-using TinyTown.Simulation.Time;
+using TinyCity.Runtime;
+using TinyCity.Simulation.Time;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace TinyTown.Tests.PlayMode
+namespace TinyCity.Tests.PlayMode
 {
     /// <summary>Phase 6, build 1: the generated places on screen, the seasons and the light.</summary>
     public class ArtPlayTests

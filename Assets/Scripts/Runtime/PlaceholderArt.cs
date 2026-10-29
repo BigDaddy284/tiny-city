@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
-    /// Plain one-colour textures for IMGUI backgrounds. Everything in the town itself is drawn by <c>TinyTown.Art</c>:
+    /// Plain one-colour textures for IMGUI backgrounds. Everything in the town itself is drawn by <c>TinyCity.Art</c>:
     /// places through <see cref="MapView"/> and residents through <see cref="TownView"/>.
     /// </summary>
     public static class PlaceholderArt

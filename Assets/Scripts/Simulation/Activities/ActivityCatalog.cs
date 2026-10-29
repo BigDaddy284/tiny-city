@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Simulation.Activities
+namespace TinyCity.Simulation.Activities
 {
     /// <summary>Every activity a resident can choose. Ids are stable because save files store them.</summary>
     public static class ActivityCatalog
@@ -128,7 +128,7 @@ namespace TinyTown.Simulation.Activities
         /// it ends; see <see cref="Community.CommunityCalendar"/>.
         /// </summary>
         public static readonly ActivityDefinition AttendEvent = new ActivityDefinition(
-            "attend-event", "Go to a village event", "joining in at a village event", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.GatheringSpot }, 3 * 60,
+            "attend-event", "Go to a city event", "joining in at a city event", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.GatheringSpot }, 3 * 60,
             new Dictionary<NeedType, double> { [NeedType.Social] = 1.2, [NeedType.Fun] = 1.0 });
 
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>

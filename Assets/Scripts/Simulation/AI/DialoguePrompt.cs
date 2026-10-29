@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
 
-namespace TinyTown.Simulation.AI
+namespace TinyCity.Simulation.AI
 {
     /// <summary>What the AI wrote for one line of a conversation, before the game checks it.</summary>
     public sealed class DialogueReply

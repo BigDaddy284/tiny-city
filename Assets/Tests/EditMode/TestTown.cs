@@ -1,10 +1,10 @@
-using TinyTown.Simulation;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>Helpers for building the starter town with a resident in a chosen situation.</summary>
     internal static class TestTown

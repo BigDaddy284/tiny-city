@@ -1,13 +1,13 @@
 using System.Linq;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation
+namespace TinyCity.Simulation
 {
     /// <summary>Birthdays, health, illness and death. All of it follows <see cref="HealthRules"/>; nothing here is up to the AI.</summary>
     public sealed partial class TownSimulation
@@ -160,7 +160,7 @@ namespace TinyTown.Simulation
                 var close = met && rel.Friendship >= SocialRules.GoodFriendsAt;
                 var summary = close ? $"My dear friend {r.FullName} died of {cause}. I'll miss them terribly."
                     : met ? $"{r.FullName} died of {cause}. I knew them a little."
-                    : $"{r.FullName}, who lived in the village, died of {cause}.";
+                    : $"{r.FullName}, who lived in the city, died of {cause}.";
                 Memories.Add(other.Id, Time, MemoryType.Event, close ? 9 : met ? 7 : 5, summary, new[] { r.Id }, new[] { r.Id, "death", "loss" });
             }
         }

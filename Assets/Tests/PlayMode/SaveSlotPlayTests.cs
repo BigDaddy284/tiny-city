@@ -1,13 +1,13 @@
 using System.Collections;
 using System.IO;
 using NUnit.Framework;
-using TinyTown.Runtime;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Persistence;
+using TinyCity.Runtime;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Persistence;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace TinyTown.Tests.PlayMode
+namespace TinyCity.Tests.PlayMode
 {
     /// <summary>Phase 5 save slots in the running game, on real files.</summary>
     public class SaveSlotPlayTests

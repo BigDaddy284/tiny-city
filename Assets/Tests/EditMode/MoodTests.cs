@@ -1,10 +1,10 @@
 using NUnit.Framework;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.Residents;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.Residents;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>Phase 6, build 2: moods are read from the simulation's own state and never stored.</summary>
     public class MoodTests

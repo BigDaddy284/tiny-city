@@ -1,8 +1,8 @@
 using System.Text;
-using TinyTown.Simulation.AI;
+using TinyCity.Simulation.AI;
 using UnityEngine.Networking;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>Sends AI requests with UnityWebRequest. Calls are polled, never awaited, so the game never blocks.</summary>
     public sealed class UnityAiTransport : IAiTransport

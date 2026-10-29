@@ -1,8 +1,8 @@
 using System;
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.Configuration;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// The interface theme: which <see cref="UiPalette"/> is in use, and the IMGUI skin and <see cref="GuiStyles"/>

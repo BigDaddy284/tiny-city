@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using TinyTown.Simulation.Content;
+using TinyCity.Simulation.Content;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     public enum HairStyle
     {

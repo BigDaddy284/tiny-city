@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Social
+namespace TinyCity.Simulation.Social
 {
     /// <summary>
     /// A conversation in progress. The game sets its length, whose turn it is and when the next line is due; the AI

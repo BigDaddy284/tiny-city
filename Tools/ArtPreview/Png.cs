@@ -1,8 +1,8 @@
 using System.IO;
 using System.IO.Compression;
-using TinyTown.Art;
+using TinyCity.Art;
 
-namespace TinyTown.Tools.ArtPreview
+namespace TinyCity.Tools.ArtPreview
 {
     /// <summary>A minimal PNG writer (8-bit RGBA, no filtering) so the preview needs no image library.</summary>
     internal static class Png

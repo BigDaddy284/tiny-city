@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Simulation.Economy
+namespace TinyCity.Simulation.Economy
 {
     /// <summary>
     /// The game's money rules: wages per hour worked, weekly rent and income, and purchases from businesses with

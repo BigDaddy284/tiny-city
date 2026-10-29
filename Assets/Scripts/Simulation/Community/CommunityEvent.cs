@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Community
+namespace TinyCity.Simulation.Community
 {
     /// <summary>
     /// A regular gathering on the village calendar, held at one gathering spot. It happens either on certain

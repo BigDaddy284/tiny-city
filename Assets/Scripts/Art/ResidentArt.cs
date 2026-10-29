@@ -1,6 +1,6 @@
 using System;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>
     /// Draws the residents: a figure about 33 pixels tall (doors are about 30), in three-quarter view facing one of

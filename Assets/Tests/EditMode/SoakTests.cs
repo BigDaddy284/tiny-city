@@ -3,20 +3,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.AI;
-using TinyTown.Simulation.Configuration;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Economy;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Configuration;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Economy;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>
     /// Long runs of the whole town, checking the Phase 4 acceptance criteria: no corrupted saves, no uncontrolled

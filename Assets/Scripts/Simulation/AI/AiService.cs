@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Configuration;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
+using TinyCity.Simulation.Configuration;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
 
-namespace TinyTown.Simulation.AI
+namespace TinyCity.Simulation.AI
 {
     public enum AiConnectionStatus
     {

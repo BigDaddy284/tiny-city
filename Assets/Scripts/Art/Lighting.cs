@@ -1,7 +1,7 @@
 using System;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>
     /// The colour of the light at a time of day. Sprites are multiplied by <see cref="Tint"/>, and lit windows are

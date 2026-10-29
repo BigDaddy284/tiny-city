@@ -1,7 +1,7 @@
 using System;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>Trees for each season. Most are broadleaf trees that blossom, turn and go bare; some are evergreen pines.</summary>
     public static class NatureArt

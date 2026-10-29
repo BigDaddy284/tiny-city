@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using TinyTown.Art;
-using TinyTown.Simulation.World;
+using TinyCity.Art;
+using TinyCity.Simulation.World;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>Draws one map with the generated art, at its own place in the world so every map can be on screen at once.</summary>
     public sealed class MapView : MonoBehaviour

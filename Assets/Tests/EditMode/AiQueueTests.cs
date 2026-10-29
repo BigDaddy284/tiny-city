@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation.AI;
+using TinyCity.Simulation.AI;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     public class AiQueueTests
     {

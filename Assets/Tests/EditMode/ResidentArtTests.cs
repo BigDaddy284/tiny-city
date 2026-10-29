@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Art;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.World;
+using TinyCity.Art;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>Phase 6, build 2: the residents' looks, animations and mood icons.</summary>
     public class ResidentArtTests

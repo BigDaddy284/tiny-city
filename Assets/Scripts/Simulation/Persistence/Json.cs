@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace TinyTown.Simulation.Persistence
+namespace TinyCity.Simulation.Persistence
 {
     /// <summary>
     /// Minimal JSON reader and writer so save files can be produced and tested without Unity.

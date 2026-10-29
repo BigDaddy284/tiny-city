@@ -1,9 +1,9 @@
-using TinyTown.Simulation;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>What a resident's body is doing, which picks their animation.</summary>
     public enum ResidentAction

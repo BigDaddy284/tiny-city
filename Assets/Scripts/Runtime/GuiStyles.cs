@@ -1,7 +1,7 @@
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.Configuration;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// The IMGUI styles shared by the inspector, windows and camera panels, in the colours of a <see cref="UiPalette"/>.

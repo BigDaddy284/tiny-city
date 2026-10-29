@@ -1,8 +1,8 @@
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Social
+namespace TinyCity.Simulation.Social
 {
     /// <summary>
     /// Built-in conversation lines for when the AI is unavailable or slow. Chosen deterministically from the
@@ -38,7 +38,7 @@ namespace TinyTown.Simulation.Social
 
         private static readonly string[] Chatter =
         {
-            "Isn't the village looking lovely {part}?",
+            "Isn't the city looking lovely {part}?",
             "I've been meaning to sit by the pond more often.",
             "Have you seen how the community garden is coming along?",
             "I could murder a cup of tea, honestly.",

@@ -2,19 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Community;
-using TinyTown.Simulation.Configuration;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Community;
+using TinyCity.Simulation.Configuration;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>Romance, community events, outings and the town history.</summary>
     public class CommunityTests
@@ -221,8 +221,8 @@ namespace TinyTown.Tests.EditMode
             sim.Relationships.Get(Ivy, Felix).Interactions = 5;
             Review(sim, Ivy, Felix);
 
-            Assert.That(TinyTown.Simulation.AI.PromptText.Relationship(sim, Get(sim, Ivy), Get(sim, Felix)), Does.Contain("you are dating"));
-            Assert.That(TinyTown.Simulation.AI.PromptText.Relationship(sim, Get(sim, Ivy), Get(sim, StarterTown.TomId)), Does.Contain("soft spot"));
+            Assert.That(TinyCity.Simulation.AI.PromptText.Relationship(sim, Get(sim, Ivy), Get(sim, Felix)), Does.Contain("you are dating"));
+            Assert.That(TinyCity.Simulation.AI.PromptText.Relationship(sim, Get(sim, Ivy), Get(sim, StarterTown.TomId)), Does.Contain("soft spot"));
         }
 
         [Test]
@@ -279,12 +279,12 @@ namespace TinyTown.Tests.EditMode
 
             var fete = StarterTown.CreateWorld().Calendar.Events.Single(e => e.Id == "village-fete").OccurrenceId(StarterTown.FeteDayOfYear);
             var went = sim.Residents.Where(r => sim.Memories.ForResident(r.Id).Any(m => m.Tags.Contains(fete))).ToList();
-            Assert.That(went.Count, Is.GreaterThanOrEqualTo(3), "the fête should draw a crowd");
+            Assert.That(went.Count, Is.GreaterThanOrEqualTo(3), "the festival should draw a crowd");
             Assert.That(went.All(r => sim.Memories.ForResident(r.Id).Count(m => m.Tags.Contains(fete)) == 1), Is.True);
 
             var gatherings = sim.History.Events.Where(e => e.Kind == TownEventKind.Gathering).ToList();
-            Assert.That(gatherings.Count, Is.GreaterThanOrEqualTo(4), "two quiz nights, a get-together and the fête");
-            Assert.That(gatherings.Last().Summary, Does.Contain("fête"));
+            Assert.That(gatherings.Count, Is.GreaterThanOrEqualTo(4), "two quiz nights, a get-together and the festival");
+            Assert.That(gatherings.Last().Summary, Does.Contain("festival"));
             Assert.That(gatherings.Last().ResidentIds.OrderBy(i => i).ToList(), Is.EqualTo(went.Select(r => r.Id).OrderBy(i => i).ToList()));
         }
 

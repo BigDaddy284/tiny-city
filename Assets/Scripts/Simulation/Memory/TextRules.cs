@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace TinyTown.Simulation.Memory
+namespace TinyCity.Simulation.Memory
 {
     /// <summary>Cleans text that comes from the AI or a save file before the game stores or shows it.</summary>
     public static class TextRules

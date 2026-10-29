@@ -1,18 +1,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.AI;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>Phase 3: relationships, conversations, shared memories and interruptions, all without AI.</summary>
     public class SocialTests

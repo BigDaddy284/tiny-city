@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Simulation.Residents
+namespace TinyCity.Simulation.Residents
 {
     public enum ResidentState
     {
@@ -85,7 +85,7 @@ namespace TinyTown.Simulation.Residents
             Job = job;
             Location = location;
             Needs = needs ?? new Needs();
-            Health = TinyTown.Simulation.Health.HealthRules.StartingHealthFor(AgeYears);
+            Health = TinyCity.Simulation.Health.HealthRules.StartingHealthFor(AgeYears);
         }
 
         public string Id { get; }

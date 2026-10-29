@@ -1,11 +1,11 @@
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     public class MemoryTests
     {

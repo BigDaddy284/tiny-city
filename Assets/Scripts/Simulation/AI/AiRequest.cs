@@ -1,6 +1,6 @@
 using System;
 
-namespace TinyTown.Simulation.AI
+namespace TinyCity.Simulation.AI
 {
     /// <summary>Lower values are served first. Optional flavour never delays a decision someone is waiting on.</summary>
     public enum AiPriority

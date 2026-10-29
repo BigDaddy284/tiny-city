@@ -1,12 +1,12 @@
 using System.Collections;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Runtime;
-using TinyTown.Simulation.Residents;
+using TinyCity.Runtime;
+using TinyCity.Simulation.Residents;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace TinyTown.Tests.PlayMode
+namespace TinyCity.Tests.PlayMode
 {
     /// <summary>Phase 6, build 2: the residents drawn in the town, animated, with their moods.</summary>
     public class ResidentPlayTests

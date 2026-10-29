@@ -1,9 +1,9 @@
 {
-    "name": "TinyTown.Tests.EditMode",
-    "rootNamespace": "TinyTown.Tests.EditMode",
+    "name": "TinyCity.Tests.EditMode",
+    "rootNamespace": "TinyCity.Tests.EditMode",
     "references": [
-        "TinyTown.Simulation",
-        "TinyTown.Art",
+        "TinyCity.Simulation",
+        "TinyCity.Art",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

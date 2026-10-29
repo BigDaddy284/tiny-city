@@ -1,13 +1,13 @@
 using System;
 using System.Linq;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Simulation
+namespace TinyCity.Simulation
 {
     /// <summary>
     /// Hobbies and outings shared with others (a coffee or a meal at the café): invitations, enjoying each other's
@@ -44,7 +44,7 @@ namespace TinyTown.Simulation
                 }
 
                 World.TryGetObject(r.TargetObjectId, out var place);
-                Memories.Add(r.Id, Time, MemoryType.Event, 4, $"I spent time {activity.Verb} with {other.FirstName} at the {place?.Name.ToLowerInvariant() ?? "village"}.", new[] { other.Id }, new[] { tag, other.Id, activity.Hobby ?? activity.Id, activity.Hobby != null ? "hobby" : "outing", "social" });
+                Memories.Add(r.Id, Time, MemoryType.Event, 4, $"I spent time {activity.Verb} with {other.FirstName} at the {place?.Name.ToLowerInvariant() ?? "city"}.", new[] { other.Id }, new[] { tag, other.Id, activity.Hobby ?? activity.Id, activity.Hobby != null ? "hobby" : "outing", "social" });
                 var view = Relationships.Get(r.Id, other.Id);
                 view.Change(friendship: SharedHobbyFriendship, trust: 1, romance: RomanceEnabled && Relationships.PartnerOf(r.Id) == other.Id ? RomancePerSharedHobby : 0);
                 view.Interactions++;

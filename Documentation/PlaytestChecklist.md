@@ -15,7 +15,7 @@ Run these on the Windows build downloaded from the latest green CI run. Automate
 9. **Save and load:** press F5 at a recognisable moment, wait a few minutes, then press F9. She returns to the same place and activity, with the same need values.
 10. **Exit and reopen:** close the window, then reopen the game. The town continues from where it was, and the status line says the saved town was loaded.
 11. **Start over:** "Start over" asks for a second click, then begins a fresh town on day 1.
-12. **Settings warning:** edit `TheTinyTown_Data/StreamingAssets/Configuration/settings.json` so the model is `""`. The game falls back to the default settings (qwen2.5:7b), and `Player.log` contains a settings warning.
+12. **Settings warning:** edit `TinyCity_Data/StreamingAssets/Configuration/settings.json` so the model is `""`. The game falls back to the default settings (qwen2.5:7b), and `Player.log` contains a settings warning.
 
 ## Phase 2: local AI and memory
 
@@ -111,7 +111,7 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 4. **Go to someone:** clicking an entry shows that resident in the inspector, and the active camera panel follows them if they're alive.
 5. **Notifications:** deaths, couples, break-ups, getting back together, committing, a new life stage and serious illness pop up at the top left of the camera area for about 12 seconds (at most four at once). Clicking one goes to that resident. Birthdays and colds don't pop up; they're only in the journal.
 6. **Timeline tab:** the inspector's last tab is now "Timeline": the village records about that resident plus their important memories, newest first. Their own memories say "(their memory)". Reflections the AI wrote are in a blue box.
-7. **Export:** "Export life story" (Timeline tab or journal) and "Export town history" (journal) write text files. The status line shows where. "Open exports folder" opens it. The files are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Exports\`. In a life story, `[memory]` and `[AI]` mark what didn't come from the village records.
+7. **Export:** "Export life story" (Timeline tab or journal) and "Export town history" (journal) write text files. The status line shows where. "Open exports folder" opens it. The files are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Exports\`. In a life story, `[memory]` and `[AI]` mark what didn't come from the village records.
 8. **Old save:** a build 1 save loads normally. Its journal starts with what was recorded before (gatherings, couples, deaths) and fills in from then on.
 9. **Save and load:** F5, then F9: the journal is the same.
 10. **Place menu:** every panel header has a "Place ▾" button. It lists the village (outside) and every building. Picking one turns that panel into a free camera there, even if it was following someone indoors, and you can drag it around. A ✓ marks where a free panel is now. Click elsewhere or press Escape to close the list. In free mode, ◀ and ▶ (or Tab) step back and forward through the same list.
@@ -129,7 +129,7 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 9. **Autosave, F5 and quitting** save the town you're playing. When you restart the game, it reopens that town.
 10. **Typing:** while typing a name, the game's keys (S, J, Space and so on) are ignored. Click elsewhere or press Escape to use them again.
 
-Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\`: one `town.json`, `town-2.json`, … per town, each with a `.bak` backup, plus `slots.json` holding the town names.
+Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `town.json`, `town-2.json`, … per town, each with a `.bak` backup, plus `slots.json` holding the town names.
 
 ## Phase 6, build 1: places
 
@@ -142,7 +142,7 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\`
 7. **Zoom:** zoom in close: pixels should stay sharp and square, not blurry.
 8. **Old saves:** any older town loads and shows the right season for its day.
 9. **Performance:** with ten panels at 4x the game should stay as smooth as in Phase 5. Note it if it doesn't.
-10. **Your own pictures (optional):** see `Documentation/ArtOverrides.md`. Put a `tree.png` in the game's `TheTinyTown_Data/StreamingAssets/Art/` folder, restart, and every broadleaf tree uses it.
+10. **Your own pictures (optional):** see `Documentation/ArtOverrides.md`. Put a `tree.png` in the game's `TinyCity_Data/StreamingAssets/Art/` folder, restart, and every broadleaf tree uses it.
 11. **Walking around furniture:** watch someone cross a room or the café. They walk around cookers, sinks, tables, beds and benches and only step onto one to use it. The shop counter is now one tile to the left of the door and the café piano stands by the left wall, so neither is in anyone's way.
 
 ## Phase 6, build 2: residents
@@ -159,10 +159,20 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\`
 
 ## Settings window
 
-1. **Button:** a **Settings** button sits at the top right of the side panel, beside "The Tiny Town". Clicking it opens the Settings window over the town; **Done**, Escape or the button again closes it. Opening it closes the journal or saved towns, and vice versa.
+1. **Button:** a **Settings** button sits at the top right of the side panel, beside "Tiny City". Clicking it opens the Settings window over the town; **Done**, Escape or the button again closes it. Opening it closes the journal or saved towns, and vice versa.
 2. **Theme:** the side panel, windows, buttons, sliders and camera panel headers use the Stills & Reels / StackSpace colours: navy in Dark (the default), white and pale blue in Light, with a blue-to-purple gradient on selected buttons. Switch between **Dark** and **Light**: everything changes at once, and the town's own art stays the same. Names over residents' heads and signs on the map stay readable in both.
 3. **AI on/off:** with Ollama running, switch **Use local AI** off: the AI line says "off (Settings)" and residents carry on by routine. Switch it on: it reconnects within a few seconds.
 4. **Model list:** the window lists your installed Ollama models, with the one in use highlighted. Pick another: the AI line shows it loading, then connected. Close Ollama and press **Refresh list**: a message says it couldn't be reached. Start it again and press Refresh list.
 5. **Sound:** the four sliders move and keep their values (there is no sound until the next update).
 6. **Screen:** try Windowed, Borderless and Full screen; step the resolution with ◀ ▶; turn VSync off and pick a frame limit. Each takes effect straight away.
 7. **Kept:** quit and start the game again. The theme, AI choice, model, volumes and screen settings are as you left them.
+
+## Tiny City: name and neon look
+
+1. **Name:** the window title, the side panel ("Tiny City"), exported histories and life stories all say Tiny City. The build's folder and program are `TinyCity`.
+2. **Old saves:** on a PC that played The Tiny Town, start Tiny City once. Your saved towns appear in the saved towns window (S) and load as before, and your Settings choices are kept. The old folder (`AppData\LocalLow\The Tiny Town`) is left untouched. The panel layout and which town was open last start fresh.
+3. **City by day:** navy paving plates, purple tarmac streets with a neon kerb, and flat-roofed blocks in magenta, violet, blue and teal with air units and antennas on the roof. Homes have two floors of windows and sliding glass doors; shops have big windows, a neon tube along the front and a neon picture sign above the door. Nothing sticks out from a wall, and no lines cross a door.
+4. **Evening and night:** from dusk, the roof edges, plinths, door frames, shop tubes and signs glow, windows light up amber or cyan, and antenna tips glow red. Residents walking past buildings go behind and in front of them correctly.
+5. **Rooms:** dark panelled walls with a pink neon rail and cyan LED skirting, and windows that show the lit city.
+6. **Seasons:** teal trees in spring, pink in summer, orange in autumn, and snow on the paving and roofs in winter.
+

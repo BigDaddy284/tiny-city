@@ -1,6 +1,6 @@
-using TinyTown.Simulation.Health;
+using TinyCity.Simulation.Health;
 
-namespace TinyTown.Simulation.Time
+namespace TinyCity.Simulation.Time
 {
     public enum Season
     {

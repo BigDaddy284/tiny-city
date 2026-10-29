@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace TinyTown.Simulation.AI
+namespace TinyCity.Simulation.AI
 {
     /// <summary>Running totals for the inspector and for measuring AI performance.</summary>
     public sealed class AiQueueStats

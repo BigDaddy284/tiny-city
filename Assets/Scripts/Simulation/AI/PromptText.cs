@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.AI
+namespace TinyCity.Simulation.AI
 {
     /// <summary>Shared pieces of prompt text describing a resident and their situation.</summary>
     internal static class PromptText
@@ -14,7 +14,7 @@ namespace TinyTown.Simulation.AI
         public static string Persona(Resident r)
         {
             var job = r.Job == null ? "a resident" : $"the {r.Job.Title.ToLowerInvariant()}";
-            return $"You are {r.FullName}, aged {r.AgeYears}, {job} in The Tiny Town, a small, cosy village. " +
+            return $"You are {r.FullName}, aged {r.AgeYears}, {job} in Tiny City, a small, neon-lit city. " +
                 $"Your personality: {r.Personality.Describe().ToLowerInvariant()}. " +
                 (r.Hobbies.Count > 0 ? $"Your hobbies: {string.Join(", ", r.Hobbies)}. " : string.Empty) +
                 "Stay in character: warm, down to earth and a little playful. Never mention being an AI. Answer with JSON only.";
@@ -132,7 +132,7 @@ namespace TinyTown.Simulation.AI
                 .ThenBy(o => o.Id, System.StringComparer.Ordinal)
                 .ToList();
             var strangers = others.Where(o => !known.Contains(o)).ToList();
-            sb.AppendLine("People in the village:");
+            sb.AppendLine("People in the city:");
             foreach (var o in known.Take(MaxPeopleListed))
             {
                 sb.Append("- ").Append(o.FullName).Append(", ").Append(o.AgeYears).Append(Work(o)).Append(": ").AppendLine(Relationship(sim, r, o));

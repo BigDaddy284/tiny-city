@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Art;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Art;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// The whole town on screen at once: every map is drawn side by side at its own origin, and every living

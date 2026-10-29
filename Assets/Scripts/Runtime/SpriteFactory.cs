@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using TinyTown.Art;
+using TinyCity.Art;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
-    /// <summary>Turns pictures drawn by <c>TinyTown.Art</c> into sprites, and frees their textures when they are no longer shown.</summary>
+    /// <summary>Turns pictures drawn by <c>TinyCity.Art</c> into sprites, and frees their textures when they are no longer shown.</summary>
     public sealed class SpriteFactory
     {
         public const int PixelsPerUnit = 64;

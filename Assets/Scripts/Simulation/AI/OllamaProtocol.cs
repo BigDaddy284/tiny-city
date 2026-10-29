@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Persistence;
+using TinyCity.Simulation.Persistence;
 
-namespace TinyTown.Simulation.AI
+namespace TinyCity.Simulation.AI
 {
     /// <summary>
     /// Builds and reads Ollama HTTP API messages (POST /api/chat, GET /api/tags). Kept free of networking so it

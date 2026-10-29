@@ -1,9 +1,9 @@
 using System;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Social
+namespace TinyCity.Simulation.Social
 {
     public enum RomanceStage
     {

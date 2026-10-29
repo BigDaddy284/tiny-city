@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Economy
+namespace TinyCity.Simulation.Economy
 {
     /// <summary>Something a business sells. Prices and stock limits are content; the game alone changes stock.</summary>
     public sealed class ShopItem

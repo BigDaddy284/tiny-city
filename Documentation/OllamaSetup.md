@@ -1,6 +1,6 @@
 # Ollama Setup and Troubleshooting
 
-The Tiny Town uses a locally installed [Ollama](https://ollama.com) service for residents' free-time decisions, their conversation lines and their end-of-day reflections. Ollama and the model are not bundled with the game. Without them the game still runs: residents follow their built-in routine.
+Tiny City uses a locally installed [Ollama](https://ollama.com) service for residents' free-time decisions, their conversation lines and their end-of-day reflections. Ollama and the model are not bundled with the game. Without them the game still runs: residents follow their built-in routine.
 
 ## Setup (Windows)
 
@@ -28,11 +28,11 @@ Click **Settings** at the top right of the side panel. Under *Local AI (Ollama)*
 - **Installed models** lists every model Ollama has (the game asks Ollama when the window opens; press **Refresh list** after installing one). Click a model to use it; the game checks and loads it first, and residents use their routine while it loads.
 - If the list can't be read, the window says why. Usually Ollama isn't running: start it and press **Refresh list**.
 
-These choices are kept in `player-settings.json` in the game's data folder (`%USERPROFILE%\AppData\LocalLow\<company>\The Tiny Town\`) and take the place of `enabled` and `model` below. Delete that file to go back to `settings.json`.
+These choices are kept in `player-settings.json` in the game's data folder (`%USERPROFILE%\AppData\LocalLow\<company>\Tiny City\`) and take the place of `enabled` and `model` below. Delete that file to go back to `settings.json`.
 
 ## Settings file
 
-`TheTinyTown_Data/StreamingAssets/Configuration/settings.json` in the game folder:
+`TinyCity_Data/StreamingAssets/Configuration/settings.json` in the game folder:
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -70,4 +70,4 @@ Invalid values are reported in `Player.log`, and the game uses the defaults inst
 | Many "no AI answer in time" lines in the log | Answers are slower than the resident's wait. Play at 1x or 2x, or raise `decisionWaitMinutes`. |
 | `off (Settings)` | Turn **Use local AI** on in the Settings window (top right). |
 
-`Player.log` is in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\`. Lines starting `[TinyTown] AI:` record each connection change, decision and fallback.
+`Player.log` is in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\`. Lines starting `[TinyCity] AI:` record each connection change, decision and fallback.

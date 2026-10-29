@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using TinyTown.Simulation.Persistence;
+using TinyCity.Simulation.Persistence;
 
-namespace TinyTown.Simulation.Configuration
+namespace TinyCity.Simulation.Configuration
 {
     /// <summary>How the side panel and windows look. Dark first, as in Stills &amp; Reels, whose default it is.</summary>
     public enum ThemeChoice

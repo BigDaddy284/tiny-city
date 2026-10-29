@@ -1,14 +1,14 @@
 using System;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.AI;
-using TinyTown.Simulation.Configuration;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation;
+using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Configuration;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>The whole AI loop against a scripted Ollama: connection, decisions, fallbacks and reflections.</summary>
     public class AiServiceTests

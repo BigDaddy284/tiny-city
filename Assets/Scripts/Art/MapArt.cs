@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     public enum ArtLayer
     {

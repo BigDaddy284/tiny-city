@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace TinyTown.Simulation.Configuration
+namespace TinyCity.Simulation.Configuration
 {
     /// <summary>
     /// Player-editable settings loaded from StreamingAssets/Configuration/settings.json.

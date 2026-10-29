@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.Configuration;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>Puts the player's window, size, VSync and frame-limit choices into effect.</summary>
     public static class ScreenSettings

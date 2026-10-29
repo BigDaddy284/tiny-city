@@ -1,7 +1,7 @@
 using System;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>
     /// Paints the flat ground of a whole map as one picture: grass, paths, the pond, garden beds and floors,
@@ -149,6 +149,11 @@ namespace TinyTown.Art
                     colour = Cobbles(p, u, v, fine, seed);
                     if (Near(grid, gw, gh, cu, cv, 1, Ground.Grass) || Near(grid, gw, gh, cu, cv, 1, Ground.Soil))
                     {
+                        // A kerb lit with the season's neon.
+                        colour = p.Accent;
+                    }
+                    else if (Near(grid, gw, gh, cu, cv, 2, Ground.Grass) || Near(grid, gw, gh, cu, cv, 2, Ground.Soil))
+                    {
                         colour = p.PathDark;
                     }
 
@@ -180,19 +185,22 @@ namespace TinyTown.Art
 
         private static Rgba Grass(int cu, int cv, double u, double v, double fine, Palette p, int seed)
         {
-            var patch = Noise.Smooth(u * 0.7, v * 0.7, seed + 3);
-            var colour = patch < 0.35 ? p.GrassDark.Mix(p.Grass, 0.55) : patch > 0.72 ? p.Grass.Mix(p.GrassLight, 0.5) : p.Grass;
-            if (fine < 0.07)
+            // Paving plates, half a tile each, with dark seams and the odd lighter plate.
+            var pu = (u * 2) - Math.Floor(u * 2);
+            var pv = (v * 2) - Math.Floor(v * 2);
+            var plate = Noise.Value((int)Math.Floor(u * 2), (int)Math.Floor(v * 2), seed + 3);
+            var colour = plate < 0.2 ? p.GrassDark.Mix(p.Grass, 0.5) : plate > 0.85 ? p.Grass.Mix(p.GrassLight, 0.6) : p.Grass;
+            if (pu < 0.05 || pv < 0.05)
             {
                 colour = p.GrassDark;
             }
-            else if (fine > 0.95)
+            else if (fine > 0.97)
             {
                 colour = p.GrassLight;
             }
 
             var dab = Noise.Value(cu >> 1, cv >> 1, seed + 11);
-            if (dab < (p.IsWinter ? 0.012 : 0.02))
+            if (dab < 0.004)
             {
                 colour = p.Flowers[(int)(Noise.Value(cu >> 1, cv >> 1, seed + 12) * p.Flowers.Length)];
             }
@@ -208,14 +216,14 @@ namespace TinyTown.Art
             var su = ((u * 3) + (row % 2 == 0 ? 0 : 0.5)) - col;
             var sv = (v * 3) - row;
             var edge = Math.Min(Math.Min(su, 1 - su), Math.Min(sv, 1 - sv));
-            if (edge < 0.08)
+            if (edge < 0.0)
             {
-                return p.PathDark.Mix(p.Path, 0.35);
+                return p.PathDark;
             }
 
-            var tint = Noise.Value(col, row, seed + 5);
-            var colour = p.Path.Shade(0.94 + (tint * 0.12));
-            return fine > 0.93 ? colour.Shade(1.06) : colour;
+            // Smooth tarmac with a fine grain.
+            var colour = p.Path.Shade(0.97 + (fine * 0.06));
+            return colour;
         }
 
         private static Rgba Water(Ground[,] grid, int gw, int gh, int cu, int cv, int px, int py, Palette p, int seed)

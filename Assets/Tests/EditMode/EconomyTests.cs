@@ -1,16 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Economy;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Economy;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     public class EconomyTests
     {
@@ -188,7 +188,7 @@ namespace TinyTown.Tests.EditMode
             var coffee = sim.FreeTimeOptionsFor(mabel).FirstOrDefault(o => o.Activity == ActivityCatalog.Coffee);
             Assert.That(coffee, Is.Not.Null);
             Assert.That(coffee.PricePence, Is.EqualTo(280));
-            Assert.That(TinyTown.Simulation.AI.DecisionPrompt.Describe(coffee), Does.Contain("costs £2.80"));
+            Assert.That(TinyCity.Simulation.AI.DecisionPrompt.Describe(coffee), Does.Contain("costs £2.80"));
 
             mabel.MoneyPence = 0;
             Assert.That(sim.FreeTimeOptionsFor(mabel).Any(o => o.PricePence > 0), Is.False);

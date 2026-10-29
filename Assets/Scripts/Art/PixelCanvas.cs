@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>
     /// A picture being drawn. Row 0 is the top. <see cref="AnchorX"/>/<see cref="AnchorY"/> is the pixel that sits on

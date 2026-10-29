@@ -1,11 +1,11 @@
-# The Tiny Town
+# Tiny City
 ## Game Design Document (GDD)
 
 **Document version:** 1.0  
 **Project status:** Pre-production / initial implementation  
 **Platform:** Windows desktop  
 **Engine:** Unity 6, C#  
-**Visual style:** Isometric 2D pixel art  
+**Visual style:** Isometric 2D pixel art, neon cyberpunk  
 **AI:** Local Ollama API, initially Qwen2.5 7B  
 **Development workflow:** Claude Code on the web, GitHub repository and cloud-based implementation  
 **Project principle:** Build a small, complete, reliable simulation before expanding the world.
@@ -16,7 +16,7 @@
 
 ## 1.1 Concept
 
-The Tiny Town is a cosy isometric life simulation in which autonomous residents live their own lives in a small fictional village.
+Tiny City is a cosy isometric life simulation in which autonomous residents live their own lives in a small, neon-lit fictional city. (The game was first called The Tiny Town, set in a storybook village; on 29 October 2026 the owner renamed it and changed the look to cyberpunk. Every system stayed the same.)
 
 Every resident has individual needs, a personality, preferences, a home, a job or daily activities, relationships, finances, memories and a personal history. Residents make their own decisions, develop friendships, experience disagreements, form romantic relationships, attend events, become ill, grow older and eventually die.
 
@@ -24,7 +24,7 @@ A locally hosted language model provides contextual decision-making and natural 
 
 The player is an observer rather than a controller. They can watch residents through a flexible camera system, inspect their lives, read conversations, follow significant events and observe how the community develops.
 
-The long-term vision is a living world that can eventually grow from one village into multiple connected towns and, ultimately, a larger city. The initial implementation must remain focused on one town and ten residents.
+The long-term vision is a living world that can eventually grow from one small city into multiple connected districts and, ultimately, a larger city. The initial implementation must remain focused on one town and ten residents.
 
 ## 1.2 Design Pillars
 
@@ -34,7 +34,7 @@ The long-term vision is a living world that can eventually grow from one village
 4. **Local-first AI:** The game uses Ollama and a configurable local model without requiring paid cloud AI services.
 5. **Reliable simulation:** Deterministic game systems govern needs, health, movement, finances, aging and death.
 6. **Believable social life:** Conversations and relationships evolve from personality, shared experiences and circumstances.
-7. **Cosy presentation:** A warm storybook village, expressive pixel characters, readable animations, seasons and gentle audio.
+7. **Cosy neon presentation:** A small cyberpunk city glowing with neon at night, expressive pixel characters, readable animations, seasons and gentle audio.
 8. **Incremental development:** Each milestone produces a playable and tested build.
 9. **Long-term extensibility:** Data and services are designed to support future population growth and multiple towns without implementing those systems prematurely.
 
@@ -43,7 +43,7 @@ The long-term vision is a living world that can eventually grow from one village
 The player should feel like an observer watching a small community gradually develop its own stories.
 
 They can:
-- Watch the whole village or follow individual residents.
+- Watch the whole city or follow individual residents.
 - View up to ten camera panels in one application window.
 - Inspect needs, health, relationships, memories, finances and activities.
 - Read recent conversations and important historical events.
@@ -151,20 +151,20 @@ The game must not require the cloud development environment to access the user's
 
 # 4. World Design
 
-## 4.1 Village
+## 4.1 The city
 
-The village is hand-designed, finite and expandable through development. It is not procedurally generated in the initial version.
+The city is hand-designed, finite and expandable through development. It is not procedurally generated in the initial version.
 
-The full village should contain recognisable areas such as:
+The full city should contain recognisable areas such as:
 - Residential streets.
-- Village centre.
+- City centre (the plaza).
 - Shops and food businesses.
 - Workplaces.
 - Parks and gardens.
 - Community spaces.
 - A future cemetery.
 
-The visual style should feel like a cosy storybook village, with warm colours, greenery, charming buildings and readable paths.
+The visual style is a small cyberpunk city: navy and purple streets, bold flat-roofed blocks in magenta, violet, blue and teal, and neon trim, signs and lit windows that make the evening glow. Paths stay readable. The locked details are in `Documentation/ArtStyle.md`.
 
 ## 4.2 Buildings and Interiors
 
@@ -351,7 +351,7 @@ The economy is simple and comprehensible. The first release does not need detail
 
 ## 7.3 Businesses
 
-The full village should contain a small variety of businesses, including a general shop, café or pub, bakery or restaurant, workshop and clinic.
+The full city should contain a small variety of businesses, including a general shop, café or pub, bakery or restaurant, workshop and clinic.
 
 Residents can visit businesses, make simple choices, pay for purchases and visibly consume or use what they buy.
 
@@ -844,19 +844,19 @@ Never invent test results. If the required Unity editor or build tools are unava
 
 # 17. Art and Audio Direction
 
-The visual style is a polished isometric pixel-art storybook village.
+The visual style is polished isometric pixel art of a small neon cyberpunk city (see `Documentation/ArtStyle.md`).
 
 Use:
-- Warm colours.
-- Charming buildings.
-- Greenery, paths, parks and gardens.
+- Dark navy and purple surfaces with saturated neon accents.
+- Futuristic flat-roofed blocks, each a little different.
+- Streets, paving, neon-lit trees and plazas.
 - Ten distinguishable resident appearances.
 - Readable silhouettes and expressive animations.
 - Consistent perspective, scale and lighting.
 
 Required everyday animation categories include walking, sitting, eating, sleeping, working, talking and emotional gestures.
 
-Audio should be cosy and unobtrusive, with gentle music, village ambience, footsteps, doors, work sounds and activity effects.
+Audio should be cosy and unobtrusive, with gentle synth music, city ambience, footsteps, doors, work sounds and activity effects.
 
 Placeholder graphics are explicitly acceptable in early milestones. Establish a coherent art direction before the final art-production phase, but do not delay core simulation work for polished sprites.
 
@@ -877,7 +877,7 @@ Do not expose arbitrary code execution through content files.
 # 19. Definition of a Successful First Release
 
 The first full release is successful when:
-- Ten residents live in one coherent village.
+- Ten residents live in one coherent small city.
 - Their needs and activities progress reliably.
 - Local AI contributes to decisions and natural conversations.
 - Relationships and memories persist across sessions.

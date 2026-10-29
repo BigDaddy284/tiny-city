@@ -1,4 +1,4 @@
-namespace TinyTown.Simulation.AI
+namespace TinyCity.Simulation.AI
 {
     /// <summary>
     /// One HTTP call in progress. Polled each frame rather than awaited, so the simulation stays single-threaded

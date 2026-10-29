@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.Configuration;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>The interface theme: the same colours as Stills &amp; Reels and StackSpace, readable, and chosen as the player asked.</summary>
     public class UiPaletteTests

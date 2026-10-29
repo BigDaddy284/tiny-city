@@ -1,6 +1,6 @@
 using System;
 
-namespace TinyTown.Simulation.World
+namespace TinyCity.Simulation.World
 {
     public enum ObjectType
     {

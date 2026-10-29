@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.Configuration;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     public static class SettingsLoader
     {
@@ -38,7 +38,7 @@ namespace TinyTown.Runtime
 
             foreach (var problem in problems)
             {
-                Debug.LogWarning($"[TinyTown] {problem}");
+                Debug.LogWarning($"[TinyCity] {problem}");
             }
 
             return settings;

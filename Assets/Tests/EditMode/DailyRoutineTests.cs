@@ -1,12 +1,12 @@
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>Phase 1 acceptance: the resident lives a basic day without any AI.</summary>
     public class DailyRoutineTests
@@ -128,7 +128,7 @@ namespace TinyTown.Tests.EditMode
             a.Advance(2 * 24 * 60);
             b.Advance(2 * 24 * 60);
 
-            Assert.That(TinyTown.Simulation.Persistence.SaveSerializer.Save(a), Is.EqualTo(TinyTown.Simulation.Persistence.SaveSerializer.Save(b)));
+            Assert.That(TinyCity.Simulation.Persistence.SaveSerializer.Save(a), Is.EqualTo(TinyCity.Simulation.Persistence.SaveSerializer.Save(b)));
         }
     }
 }

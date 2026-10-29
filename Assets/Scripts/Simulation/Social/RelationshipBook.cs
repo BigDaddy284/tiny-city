@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace TinyTown.Simulation.Social
+namespace TinyCity.Simulation.Social
 {
     /// <summary>All relationships in the town, created on first use with neutral values. Never more than one per ordered pair.</summary>
     public sealed class RelationshipBook

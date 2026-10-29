@@ -2,12 +2,12 @@ using System.Collections;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Runtime;
-using TinyTown.Simulation.History;
+using TinyCity.Runtime;
+using TinyCity.Simulation.History;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace TinyTown.Tests.PlayMode
+namespace TinyCity.Tests.PlayMode
 {
     /// <summary>The Phase 5 journal, notifications and exports in the running game.</summary>
     public class JournalPlayTests
@@ -63,7 +63,7 @@ namespace TinyTown.Tests.PlayMode
             game.ExportTownHistory();
             var historyFile = Path.Combine(ExportStore.Folder, $"Town history - day {game.Simulation.Time.Day}.txt");
             Assert.That(File.Exists(historyFile), Is.True, game.Status);
-            Assert.That(File.ReadAllText(historyFile), Does.StartWith("A history of The Tiny Town"));
+            Assert.That(File.ReadAllText(historyFile), Does.StartWith("A history of Tiny City"));
             File.Delete(historyFile);
 
             var r = game.Simulation.Residents[0];

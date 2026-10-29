@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using TinyTown.Simulation.Residents;
+using TinyCity.Simulation.Residents;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>
     /// The little thought bubbles over residents' heads. Each is a cream bubble with a tail, outlined like everything
