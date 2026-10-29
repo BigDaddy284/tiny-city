@@ -9,7 +9,7 @@ namespace TinyCity.Simulation.Activities
     public static class ActivityCatalog
     {
         public static readonly ActivityDefinition Sleep = new ActivityDefinition(
-            "sleep", "Sleep", "sleeping", ActivityKind.Sleep, NeedType.Energy, new[] { ObjectType.Bed }, 10 * 60,
+            "sleep", "Sleep", "sleeping", ActivityKind.Sleep, NeedType.Energy, new[] { ObjectType.Bed, ObjectType.Bench }, 10 * 60,
             new Dictionary<NeedType, double> { [NeedType.Energy] = 12.5 / 60 },
             new Dictionary<NeedType, double>
             {
@@ -32,6 +32,11 @@ namespace TinyCity.Simulation.Activities
         /// <summary>Odds and ends from the cupboard: always possible, so hunger can never be blocked by an empty larder or purse.</summary>
         public static readonly ActivityDefinition Snack = new ActivityDefinition(
             "snack", "Make do with a snack", "eating whatever's in the cupboard", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.Kitchen }, 15,
+            new Dictionary<NeedType, double> { [NeedType.Hunger] = 2.0 });
+
+        /// <summary>What the market stalls give away at the end of the day. Only for the homeless, who have no kitchen for a snack.</summary>
+        public static readonly ActivityDefinition Leftovers = new ActivityDefinition(
+            "leftovers", "Ask for leftovers", "getting by on leftovers from the market stalls", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.MarketStall }, 15,
             new Dictionary<NeedType, double> { [NeedType.Hunger] = 2.0 });
 
         public static readonly ActivityDefinition CafeMeal = new ActivityDefinition(
@@ -186,7 +191,7 @@ namespace TinyCity.Simulation.Activities
         {
             Sleep, Eat, Snack, CafeMeal, Pastry, Drink, UseToilet, Shower, Work, Exercise, Read, WatchTown, Coffee, BuyGroceries, Chat,
             Rest, SeeDoctor, Paint, PlayPiano, Chess, Fish, Garden, Bake, Knit, AttendEvent, BarDrink, Dance,
-            PlayPool, PlaySnooker, Bowling, PlayArcade, GymWorkout, BrowseMarket,
+            PlayPool, PlaySnooker, Bowling, PlayArcade, GymWorkout, BrowseMarket, Leftovers,
         };
 
         /// <summary>Every hobby id, from the hobby activities.</summary>

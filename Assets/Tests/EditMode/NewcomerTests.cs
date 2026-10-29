@@ -95,6 +95,7 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(arrived.Count, Is.EqualTo(PopulationRules.MaxNewcomers));
             Assert.That(arrived.Select(r => r.HomeMapId).Distinct().Count(), Is.EqualTo(arrived.Count), "one home each");
+            Assert.That(arrived.Any(r => r.IsHomeless), Is.False, "22 free homes for 10 newcomers");
             Assert.That(arrived.Select(r => r.Id).Distinct().Count(), Is.EqualTo(arrived.Count));
             Assert.That(arrived.Select(r => r.FullName).Distinct().Count(), Is.EqualTo(arrived.Count), "no two share a name");
 
@@ -104,7 +105,7 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void NobodyMovesIn_WithoutAFreeHome()
+        public void WithEveryHomeTaken_ANewcomerSleepsOnABench_UntilAHomeComesFree()
         {
             var sim = NewCity();
             var homes = sim.FreeHomes().ToList();
@@ -115,13 +116,64 @@ namespace TinyCity.Tests.EditMode
                 lodgers.Add(Lodger(sim, $"res-9{lodgers.Count:000}", home.Id));
             }
 
-            Assert.That(sim.HasRoomForNewcomer, Is.False);
-            Assert.That(sim.MoveInNewcomer(), Is.Null);
+            var newcomer = sim.MoveInNewcomer();
+            Assert.That(newcomer, Is.Not.Null, "they come anyway");
+            Assert.That(newcomer.IsHomeless, Is.True);
+            Assert.That(newcomer.WeeklyRentPence, Is.EqualTo(0));
+            Assert.That(sim.History.Events.Last().Summary, Does.Contain("park bench"));
 
             sim.Die(lodgers[3], "old age");
-            var newcomer = sim.MoveInNewcomer();
-            Assert.That(newcomer, Is.Not.Null, "a home came free");
+            sim.HouseTheHomeless();
+            Assert.That(newcomer.IsHomeless, Is.False, "a home came free");
             Assert.That(newcomer.HomeMapId, Is.EqualTo(homes[3].Id));
+            Assert.That(newcomer.WeeklyRentPence, Is.GreaterThan(0));
+            Assert.That(sim.History.Events.Last().Kind, Is.EqualTo(TownEventKind.Housed));
+        }
+
+        [Test]
+        public void SomeoneHomeless_SleepsOnABench_AndGetsBy()
+        {
+            var sim = NewCity();
+            sim.NewcomersEnabled = false;
+            var mabel = sim.GetResident(StarterTown.ResidentId);
+            var lodgers = 0;
+            foreach (var home in sim.FreeHomes().ToList())
+            {
+                Lodger(sim, $"res-9{lodgers++:000}", home.Id);
+            }
+
+            sim.MakeHomeless(mabel, "Test.");
+            Lodger(sim, $"res-9{lodgers:000}", StarterTown.CottageMapId);
+            Assert.That(sim.FreeHomes().Any(), Is.False);
+            var benchNights = 0;
+            for (var minute = 0; minute < 5 * GameTime.MinutesPerDay; minute++)
+            {
+                sim.Tick();
+                if (sim.Time.Hour == 3 && sim.Time.Minute == 0)
+                {
+                    sim.World.TryGetObject(mabel.TargetObjectId ?? string.Empty, out var bench);
+                    if (mabel.ActivityId == "sleep" && bench != null && bench.Type == ObjectType.Bench)
+                    {
+                        benchNights++;
+                    }
+                }
+
+                if (minute > 120)
+                {
+                    Assert.That(mabel.Location.MapId == StarterTown.CottageMapId, Is.False, "she has left her old home and doesn't go back");
+                }
+            }
+
+            Assert.That(benchNights, Is.EqualTo(5));
+            Assert.That(mabel.IsAlive, Is.True);
+            Assert.That(mabel.Needs[NeedType.Hunger], Is.GreaterThan(10));
+            Assert.That(sim.Residents.Where(r => r.IsAlive && !r.IsHomeless).All(r => r.ActivityId != "leftovers"), Is.True, "leftovers are only for the homeless");
+
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), StarterTown.CreateWorld());
+            Assert.That(loaded.Success, Is.True, string.Join("; ", loaded.Errors));
+            Assert.That(loaded.Warnings, Is.Empty);
+            Assert.That(loaded.Simulation.GetResident(mabel.Id).IsHomeless, Is.True);
+            Assert.That(SaveSerializer.Save(loaded.Simulation), Is.EqualTo(SaveSerializer.Save(sim)));
         }
 
         [Test]

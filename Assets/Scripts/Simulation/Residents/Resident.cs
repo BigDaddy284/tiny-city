@@ -112,9 +112,14 @@ namespace TinyCity.Simulation.Residents
 
         public Personality Personality { get; }
 
-        public string HomeMapId { get; }
+        /// <summary>The home they live in, or null for someone with nowhere to live; see <see cref="IsHomeless"/>.</summary>
+        public string HomeMapId { get; internal set; }
 
-        public string BedObjectId { get; }
+        /// <summary>Their bed at home, or null when homeless.</summary>
+        public string BedObjectId { get; internal set; }
+
+        /// <summary>Nowhere to live: they sleep on a park bench and get by on what's free.</summary>
+        public bool IsHomeless => string.IsNullOrEmpty(HomeMapId);
 
         /// <summary>Null for the retired and the unemployed. Replaced only by game logic, e.g. upgrading an old save.</summary>
         public Job Job { get; internal set; }

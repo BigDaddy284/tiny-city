@@ -62,6 +62,8 @@ namespace TinyCity.Simulation.History
                 case TownEventKind.LifeStage:
                 case TownEventKind.SeriousIllness:
                 case TownEventKind.MovedIn:
+                case TownEventKind.Housed:
+                case TownEventKind.Homeless:
                     return true;
                 default:
                     return false;

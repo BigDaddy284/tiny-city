@@ -21,6 +21,9 @@ namespace TinyCity.Simulation.Residents
         /// <summary>When the day's chance of someone arriving is rolled: mid-morning, so they arrive in daylight.</summary>
         public static readonly int ArrivalMinute = GameTime.MinuteOfDayFor(10, 0);
 
+        /// <summary>When anyone sleeping rough is offered a home that has come free.</summary>
+        public static readonly int HousingMinute = GameTime.MinuteOfDayFor(9, 0);
+
         /// <summary>The chance each day that someone moves in, while there's room: about two a week.</summary>
         public const double ArrivalChance = 0.25;
 

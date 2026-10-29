@@ -39,11 +39,14 @@ namespace TinyCity.Simulation.Content
         public const string AllowanceLabel = "Jobseeker's allowance";
         public static readonly long AllowanceIncome = Money.Pounds(150);
 
+        /// <summary>The weekly rent for a home: flats are a little cheaper than cottages.</summary>
+        public static long RentFor(TileMap home) => home.Id.StartsWith(StarterTown.FlatMapPrefix) ? FlatRent : CottageRent;
+
         /// <summary>
-        /// Makes the newcomer with this id, standing at <paramref name="arrival"/> and about to live in
-        /// <paramref name="home"/>. Names already taken by someone in town are skipped where possible.
+        /// Makes the newcomer with this id, standing at <paramref name="arrival"/>, with no home yet (the simulation
+        /// gives them one). Names already taken by someone in town are skipped where possible.
         /// </summary>
-        public static Resident Create(string id, int day, TileMap home, WorldObject bed, Location arrival, ICollection<string> takenNames)
+        public static Resident Create(string id, int day, Location arrival, ICollection<string> takenNames)
         {
             double Roll(int salt) => Chance.Roll("newcomer:" + id, 0, salt);
 
@@ -58,12 +61,11 @@ namespace TinyCity.Simulation.Content
             var age = 20 + (int)(Roll(3) * 41);
             var personality = new Personality(Trait(Roll(4)), Trait(Roll(5)), Trait(Roll(6)), Trait(Roll(7)));
             var needs = new Needs(72);
-            var r = new Resident(id, first, last, age, 1 + (int)(Roll(8) * 365), Colours[(int)(Roll(9) * Colours.Length)], personality, home.Id, bed.Id, null, arrival, needs)
+            var r = new Resident(id, first, last, age, 1 + (int)(Roll(8) * 365), Colours[(int)(Roll(9) * Colours.Length)], personality, null, null, null, arrival, needs)
             {
                 MovedInDay = day,
                 MoneyPence = Money.Pounds(300 + (int)(Roll(10) * 501)),
                 Groceries = 3,
-                WeeklyRentPence = home.Id.StartsWith(StarterTown.FlatMapPrefix) ? FlatRent : CottageRent,
                 OpenToRomance = Roll(11) < 0.8,
             };
 

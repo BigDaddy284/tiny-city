@@ -120,6 +120,9 @@ namespace TinyCity.Art
         /// for each <paramref name="seat"/> (0 is the first to arrive), such as the two chairs of a café table; a seat
         /// past the last one shares the first.
         /// </summary>
+        /// <summary>Someone with nowhere to live, asleep along a park bench.</summary>
+        public static readonly Placement OnBench = new Placement(0.5, 0.5, 12, Stance.Lying, Facing.DownRight);
+
         public static Placement For(ObjectType type, int seat = 0)
         {
             if (seat > 0)
@@ -310,7 +313,7 @@ namespace TinyCity.Art
             var placement = Placement.Centre;
             if (resident.TargetObjectId != null && world.TryGetObject(resident.TargetObjectId, out var obj) && obj.Location == resident.Location)
             {
-                placement = Placement.For(obj.Type, seat);
+                placement = obj.Type == ObjectType.Bench && resident.ActivityId == ActivityCatalog.Sleep.Id ? Placement.OnBench : Placement.For(obj.Type, seat);
             }
 
             return (ActionFor(resident.ActivityId, placement.Stance), placement);

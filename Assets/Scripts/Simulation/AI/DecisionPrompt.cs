@@ -53,6 +53,10 @@ namespace TinyCity.Simulation.AI
             sb.AppendLine($"How you feel: {PromptText.Feelings(r)}.");
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
             sb.AppendLine($"Money: {PromptText.Purse(r)}.");
+            if (r.IsHomeless)
+            {
+                sb.AppendLine("You have nowhere to live yet, so you sleep on a park bench.");
+            }
             PromptText.AppendMemories(sb, memories);
             PromptText.AppendPeople(sb, sim, r);
 

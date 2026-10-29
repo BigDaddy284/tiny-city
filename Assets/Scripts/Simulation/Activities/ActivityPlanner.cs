@@ -224,7 +224,41 @@ namespace TinyCity.Simulation.Activities
         public bool CanDo(Resident resident, ActivityDefinition activity, WorldObject obj, GameTime time) =>
             activity.CanUse(obj) && (activity.Hobby == null || resident.Hobbies.Contains(activity.Hobby))
             && (activity != ActivityCatalog.AttendEvent || EventAt(obj, time) != null)
-            && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _));
+            && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _))
+            && SuitsHousing(resident, activity, obj);
+
+        /// <summary>
+        /// Only someone with nowhere to live sleeps on a bench, and only on one nobody else is using; nobody joins
+        /// them there. Market leftovers are for them alone too.
+        /// </summary>
+        private bool SuitsHousing(Resident resident, ActivityDefinition activity, WorldObject obj)
+        {
+            if (activity == ActivityCatalog.Leftovers)
+            {
+                return resident.IsHomeless;
+            }
+
+            if (obj.Type != ObjectType.Bench)
+            {
+                return true;
+            }
+
+            if (activity == ActivityCatalog.Sleep)
+            {
+                return resident.IsHomeless && UsersOf(resident, obj) == 0;
+            }
+
+            foreach (var other in residents)
+            {
+                if (other != resident && other.IsAlive && other.TargetObjectId == obj.Id && other.ActivityId == ActivityCatalog.Sleep.Id
+                    && (other.State == ResidentState.Travelling || other.State == ResidentState.Performing))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         /// <summary>Whether the calendar's community events take place. Turned off in settings, nobody can attend one.</summary>
         public bool CommunityEventsEnabled { get; set; } = true;
@@ -454,7 +488,7 @@ namespace TinyCity.Simulation.Activities
         /// <summary>A trip to the shop when groceries are running low and the shop can serve them.</summary>
         private PlanChoice ShoppingChoice(Resident resident, GameTime time)
         {
-            if (resident.Groceries > LowGroceries)
+            if (resident.Groceries > LowGroceries || resident.IsHomeless)
             {
                 return null;
             }

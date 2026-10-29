@@ -25,6 +25,8 @@ namespace TinyCity.Simulation.History
 
         // Added with newcomers (save version 7).
         MovedIn,
+        Housed,
+        Homeless,
     }
 
     /// <summary>Something that happened in the village and belongs to its history, separate from any one resident's memories.</summary>

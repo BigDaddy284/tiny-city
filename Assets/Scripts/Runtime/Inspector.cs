@@ -84,6 +84,11 @@ namespace TinyCity.Runtime
                 GUILayout.Label($"Moved to the city on day {r.MovedInDay}", styles.Text);
             }
 
+            if (r.IsHomeless && r.IsAlive)
+            {
+                GUILayout.Label("Nowhere to live: sleeps on a park bench until a home comes free", styles.Text);
+            }
+
             switch (tab)
             {
                 case 1:
