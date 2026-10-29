@@ -8,7 +8,7 @@ using TinyCity.Simulation.Time;
 
 namespace TinyCity.Tools.ArtPreview
 {
-    /// <summary>Writes every map (the village in every season, interiors in summer), by day and by night, as PNG files.</summary>
+    /// <summary>Writes every map (the village in every season, interiors in summer), by day and by night, as PNG files; <c>--sounds</c> writes every sound as WAV.</summary>
     internal static class Program
     {
         private static void Main(string[] args)
@@ -22,6 +22,20 @@ namespace TinyCity.Tools.ArtPreview
             if (args.Length > 0 && args[0] == "--residents")
             {
                 WriteResidents(args.Length > 1 ? args[1] : "residents.png");
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--sounds")
+            {
+                var folder = args.Length > 1 ? args[1] : "sounds";
+                Directory.CreateDirectory(folder);
+                foreach (var key in TinyCity.Sound.SoundLibrary.Keys)
+                {
+                    var sound = TinyCity.Sound.SoundLibrary.Generate(key);
+                    File.WriteAllBytes(Path.Combine(folder, key + ".wav"), TinyCity.Sound.Wav.Write(sound.Samples, sound.SampleRate));
+                    Console.WriteLine($"{key}: {sound.Seconds:0.0} s");
+                }
+
                 return;
             }
 

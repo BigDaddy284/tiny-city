@@ -184,3 +184,13 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 3. **Inspector top row:** "Town journal" (J still works), then −, + and Watch everyone, with the number of camera panels in a box on the far right. The row of name buttons is gone.
 4. **People list:** click "People ▼". A scrolling list shows each person's name and age († for those who have died). Filter by Everyone, Living or Died and sort by first name, surname, oldest or youngest. Clicking a name shows them in the inspector and the active panel.
 5. **Find a person:** click the "Find a person…" box and type. Matching names appear underneath as you type (case doesn't matter, surnames count). Clicking one shows that person and clears the box. While typing, the game's keys (J, S, F5 and so on) don't fire; Escape or clicking the town leaves the box.
+
+## Phase 6, build 3: sound and the themed window
+
+1. **Music:** soft synth music starts a few seconds after the town appears. From dusk it crossfades to a slower night piece, and back at dawn.
+2. **Ambience:** with the active panel outdoors you hear the city hum and hover traffic passing (by night, quieter traffic and the buzz of neon). Following someone indoors, it fades to a quiet room tone.
+3. **Effects:** follow a resident. You hear their footsteps, a door whoosh going in or out, sizzling when they cook, a pour when they drink, beeps at shop counters, key taps at desks, digging in the garden, chess pieces, the piano and fishing. People far from the middle of the panel are quieter, and people on other maps are silent.
+4. **City news:** a bright chime plays when a notable event pops up.
+5. **Volumes:** in Settings, Master, Music, Ambience and Effects change the sound straight away, and 0 silences each one.
+6. **Replacement sounds:** put a WAV called `music-day.wav` in `TinyCity_Data\StreamingAssets\Audio` and restart. It plays instead of the built-in music (see `Documentation/SoundOverrides.md`).
+7. **Title bar:** on Windows 11 the window's title bar is the theme's dark navy, with light text, like Stills & Reels. Switch the theme to Light and it turns light. On Windows 10 it switches between the dark and light system title bars.

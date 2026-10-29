@@ -30,14 +30,16 @@ namespace TinyCity.Runtime
             nextNumber = simulation.History.NextNumber;
         }
 
-        /// <summary>Picks up notable events added since the last call. Call once per frame.</summary>
-        public void Update(TownSimulation simulation, float now)
+        /// <summary>Picks up notable events added since the last call. Call once per frame. Returns how many popped up.</summary>
+        public int Update(TownSimulation simulation, float now)
         {
+            var arrived = 0;
             if (simulation.History.NextNumber != nextNumber)
             {
                 foreach (var entry in simulation.History.Since(nextNumber).Where(e => Journal.IsNotable(e.Kind)))
                 {
                     shown.Add((entry, now + ShowSeconds));
+                    arrived++;
                 }
 
                 nextNumber = simulation.History.NextNumber;
@@ -48,6 +50,8 @@ namespace TinyCity.Runtime
             {
                 shown.RemoveAt(0);
             }
+
+            return arrived;
         }
 
         /// <summary>Draws the pop-ups down from the top left of <paramref name="area"/>; a click calls <paramref name="clicked"/> and dismisses it.</summary>

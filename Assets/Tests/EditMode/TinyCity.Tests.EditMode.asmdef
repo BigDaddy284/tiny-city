@@ -4,6 +4,7 @@
     "references": [
         "TinyCity.Simulation",
         "TinyCity.Art",
+        "TinyCity.Sound",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

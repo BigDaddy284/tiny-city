@@ -48,5 +48,12 @@ namespace TinyCity.Tests.EditMode
                 Assert.That(UiColour.Contrast(p.SelectedText, p.AccentA), Is.GreaterThanOrEqualTo(4.5), $"selected button, dark {p.Dark}");
             }
         }
+
+        [Test]
+        public void TitleBarColours_AreWindowsColorRefs()
+        {
+            Assert.That(new UiColour(0x12, 0x34, 0x56).ColorRef, Is.EqualTo(0x00563412u), "blue, green, red from the top");
+            Assert.That(UiPalette.DarkPalette.Window.ColorRef, Is.Not.EqualTo(UiPalette.LightPalette.Window.ColorRef));
+        }
     }
 }
