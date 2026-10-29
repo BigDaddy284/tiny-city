@@ -245,7 +245,7 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 ## Babies, children and homelessness
 
 1. **A baby:** let a town run at 10x until two residents become a committed couple (the journal says so). Within a few weeks they have a baby: a notification, a journal entry under Life, and a little bundle in one parent's arms that goes everywhere with them, tucked up beside them in bed at night. The inspector says who the baby was born to and who carries them.
-2. **Growing up:** a child ages a year every 3 days. From 3 they walk about on their own, smaller than adults, go to bed earlier, sleep in their parent's bed, never work and never go into the bar. Teenagers are a little taller.
+2. **Growing up:** a child ages a year every 14 days, twice as fast as adults. From 3 they walk about on their own, smaller than adults, go to bed earlier, sleep in their parent's bed, never work and never go into the bar. Teenagers are a little taller.
 3. **Moving out:** at 18 they move into an empty cottage or flat, with a notification. If every home is taken they sleep on a park bench instead.
 4. **Homeless:** someone with nowhere to live lies along a park bench at night (nobody sits on it with them), eats leftovers at the market stalls, and moves into the first home that comes free, at 09:00.
 5. **Limits:** no baby is born while fifty people are alive, a couple has at most three children, and parents are never older than 50. Family never fall for each other.

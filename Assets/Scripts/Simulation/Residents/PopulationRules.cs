@@ -20,9 +20,9 @@ namespace TinyCity.Simulation.Residents
 
         /// <summary>
         /// Children grow a year older every this many days until <see cref="AdultAge"/> (adults age once every
-        /// 28-day year), so a newborn is grown up in 54 days.
+        /// 28-day year): twice as fast as adults, so a newborn is grown up in 252 days.
         /// </summary>
-        public const int ChildDaysPerYear = 3;
+        public const int ChildDaysPerYear = 14;
 
         /// <summary>The most people who can ever move in from out of town, counting any who have since died.</summary>
         public const int MaxNewcomers = 10;

@@ -67,7 +67,7 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Children_AgeAYearEveryThreeDays_AndWalkFromThree()
+        public void Children_AgeTwiceAsFastAsAdults_AndWalkFromThree()
         {
             var sim = CityWithACouple(out var mabel, out var tom);
             var baby = sim.HaveBaby(mabel, tom);
@@ -118,7 +118,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.History.Events.Any(e => e.Kind == TownEventKind.MovedOut && e.ResidentIds.Contains(child.Id)), Is.True);
 
             // From now on, birthdays come once a year like everyone else's.
-            sim.Advance(PopulationRules.ChildDaysPerYear * GameTime.MinutesPerDay);
+            sim.Advance(7 * GameTime.MinutesPerDay);
             Assert.That(child.AgeYears, Is.EqualTo(PopulationRules.AdultAge));
         }
 
@@ -220,8 +220,12 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = CityWithACouple(out var mabel, out var tom);
             var reference = CityWithACouple(out var m2, out var t2);
+
+            // The babies here are made by hand, so none arrives by chance in between.
+            sim.BabiesEnabled = reference.BabiesEnabled = false;
             var walker = sim.HaveBaby(mabel, tom);
-            reference.HaveBaby(m2, t2);
+            walker.AgeYears = PopulationRules.WalkingAge;
+            reference.HaveBaby(m2, t2).AgeYears = PopulationRules.WalkingAge;
             sim.Advance(9 * GameTime.MinutesPerDay + 600);
             reference.Advance(9 * GameTime.MinutesPerDay + 600);
             var baby = sim.HaveBaby(mabel, tom);
@@ -233,7 +237,6 @@ namespace TinyCity.Tests.EditMode
             Assert.That(loaded.Success, Is.True, string.Join("; ", loaded.Errors));
             Assert.That(loaded.Warnings, Is.Empty);
             var again = loaded.Simulation;
-            again.BabiesEnabled = true;
             Assert.That(again.GetResident(baby.Id).ParentIds, Is.EquivalentTo(new[] { mabel.Id, tom.Id }));
             Assert.That(again.GetResident(baby.Id).BornDay, Is.EqualTo(baby.BornDay));
 
