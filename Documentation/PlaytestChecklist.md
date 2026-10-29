@@ -157,3 +157,12 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\The Tiny Town\The Tiny Town\Saves\`
 8. **Clicking:** clicking a resident still selects them in the inspector, including someone sitting or lying down.
 9. **Performance:** with ten panels at 4x the game should stay smooth. Note it if it doesn't.
 
+## Settings window
+
+1. **Button:** a **Settings** button sits at the top right of the side panel, beside "The Tiny Town". Clicking it opens the Settings window over the town; **Done**, Escape or the button again closes it. Opening it closes the journal or saved towns, and vice versa.
+2. **Theme:** the side panel, windows, buttons, sliders and camera panel headers use the Stills & Reels / StackSpace colours: navy in Dark (the default), white and pale blue in Light, with a blue-to-purple gradient on selected buttons. Switch between **Dark** and **Light**: everything changes at once, and the town's own art stays the same. Names over residents' heads and signs on the map stay readable in both.
+3. **AI on/off:** with Ollama running, switch **Use local AI** off: the AI line says "off (Settings)" and residents carry on by routine. Switch it on: it reconnects within a few seconds.
+4. **Model list:** the window lists your installed Ollama models, with the one in use highlighted. Pick another: the AI line shows it loading, then connected. Close Ollama and press **Refresh list**: a message says it couldn't be reached. Start it again and press Refresh list.
+5. **Sound:** the four sliders move and keep their values (there is no sound until the next update).
+6. **Screen:** try Windowed, Borderless and Full screen; step the resolution with ◀ ▶; turn VSync off and pick a frame limit. Each takes effect straight away.
+7. **Kept:** quit and start the game again. The theme, AI choice, model, volumes and screen settings are as you left them.
