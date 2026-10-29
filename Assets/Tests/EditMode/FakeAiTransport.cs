@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using TinyTown.Simulation.AI;
+using TinyCity.Simulation.AI;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>A scripted stand-in for Ollama. Tests decide how each call is answered and when.</summary>
     internal sealed class FakeAiTransport : IAiTransport

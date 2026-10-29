@@ -1,11 +1,11 @@
 using System.Collections;
 using NUnit.Framework;
-using TinyTown.Runtime;
-using TinyTown.Simulation.AI;
+using TinyCity.Runtime;
+using TinyCity.Simulation.AI;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace TinyTown.Tests.PlayMode
+namespace TinyCity.Tests.PlayMode
 {
     public class BootstrapTests
     {
@@ -63,7 +63,7 @@ namespace TinyTown.Tests.PlayMode
             Assert.That(game.Simulation.AiDecisionsEnabled, Is.False);
 
             game.AdvanceMinutes(120);
-            Assert.That(game.Simulation.Residents[0].State, Is.Not.EqualTo(TinyTown.Simulation.Residents.ResidentState.Deciding));
+            Assert.That(game.Simulation.Residents[0].State, Is.Not.EqualTo(TinyCity.Simulation.Residents.ResidentState.Deciding));
         }
     }
 }

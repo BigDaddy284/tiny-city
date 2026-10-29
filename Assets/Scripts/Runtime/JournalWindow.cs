@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using TinyTown.Simulation;
-using TinyTown.Simulation.History;
+using TinyCity.Simulation;
+using TinyCity.Simulation.History;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// The town journal: the village records newest first, with a search box, topic filters and an option to show
@@ -62,9 +62,9 @@ namespace TinyTown.Runtime
             var selected = game.SelectedResident;
             var width = Mathf.Min(MaxWidth, cameraArea.width - 40f);
             Area = new Rect(cameraArea.x + ((cameraArea.width - width) / 2f), cameraArea.y + 36f, width, cameraArea.height - 72f);
-            GUI.color = new Color(0.98f, 0.93f, 0.84f, 0.98f);
+            GUI.color = UiTheme.ToColor(UiTheme.Palette.Window, 0.98f);
             GUI.DrawTexture(Area, Texture2D.whiteTexture);
-            GUI.color = GuiStyles.Ink;
+            GUI.color = UiTheme.ToColor(UiTheme.Palette.AccentA);
             GUI.DrawTexture(new Rect(Area.x, Area.y, Area.width, 2f), Texture2D.whiteTexture);
             GUI.color = Color.white;
 

@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using TinyTown.Art;
+using TinyCity.Art;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// Pictures the player has put in <c>StreamingAssets/Art</c> to replace generated ones, named by
@@ -53,12 +53,12 @@ namespace TinyTown.Runtime
             try
             {
                 var canvas = PngReader.Read(File.ReadAllBytes(path), (w, h) => MapArt.AnchorFor(w, h, request.FootprintWidth, request.FootprintDepth));
-                Debug.Log($"[TinyTown] Art: using {path}.");
+                Debug.Log($"[TinyCity] Art: using {path}.");
                 return canvas;
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[TinyTown] Art: couldn't use {path} ({e.Message}); keeping the built-in picture.");
+                Debug.LogWarning($"[TinyCity] Art: couldn't use {path} ({e.Message}); keeping the built-in picture.");
                 return null;
             }
         }

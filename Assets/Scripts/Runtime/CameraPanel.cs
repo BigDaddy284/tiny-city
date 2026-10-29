@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// One view onto the town. A panel either follows a resident wherever they go, indoors and out, or is a free

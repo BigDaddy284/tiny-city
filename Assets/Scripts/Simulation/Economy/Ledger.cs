@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Economy
+namespace TinyCity.Simulation.Economy
 {
     public enum TransactionKind
     {

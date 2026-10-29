@@ -5,18 +5,18 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace TinyTown.Editor
+namespace TinyCity.Editor
 {
     /// <summary>
     /// Command-line build entry point used by CI:
-    /// Unity -batchmode -quit -projectPath . -executeMethod TinyTown.Editor.BuildScript.BuildWindows -customBuildPath Builds/Windows/TheTinyTown.exe
+    /// Unity -batchmode -quit -projectPath . -executeMethod TinyCity.Editor.BuildScript.BuildWindows -customBuildPath Builds/Windows/TinyCity.exe
     /// </summary>
     public static class BuildScript
     {
         public const string BootScenePath = "Assets/Scenes/Boot.unity";
-        private const string DefaultBuildPath = "Builds/Windows/TheTinyTown.exe";
+        private const string DefaultBuildPath = "Builds/Windows/TinyCity.exe";
 
-        [MenuItem("Tiny Town/Build Windows")]
+        [MenuItem("Tiny City/Build Windows")]
         public static void BuildWindows()
         {
             EnsureBootScene();
@@ -34,7 +34,7 @@ namespace TinyTown.Editor
             });
 
             var summary = report.summary;
-            Debug.Log($"[TinyTown] Build {summary.result}: {summary.outputPath}, {summary.totalSize} bytes, {summary.totalErrors} errors.");
+            Debug.Log($"[TinyCity] Build {summary.result}: {summary.outputPath}, {summary.totalSize} bytes, {summary.totalErrors} errors.");
             if (summary.result != BuildResult.Succeeded)
             {
                 throw new Exception($"Windows build failed with result {summary.result}.");
@@ -42,7 +42,7 @@ namespace TinyTown.Editor
         }
 
         /// <summary>
-        /// The boot scene is intentionally empty: <c>TinyTown.Runtime.Bootstrap</c> creates everything at startup.
+        /// The boot scene is intentionally empty: <c>TinyCity.Runtime.Bootstrap</c> creates everything at startup.
         /// Creating it here means the scene file is always produced by the editor rather than written by hand.
         /// </summary>
         public static void EnsureBootScene()
@@ -60,8 +60,8 @@ namespace TinyTown.Editor
 
         private static void ApplyPlayerSettings()
         {
-            PlayerSettings.companyName = "The Tiny Town";
-            PlayerSettings.productName = "The Tiny Town";
+            PlayerSettings.companyName = "Tiny City";
+            PlayerSettings.productName = "Tiny City";
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
             PlayerSettings.defaultScreenWidth = 1280;
             PlayerSettings.defaultScreenHeight = 720;

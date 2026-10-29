@@ -1,13 +1,13 @@
 using System;
 using System.Linq;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation
+namespace TinyCity.Simulation
 {
     /// <summary>
     /// Romance between compatible adults: feelings grow from warm conversations, and the game alone decides when a

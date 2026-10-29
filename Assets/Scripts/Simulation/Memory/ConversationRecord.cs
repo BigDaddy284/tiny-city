@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Memory
+namespace TinyCity.Simulation.Memory
 {
     public enum ConversationKind
     {

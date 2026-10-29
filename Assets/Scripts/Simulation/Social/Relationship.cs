@@ -1,6 +1,6 @@
 using System;
 
-namespace TinyTown.Simulation.Social
+namespace TinyCity.Simulation.Social
 {
     /// <summary>
     /// How one resident feels about another. Directional: Mabel's view of Arthur is separate from Arthur's view of

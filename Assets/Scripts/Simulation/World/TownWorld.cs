@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Economy;
+using TinyCity.Simulation.Economy;
 
-namespace TinyTown.Simulation.World
+namespace TinyCity.Simulation.World
 {
     /// <summary>Static layout of a town: maps, furniture and doors. Not saved; saves refer to it by stable ids.</summary>
     public sealed class TownWorld

@@ -1,10 +1,10 @@
 {
-    "name": "TinyTown.Tests.PlayMode",
-    "rootNamespace": "TinyTown.Tests.PlayMode",
+    "name": "TinyCity.Tests.PlayMode",
+    "rootNamespace": "TinyCity.Tests.PlayMode",
     "references": [
-        "TinyTown.Runtime",
-        "TinyTown.Simulation",
-        "TinyTown.Art",
+        "TinyCity.Runtime",
+        "TinyCity.Simulation",
+        "TinyCity.Art",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],

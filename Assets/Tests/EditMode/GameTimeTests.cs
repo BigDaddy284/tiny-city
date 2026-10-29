@@ -1,7 +1,7 @@
 using NUnit.Framework;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     public class GameTimeTests
     {

@@ -1,6 +1,6 @@
 using System;
 
-namespace TinyTown.Simulation.Residents
+namespace TinyCity.Simulation.Residents
 {
     public enum NeedType
     {

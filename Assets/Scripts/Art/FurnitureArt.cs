@@ -1,8 +1,8 @@
 using System;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>Furniture and outdoor fittings, one picture per <see cref="ObjectType"/>, each standing on its tile.</summary>
     public static class FurnitureArt

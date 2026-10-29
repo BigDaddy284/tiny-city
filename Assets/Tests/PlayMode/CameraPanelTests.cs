@@ -1,11 +1,11 @@
 using System.Collections;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Runtime;
+using TinyCity.Runtime;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace TinyTown.Tests.PlayMode
+namespace TinyCity.Tests.PlayMode
 {
     /// <summary>The Phase 5 observer view: one to ten camera panels watching the same town.</summary>
     public class CameraPanelTests

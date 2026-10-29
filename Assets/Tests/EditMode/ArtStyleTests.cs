@@ -2,12 +2,12 @@ using System;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Art;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Art;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>
     /// The art style and palette are locked by the owner (Documentation/ArtStyle.md). These fingerprints change
@@ -32,8 +32,8 @@ namespace TinyTown.Tests.EditMode
                 hash.Add(colour);
             }
 
-            Assert.That(entries.Count, Is.EqualTo(206), Locked);
-            Assert.That(hash.Value, Is.EqualTo(16504919193236073666UL), Locked);
+            Assert.That(entries.Count, Is.EqualTo(251), Locked);
+            Assert.That(hash.Value, Is.EqualTo(13564815567059430809UL), Locked);
         }
 
         [Test]
@@ -63,7 +63,7 @@ namespace TinyTown.Tests.EditMode
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(1995987477292991286UL), Locked);
+            Assert.That(hash.Value, Is.EqualTo(14009164888431703415UL), Locked);
         }
 
         [Test]
@@ -81,7 +81,7 @@ namespace TinyTown.Tests.EditMode
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(15198207387189146475UL), Locked);
+            Assert.That(hash.Value, Is.EqualTo(2281408910426031061UL), Locked);
         }
 
         [Test]
@@ -103,7 +103,7 @@ namespace TinyTown.Tests.EditMode
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(17914511792282034033UL), Locked);
+            Assert.That(hash.Value, Is.EqualTo(16784573609646332105UL), Locked);
         }
 
         [Test]
@@ -126,8 +126,29 @@ namespace TinyTown.Tests.EditMode
                 }
             }
 
-            Assert.That(trees.Value, Is.EqualTo(379319625372261512UL), "Trees. " + Locked);
-            Assert.That(furniture.Value, Is.EqualTo(15434673107432456013UL), "Furniture. " + Locked);
+            Assert.That(trees.Value, Is.EqualTo(16681692374567243500UL), "Trees. " + Locked);
+            Assert.That(furniture.Value, Is.EqualTo(11047987526911261211UL), "Furniture. " + Locked);
+        }
+
+        [Test]
+        public void ResidentsAndMoods_AreLocked()
+        {
+            var hash = new Fingerprint();
+            foreach (var resident in StarterTown.CreateResidents(World))
+            {
+                var look = ResidentLook.For(resident.Id, resident.AgeYears);
+                foreach (var pose in ResidentArtTests.AllPoses())
+                {
+                    hash.Add(ResidentArt.Render(look, pose));
+                }
+            }
+
+            foreach (var mood in MoodArt.Shown.OrderBy(m => m))
+            {
+                hash.Add(MoodArt.Icon(mood));
+            }
+
+            Assert.That(hash.Value, Is.EqualTo(2378288113772359027UL), "Residents. " + Locked);
         }
 
         [Test]

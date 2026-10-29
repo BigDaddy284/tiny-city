@@ -5,7 +5,7 @@ replace any picture with a PNG of your own. This is optional, and nothing change
 
 ## Where the files go
 
-In the Windows build, make a folder called `Art` inside `TheTinyTown_Data\StreamingAssets\` (next to the
+In the Windows build, make a folder called `Art` inside `TinyCity_Data\StreamingAssets\` (next to the
 `Configuration` folder) and put PNG files in it. In the Unity editor the folder is `Assets/StreamingAssets/Art/`.
 Restart the game after adding or changing files. If a file can't be read, the game logs a warning and keeps its own
 picture.

@@ -1,6 +1,6 @@
-using TinyTown.Simulation.Residents;
+using TinyCity.Simulation.Residents;
 
-namespace TinyTown.Simulation.Activities
+namespace TinyCity.Simulation.Activities
 {
     /// <summary>Deterministic per-minute need changes. Nothing else changes need values.</summary>
     public static class NeedRules

@@ -1,14 +1,14 @@
 using System;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.AI;
-using TinyTown.Simulation.Configuration;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation;
+using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Configuration;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>The whole AI loop against a scripted Ollama: connection, decisions, fallbacks and reflections.</summary>
     public class AiServiceTests
@@ -246,5 +246,98 @@ namespace TinyTown.Tests.EditMode
             Assert.That(ai.Queue.PendingCount, Is.EqualTo(0));
             Assert.That(other.AiDecisionsEnabled, Is.True);
         }
-    }
+    
+        [Test]
+        public void ModelList_IsReadEvenWhileTheAiIsOff()
+        {
+            var transport = FakeAiTransport.WorkingOllama(_ => ReadAtArmchair);
+            var ai = new AiService(new OllamaSettings { enabled = false }, transport);
+
+            ai.RefreshModelList();
+            Assert.That(ai.ListingModels, Is.True);
+            ai.Update(now);
+            ai.Update(now + 0.1);
+
+            Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Disabled));
+            Assert.That(ai.ListingModels, Is.False);
+            Assert.That(ai.ModelListError, Is.Null);
+            Assert.That(ai.InstalledModels.ToList(), Is.EqualTo(new[] { "llama3:latest", FakeAiTransport.Model }));
+            Assert.That(transport.Calls.Count(c => c.Body.Contains("messages")), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ModelList_ReportsWhenOllamaIsNotRunning()
+        {
+            var transport = new FakeAiTransport { Responder = call => call.Fail("connection refused") };
+            var ai = new AiService(new OllamaSettings { enabled = false }, transport);
+
+            ai.RefreshModelList();
+            ai.Update(now);
+            ai.Update(now + 0.1);
+
+            Assert.That(ai.InstalledModels, Is.Empty);
+            Assert.That(ai.ModelListError, Does.Contain("connection refused"));
+        }
+
+        [Test]
+        public void TurningTheAiOff_DropsRequests_AndTurningItOnReconnects()
+        {
+            var sim = FreeAfternoon();
+            var transport = FakeAiTransport.WorkingOllama(_ => null);
+            var ai = Connected(sim, transport);
+            Run(ai, sim, 2);
+            Assert.That(sim.Residents[0].State, Is.EqualTo(ResidentState.Deciding));
+
+            ai.SetEnabled(false);
+            Run(ai, sim, 1);
+
+            Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Disabled));
+            Assert.That(sim.AiDecisionsEnabled, Is.False);
+            Assert.That(ai.Queue.Active, Is.Null);
+            Assert.That(ai.Queue.PendingCount, Is.EqualTo(0));
+            Assert.That(ai.Summary(), Does.Contain("Settings"));
+
+            ai.SetEnabled(true);
+            Run(ai, sim, 1);
+            ai.Update(now + 0.1);
+
+            Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Connected));
+        }
+
+        [Test]
+        public void UsingAnotherModel_ChecksAndLoadsIt()
+        {
+            var sim = FreeAfternoon();
+            var transport = FakeAiTransport.WorkingOllama(_ => ReadAtArmchair);
+            var ai = Connected(sim, transport);
+            var loadsBefore = transport.Calls.Count(c => c.Body.Contains("\"messages\": []"));
+
+            ai.UseModel("llama3:latest");
+            Assert.That(sim.AiDecisionsEnabled, Is.False);
+            for (var i = 0; i < 3; i++)
+            {
+                ai.Update(now);
+                now += 0.1;
+            }
+
+            Assert.That(ai.Model, Is.EqualTo("llama3:latest"));
+            Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Connected));
+            Assert.That(transport.Calls.Count(c => c.Body.Contains("\"messages\": []")), Is.EqualTo(loadsBefore + 1));
+            Assert.That(transport.Calls.Last(c => c.Body.Contains("\"messages\": []")).Body, Does.Contain("llama3:latest"));
+        }
+
+        [Test]
+        public void UsingAModelThatIsNotInstalled_SaysSo()
+        {
+            var sim = FreeAfternoon();
+            var ai = Connected(sim, FakeAiTransport.WorkingOllama(_ => ReadAtArmchair));
+
+            ai.UseModel("not-a-model:1b");
+            ai.Update(now);
+            ai.Update(now + 0.1);
+
+            Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.ModelMissing));
+            Assert.That(sim.AiDecisionsEnabled, Is.False);
+        }
+}
 }

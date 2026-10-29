@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>Phase 5 save slots: summaries for the save list, slot ids and the names index.</summary>
     public class SaveSlotTests
@@ -38,7 +38,7 @@ namespace TinyTown.Tests.EditMode
             var cases = new Dictionary<string, string>
             {
                 ["the file is damaged"] = good.Substring(0, good.Length / 2),
-                ["isn't a Tiny Town save"] = "{\"hello\": 1}",
+                ["isn't a Tiny City save"] = "{\"hello\": 1}",
                 ["newer version"] = good.Replace($"\"version\": {SaveSerializer.CurrentVersion}", "\"version\": 99"),
                 ["no residents"] = "{\"format\": \"tiny-town-save\", \"version\": 6, \"gameMinutes\": 10, \"residents\": []}",
                 ["no valid date"] = "{\"format\": \"tiny-town-save\", \"version\": 6, \"residents\": [{}]}",

@@ -1,4 +1,4 @@
-namespace TinyTown.Simulation.Health
+namespace TinyCity.Simulation.Health
 {
     /// <summary>
     /// Deterministic "dice": the same inputs always give the same number in [0, 1), on every platform and after

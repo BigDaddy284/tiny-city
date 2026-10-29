@@ -1,17 +1,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.AI;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>Ageing, health, illness, death and hobbies.</summary>
     public class LifeTests
@@ -117,7 +117,7 @@ namespace TinyTown.Tests.EditMode
         public void TheDead_MakeNoAiRequests()
         {
             var transport = FakeAiTransport.WorkingOllama(_ => "{\"action\":\"relax\",\"target_id\":\"none\",\"reason\":\"x\",\"say\":\"\"}");
-            var service = new AiService(new TinyTown.Simulation.Configuration.OllamaSettings(), transport);
+            var service = new AiService(new TinyCity.Simulation.Configuration.OllamaSettings(), transport);
             var sim = StarterTown.CreateNewGame();
             foreach (var r in sim.Residents.Where(r => r.Id != StarterTown.ResidentId).ToList())
             {
@@ -200,7 +200,7 @@ namespace TinyTown.Tests.EditMode
             Assert.That(worked, Is.EqualTo(0), Log(nell));
             Assert.That(rested, Is.GreaterThan(4 * 60), Log(nell));
             Assert.That(nell.Log.Any(e => e.Text.StartsWith("Called in sick")), Is.True, Log(nell));
-            Assert.That(sim.Economy.Ledger.For(nell.Id).Any(t => t.Kind == TinyTown.Simulation.Economy.TransactionKind.Wage), Is.False);
+            Assert.That(sim.Economy.Ledger.For(nell.Id).Any(t => t.Kind == TinyCity.Simulation.Economy.TransactionKind.Wage), Is.False);
         }
 
         [Test]
@@ -291,7 +291,7 @@ namespace TinyTown.Tests.EditMode
             var arthur = Get(sim, StarterTown.ArthurId);
             sim.FallIll(arthur, IllnessCatalog.Cold);
 
-            for (var i = 0; i < 120 && sim.Conversations.All.Count(c => c.Kind == TinyTown.Simulation.Memory.ConversationKind.Chat) == 0; i++)
+            for (var i = 0; i < 120 && sim.Conversations.All.Count(c => c.Kind == TinyCity.Simulation.Memory.ConversationKind.Chat) == 0; i++)
             {
                 sim.Tick();
             }
@@ -357,7 +357,7 @@ namespace TinyTown.Tests.EditMode
             sim.FallIll(mabel, IllnessCatalog.Cold);
             var options = sim.FreeTimeOptionsFor(mabel);
 
-            var text = DecisionPrompt.UserText(sim, mabel, options, new TinyTown.Simulation.Memory.MemoryRecord[0]);
+            var text = DecisionPrompt.UserText(sim, mabel, options, new TinyCity.Simulation.Memory.MemoryRecord[0]);
             var body = DecisionPrompt.BuildBody("qwen2.5:7b", sim, mabel, options);
 
             Assert.That(text, Does.Contain("you are poorly with a cold"));

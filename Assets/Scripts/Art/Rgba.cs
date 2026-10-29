@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>An 8-bit colour with alpha. The art is drawn with these and handed to Unity as raw pixels.</summary>
     public readonly struct Rgba : IEquatable<Rgba>

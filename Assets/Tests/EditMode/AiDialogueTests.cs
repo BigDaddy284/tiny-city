@@ -1,15 +1,15 @@
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.AI;
-using TinyTown.Simulation.Configuration;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation;
+using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Configuration;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>AI-written conversation lines through the real queue and service, against a scripted Ollama.</summary>
     public class AiDialogueTests
@@ -257,7 +257,7 @@ namespace TinyTown.Tests.EditMode
 
             Assert.That(chat.TargetId, Is.EqualTo(StarterTown.ArthurId));
             Assert.That(text, Does.Contain($"target_id \"{StarterTown.ArthurId}\": go and chat with Arthur Bramble"));
-            Assert.That(text, Does.Contain("People in the village:"));
+            Assert.That(text, Does.Contain("People in the city:"));
             Assert.That(text, Does.Contain("- You have never really met: Arthur Bramble"));
             Assert.That(text, Does.Contain("Money: you have £450.00, and food at home for 4 meals."));
 

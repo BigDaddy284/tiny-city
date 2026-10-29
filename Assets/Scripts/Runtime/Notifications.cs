@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation;
-using TinyTown.Simulation.History;
+using TinyCity.Simulation;
+using TinyCity.Simulation.History;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// Pops up the town's big moments (see <see cref="Journal.IsNotable"/>) in the corner of the camera area. Clicking

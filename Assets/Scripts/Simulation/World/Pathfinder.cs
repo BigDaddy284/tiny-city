@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace TinyTown.Simulation.World
+namespace TinyCity.Simulation.World
 {
     /// <summary>
     /// Deterministic tile navigation across maps. Residents ask for one step at a time, so no path needs to be

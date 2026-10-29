@@ -1,7 +1,7 @@
 using System;
-using TinyTown.Simulation.Residents;
+using TinyCity.Simulation.Residents;
 
-namespace TinyTown.Simulation.Health
+namespace TinyCity.Simulation.Health
 {
     /// <summary>
     /// Every number about health, illness, ageing and death. Deterministic: luck comes from <see cref="Chance"/>, so a

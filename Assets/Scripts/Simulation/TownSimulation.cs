@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Economy;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Economy;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Simulation
+namespace TinyCity.Simulation
 {
     /// <summary>What happened to an AI suggestion handed to the simulation.</summary>
     public enum DecisionOutcome
@@ -673,7 +673,7 @@ namespace TinyTown.Simulation
             var ab = Relationships.Get(initiator.Id, partner.Id);
             var ba = Relationships.Get(partner.Id, initiator.Id);
             var map = World.GetMap(initiator.Location.MapId);
-            var place = World.Objects.FirstOrDefault(o => Near(o.Location, initiator.Location, 1))?.Name ?? (map.IsExterior ? "village green" : map.Name);
+            var place = World.Objects.FirstOrDefault(o => Near(o.Location, initiator.Location, 1))?.Name ?? (map.IsExterior ? "city plaza" : map.Name);
             var session = new ConversationSession(Conversations.ReserveId(), initiator.Id, partner.Id, Time, SocialRules.LinesFor(initiator, partner, ab, ba), place);
             sessions.Add(session);
             foreach (var (me, other) in new[] { (initiator, partner), (partner, initiator) })

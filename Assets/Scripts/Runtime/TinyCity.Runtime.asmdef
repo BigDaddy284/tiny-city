@@ -1,8 +1,9 @@
 {
-    "name": "TinyTown.Art",
-    "rootNamespace": "TinyTown.Art",
+    "name": "TinyCity.Runtime",
+    "rootNamespace": "TinyCity.Runtime",
     "references": [
-        "TinyTown.Simulation"
+        "TinyCity.Simulation",
+        "TinyCity.Art"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -12,5 +13,5 @@
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
-    "noEngineReferences": true
+    "noEngineReferences": false
 }

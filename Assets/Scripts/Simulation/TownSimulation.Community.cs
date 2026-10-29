@@ -1,11 +1,11 @@
 using System.Linq;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation
+namespace TinyCity.Simulation
 {
     /// <summary>Community events on the village calendar: who came, what they remember, and the town's record of it.</summary>
     public sealed partial class TownSimulation

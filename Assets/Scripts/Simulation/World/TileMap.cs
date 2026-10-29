@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace TinyTown.Simulation.World
+namespace TinyCity.Simulation.World
 {
     public enum TileType
     {

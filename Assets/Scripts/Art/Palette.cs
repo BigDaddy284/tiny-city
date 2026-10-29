@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>
-    /// The game's locked palette: every colour the art uses is named here, and nowhere else. The fixed colours
+    /// The game's locked palette (Tiny City's neon cyberpunk look): every colour the art uses is named here, and nowhere else. The fixed colours
     /// are static; the colours of the outdoors change with the season and are on an instance from
     /// <see cref="For"/>. See Documentation/ArtStyle.md. The palette is locked by the owner: change it only with
     /// their approval, then update the fingerprint in <c>ArtStyleTests</c>.
@@ -14,62 +14,62 @@ namespace TinyTown.Art
     public sealed class Palette
     {
         // Materials used everywhere.
-        public static readonly Rgba Outline = Rgba.Hex("#3b2a2a");
+        public static readonly Rgba Outline = Rgba.Hex("#140f2b");
         public static readonly Rgba Shadow = new Rgba(40, 30, 50, 70);
-        public static readonly Rgba ShadowTint = Rgba.Hex("#33304a");
+        public static readonly Rgba ShadowTint = Rgba.Hex("#1a1236");
         public static readonly Rgba Highlight = Rgba.Hex("#ffffff");
-        public static readonly Rgba Earth = Rgba.Hex("#8a6142");
-        public static readonly Rgba EarthDark = Rgba.Hex("#5e4030");
-        public static readonly Rgba Wood = Rgba.Hex("#9c6b43");
-        public static readonly Rgba WoodDark = Rgba.Hex("#6e4a32");
-        public static readonly Rgba WoodLight = Rgba.Hex("#c99a68");
-        public static readonly Rgba Stone = Rgba.Hex("#a8a39b");
-        public static readonly Rgba StoneDark = Rgba.Hex("#7d776f");
-        public static readonly Rgba Brick = Rgba.Hex("#9a6a55");
-        public static readonly Rgba White = Rgba.Hex("#f4f1ea");
+        public static readonly Rgba Earth = Rgba.Hex("#2a2048");
+        public static readonly Rgba EarthDark = Rgba.Hex("#1a1433");
+        public static readonly Rgba Wood = Rgba.Hex("#4a3a6e");
+        public static readonly Rgba WoodDark = Rgba.Hex("#2e2350");
+        public static readonly Rgba WoodLight = Rgba.Hex("#6f5a9c");
+        public static readonly Rgba Stone = Rgba.Hex("#4b4775");
+        public static readonly Rgba StoneDark = Rgba.Hex("#33305a");
+        public static readonly Rgba Brick = Rgba.Hex("#3c2f63");
+        public static readonly Rgba White = Rgba.Hex("#e6e8ff");
         public static readonly Rgba Porcelain = Rgba.Hex("#eef3f5");
         public static readonly Rgba PorcelainShade = Rgba.Hex("#dfe7ea");
-        public static readonly Rgba Metal = Rgba.Hex("#9aa4ad");
-        public static readonly Rgba Brass = Rgba.Hex("#e8c35a");
-        public static readonly Rgba Iron = Rgba.Hex("#2d2d33");
-        public static readonly Rgba Charcoal = Rgba.Hex("#3a3a40");
-        public static readonly Rgba Slate = Rgba.Hex("#4a4a52");
-        public static readonly Rgba SlateLight = Rgba.Hex("#6b6b75");
+        public static readonly Rgba Metal = Rgba.Hex("#7f88b8");
+        public static readonly Rgba Brass = Rgba.Hex("#ffcf5a");
+        public static readonly Rgba Iron = Rgba.Hex("#15122a");
+        public static readonly Rgba Charcoal = Rgba.Hex("#221d3d");
+        public static readonly Rgba Slate = Rgba.Hex("#2c2650");
+        public static readonly Rgba SlateLight = Rgba.Hex("#463d78");
         public static readonly Rgba Ebony = Rgba.Hex("#3a2a2a");
         public static readonly Rgba Ivory = Rgba.Hex("#d8d4cc");
-        public static readonly Rgba Glass = Rgba.Hex("#5d7f9e");
-        public static readonly Rgba GlassLight = Rgba.Hex("#a9c8dc");
+        public static readonly Rgba Glass = Rgba.Hex("#2a4fa8");
+        public static readonly Rgba GlassLight = Rgba.Hex("#66d9ff");
         public static readonly Rgba ShowerGlass = new Rgba(170, 220, 235);
         public static readonly Rgba DisplayGlass = new Rgba(200, 230, 245, 90);
         public static readonly Rgba DisplayGlassTop = new Rgba(220, 240, 250, 70);
-        public static readonly Rgba WindowGlow = Rgba.Hex("#ffd27a");
-        public static readonly Rgba Snow = Rgba.Hex("#f3f6fa");
-        public static readonly Rgba SnowShade = Rgba.Hex("#cdd8e6");
-        public static readonly Rgba Sand = Rgba.Hex("#d8c79a");
+        public static readonly Rgba WindowGlow = Rgba.Hex("#ffc15a");
+        public static readonly Rgba Snow = Rgba.Hex("#e8ecff");
+        public static readonly Rgba SnowShade = Rgba.Hex("#b8c2ec");
+        public static readonly Rgba Sand = Rgba.Hex("#5a4a86");
         public static readonly Rgba IceCrack = Rgba.Hex("#8fb3cc");
 
         // Bright colours for cushions, quilts, flags, goods and signs.
-        public static readonly Rgba Red = Rgba.Hex("#d9675a");
-        public static readonly Rgba Blue = Rgba.Hex("#5a8fd9");
-        public static readonly Rgba Green = Rgba.Hex("#6fb36a");
-        public static readonly Rgba Yellow = Rgba.Hex("#e0b04a");
-        public static readonly Rgba Purple = Rgba.Hex("#a274c9");
-        public static readonly Rgba Cream = Rgba.Hex("#f2e8d0");
-        public static readonly Rgba Tomato = Rgba.Hex("#c94f3c");
-        public static readonly Rgba Poppy = Rgba.Hex("#e0533d");
-        public static readonly Rgba Pumpkin = Rgba.Hex("#e08a35");
-        public static readonly Rgba Mustard = Rgba.Hex("#f0c05a");
-        public static readonly Rgba Apple = Rgba.Hex("#8fbf5a");
-        public static readonly Rgba LeafGreen = Rgba.Hex("#4f8a4e");
-        public static readonly Rgba SignRed = Rgba.Hex("#d23c3c");
-        public static readonly Rgba Bread = Rgba.Hex("#c98a3e");
-        public static readonly Rgba Icing = Rgba.Hex("#f2b6c4");
-        public static readonly Rgba Sky = Rgba.Hex("#9cc8e8");
-        public static readonly Rgba Mat = Rgba.Hex("#5aa0c9");
-        public static readonly Rgba MatDark = Rgba.Hex("#4c8db3");
-        public static readonly Rgba Moss = Rgba.Hex("#7a8a6a");
-        public static readonly Rgba Chalkboard = Rgba.Hex("#2f4a3a");
-        public static readonly Rgba ClinicBlanket = Rgba.Hex("#a9cbe0");
+        public static readonly Rgba Red = Rgba.Hex("#ff4f7a");
+        public static readonly Rgba Blue = Rgba.Hex("#3a7bff");
+        public static readonly Rgba Green = Rgba.Hex("#2fe0b0");
+        public static readonly Rgba Yellow = Rgba.Hex("#ffd24a");
+        public static readonly Rgba Purple = Rgba.Hex("#b45cff");
+        public static readonly Rgba Cream = Rgba.Hex("#f0e6ff");
+        public static readonly Rgba Tomato = Rgba.Hex("#ff5a6e");
+        public static readonly Rgba Poppy = Rgba.Hex("#ff3d8b");
+        public static readonly Rgba Pumpkin = Rgba.Hex("#ff9a3d");
+        public static readonly Rgba Mustard = Rgba.Hex("#ffd24a");
+        public static readonly Rgba Apple = Rgba.Hex("#3dffb4");
+        public static readonly Rgba LeafGreen = Rgba.Hex("#19c9a0");
+        public static readonly Rgba SignRed = Rgba.Hex("#ff2e6e");
+        public static readonly Rgba Bread = Rgba.Hex("#ffb347");
+        public static readonly Rgba Icing = Rgba.Hex("#ff9fe0");
+        public static readonly Rgba Sky = Rgba.Hex("#4fd8ff");
+        public static readonly Rgba Mat = Rgba.Hex("#2fb8ff");
+        public static readonly Rgba MatDark = Rgba.Hex("#1f8fd0");
+        public static readonly Rgba Moss = Rgba.Hex("#3a5a7a");
+        public static readonly Rgba Chalkboard = Rgba.Hex("#14203a");
+        public static readonly Rgba ClinicBlanket = Rgba.Hex("#5fc8ff");
 
         /// <summary>Cushions, quilts and armchairs, one per object by its id.</summary>
         public static readonly Rgba[] Accents = { Red, Blue, Green, Yellow, Purple };
@@ -84,61 +84,93 @@ namespace TinyTown.Art
         public static readonly Rgba[] WindowGoods = { Poppy, Mustard, Apple };
 
         // Cottages: each picks a wall, roof and door colour by its id.
-        public static readonly Rgba[] CottageWalls = { Rgba.Hex("#f1e3c6"), Rgba.Hex("#f0cfc4"), Rgba.Hex("#f3e1a0"), Rgba.Hex("#d3dfc3"), Rgba.Hex("#d3e2ec"), Rgba.Hex("#ead7e6") };
-        public static readonly Rgba[] CottageRoofs = { Rgba.Hex("#c8623f"), Rgba.Hex("#5f6f8a"), Rgba.Hex("#6f8f55"), Rgba.Hex("#8a5a6e"), Rgba.Hex("#c9a35a"), Rgba.Hex("#a8553a") };
+        public static readonly Rgba[] CottageWalls = { Rgba.Hex("#c2367f"), Rgba.Hex("#5a3fb5"), Rgba.Hex("#2f5fb8"), Rgba.Hex("#1f8f9a"), Rgba.Hex("#8a2fa0"), Rgba.Hex("#3a3f9a") };
+        public static readonly Rgba[] CottageRoofs = { Rgba.Hex("#1c1636"), Rgba.Hex("#221a40"), Rgba.Hex("#18203a"), Rgba.Hex("#2a1838"), Rgba.Hex("#201a3a"), Rgba.Hex("#141a30") };
 
-        /// <summary>The thatched roof among <see cref="CottageRoofs"/>.</summary>
-        public static readonly Rgba Thatch = CottageRoofs[4];
-
-        public static readonly Rgba[] CottageDoors = { Rgba.Hex("#b8433a"), Rgba.Hex("#3f6a9c"), Rgba.Hex("#4f8a4e"), Rgba.Hex("#e0a93a"), Rgba.Hex("#7a4f8c") };
+        public static readonly Rgba[] CottageDoors = { Rgba.Hex("#35e0ff"), Rgba.Hex("#ff4fb0"), Rgba.Hex("#ffd24a"), Rgba.Hex("#3dffb4"), Rgba.Hex("#b45cff") };
 
         // Shops from outside.
-        public static readonly Rgba StoreWall = Rgba.Hex("#e9dcc0");
-        public static readonly Rgba StoreRoof = Rgba.Hex("#4f7a5a");
-        public static readonly Rgba StoreDoor = Rgba.Hex("#3d6b4a");
-        public static readonly Rgba StoreAwning = Rgba.Hex("#4e9a5c");
-        public static readonly Rgba CafeWall = Rgba.Hex("#f2d9b3");
-        public static readonly Rgba CafeRoof = Rgba.Hex("#9c4a3a");
-        public static readonly Rgba CafeDoor = Rgba.Hex("#8a3b30");
-        public static readonly Rgba CafeAwning = Rgba.Hex("#d24b3e");
-        public static readonly Rgba BakeryWall = Rgba.Hex("#f6e3a8");
-        public static readonly Rgba BakeryRoof = Rgba.Hex("#b5733f");
-        public static readonly Rgba BakeryDoor = Rgba.Hex("#7a5232");
-        public static readonly Rgba BakeryAwning = Rgba.Hex("#e7a83a");
-        public static readonly Rgba BakeryAwningStripe = Rgba.Hex("#fff4d6");
-        public static readonly Rgba ClinicWall = Rgba.Hex("#f5f6f2");
-        public static readonly Rgba ClinicRoof = Rgba.Hex("#5d7a99");
-        public static readonly Rgba ClinicDoor = Rgba.Hex("#3f6a9c");
-        public static readonly Rgba ShopAwning = Rgba.Hex("#5a7fb0");
+        public static readonly Rgba StoreWall = Rgba.Hex("#2b5f8f");
+        public static readonly Rgba StoreRoof = Rgba.Hex("#1a2a4a");
+        public static readonly Rgba StoreDoor = Rgba.Hex("#35e0ff");
+        public static readonly Rgba StoreNeon = Rgba.Hex("#00e5c0");
+        public static readonly Rgba CafeWall = Rgba.Hex("#8a2f7a");
+        public static readonly Rgba CafeRoof = Rgba.Hex("#2a1640");
+        public static readonly Rgba CafeDoor = Rgba.Hex("#ff5ab4");
+        public static readonly Rgba CafeNeon = Rgba.Hex("#ff3d8b");
+        public static readonly Rgba BakeryWall = Rgba.Hex("#9a5a2a");
+        public static readonly Rgba BakeryRoof = Rgba.Hex("#2a1a30");
+        public static readonly Rgba BakeryDoor = Rgba.Hex("#ffb347");
+        public static readonly Rgba BakeryNeon = Rgba.Hex("#ff9a3d");
+        public static readonly Rgba ClinicWall = Rgba.Hex("#d8e4ff");
+        public static readonly Rgba ClinicRoof = Rgba.Hex("#2a3a6a");
+        public static readonly Rgba ClinicDoor = Rgba.Hex("#35e0ff");
+        public static readonly Rgba ShopNeon = Rgba.Hex("#7a5cff");
 
         // Rooms.
-        public static readonly Rgba WallCap = Rgba.Hex("#5e4a44");
-        public static readonly Rgba FrontWallOutside = Rgba.Hex("#efe2c8");
-        public static readonly Rgba RoomWindowSky = Rgba.Hex("#9ccbe6");
-        public static readonly Rgba RoomWindowSkyHigh = Rgba.Hex("#bfe0f2");
-        public static readonly Rgba PictureFrame = Rgba.Hex("#c99a3e");
-        public static readonly Rgba PictureLand = Rgba.Hex("#7fb069");
-        public static readonly Rgba PictureSky = Rgba.Hex("#a7d0ea");
-        public static readonly Rgba Doormat = Rgba.Hex("#a0583a");
-        public static readonly Rgba DoormatDark = Rgba.Hex("#8a4a30");
-        public static readonly Rgba StoreWallpaper = Rgba.Hex("#cfe0c4");
-        public static readonly Rgba CafeWallpaper = Rgba.Hex("#f0d7b8");
-        public static readonly Rgba BakeryWallpaper = Rgba.Hex("#f6e7b8");
-        public static readonly Rgba ClinicWallpaper = Rgba.Hex("#e3eef3");
-        public static readonly Rgba ShopWallpaper = Rgba.Hex("#e6e0d4");
-        public static readonly Rgba[] CottageWallpapers = { Rgba.Hex("#f2e2c4"), Rgba.Hex("#e9d3d8"), Rgba.Hex("#d7e4d2"), Rgba.Hex("#d9e2ee"), Rgba.Hex("#f0e6b8") };
-        public static readonly Rgba[] StoreFloor = { Rgba.Hex("#efe6cf"), Rgba.Hex("#9cc29a") };
-        public static readonly Rgba[] ClinicFloor = { Rgba.Hex("#f4f7f8"), Rgba.Hex("#cfe1ea") };
-        public static readonly Rgba[] BakeryFloor = { Rgba.Hex("#d98b5f"), Rgba.Hex("#c57650") };
-        public static readonly Rgba[] ShopFloor = { Rgba.Hex("#e8e2d6"), Rgba.Hex("#c9c1b3") };
-        public static readonly Rgba CafeFloor = Rgba.Hex("#a2603f");
-        public static readonly Rgba[] CottageFloors = { Rgba.Hex("#c08a5a"), Rgba.Hex("#b07a4c"), Rgba.Hex("#caa074") };
+        public static readonly Rgba WallCap = Rgba.Hex("#120d24");
+        public static readonly Rgba FrontWallOutside = Rgba.Hex("#3a2f63");
+        public static readonly Rgba RoomWindowSky = Rgba.Hex("#2a1f5a");
+        public static readonly Rgba RoomWindowSkyHigh = Rgba.Hex("#5a3a9a");
+        public static readonly Rgba PictureFrame = Rgba.Hex("#35e0ff");
+        public static readonly Rgba PictureLand = Rgba.Hex("#ff3d8b");
+        public static readonly Rgba PictureSky = Rgba.Hex("#3a2a7a");
+        public static readonly Rgba Doormat = Rgba.Hex("#ff3d8b");
+        public static readonly Rgba DoormatDark = Rgba.Hex("#b02a6a");
+        public static readonly Rgba StoreWallpaper = Rgba.Hex("#1f3a5f");
+        public static readonly Rgba CafeWallpaper = Rgba.Hex("#4a1f4f");
+        public static readonly Rgba BakeryWallpaper = Rgba.Hex("#4f2f2a");
+        public static readonly Rgba ClinicWallpaper = Rgba.Hex("#c8d6f5");
+        public static readonly Rgba ShopWallpaper = Rgba.Hex("#2f2a55");
+        public static readonly Rgba[] CottageWallpapers = { Rgba.Hex("#2a2050"), Rgba.Hex("#3a1f4a"), Rgba.Hex("#1f2f4f"), Rgba.Hex("#2a2a5a"), Rgba.Hex("#3a2a3f") };
+        public static readonly Rgba[] StoreFloor = { Rgba.Hex("#1f2a48"), Rgba.Hex("#2a3d66") };
+        public static readonly Rgba[] ClinicFloor = { Rgba.Hex("#dfe8ff"), Rgba.Hex("#b8c8f0") };
+        public static readonly Rgba[] BakeryFloor = { Rgba.Hex("#3a2430"), Rgba.Hex("#2e1c26") };
+        public static readonly Rgba[] ShopFloor = { Rgba.Hex("#2a2648"), Rgba.Hex("#221e3d") };
+        public static readonly Rgba CafeFloor = Rgba.Hex("#2e2045");
+        public static readonly Rgba[] CottageFloors = { Rgba.Hex("#2e2650"), Rgba.Hex("#272043"), Rgba.Hex("#363060") };
+
+        // Residents (Phase 6, build 2): skin, hair, clothes and the little mood bubbles.
+        public static readonly Rgba[] Skin = { Rgba.Hex("#f6d9c2"), Rgba.Hex("#ebc19c"), Rgba.Hex("#d29a72"), Rgba.Hex("#b47a52"), Rgba.Hex("#7f5038") };
+        public static readonly Rgba Blush = Rgba.Hex("#e8a29a");
+        public static readonly Rgba HairBlack = Rgba.Hex("#2e2626");
+        public static readonly Rgba HairDarkBrown = Rgba.Hex("#4a3226");
+        public static readonly Rgba HairBrown = Rgba.Hex("#6b4630");
+        public static readonly Rgba HairAuburn = Rgba.Hex("#a4523a");
+        public static readonly Rgba HairGinger = Rgba.Hex("#d0813e");
+        public static readonly Rgba HairBlonde = Rgba.Hex("#e2c27a");
+        public static readonly Rgba HairGrey = Rgba.Hex("#b9b4ad");
+        public static readonly Rgba HairWhite = Rgba.Hex("#ece9e3");
+        public static readonly Rgba Terracotta = Rgba.Hex("#d9734e");
+        public static readonly Rgba Cornflower = Rgba.Hex("#5b7db1");
+        public static readonly Rgba Fern = Rgba.Hex("#6fae5c");
+        public static readonly Rgba Rose = Rgba.Hex("#c2577a");
+        public static readonly Rgba Marigold = Rgba.Hex("#e0a33a");
+        public static readonly Rgba Lavender = Rgba.Hex("#8e6cc0");
+        public static readonly Rgba Buttercup = Rgba.Hex("#d4b44a");
+        public static readonly Rgba Teal = Rgba.Hex("#3e8e8a");
+        public static readonly Rgba Powder = Rgba.Hex("#7fa7d9");
+        public static readonly Rgba Pebble = Rgba.Hex("#b0a8a0");
+        public static readonly Rgba Denim = Rgba.Hex("#4d5f86");
+        public static readonly Rgba Corduroy = Rgba.Hex("#7a5a3e");
+        public static readonly Rgba Khaki = Rgba.Hex("#a8946a");
+
+        /// <summary>Clothes for residents without a look of their own, chosen by their id.</summary>
+        public static readonly Rgba[] Clothes = { Terracotta, Cornflower, Fern, Rose, Marigold, Lavender, Buttercup, Teal, Powder, Pebble };
+
+        /// <summary>Hair for residents without a look of their own, chosen by their id (grey and white come with age).</summary>
+        public static readonly Rgba[] Hair = { HairBlack, HairDarkBrown, HairBrown, HairAuburn, HairGinger, HairBlonde };
+
+        public static readonly Rgba Bubble = Rgba.Hex("#fffaf0");
+        public static readonly Rgba Heart = Rgba.Hex("#e0566a");
+        public static readonly Rgba Sleepy = Rgba.Hex("#6a86c9");
+        public static readonly Rgba Queasy = Rgba.Hex("#8cbf6a");
 
         // Light: sprites are multiplied by these (see Lighting).
         public static readonly Rgba Daylight = Rgba.Hex("#ffffff");
-        public static readonly Rgba GoldenHour = Rgba.Hex("#ffd6b0");
-        public static readonly Rgba Moonlight = Rgba.Hex("#6a77b8");
-        public static readonly Rgba Lamplight = Rgba.Hex("#ffe2b8");
+        public static readonly Rgba GoldenHour = Rgba.Hex("#ffb8d8");
+        public static readonly Rgba Moonlight = Rgba.Hex("#7a6ad8");
+        public static readonly Rgba Lamplight = Rgba.Hex("#e8d0ff");
 
         private Palette(Season season)
         {
@@ -146,55 +178,55 @@ namespace TinyTown.Art
             switch (season)
             {
                 case Season.Spring:
-                    Grass = Rgba.Hex("#86c165");
-                    GrassDark = Rgba.Hex("#69a552");
-                    GrassLight = Rgba.Hex("#a6d67c");
-                    Leaves = Rgba.Hex("#7cc35a");
-                    LeavesDark = Rgba.Hex("#4f9445");
-                    LeavesLight = Rgba.Hex("#b4e07e");
-                    Accent = Rgba.Hex("#f7b6cf");
-                    Flowers = new[] { Rgba.Hex("#f7b6cf"), Rgba.Hex("#fff3a6"), Rgba.Hex("#ffffff"), Rgba.Hex("#c7b3f0") };
-                    Water = Rgba.Hex("#5fa8d8");
+                    Grass = Rgba.Hex("#2a2456");
+                    GrassDark = Rgba.Hex("#221d48");
+                    GrassLight = Rgba.Hex("#352e6a");
+                    Leaves = Rgba.Hex("#22c7b4");
+                    LeavesDark = Rgba.Hex("#138a86");
+                    LeavesLight = Rgba.Hex("#6ff5dc");
+                    Accent = Rgba.Hex("#35e0ff");
+                    Flowers = new[] { Rgba.Hex("#35e0ff"), Rgba.Hex("#ff4fb0"), Rgba.Hex("#ffd24a"), Rgba.Hex("#b45cff") };
+                    Water = Rgba.Hex("#1d4fb0");
                     break;
                 case Season.Summer:
-                    Grass = Rgba.Hex("#74b04e");
-                    GrassDark = Rgba.Hex("#5a943e");
-                    GrassLight = Rgba.Hex("#93c763");
-                    Leaves = Rgba.Hex("#5ea844");
-                    LeavesDark = Rgba.Hex("#3d7a35");
-                    LeavesLight = Rgba.Hex("#8fcb5c");
-                    Accent = Rgba.Hex("#e0533d");
-                    Flowers = new[] { Rgba.Hex("#ffd54a"), Rgba.Hex("#ffffff"), Rgba.Hex("#e86d5a"), Rgba.Hex("#8fb3ff") };
-                    Water = Rgba.Hex("#4ea0d6");
+                    Grass = Rgba.Hex("#2c2254");
+                    GrassDark = Rgba.Hex("#231b46");
+                    GrassLight = Rgba.Hex("#3a2c6a");
+                    Leaves = Rgba.Hex("#ff4fb0");
+                    LeavesDark = Rgba.Hex("#b02a7e");
+                    LeavesLight = Rgba.Hex("#ff9fe0");
+                    Accent = Rgba.Hex("#ff3d8b");
+                    Flowers = new[] { Rgba.Hex("#ff4fb0"), Rgba.Hex("#35e0ff"), Rgba.Hex("#ffd24a"), Rgba.Hex("#3dffb4") };
+                    Water = Rgba.Hex("#1f58c0");
                     break;
                 case Season.Autumn:
-                    Grass = Rgba.Hex("#a3a356");
-                    GrassDark = Rgba.Hex("#858a45");
-                    GrassLight = Rgba.Hex("#bfb96a");
-                    Leaves = Rgba.Hex("#e08a35");
-                    LeavesDark = Rgba.Hex("#b0502c");
-                    LeavesLight = Rgba.Hex("#f3c14f");
-                    Accent = Rgba.Hex("#d4632e");
-                    Flowers = new[] { Rgba.Hex("#e08a35"), Rgba.Hex("#c6482f"), Rgba.Hex("#f3c14f"), Rgba.Hex("#9a5a2e") };
-                    Water = Rgba.Hex("#5a93b8");
+                    Grass = Rgba.Hex("#2e2450");
+                    GrassDark = Rgba.Hex("#251c42");
+                    GrassLight = Rgba.Hex("#3c2f64");
+                    Leaves = Rgba.Hex("#ff9a3d");
+                    LeavesDark = Rgba.Hex("#c25a2a");
+                    LeavesLight = Rgba.Hex("#ffd24a");
+                    Accent = Rgba.Hex("#ff9a3d");
+                    Flowers = new[] { Rgba.Hex("#ff9a3d"), Rgba.Hex("#ff4f7a"), Rgba.Hex("#ffd24a"), Rgba.Hex("#b45cff") };
+                    Water = Rgba.Hex("#22489a");
                     break;
                 default:
-                    Grass = Rgba.Hex("#e9eff5");
-                    GrassDark = Rgba.Hex("#ccd8e6");
-                    GrassLight = Rgba.Hex("#fbfdff");
-                    Leaves = Rgba.Hex("#7a6152");
-                    LeavesDark = Rgba.Hex("#5a463c");
-                    LeavesLight = Rgba.Hex("#a28775");
-                    Accent = Rgba.Hex("#c94040");
-                    Flowers = new[] { Rgba.Hex("#a7b98e"), Rgba.Hex("#8fa07a"), Rgba.Hex("#c94040"), Rgba.Hex("#d7e2ec") };
-                    Water = Rgba.Hex("#b9d7ea");
+                    Grass = Rgba.Hex("#c9d2f0");
+                    GrassDark = Rgba.Hex("#a8b2dc");
+                    GrassLight = Rgba.Hex("#e8ecff");
+                    Leaves = Rgba.Hex("#3a2f5a");
+                    LeavesDark = Rgba.Hex("#2a2148");
+                    LeavesLight = Rgba.Hex("#5a4a86");
+                    Accent = Rgba.Hex("#35e0ff");
+                    Flowers = new[] { Rgba.Hex("#7a8ad0"), Rgba.Hex("#5a6ab0"), Rgba.Hex("#35e0ff"), Rgba.Hex("#d0d8ff") };
+                    Water = Rgba.Hex("#8fb0e8");
                     break;
             }
 
-            Path = season == Season.Winter ? Rgba.Hex("#c9bfb1") : Rgba.Hex("#dcc596");
-            PathDark = season == Season.Winter ? Rgba.Hex("#a99d8f") : Rgba.Hex("#b99f72");
-            PineLeaves = season == Season.Winter ? Rgba.Hex("#3f6b52") : Rgba.Hex("#3e7a4a");
-            PineLeavesDark = Rgba.Hex("#2c5639");
+            Path = season == Season.Winter ? Rgba.Hex("#6a6aa8") : Rgba.Hex("#4a3a86");
+            PathDark = season == Season.Winter ? Rgba.Hex("#4f4f8a") : Rgba.Hex("#33286a");
+            PineLeaves = season == Season.Winter ? Rgba.Hex("#2a6a9a") : Rgba.Hex("#2a7ad0");
+            PineLeavesDark = Rgba.Hex("#1a4a96");
         }
 
         public Season Season { get; }

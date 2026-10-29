@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     /// <summary>The Phase 5 journal: what goes into the town history, searching it, timelines and exported text.</summary>
     public class JournalTests
@@ -182,7 +182,7 @@ namespace TinyTown.Tests.EditMode
         {
             var sim = TownWithHistory();
             var text = LifeStory.WriteTownHistory(sim);
-            Assert.That(text, Does.StartWith("A history of The Tiny Town"));
+            Assert.That(text, Does.StartWith("A history of Tiny City"));
             foreach (var r in sim.Residents)
             {
                 Assert.That(text, Does.Contain(r.FullName));

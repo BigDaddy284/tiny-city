@@ -1,10 +1,10 @@
 using NUnit.Framework;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     public class NeedsAndPlannerTests
     {

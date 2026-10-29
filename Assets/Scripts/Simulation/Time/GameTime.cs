@@ -1,6 +1,6 @@
 using System;
 
-namespace TinyTown.Simulation.Time
+namespace TinyCity.Simulation.Time
 {
     public enum Weekday
     {

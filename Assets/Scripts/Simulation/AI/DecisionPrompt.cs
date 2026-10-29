@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
 
-namespace TinyTown.Simulation.AI
+namespace TinyCity.Simulation.AI
 {
     /// <summary>What the AI answered for a free-time decision, before the game validates it.</summary>
     public sealed class DecisionReply

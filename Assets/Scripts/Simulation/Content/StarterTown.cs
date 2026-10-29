@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Community;
-using TinyTown.Simulation.Economy;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Community;
+using TinyCity.Simulation.Economy;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Simulation.Content
+namespace TinyCity.Simulation.Content
 {
     /// <summary>
     /// The starter town: a village with ten cottages, a general store, café, bakery and clinic, and ten residents.
@@ -16,6 +16,7 @@ namespace TinyTown.Simulation.Content
     /// </summary>
     public static class StarterTown
     {
+        /// <summary>Kept from the game's first name, The Tiny Town: saves refer to it.</summary>
         public const string TownId = "town-tiny-town";
         public const string VillageMapId = "map-village";
         public const string CottageMapId = "map-cottage-1";
@@ -105,13 +106,14 @@ namespace TinyTown.Simulation.Content
             "####D####",
         };
 
-        // y tables, c counter (work), t toilet, s sink, u piano, q quiz corner (gathering spot).
+        // y window and corner tables, m middle and n centre tables (added later, so the first two keep their places),
+        // c counter (work), t toilet, s sink, u piano, q quiz corner (gathering spot).
         private static readonly string[] CafeRows =
         {
             "###########",
-            "#y...y..#t#",
+            "#y.m.y..#t#",
             "#...q...#.#",
-            "#u........#",
+            "#u....n...#",
             "#...c...s.#",
             "#####D#####",
         };
@@ -207,7 +209,7 @@ namespace TinyTown.Simulation.Content
 
         public static TownWorld CreateWorld()
         {
-            var maps = new List<TileMap> { TileMap.FromRows(VillageMapId, "Tiny Town", true, VillageRows, VillageLegend) };
+            var maps = new List<TileMap> { TileMap.FromRows(VillageMapId, "Tiny City", true, VillageRows, VillageLegend) };
             var objects = new List<WorldObject>();
             AddObjects(objects, VillageMapId, VillageRows, new Dictionary<char, (string id, string name, ObjectType type)>
             {
@@ -219,14 +221,14 @@ namespace TinyTown.Simulation.Content
                 ['a'] = ("obj-village-easel", "Easel by the pond", ObjectType.Easel),
                 ['h'] = ("obj-village-chess", "Chess table", ObjectType.ChessTable),
                 ['f'] = ("obj-village-fishing", "Fishing spot", ObjectType.FishingSpot),
-                ['q'] = (VillageGreenId, "Village green", ObjectType.GatheringSpot),
+                ['q'] = (VillageGreenId, "City plaza", ObjectType.GatheringSpot),
                 ['j'] = (PondLawnId, "Pond-side lawn", ObjectType.GatheringSpot),
             });
 
             // Benches share letters, so give them ids by position.
             objects.Add(new WorldObject("obj-village-bench-pond", "Pond bench", ObjectType.Bench, Find(VillageMapId, VillageRows, 'b', 0)));
             objects.Add(new WorldObject("obj-village-bench-garden", "Garden bench", ObjectType.Bench, Find(VillageMapId, VillageRows, 'b', 1)));
-            objects.Add(new WorldObject("obj-village-bench-square", "Village square bench", ObjectType.Bench, Find(VillageMapId, VillageRows, 'p', 0)));
+            objects.Add(new WorldObject("obj-village-bench-square", "Square bench", ObjectType.Bench, Find(VillageMapId, VillageRows, 'p', 0)));
             objects.Add(new WorldObject("obj-village-bench-park", "Park bench", ObjectType.Bench, Find(VillageMapId, VillageRows, 'p', 1)));
 
             var portals = new List<Portal>();
@@ -262,6 +264,8 @@ namespace TinyTown.Simulation.Content
             });
             objects.Add(new WorldObject("obj-cafe-table-window", "Window table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'y', 0)));
             objects.Add(new WorldObject("obj-cafe-table-corner", "Corner table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'y', 1)));
+            objects.Add(new WorldObject("obj-cafe-table-middle", "Middle table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'm', 0)));
+            objects.Add(new WorldObject("obj-cafe-table-centre", "Centre table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'n', 0)));
             AddBuilding(maps, objects, portals, BakeryMapId, "Bakery", BakeryRows, 'K', "bakery", new Dictionary<char, (string id, string name, ObjectType type)>
             {
                 ['v'] = ("obj-bakery-display", "Cake display", ObjectType.BakeryDisplay),
@@ -276,7 +280,7 @@ namespace TinyTown.Simulation.Content
             objects.Add(new WorldObject("obj-clinic-bed-1", "Clinic bed", ObjectType.ClinicBed, Find(ClinicMapId, ClinicRows, 'm', 0)));
             objects.Add(new WorldObject("obj-clinic-bed-2", "Clinic bed", ObjectType.ClinicBed, Find(ClinicMapId, ClinicRows, 'm', 1)));
 
-            return new TownWorld(TownId, "The Tiny Town", maps, objects, portals, CreateBusinesses(), new CommunityCalendar(CreateCommunityEvents()));
+            return new TownWorld(TownId, "Tiny City", maps, objects, portals, CreateBusinesses(), new CommunityCalendar(CreateCommunityEvents()));
         }
 
         private static IEnumerable<Business> CreateBusinesses()
@@ -305,7 +309,7 @@ namespace TinyTown.Simulation.Content
         {
             yield return new CommunityEvent("get-together", "Sunday get-together", PondLawnId, Minute(15), Minute(17), days: 1 << (int)Weekday.Sunday, turnout: 0.45);
             yield return new CommunityEvent("quiz-night", "Quiz night", QuizCornerId, Minute(18), Minute(20), days: 1 << (int)Weekday.Wednesday, turnout: 0.4);
-            yield return new CommunityEvent("village-fete", "Village fête", VillageGreenId, Minute(14), Minute(17), yearDay: FeteDayOfYear, turnout: 0.8);
+            yield return new CommunityEvent("village-fete", "City festival", VillageGreenId, Minute(14), Minute(17), yearDay: FeteDayOfYear, turnout: 0.8);
         }
 
         /// <summary>The fête's day in each 28-day year: the second Sunday.</summary>
@@ -428,7 +432,7 @@ namespace TinyTown.Simulation.Content
                 id = SamuelId, first = "Samuel", last = "Okafor", age = 54, birthday = 160, colour = "#3E8E8A",
                 personality = new Personality(active: 0.4, sociable: 0.55, tidy: 0.75, bookish: 0.85),
                 homeMapId = "map-cottage-8", bedId = "obj-cottage8-bed",
-                job = new Job("Village doctor", "obj-clinic-desk", Minute(9), Minute(17), Job.Weekdays, Money.Pounds(24)),
+                job = new Job("City doctor", "obj-clinic-desk", Minute(9), Minute(17), Job.Weekdays, Money.Pounds(24)),
                 needsLevel = 74, needAdjustments = { [NeedType.Energy] = 88 },
                 money = Money.Pounds(1200), groceries = 6, rent = Money.Pounds(130),
             },
@@ -581,15 +585,15 @@ namespace TinyTown.Simulation.Content
             switch (residentId)
             {
                 case ResidentId:
-                    yield return (7, "I moved into Rose Cottage last spring and became the village's community gardener.", new[] { CottageMapId, GardenPlotId, "work" });
+                    yield return (7, "I moved into Rose Cottage last spring and became the city's community gardener.", new[] { CottageMapId, GardenPlotId, "work" });
                     yield return (5, "Reading in my armchair with a cup of tea is my favourite way to unwind.", new[] { "obj-cottage1-armchair", "read", "fun" });
                     break;
                 case ArthurId:
-                    yield return (7, "I ran the village post office for forty years, so I know everyone's comings and goings.", new[] { WillowCottageMapId, "social" });
+                    yield return (7, "I ran the local post office for forty years, so I know everyone's comings and goings.", new[] { WillowCottageMapId, "social" });
                     yield return (5, "Since I retired I miss the chatter at the counter; a good natter on the pond bench helps.", new[] { "obj-village-bench-pond", "watch-town", "chat", "social" });
                     break;
                 case NellId:
-                    yield return (7, "I moved to the Tiny Town a month ago to set up the repair workshop.", new[] { FernCottageMapId, WorkbenchId, "work" });
+                    yield return (7, "I moved to Tiny City a month ago to set up the repair workshop.", new[] { FernCottageMapId, WorkbenchId, "work" });
                     yield return (4, "I'd rather fix a squeaky gate than make small talk, but I'm trying to meet people.", new[] { "chat", "social" });
                     break;
                 case RosaId:
@@ -597,27 +601,27 @@ namespace TinyTown.Simulation.Content
                     yield return (5, "I like everything in its place: tins lined up, labels facing out.", new[] { "work", "tidy" });
                     break;
                 case TomId:
-                    yield return (7, "I trained as a chef in the city and came home to cook at the village café.", new[] { CafeMapId, "obj-cafe-counter", "work" });
+                    yield return (7, "I trained as a chef downtown and came home to cook at the neighbourhood café.", new[] { CafeMapId, "obj-cafe-counter", "work" });
                     yield return (4, "My soup of the day is never the same twice, and I'm proud of that.", new[] { "cafe-meal", "work" });
                     break;
                 case PriyaId:
-                    yield return (7, "Serving at the café means I hear all the village news first.", new[] { CafeMapId, "work", "social" });
+                    yield return (7, "Serving at the café means I hear all the city news first.", new[] { CafeMapId, "work", "social" });
                     yield return (5, "I paint watercolours on my days off and dream of a little exhibition.", new[] { "fun", "art" });
                     break;
                 case IvyId:
-                    yield return (7, "I'm up before everyone else to bake the village's bread; the bakery was my grandmother's.", new[] { BakeryMapId, "obj-bakery-counter", "work" });
+                    yield return (7, "I'm up before everyone else to bake the neighbourhood's bread; the bakery was my grandmother's.", new[] { BakeryMapId, "obj-bakery-counter", "work" });
                     yield return (4, "I go for a run along the fitness trail whenever my legs aren't covered in flour.", new[] { "obj-village-fitness-trail", "exercise" });
                     break;
                 case SamuelId:
-                    yield return (7, "I've been the village doctor for twenty years; I've stitched up half the town at some point.", new[] { ClinicMapId, "obj-clinic-desk", "work" });
+                    yield return (7, "I've been the city doctor for twenty years; I've stitched up half the neighbourhood at some point.", new[] { ClinicMapId, "obj-clinic-desk", "work" });
                     yield return (5, "Evenings with a medical journal and a pot of tea suit me fine.", new[] { "read", "fun" });
                     break;
                 case FelixId:
-                    yield return (7, "I left school last summer and I'm still looking for work in the village.", new[] { "money", "work" });
+                    yield return (7, "I left school last summer and I'm still looking for work in the city.", new[] { "money", "work" });
                     yield return (4, "Money's tight, so I make the most of free things: the park, the trail, a chat.", new[] { "money", "exercise", "social" });
                     break;
                 case EdithId:
-                    yield return (8, "I've lived in the Tiny Town all my eighty-two years and remember when the pond was a well.", new[] { "obj-village-bench-pond", "social" });
+                    yield return (8, "I've lived in Tiny City all my eighty-two years and remember when the pond was a well.", new[] { "obj-village-bench-pond", "social" });
                     yield return (5, "My knees aren't what they were, but a cup of coffee at the café keeps me cheerful.", new[] { CafeMapId, "coffee", "social" });
                     break;
             }

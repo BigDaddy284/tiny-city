@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using TinyTown.Simulation.Configuration;
+using TinyCity.Simulation.Configuration;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// Entry point created automatically when the game starts, so the boot scene needs no hand-placed objects.
@@ -10,9 +10,9 @@ namespace TinyTown.Runtime
     /// </summary>
     public sealed class Bootstrap : MonoBehaviour
     {
-        public const string ObjectName = "TinyTownBootstrap";
+        public const string ObjectName = "TinyCityBootstrap";
 
-        private static readonly Color BackgroundColour = new Color(0.98f, 0.91f, 0.78f);
+        private static readonly Color BackgroundColour = new Color(9f / 255f, 12f / 255f, 24f / 255f);
 
         public GameSettings Settings { get; private set; }
 
@@ -36,9 +36,15 @@ namespace TinyTown.Runtime
         private void Awake()
         {
             EnsureCamera();
+            var copied = OldDataFolder.CopyIfNeeded();
+            if (copied != null)
+            {
+                Debug.Log($"[TinyCity] {copied}");
+            }
+
             Settings = SettingsLoader.Load(out var problems);
             SettingsProblems = problems;
-            Debug.Log($"[TinyTown] Started version {Application.version}. Ollama: {Settings.ollama.endpoint} ({Settings.ollama.model}).");
+            Debug.Log($"[TinyCity] Started version {Application.version}. Ollama: {Settings.ollama.endpoint} ({Settings.ollama.model}).");
             Game = gameObject.AddComponent<GameController>();
             Game.Settings = Settings;
         }

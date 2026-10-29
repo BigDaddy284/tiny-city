@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Persistence
+namespace TinyCity.Simulation.Persistence
 {
     /// <summary>What the save list shows about a slot without loading the whole town.</summary>
     public sealed class SaveSummary
@@ -52,7 +52,7 @@ namespace TinyTown.Simulation.Persistence
             {
                 if (!(Json.Parse(json) is Dictionary<string, object> root) || !Equals(root.TryGetValue("format", out var f) ? f : null, SaveSerializer.Format))
                 {
-                    return Broken("it isn't a Tiny Town save");
+                    return Broken("it isn't a Tiny City save");
                 }
 
                 var version = root.TryGetValue("version", out var v) && v is double dv ? (int)dv : 0;

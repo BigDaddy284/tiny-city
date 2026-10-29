@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.History
+namespace TinyCity.Simulation.History
 {
     /// <summary>Where a timeline entry came from, so the game's records and the AI's words are never confused.</summary>
     public enum TimelineSource
@@ -82,7 +82,7 @@ namespace TinyTown.Simulation.History
             var text = new StringBuilder();
             text.AppendLine($"The life of {r.FullName}");
             text.AppendLine(new string('=', r.FullName.Length + 12));
-            text.AppendLine($"Written on {Journal.DateText(sim.Time)} in The Tiny Town.");
+            text.AppendLine($"Written on {Journal.DateText(sim.Time)} in Tiny City.");
             text.AppendLine();
             text.AppendLine(r.IsAlive
                 ? $"{r.FullName} is {r.AgeYears}, {Words(r.LifeStage)}, with a birthday on day {HealthRules.BirthdayCycleDay(r)} of each {HealthRules.DaysPerYear}-day year."
@@ -106,7 +106,7 @@ namespace TinyTown.Simulation.History
             text.AppendLine();
             text.AppendLine("Timeline");
             text.AppendLine("--------");
-            text.AppendLine("Lines marked [memory] are their own memories; [AI] marks a reflection the AI wrote for them. Everything else is from the village records.");
+            text.AppendLine("Lines marked [memory] are their own memories; [AI] marks a reflection the AI wrote for them. Everything else is from the city records.");
             var timeline = Timeline(sim, residentId);
             if (timeline.Count == 0)
             {
@@ -126,7 +126,7 @@ namespace TinyTown.Simulation.History
         public static string WriteTownHistory(TownSimulation sim)
         {
             var text = new StringBuilder();
-            text.AppendLine("A history of The Tiny Town");
+            text.AppendLine("A history of Tiny City");
             text.AppendLine("==========================");
             text.AppendLine($"Written on {Journal.DateText(sim.Time)}.");
             text.AppendLine();

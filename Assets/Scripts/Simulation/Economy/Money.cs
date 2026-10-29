@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace TinyTown.Simulation.Economy
+namespace TinyCity.Simulation.Economy
 {
     /// <summary>Money is whole pence (a long), so sums are exact and saves are stable.</summary>
     public static class Money

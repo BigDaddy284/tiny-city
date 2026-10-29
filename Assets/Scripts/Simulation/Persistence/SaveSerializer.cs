@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Economy;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Social;
-using TinyTown.Simulation.Time;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Economy;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Social;
+using TinyCity.Simulation.Time;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Simulation.Persistence
+namespace TinyCity.Simulation.Persistence
 {
     public sealed class SaveLoadResult
     {
@@ -44,6 +44,7 @@ namespace TinyTown.Simulation.Persistence
     /// </summary>
     public static class SaveSerializer
     {
+        /// <summary>Kept from the game's first name, The Tiny Town, so every older save still loads.</summary>
         public const string Format = "tiny-town-save";
 
         /// <summary>
@@ -133,7 +134,7 @@ namespace TinyTown.Simulation.Persistence
 
             if (GetString(root, "format") != Format)
             {
-                return Fail("This is not a Tiny Town save file.");
+                return Fail("This is not a Tiny City save file.");
             }
 
             var version = GetInt(root, "version", -1);

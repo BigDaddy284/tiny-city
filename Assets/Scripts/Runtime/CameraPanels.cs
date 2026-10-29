@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.World;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// One to ten camera panels sharing the screen to the left of the inspector. The layout adapts to how many
@@ -17,14 +17,12 @@ namespace TinyTown.Runtime
     {
         public const int MaxPanels = 10;
         public const float HeaderHeight = 22f;
-        private const string PrefsKey = "TinyTown.Panels";
+        private const string PrefsKey = "TinyCity.Panels";
         private const float SpeechSeconds = 8f;
 
         /// <summary>Object names are only drawn when the camera is close enough for them to fit.</summary>
         private const float LabelPixelsPerUnit = 42f;
 
-        private static readonly Color Background = new Color(0.98f, 0.91f, 0.78f);
-        private static readonly Color ActiveBorder = new Color(0.85f, 0.45f, 0.2f);
 
         private readonly List<CameraPanel> panels = new List<CameraPanel>();
         private readonly Camera mainCamera;
@@ -79,7 +77,7 @@ namespace TinyTown.Runtime
             var camera = go.AddComponent<Camera>();
             camera.orthographic = true;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = mainCamera != null ? mainCamera.backgroundColor : Background;
+            camera.backgroundColor = mainCamera != null ? mainCamera.backgroundColor : UiTheme.ToColor(UiTheme.Palette.Canvas);
             camera.depth = (mainCamera != null ? mainCamera.depth : 0) + panels.Count;
             var panel = new CameraPanel(camera, ownsCamera: true);
             panels.Add(panel);
@@ -369,7 +367,7 @@ namespace TinyTown.Runtime
             {
                 foreach (var obj in simulation.World.Objects)
                 {
-                    Label(panel, origin, view.ToWorld(obj.Location) + new Vector3(0f, 0.32f, 0f), obj.Name, styles.Small);
+                    Label(panel, origin, view.ToWorld(obj.Location) + new Vector3(0f, 0.32f, 0f), obj.Name, styles.Sign);
                 }
 
                 // Each door outside is labelled with the building it leads into.
@@ -378,7 +376,7 @@ namespace TinyTown.Runtime
                     if (simulation.World.TryGetMap(portal.From.MapId, out var outside) && outside.IsExterior
                         && simulation.World.TryGetMap(portal.To.MapId, out var inside) && !inside.IsExterior)
                     {
-                        Label(panel, origin, view.ToWorld(portal.From) + new Vector3(0f, 0.5f, 0f), inside.Name, styles.Small);
+                        Label(panel, origin, view.ToWorld(portal.From) + new Vector3(0f, 0.5f, 0f), inside.Name, styles.Sign);
                     }
                 }
             }
@@ -390,10 +388,10 @@ namespace TinyTown.Runtime
                     continue;
                 }
 
-                Label(panel, origin, position + new Vector3(0f, 0.72f, 0f), r.FirstName, styles.Name);
+                Label(panel, origin, position + new Vector3(0f, 0.86f, 0f), r.FirstName, styles.Name);
 
                 // A bubble appears for each new line a resident says, and fades after a few seconds.
-                if (speech.TryGetValue(r.Id, out var bubble) && Time.unscaledTime < bubble.until && panel.TryScreenPoint(position + new Vector3(0f, 0.95f, 0f), out var above))
+                if (speech.TryGetValue(r.Id, out var bubble) && Time.unscaledTime < bubble.until && panel.TryScreenPoint(position + new Vector3(0f, 1.05f, 0f), out var above))
                 {
                     var content = new GUIContent($"“{bubble.line.Text}”");
                     var width = Mathf.Min(220f, panel.ScreenRect.width * 0.8f);
@@ -414,9 +412,10 @@ namespace TinyTown.Runtime
         private static void DrawFrame(CameraPanel panel, bool active)
         {
             var r = panel.ScreenRect;
-            GUI.color = new Color(0.3f, 0.2f, 0.12f, 0.75f);
+            var p = UiTheme.Palette;
+            GUI.color = UiTheme.ToColor(p.Bar, 0.9f);
             GUI.DrawTexture(new Rect(r.x, r.y, r.width, HeaderHeight), Texture2D.whiteTexture);
-            GUI.color = active ? ActiveBorder : new Color(0.55f, 0.45f, 0.35f);
+            GUI.color = UiTheme.ToColor(active ? p.AccentA : p.BarBorder);
             var thickness = active ? 3f : 1f;
             GUI.DrawTexture(new Rect(r.x, r.y, r.width, thickness), Texture2D.whiteTexture);
             GUI.DrawTexture(new Rect(r.x, r.yMax - thickness, r.width, thickness), Texture2D.whiteTexture);

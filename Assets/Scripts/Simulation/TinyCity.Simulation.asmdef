@@ -1,10 +1,8 @@
 {
-    "name": "TinyTown.Editor",
-    "rootNamespace": "TinyTown.Editor",
+    "name": "TinyCity.Simulation",
+    "rootNamespace": "TinyCity.Simulation",
     "references": [],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
@@ -12,5 +10,5 @@
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
-    "noEngineReferences": false
+    "noEngineReferences": true
 }

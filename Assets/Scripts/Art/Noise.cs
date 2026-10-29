@@ -1,6 +1,6 @@
 using System;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>Repeatable pseudo-random numbers from coordinates, so the same town always looks the same.</summary>
     public static class Noise

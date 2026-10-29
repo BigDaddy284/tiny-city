@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation;
-using TinyTown.Simulation.AI;
-using TinyTown.Simulation.Configuration;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.History;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Residents;
+using TinyCity.Simulation;
+using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Configuration;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.History;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Residents;
 using UnityEngine;
 
-namespace TinyTown.Runtime
+namespace TinyCity.Runtime
 {
     /// <summary>
     /// Runs the town: advances the simulation with the clock, saves and loads, and hands drawing to the
@@ -21,7 +21,7 @@ namespace TinyTown.Runtime
     public sealed class GameController : MonoBehaviour
     {
         /// <summary>Remembers which town was being played, so the game reopens it next time.</summary>
-        private const string SlotPrefsKey = "TinyTown.Slot";
+        private const string SlotPrefsKey = "TinyCity.Slot";
 
         /// <summary>Game minutes per real second. At 1x one in-game day lasts 24 real minutes.</summary>
         public static readonly int[] Speeds = { 0, 1, 2, 4, 10 };
@@ -38,6 +38,7 @@ namespace TinyTown.Runtime
         private Inspector inspector;
         private JournalWindow journal;
         private SavesWindow saves;
+        private SettingsWindow settingsWindow;
         private int placeMenuPanel = -1;
         private Rect placeMenuButton;
         private Rect placeMenuArea;
@@ -60,6 +61,11 @@ namespace TinyTown.Runtime
         public bool JournalOpen => journal != null && journal.IsOpen;
 
         public bool SavesOpen => saves != null && saves.IsOpen;
+
+        public bool SettingsOpen => settingsWindow != null && settingsWindow.IsOpen;
+
+        /// <summary>The player's choices from the Settings window: AI, volumes, screen and theme.</summary>
+        public PlayerPreferences Preferences { get; private set; } = new PlayerPreferences();
 
         /// <summary>The save slot this town is saved to: autosaves, F5 and saving on exit all go here.</summary>
         public string CurrentSlot { get; private set; } = SaveSlotIndex.DefaultSlot;
@@ -99,8 +105,19 @@ namespace TinyTown.Runtime
             inspector = new Inspector(this);
             journal = new JournalWindow(this);
             saves = new SavesWindow(this);
+            settingsWindow = new SettingsWindow(this);
             Notifications = new Notifications();
-            Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyTown] AI: {message}") };
+            Preferences = PlayerSettingsStore.Load(out var preferenceProblems);
+            foreach (var problem in preferenceProblems)
+            {
+                Debug.LogWarning($"[TinyCity] {problem}");
+            }
+
+            Preferences.ApplyTo(Settings.ollama);
+            UiTheme.Choose(Preferences.Theme);
+            UiTheme.Changed += ApplyThemeToCameras;
+            ScreenSettings.Apply(Preferences);
+            Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyCity] AI: {message}") };
 
             SlotNames = SaveStore.ReadIndex();
             var remembered = PlayerPrefs.GetString(SlotPrefsKey, SaveSlotIndex.DefaultSlot);
@@ -117,7 +134,23 @@ namespace TinyTown.Runtime
             }
 
             Panels.LoadLayout(view, Simulation);
+            ApplyThemeToCameras();
             UpdateView(1f);
+        }
+
+        private void OnDestroy()
+        {
+            UiTheme.Changed -= ApplyThemeToCameras;
+        }
+
+        /// <summary>Behind the maps, every panel shows the theme's canvas colour.</summary>
+        private void ApplyThemeToCameras()
+        {
+            var colour = UiTheme.ToColor(UiTheme.Palette.Canvas);
+            foreach (var panel in Panels.All)
+            {
+                panel.Camera.backgroundColor = colour;
+            }
         }
 
         private void Update()
@@ -142,6 +175,7 @@ namespace TinyTown.Runtime
 
             UpdateView(Speed > 0 && ticks <= 1 ? accumulator : 1f);
             Notifications?.Update(Simulation, UnityEngine.Time.unscaledTime);
+            settingsWindow?.Update();
         }
 
         private void OnApplicationQuit()
@@ -151,6 +185,8 @@ namespace TinyTown.Runtime
                 Save("on exit");
                 Panels?.SaveLayout();
             }
+
+            settingsWindow?.SaveNow();
         }
 
         private void TickOnce()
@@ -177,7 +213,7 @@ namespace TinyTown.Runtime
             Ai?.Attach(simulation);
             if (view.World == null)
             {
-                view.Build(simulation.World, TinyTown.Simulation.Time.Seasons.Of(simulation.Time));
+                view.Build(simulation.World, TinyCity.Simulation.Time.Seasons.Of(simulation.Time));
             }
 
             view.ForgetResidents();
@@ -217,7 +253,7 @@ namespace TinyTown.Runtime
             catch (Exception e)
             {
                 Status = $"Save failed: {e.Message}";
-                Debug.LogError($"[TinyTown] {Status}");
+                Debug.LogError($"[TinyCity] {Status}");
             }
         }
 
@@ -275,7 +311,7 @@ namespace TinyTown.Runtime
                 SetSimulation(result.Simulation);
                 foreach (var warning in result.Warnings)
                 {
-                    Debug.LogWarning($"[TinyTown] Save repaired: {warning}");
+                    Debug.LogWarning($"[TinyCity] Save repaired: {warning}");
                 }
 
                 Status = (useBackup ? $"The save of {CurrentTownName} was damaged, so its backup was loaded. " : $"Loaded {CurrentTownName}. ")
@@ -286,7 +322,7 @@ namespace TinyTown.Runtime
 
             foreach (var problem in problems)
             {
-                Debug.LogWarning($"[TinyTown] Load failed: {problem}");
+                Debug.LogWarning($"[TinyCity] Load failed: {problem}");
             }
 
             Status = $"Couldn't load {SlotNames.NameOf(slot)}: {problems.LastOrDefault()}";
@@ -346,7 +382,7 @@ namespace TinyTown.Runtime
             catch (Exception e)
             {
                 Status = $"Couldn't copy {SlotNames.NameOf(slot)}: {e.Message}";
-                Debug.LogError($"[TinyTown] {Status}");
+                Debug.LogError($"[TinyCity] {Status}");
                 return null;
             }
         }
@@ -378,7 +414,7 @@ namespace TinyTown.Runtime
             catch (Exception e)
             {
                 Status = $"Couldn't delete {SlotNames.NameOf(slot)}: {e.Message}";
-                Debug.LogError($"[TinyTown] {Status}");
+                Debug.LogError($"[TinyCity] {Status}");
                 return false;
             }
         }
@@ -402,7 +438,7 @@ namespace TinyTown.Runtime
             catch (Exception e)
             {
                 Status = $"Couldn't export {SlotNames.NameOf(slot)}: {e.Message}";
-                Debug.LogError($"[TinyTown] {Status}");
+                Debug.LogError($"[TinyCity] {Status}");
             }
         }
 
@@ -415,7 +451,7 @@ namespace TinyTown.Runtime
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[TinyTown] Couldn't save the town names: {e.Message}");
+                Debug.LogWarning($"[TinyCity] Couldn't save the town names: {e.Message}");
             }
         }
 
@@ -462,9 +498,9 @@ namespace TinyTown.Runtime
 
         public void ToggleJournal()
         {
-            if (!journal.IsOpen && saves.IsOpen)
+            if (!journal.IsOpen)
             {
-                saves.Toggle();
+                CloseWindows();
             }
 
             journal.Toggle();
@@ -472,13 +508,44 @@ namespace TinyTown.Runtime
 
         public void ToggleSaves()
         {
-            if (!saves.IsOpen && journal.IsOpen)
+            if (!saves.IsOpen)
             {
-                journal.Toggle();
+                CloseWindows();
             }
 
             saves.Toggle();
         }
+
+        public void ToggleSettings()
+        {
+            if (!settingsWindow.IsOpen)
+            {
+                CloseWindows();
+            }
+
+            settingsWindow.Toggle();
+        }
+
+        /// <summary>Only one of the journal, saves and settings windows is open at a time.</summary>
+        private void CloseWindows()
+        {
+            if (journal.IsOpen)
+            {
+                journal.Toggle();
+            }
+
+            if (saves.IsOpen)
+            {
+                saves.Toggle();
+            }
+
+            if (settingsWindow.IsOpen)
+            {
+                settingsWindow.Toggle();
+            }
+        }
+
+        private bool OverWindow(Vector2 point) => journal.Area.Contains(point) || saves.Area.Contains(point) || settingsWindow.Area.Contains(point);
 
         /// <summary>Opens the journal with only the inspector's resident's entries.</summary>
         public void ShowJournalFor(Resident r)
@@ -508,7 +575,7 @@ namespace TinyTown.Runtime
             catch (Exception e)
             {
                 Status = $"Export failed: {e.Message}";
-                Debug.LogError($"[TinyTown] {Status}");
+                Debug.LogError($"[TinyCity] {Status}");
             }
         }
 
@@ -521,9 +588,10 @@ namespace TinyTown.Runtime
                 return;
             }
 
-            styles ??= new GuiStyles();
+            GUI.skin = UiTheme.Skin;
+            styles = UiTheme.Styles;
             var e = Event.current;
-            if (e.type == EventType.MouseDown && !journal.Area.Contains(e.mousePosition) && !saves.Area.Contains(e.mousePosition))
+            if (e.type == EventType.MouseDown && !OverWindow(e.mousePosition))
             {
                 // Clicking outside the journal and saves windows leaves their text boxes, so the game's keys work again.
                 GUIUtility.keyboardControl = 0;
@@ -539,10 +607,11 @@ namespace TinyTown.Runtime
             DrawPlaceMenu();
             journal.Draw(CameraArea(), styles);
             saves.Draw(CameraArea(), styles);
+            settingsWindow.Draw(CameraArea(), styles);
             Notifications.Draw(CameraArea(), styles, GoTo);
             inspector.Draw(styles);
             var overMenu = placeMenuPanel >= 0 && placeMenuArea.Contains(e.mousePosition);
-            if ((e.isMouse || e.type == EventType.ScrollWheel) && !journal.Area.Contains(e.mousePosition) && !saves.Area.Contains(e.mousePosition) && !overMenu)
+            if ((e.isMouse || e.type == EventType.ScrollWheel) && !OverWindow(e.mousePosition) && !overMenu)
             {
                 // After the buttons have had their chance, so header buttons and the inspector win over the panels.
                 Panels.HandleMouse(e, view);
@@ -741,6 +810,9 @@ namespace TinyTown.Runtime
                     break;
                 case KeyCode.Escape when SavesOpen:
                     ToggleSaves();
+                    break;
+                case KeyCode.Escape when SettingsOpen:
+                    ToggleSettings();
                     break;
                 default:
                     return;

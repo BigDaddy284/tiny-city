@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using TinyTown.Simulation.AI;
-using TinyTown.Simulation.Persistence;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tests.EditMode
+namespace TinyCity.Tests.EditMode
 {
     public class OllamaPromptTests
     {
@@ -47,7 +47,7 @@ namespace TinyTown.Tests.EditMode
         {
             var sim = TestTown.WithResident(TestTown.WeekendAfternoon, adjust: n => n[NeedType.Fun] = 30);
             var r = sim.Residents[0];
-            sim.Memories.Add(r.Id, sim.Time, TinyTown.Simulation.Memory.MemoryType.Event, 5, "My armchair has a wobbly leg.", tags: new[] { "obj-cottage1-armchair" });
+            sim.Memories.Add(r.Id, sim.Time, TinyCity.Simulation.Memory.MemoryType.Event, 5, "My armchair has a wobbly leg.", tags: new[] { "obj-cottage1-armchair" });
             var options = sim.Planner.FreeTimeOptions(r);
 
             var body = (Dictionary<string, object>)Json.Parse(DecisionPrompt.BuildBody("qwen2.5:7b", sim, r, options));

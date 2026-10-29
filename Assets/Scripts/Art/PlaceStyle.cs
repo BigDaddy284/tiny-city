@@ -1,7 +1,7 @@
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>How a place is decorated: its floor, walls, and, from outside, its building.</summary>
     public enum PlaceKind

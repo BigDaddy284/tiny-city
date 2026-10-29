@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Activities;
-using TinyTown.Simulation.Health;
-using TinyTown.Simulation.Memory;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.Time;
+using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Health;
+using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Simulation.Social
+namespace TinyCity.Simulation.Social
 {
     /// <summary>The game's rules for who can talk, for how long, and what a conversation does to a relationship.</summary>
     public static class SocialRules

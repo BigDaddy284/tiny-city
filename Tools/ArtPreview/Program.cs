@@ -1,17 +1,30 @@
 using System;
 using System.IO;
 using System.Linq;
-using TinyTown.Art;
-using TinyTown.Simulation.Content;
-using TinyTown.Simulation.Time;
+using TinyCity.Art;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
-namespace TinyTown.Tools.ArtPreview
+namespace TinyCity.Tools.ArtPreview
 {
     /// <summary>Writes every map (the village in every season, interiors in summer), by day and by night, as PNG files.</summary>
     internal static class Program
     {
         private static void Main(string[] args)
         {
+            if (args.Length > 0 && args[0] == "--scene")
+            {
+                WriteScenes(args.Length > 1 ? args[1] : "scenes", args.Length > 2 ? int.Parse(args[2]) : 8 * 60);
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--residents")
+            {
+                WriteResidents(args.Length > 1 ? args[1] : "residents.png");
+                return;
+            }
+
             if (args.Length > 0 && args[0] == "--palette")
             {
                 WritePalette(args.Length > 1 ? args[1] : "palette.png");
@@ -71,31 +84,158 @@ namespace TinyTown.Tools.ArtPreview
             }
         }
 
+        /// <summary>
+        /// Writes a sheet of every starter resident in every pose and facing, with the mood icons along the bottom,
+        /// at twice the size on a floor-coloured background.
+        /// </summary>
+        private static void WriteResidents(string path)
+        {
+            var world = StarterTown.CreateWorld();
+            var residents = StarterTown.CreateResidents(world);
+            var poses = new System.Collections.Generic.List<ResidentPose>();
+            foreach (var facing in new[] { Facing.DownRight, Facing.DownLeft, Facing.UpLeft, Facing.UpRight })
+            {
+                for (var f = 0; f < 4; f++)
+                {
+                    poses.Add(new ResidentPose(ResidentAction.Walk, Stance.Standing, facing, f));
+                }
+            }
+
+            foreach (ResidentAction action in Enum.GetValues(typeof(ResidentAction)))
+            {
+                for (var f = 0; f < ResidentPose.FramesOf(action); f++)
+                {
+                    poses.Add(new ResidentPose(action, Stance.Standing, Facing.DownRight, f));
+                }
+            }
+
+            foreach (var action in new[] { ResidentAction.Stand, ResidentAction.Eat, ResidentAction.Read, ResidentAction.Work, ResidentAction.Talk })
+            {
+                poses.Add(new ResidentPose(action, Stance.Sitting, Facing.DownRight, 1));
+                poses.Add(new ResidentPose(action, Stance.Sitting, Facing.UpRight, 1));
+            }
+
+            const int scale = 2;
+            var cellW = ResidentArt.Width;
+            var cellH = ResidentArt.Height;
+            var sheet = new PixelCanvas(poses.Count * cellW * scale, (residents.Count * cellH + 16) * scale, 0, 0);
+            sheet.FillRect(0, 0, sheet.Width, sheet.Height, Palette.WoodLight);
+            for (var r = 0; r < residents.Count; r++)
+            {
+                var look = ResidentLook.For(residents[r].Id, residents[r].AgeYears);
+                for (var i = 0; i < poses.Count; i++)
+                {
+                    Stamp(sheet, ResidentArt.Render(look, poses[i]), i * cellW * scale, r * cellH * scale, scale);
+                }
+            }
+
+            var x = 0;
+            foreach (var mood in MoodArt.Shown)
+            {
+                Stamp(sheet, MoodArt.Icon(mood), x, residents.Count * cellH * scale + scale, scale);
+                x += (MoodArt.Width + 3) * scale;
+            }
+
+            Png.Write(path, sheet);
+            Console.WriteLine($"{residents.Count} residents x {poses.Count} poses");
+        }
+
+        private static void Stamp(PixelCanvas target, PixelCanvas source, int ox, int oy, int scale)
+        {
+            for (var y = 0; y < source.Height * scale; y++)
+            {
+                for (var x = 0; x < source.Width * scale; x++)
+                {
+                    target.Paint(ox + x, oy + y, source.Get(x / scale, y / scale));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Runs a new town for <paramref name="minutes"/> and draws every map with the residents where they are,
+        /// posed and placed as the game does, with their mood icons.
+        /// </summary>
+        private static void WriteScenes(string output, int minutes)
+        {
+            Directory.CreateDirectory(output);
+            var sim = StarterTown.CreateNewGame();
+            sim.Advance(minutes);
+            var world = sim.World;
+            var season = Seasons.Of(sim.Time);
+            var palette = Palette.For(season);
+            var seating = new Seating();
+            seating.Update(world, sim.Residents);
+            foreach (var map in world.Maps)
+            {
+                var here = sim.Residents.Where(r => r.IsAlive && r.Location.MapId == map.Id).ToList();
+                if (here.Count == 0)
+                {
+                    continue;
+                }
+
+                var art = MapArt.Build(world, map, palette);
+                var extra = new System.Collections.Generic.List<(int sortX, int sortY, int layer, PixelCanvas canvas, double px, double py)>();
+                foreach (var r in here)
+                {
+                    var (action, placement) = ResidentPose.Choose(world, r, false, seating.SeatOf(r.Id));
+                    var look = ResidentLook.For(r.Id, r.AgeYears);
+                    var pose = new ResidentPose(action, placement.Stance, placement.Facing, 1);
+                    var dx = ((placement.U - placement.V) * IsoPainter.HalfTileWidth);
+                    var dy = ((placement.U + placement.V - 1) * IsoPainter.HalfTileHeight) - placement.Z;
+                    var pos = r.Location.Position;
+                    extra.Add((pos.X, pos.Y, placement.Behind ? 0 : 3, ResidentArt.Render(look, pose), dx, dy));
+                    var icon = MoodArt.Icon(Moods.Of(sim, r));
+                    if (icon != null)
+                    {
+                        extra.Add((pos.X, pos.Y, 9, icon, dx, dy - ResidentArt.HeadTop(look, pose) - 2));
+                    }
+
+                    Console.WriteLine($"{map.Id}: {r.FirstName} {r.State} {r.ActivityId} -> {action} {placement.Stance} {Moods.Of(sim, r)}");
+                }
+
+                var light = Lighting.At(sim.Time.MinuteOfDay, season, map.IsExterior);
+                var canvas = Compose(art, light, extra);
+                Png.Write(Path.Combine(output, $"{map.Id}.png"), canvas);
+            }
+
+            Console.WriteLine($"Day {sim.Time.Day} {sim.Time.ClockText}");
+        }
+
         /// <summary>Lays the pieces out the way the game does: ground first, then by sorting order.</summary>
-        private static PixelCanvas Compose(MapArt art, Daylight light)
+        private static PixelCanvas Compose(MapArt art, Daylight light) => Compose(art, light, null);
+
+        private static PixelCanvas Compose(MapArt art, Daylight light, System.Collections.Generic.List<(int sortX, int sortY, int layer, PixelCanvas canvas, double px, double py)> extra)
         {
             const int top = 140;
             var ground = art.Ground;
             var canvas = new PixelCanvas(ground.Width + 40, ground.Height + top, ground.AnchorX + 20, ground.AnchorY + top);
             Blit(canvas, ground, 0, 0, light.Tint, 1);
-            foreach (var piece in art.Pieces.OrderBy(p => ((p.SortX + p.SortY) * 10) + (int)p.Layer))
+            var all = art.Pieces.Select(p => (order: ((p.SortX + p.SortY) * 10) + (int)p.Layer, draw: (Action)(() =>
             {
-                var glow = piece.Layer == ArtLayer.Glow;
-                if (glow && light.WindowGlow <= 0)
+                var glow = p.Layer == ArtLayer.Glow;
+                if (!glow || light.WindowGlow > 0)
                 {
-                    continue;
+                    Blit(canvas, p.Canvas, p.TileX, p.TileY, glow ? Lighting.Day : light.Tint, glow ? light.WindowGlow : 1);
                 }
+            }))).ToList();
+            foreach (var e in extra ?? new System.Collections.Generic.List<(int sortX, int sortY, int layer, PixelCanvas canvas, double px, double py)>())
+            {
+                var tint = e.layer > 3 ? Lighting.Day : light.Tint;
+                all.Add((((e.sortX + e.sortY) * 10) + e.layer + (e.layer > 3 ? 100000 : 0), () => Blit(canvas, e.canvas, e.sortX, e.sortY, tint, 1, e.px, e.py)));
+            }
 
-                Blit(canvas, piece.Canvas, piece.TileX, piece.TileY, glow ? Lighting.Day : light.Tint, glow ? light.WindowGlow : 1);
+            foreach (var item in all.OrderBy(a => a.order))
+            {
+                item.draw();
             }
 
             return canvas;
         }
 
-        private static void Blit(PixelCanvas target, PixelCanvas source, int tileX, int tileY, Rgba tint, double alpha)
+        private static void Blit(PixelCanvas target, PixelCanvas source, int tileX, int tileY, Rgba tint, double alpha, double px = 0, double py = 0)
         {
-            var ox = (int)Math.Round(target.AnchorX + ((tileX - tileY) * IsoPainter.HalfTileWidth) - source.AnchorX);
-            var oy = (int)Math.Round(target.AnchorY + ((tileX + tileY) * IsoPainter.HalfTileHeight) - source.AnchorY);
+            var ox = (int)Math.Round(target.AnchorX + ((tileX - tileY) * IsoPainter.HalfTileWidth) - source.AnchorX + px);
+            var oy = (int)Math.Round(target.AnchorY + ((tileX + tileY) * IsoPainter.HalfTileHeight) - source.AnchorY + py);
             for (var y = 0; y < source.Height; y++)
             {
                 for (var x = 0; x < source.Width; x++)

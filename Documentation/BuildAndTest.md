@@ -1,4 +1,4 @@
-# Building and Testing The Tiny Town
+# Building and Testing Tiny City
 
 The game is built and tested in the cloud by GitHub Actions (`.github/workflows/build.yml`), so no Unity editor is needed on your PC to get a playable Windows build.
 
@@ -28,21 +28,21 @@ Reference: https://game.ci/docs/github/activation/
 |---|---|---|
 | Simulation tests (.NET) | No | `dotnet test DotNetTests` |
 | Unity Edit Mode and Play Mode tests | Yes | `game-ci/unity-test-runner`, results uploaded as `unity-test-results` |
-| Windows build | Yes | `game-ci/unity-builder` calling `TinyTown.Editor.BuildScript.BuildWindows`, uploaded as `TheTinyTown-Windows-0.0.<run>` |
+| Windows build | Yes | `game-ci/unity-builder` calling `TinyCity.Editor.BuildScript.BuildWindows`, uploaded as `TinyCity-Windows-0.0.<run>` |
 
 The workflow runs on pushes to `main`, on pull requests, and manually from the **Actions** tab (**Run workflow**).
 
 ## Getting the Windows build
 
 1. Open the repository's **Actions** tab and select the latest successful **Tests and Windows build** run.
-2. Download the `TheTinyTown-Windows-...` artifact at the bottom of the run page. It is a zip.
-3. Extract the whole zip (keep `TheTinyTown_Data` next to the .exe) and run `TheTinyTown.exe`.
+2. Download the `TinyCity-Windows-...` artifact at the bottom of the run page. It is a zip.
+3. Extract the whole zip (keep `TinyCity_Data` next to the .exe) and run `TinyCity.exe`.
 
 Windows may show a SmartScreen warning because the build is unsigned; choose **More info → Run anyway**.
 
 ## Settings
 
-The built game reads `TheTinyTown_Data/StreamingAssets/Configuration/settings.json`. The source copy is `Assets/StreamingAssets/Configuration/settings.json`. Invalid or missing settings fall back to the defaults (`http://localhost:11434`, `qwen2.5:7b`, 60 second timeout) and the problem is written to `Player.log`. All AI settings are described in [OllamaSetup.md](OllamaSetup.md).
+The built game reads `TinyCity_Data/StreamingAssets/Configuration/settings.json`. The source copy is `Assets/StreamingAssets/Configuration/settings.json`. Invalid or missing settings fall back to the defaults (`http://localhost:11434`, `qwen2.5:7b`, 60 second timeout) and the problem is written to `Player.log`. All AI settings are described in [OllamaSetup.md](OllamaSetup.md).
 
 ## AI in tests
 
@@ -50,7 +50,7 @@ Automated tests never contact a real Ollama. Edit Mode tests use `FakeAiTranspor
 
 ## Running tests in a cloud coding session
 
-Only code under `Assets/Scripts/Simulation` (assembly `TinyTown.Simulation`, `noEngineReferences: true`) and the tests under `Assets/Tests/EditMode` can run without Unity:
+Only code under `Assets/Scripts/Simulation` (assembly `TinyCity.Simulation`, `noEngineReferences: true`) and the tests under `Assets/Tests/EditMode` can run without Unity:
 
 ```bash
 dotnet test DotNetTests                                         # all
@@ -61,8 +61,8 @@ The .NET SDK may need installing first (`sudo apt-get install -y dotnet-sdk-8.0`
 
 ## Building locally (optional)
 
-With Unity 6000.3.27f1 installed, open the project and use **Tiny Town → Build Windows**, or run:
+With Unity 6000.3.27f1 installed, open the project and use **Tiny City → Build Windows**, or run:
 
 ```
-Unity.exe -batchmode -quit -projectPath . -executeMethod TinyTown.Editor.BuildScript.BuildWindows -customBuildPath Builds/Windows/TheTinyTown.exe
+Unity.exe -batchmode -quit -projectPath . -executeMethod TinyCity.Editor.BuildScript.BuildWindows -customBuildPath Builds/Windows/TinyCity.exe
 ```

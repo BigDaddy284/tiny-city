@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Residents;
+using TinyCity.Simulation.Residents;
 
-namespace TinyTown.Simulation.Health
+namespace TinyCity.Simulation.Health
 {
     /// <summary>One kind of illness and what it does. Ids are stable because saves store them.</summary>
     public sealed class Illness

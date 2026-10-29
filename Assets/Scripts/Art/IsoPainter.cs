@@ -1,6 +1,6 @@
 using System;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>
     /// Draws 3D shapes onto a <see cref="PixelCanvas"/> in the game's isometric projection. Positions are in tiles

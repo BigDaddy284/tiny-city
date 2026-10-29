@@ -1,6 +1,6 @@
 using System;
 
-namespace TinyTown.Simulation.Configuration
+namespace TinyCity.Simulation.Configuration
 {
     /// <summary>Optional parts of the simulation the player can switch off.</summary>
     [Serializable]

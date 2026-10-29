@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>
     /// Reads PNG files into a <see cref="PixelCanvas"/> without Unity's image module, for replacement art.

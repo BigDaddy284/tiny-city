@@ -1,7 +1,7 @@
 using System;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Art
+namespace TinyCity.Art
 {
     /// <summary>
     /// The walls of a room, drawn like a doll's house: the two back walls stand tall, the two front walls are cut
@@ -128,27 +128,42 @@ namespace TinyTown.Art
         {
             if (height <= FrontHeight)
             {
-                return (z > height - 3 ? Palette.WoodLight : paper).Shade(light);
+                return z > height - 3 ? Palette.GlassLight : paper.Shade(light);
             }
 
-            if (z < 5)
+            if (z < 4)
             {
-                return Palette.WoodDark.Shade(light);
+                return Palette.Charcoal.Shade(light);
             }
 
-            if (Math.Abs(z - 24) < 1.2)
+            if (z < 5.5)
             {
-                return Palette.WoodLight.Shade(light);
+                // LED strip along the skirting.
+                return Palette.GlassLight;
+            }
+
+            if (Math.Abs(z - 24) < 0.9)
+            {
+                // A neon rail at waist height.
+                return Palette.Poppy;
             }
 
             if (window && s > 0.22 && s < 0.78 && z > 26 && z < 52)
             {
-                if (s < 0.27 || s > 0.73 || z < 28 || z > 50 || Math.Abs(s - 0.5) < 0.025 || Math.Abs(z - 39) < 1)
+                if (s < 0.25 || s > 0.75 || z < 27.5 || z > 50.5)
                 {
-                    return Palette.White.Shade(light);
+                    return Palette.Iron;
                 }
 
-                return (z > 44 ? Palette.RoomWindowSkyHigh : Palette.RoomWindowSky).Shade(light);
+                // The city outside: towers against a purple sky, with lit windows.
+                var col = (int)(s * 40);
+                var tower = 30 + (Noise.Value(col / 3, 7, 11) * 16);
+                if (z < tower)
+                {
+                    return Noise.Value(col, (int)(z / 2), 12) < 0.18 ? Palette.WindowGlow : Palette.Charcoal;
+                }
+
+                return z > 44 ? Palette.RoomWindowSkyHigh : Palette.RoomWindowSky;
             }
 
             if (picture && s > 0.32 && s < 0.68 && z > 31 && z < 47)

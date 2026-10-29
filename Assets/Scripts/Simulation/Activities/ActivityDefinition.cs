@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyTown.Simulation.Residents;
-using TinyTown.Simulation.World;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.World;
 
-namespace TinyTown.Simulation.Activities
+namespace TinyCity.Simulation.Activities
 {
     public enum ActivityKind
     {

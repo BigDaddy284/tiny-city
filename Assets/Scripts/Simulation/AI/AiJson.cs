@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using TinyTown.Simulation.Persistence;
+using TinyCity.Simulation.Persistence;
 
-namespace TinyTown.Simulation.AI
+namespace TinyCity.Simulation.AI
 {
     /// <summary>Tolerant reading of JSON written by a language model, which may wrap it in prose or code fences.</summary>
     public static class AiJson
