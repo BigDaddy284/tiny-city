@@ -78,6 +78,8 @@ namespace TinyCity.Runtime
         /// <summary>Where the maps and residents are drawn in the world.</summary>
         public TownView View => view;
 
+        public SoundPlayer Sound { get; private set; }
+
         public int SpeedIndex { get; private set; } = 1;
 
         public int Speed => Speeds[SpeedIndex];
@@ -101,6 +103,7 @@ namespace TinyCity.Runtime
         private void Start()
         {
             view = new GameObject("Town").AddComponent<TownView>();
+            Sound = gameObject.AddComponent<SoundPlayer>();
             Panels = new CameraPanels(Camera.main) { ResidentClicked = id => Select(Simulation.GetResident(id), followInActivePanel: false) };
             inspector = new Inspector(this);
             journal = new JournalWindow(this);
@@ -143,13 +146,24 @@ namespace TinyCity.Runtime
             UiTheme.Changed -= ApplyThemeToCameras;
         }
 
-        /// <summary>Behind the maps, every panel shows the theme's canvas colour.</summary>
+        /// <summary>Behind the maps, every panel shows the theme's canvas colour, and the title bar takes the theme too.</summary>
         private void ApplyThemeToCameras()
         {
             var colour = UiTheme.ToColor(UiTheme.Palette.Canvas);
             foreach (var panel in Panels.All)
             {
                 panel.Camera.backgroundColor = colour;
+            }
+
+            WindowFrame.Apply(UiTheme.Palette);
+        }
+
+        /// <summary>The title bar can lose its colours when the window is recreated (for example by a screen mode change).</summary>
+        private void OnApplicationFocus(bool focused)
+        {
+            if (focused)
+            {
+                WindowFrame.Apply(UiTheme.Palette);
             }
         }
 
@@ -174,7 +188,12 @@ namespace TinyCity.Runtime
             }
 
             UpdateView(Speed > 0 && ticks <= 1 ? accumulator : 1f);
-            Notifications?.Update(Simulation, UnityEngine.Time.unscaledTime);
+            if (Notifications != null && Notifications.Update(Simulation, UnityEngine.Time.unscaledTime) > 0)
+            {
+                Sound?.PlayChime();
+            }
+
+            Sound?.Steer(Simulation, Panels.Active, view, Preferences);
             settingsWindow?.Update();
         }
 
@@ -193,6 +212,7 @@ namespace TinyCity.Runtime
         {
             view.RememberPositions(Simulation);
             Simulation.Tick();
+            Sound?.Hear(Simulation);
             if (Simulation.Time.TotalMinutes - lastAutosaveMinute >= AutosaveEveryGameMinutes)
             {
                 Save("autosave");
@@ -217,6 +237,7 @@ namespace TinyCity.Runtime
             }
 
             view.ForgetResidents();
+            Sound?.Forget();
             Panels.ClearSpeech();
             Notifications.Reset(simulation);
             if (simulation.GetResident(selectedId) == null)

@@ -3,7 +3,7 @@
   <!--
     Runs the Unity-independent simulation code and its Edit Mode tests with plain .NET,
     so they can be checked without a Unity editor or licence.
-    Only engine-free code (Assets/Scripts/Simulation and Assets/Scripts/Art, both noEngineReferences) belongs here.
+    Only engine-free code (Assets/Scripts/Simulation, Art and Sound, all noEngineReferences) belongs here.
   -->
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -17,6 +17,7 @@
   <ItemGroup>
     <Compile Include="../Assets/Scripts/Simulation/**/*.cs" />
     <Compile Include="../Assets/Scripts/Art/**/*.cs" />
+    <Compile Include="../Assets/Scripts/Sound/**/*.cs" />
     <Compile Include="../Assets/Tests/EditMode/**/*.cs" />
   </ItemGroup>
 

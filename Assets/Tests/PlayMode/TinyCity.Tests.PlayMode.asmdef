@@ -5,6 +5,7 @@
         "TinyCity.Runtime",
         "TinyCity.Simulation",
         "TinyCity.Art",
+        "TinyCity.Sound",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],

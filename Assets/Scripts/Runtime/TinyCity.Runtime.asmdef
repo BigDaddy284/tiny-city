@@ -3,7 +3,8 @@
     "rootNamespace": "TinyCity.Runtime",
     "references": [
         "TinyCity.Simulation",
-        "TinyCity.Art"
+        "TinyCity.Art",
+        "TinyCity.Sound"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

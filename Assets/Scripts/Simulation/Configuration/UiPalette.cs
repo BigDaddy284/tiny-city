@@ -18,6 +18,9 @@ namespace TinyCity.Simulation.Configuration
 
         public byte B { get; }
 
+        /// <summary>The colour as Windows' COLORREF (0x00BBGGRR), for the window's title bar.</summary>
+        public uint ColorRef => (uint)(R | (G << 8) | (B << 16));
+
         /// <summary>Relative luminance as WCAG defines it, 0 (black) to 1 (white).</summary>
         public double Luminance => (0.2126 * Linear(R)) + (0.7152 * Linear(G)) + (0.0722 * Linear(B));
 
