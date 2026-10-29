@@ -99,9 +99,6 @@ namespace TinyCity.Simulation.Activities
     /// </summary>
     public sealed class ActivityPlanner
     {
-        public static readonly int BedtimeMinute = GameTime.MinuteOfDayFor(22, 30);
-        public static readonly int WakeMinute = GameTime.MinuteOfDayFor(6, 30);
-
         /// <summary>Residents leave for work this many minutes before their shift starts.</summary>
         public const int CommuteLeadMinutes = 30;
 
@@ -197,8 +194,6 @@ namespace TinyCity.Simulation.Activities
             return d == Pathfinder.Unreachable ? d : d + (CrowdedSteps * UsersOf(resident, obj));
         }
 
-        public static bool IsSleepTime(GameTime time) => GameTime.IsWithin(time.MinuteOfDay, BedtimeMinute, WakeMinute);
-
         public static bool IsWorkTime(Resident resident, GameTime time)
         {
             var job = resident.Job;
@@ -265,7 +260,7 @@ namespace TinyCity.Simulation.Activities
                 return doctor;
             }
 
-            if (IsSleepTime(time))
+            if (SleepSchedule.IsSleepTime(resident, time))
             {
                 var bed = BedChoice(resident, "It's bedtime", PlanPriority.Bedtime);
                 if (bed != null)
@@ -299,6 +294,7 @@ namespace TinyCity.Simulation.Activities
             return BestScored(resident, time, comfortOnly: true)
                 ?? ShoppingChoice(resident, time)
                 ?? EventChoice(resident, time)
+                ?? NightOutChoice(resident, time)
                 ?? BestScored(resident, time, comfortOnly: false);
         }
 
@@ -357,6 +353,51 @@ namespace TinyCity.Simulation.Activities
             }
 
             return new PlanChoice(ActivityCatalog.AttendEvent, place, $"The {evt.Name.ToLowerInvariant()} is on at the {place.Name.ToLowerInvariant()}", PlanPriority.Leisure);
+        }
+
+        /// <summary>Nights out start from this time.</summary>
+        public static readonly int NightOutFrom = GameTime.MinuteOfDayFor(19, 0);
+
+        /// <summary>The chance, each evening hour, that an average resident fancies a drink or a dance.</summary>
+        public const double NightOutChance = 0.2;
+
+        /// <summary>Nobody heads out with less than this long before their bedtime.</summary>
+        public const int NightOutBeforeBedMinutes = 60;
+
+        /// <summary>Nobody spends their last few pounds on a night out.</summary>
+        public const long NightOutMinimumPence = 3000;
+
+        /// <summary>
+        /// A night out at the bar, for someone with nothing better to do in the evening. Each hour of the evening each
+        /// resident fancies it or not by <see cref="Chance"/>, likelier for the sociable and the young; the active
+        /// ones prefer to dance. Only while somewhere is open, with money to spare and time before bed.
+        /// </summary>
+        private PlanChoice NightOutChoice(Resident resident, GameTime time)
+        {
+            if (time.MinuteOfDay < NightOutFrom || resident.MoneyPence < NightOutMinimumPence
+                || SleepSchedule.MinutesToBed(resident, time) < NightOutBeforeBedMinutes)
+            {
+                return null;
+            }
+
+            var age = resident.AgeYears < 40 ? 1.3 : resident.AgeYears >= 65 ? 0.5 : 1.0;
+            var hour = time.MinuteOfDay / 60;
+            if (Chance.Roll(resident.Id, time.Day, 31 + hour) >= NightOutChance * (0.5 + resident.Personality.Sociable) * age)
+            {
+                return null;
+            }
+
+            var dance = Chance.Roll(resident.Id, time.Day, 60 + hour) < 0.3 + (0.5 * resident.Personality.Active);
+            foreach (var activity in dance ? new[] { ActivityCatalog.Dance, ActivityCatalog.BarDrink } : new[] { ActivityCatalog.BarDrink, ActivityCatalog.Dance })
+            {
+                var place = NearestDoable(resident, activity, time);
+                if (place != null)
+                {
+                    return new PlanChoice(activity, place, $"Fancies a night out: {activity.Verb}", PlanPriority.Leisure);
+                }
+            }
+
+            return null;
         }
 
         /// <summary>A trip to the shop when groceries are running low and the shop can serve them.</summary>
@@ -426,7 +467,7 @@ namespace TinyCity.Simulation.Activities
             {
                 // Finish looking after an urgent need first; otherwise work and bedtime come before leisure.
                 var forUrgent = current.PrimaryNeed != null && current.PrimaryNeed == urgent;
-                if (!forUrgent && current.Kind != ActivityKind.Care && (ShouldWork(resident, time) || IsSleepTime(time)) && WorkOrBedIsPossible(resident, time))
+                if (!forUrgent && current.Kind != ActivityKind.Care && (ShouldWork(resident, time) || SleepSchedule.IsSleepTime(resident, time)) && WorkOrBedIsPossible(resident, time))
                 {
                     return true;
                 }
@@ -450,7 +491,7 @@ namespace TinyCity.Simulation.Activities
             switch (activity.Kind)
             {
                 case ActivityKind.Sleep:
-                    return !IsSleepTime(time) && resident.Needs[NeedType.Energy] >= RestedEnergy;
+                    return !SleepSchedule.IsSleepTime(resident, time) && resident.Needs[NeedType.Energy] >= RestedEnergy;
                 case ActivityKind.Work:
                     return resident.MinutesRemaining <= 0 || !ShouldWork(resident, time);
                 case ActivityKind.Leisure when activity == ActivityCatalog.AttendEvent:
@@ -593,9 +634,14 @@ namespace TinyCity.Simulation.Activities
                 return 0.5 + p.Active;
             }
 
-            if (activity == ActivityCatalog.WatchTown || activity == ActivityCatalog.Coffee || activity == ActivityCatalog.CafeMeal)
+            if (activity == ActivityCatalog.WatchTown || activity == ActivityCatalog.Coffee || activity == ActivityCatalog.CafeMeal || activity == ActivityCatalog.BarDrink)
             {
                 return 0.5 + p.Sociable;
+            }
+
+            if (activity == ActivityCatalog.Dance)
+            {
+                return 0.5 + ((p.Active + p.Sociable) / 2);
             }
 
             if (activity == ActivityCatalog.Read)

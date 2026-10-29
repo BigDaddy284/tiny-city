@@ -63,7 +63,7 @@ namespace TinyCity.Tests.EditMode
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(14009164888431703415UL), Locked);
+            Assert.That(hash.Value, Is.EqualTo(16077229177817136818UL), Locked);
         }
 
         [Test]
@@ -81,7 +81,7 @@ namespace TinyCity.Tests.EditMode
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(2281408910426031061UL), Locked);
+            Assert.That(hash.Value, Is.EqualTo(7054617281269187708UL), Locked);
         }
 
         [Test]
@@ -103,7 +103,7 @@ namespace TinyCity.Tests.EditMode
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(16784573609646332105UL), Locked);
+            Assert.That(hash.Value, Is.EqualTo(9408866579387279822UL), Locked);
         }
 
         [Test]
@@ -124,10 +124,12 @@ namespace TinyCity.Tests.EditMode
                     furniture.Add(FurnitureArt.Render(type, 1, palette, outdoors: true));
                     furniture.Add(FurnitureArt.Render(type, 2, palette, outdoors: false));
                 }
+
+                furniture.Add(FurnitureArt.Render(ObjectType.GatheringSpot, 2, palette, outdoors: false, PlaceKind.Bar));
             }
 
             Assert.That(trees.Value, Is.EqualTo(16681692374567243500UL), "Trees. " + Locked);
-            Assert.That(furniture.Value, Is.EqualTo(11047987526911261211UL), "Furniture. " + Locked);
+            Assert.That(furniture.Value, Is.EqualTo(2233961772708468399UL), "Furniture. " + Locked);
         }
 
         [Test]

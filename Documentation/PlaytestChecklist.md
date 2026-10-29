@@ -207,3 +207,12 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 2. **Off sick:** when a shopkeeper is too ill to work and stays home, their shop stays shut for the day. If the only person who worked there dies, it stays shut for good.
 3. **Expand:** open People ▼ and click Expand at the end of the Everyone / Living / Died row. The side panel shows the speed and panel controls, the filter and order buttons, and everyone's names in a two-column grid, A–Z by first name. Click a name to pick that person; the grid stays open. Click Back to return to the normal view.
 4. **Hide the side panel:** click "Hide ▶" beside Settings, or press H. The city fills the whole window, and a "◀ Panel" button sits in the top-right corner. Click it, or press H again, to bring the panel back. The choice is remembered the next time you start the game.
+
+## Staggered sleep and the neon bar
+
+1. **Bed and wake times:** at night, watch the whole town. People go to bed over about two hours rather than all at once. Younger people stay up later and older people turn in earlier. Mornings stagger the same way. Morning workers are always up in time for their shift.
+2. **The bar:** there is a violet building with a cocktail-glass sign east of the lower cottages, with its door onto the bottom street. Inside are a bar counter, two high tables with stools, a 3 × 3 light-up dance floor, a DJ booth, a toilet and a sink.
+3. **Felix's job:** from Wednesday to Sunday, Felix walks to the bar by 17:30 and works until 23:30. He goes to bed after his shift (about 00:15) and sleeps in. His inspector shows the job "Bar host" and his wages. An older save gives him the job when it is loaded, and his jobseeker's allowance stops.
+4. **Opening hours:** the inspector shows the bar as "closed" on Monday, Tuesday and in the daytime. From 18:00 it is "open" once Felix is in.
+5. **A night out:** on open evenings from 19:00, a few residents go for a drink at the high tables (paid, about £5.50) or to dance on the floor (free, arms up). Friends are sometimes invited along. Nobody heads out within an hour of their bedtime or with less than £30 to spend.
+6. **Club night:** on Fridays from 20:00 to 23:00, a "Club night" event gathers people at the DJ booth. It appears in the journal like the quiz night does.

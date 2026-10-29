@@ -33,6 +33,12 @@ namespace TinyCity.Simulation.World
 
         /// <summary>Where a community event is held. Holds a crowd.</summary>
         GatheringSpot,
+
+        /// <summary>A high table at the bar, for two.</summary>
+        BarTable,
+
+        /// <summary>A square of the bar's dance floor: open floor with room for two dancers.</summary>
+        DanceFloor,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -64,7 +70,7 @@ namespace TinyCity.Simulation.World
 
         /// <summary>
         /// Furniture and fittings stand in the way: residents walk around them and step onto one only to use it.
-        /// Open ground (garden plots, spots for exercise, fishing or gathering) can be crossed.
+        /// Open ground (garden plots, the dance floor, spots for exercise, fishing or gathering) can be crossed.
         /// </summary>
         public bool BlocksPassing => BlocksPassingType(Type);
 
@@ -76,6 +82,7 @@ namespace TinyCity.Simulation.World
                 case ObjectType.ExerciseSpot:
                 case ObjectType.FishingSpot:
                 case ObjectType.GatheringSpot:
+                case ObjectType.DanceFloor:
                     return false;
                 default:
                     return true;
@@ -92,6 +99,8 @@ namespace TinyCity.Simulation.World
                 case ObjectType.ExerciseSpot:
                 case ObjectType.Workbench:
                 case ObjectType.CafeTable:
+                case ObjectType.BarTable:
+                case ObjectType.DanceFloor:
                     return 2;
                 case ObjectType.GardenPlot:
                     return 4;

@@ -106,9 +106,9 @@ namespace TinyCity.Tests.EditMode
         {
             World.TryGetMap(StarterTown.VillageMapId, out var village);
             var buildings = BuildingArt.Find(World, village);
-            Assert.That(buildings.Count, Is.EqualTo(14));
+            Assert.That(buildings.Count, Is.EqualTo(15));
             Assert.That(buildings.Count(b => b.Kind == PlaceKind.Cottage), Is.EqualTo(10));
-            foreach (var kind in new[] { PlaceKind.Store, PlaceKind.Cafe, PlaceKind.Bakery, PlaceKind.Clinic })
+            foreach (var kind in new[] { PlaceKind.Store, PlaceKind.Cafe, PlaceKind.Bakery, PlaceKind.Clinic, PlaceKind.Bar })
             {
                 Assert.That(buildings.Count(b => b.Kind == kind), Is.EqualTo(1), kind.ToString());
             }
@@ -122,7 +122,7 @@ namespace TinyCity.Tests.EditMode
                 Assert.That(World.TryGetMap(b.InteriorMapId, out _), Is.True);
             }
 
-            Assert.That(buildings.Select(b => b.InteriorMapId).Distinct().Count(), Is.EqualTo(14));
+            Assert.That(buildings.Select(b => b.InteriorMapId).Distinct().Count(), Is.EqualTo(15));
         }
 
         [Test]

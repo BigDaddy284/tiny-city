@@ -406,7 +406,7 @@ namespace TinyCity.Simulation
         /// <summary>A resident is ready to reflect once they have gone to bed for the night and haven't reflected on today yet.</summary>
         public bool IsReflectionDue(Resident r) =>
             r != null && r.IsAlive && r.State == ResidentState.Performing && r.ActivityId == ActivityCatalog.Sleep.Id
-            && ActivityPlanner.IsSleepTime(Time) && ReflectionDayFor(Time) > r.LastReflectionDay;
+            && SleepSchedule.IsSleepTime(r, Time) && ReflectionDayFor(Time) > r.LastReflectionDay;
 
         /// <summary>
         /// Stores an AI-suggested reflection as a memory, after checking it is for a day not yet reflected on.

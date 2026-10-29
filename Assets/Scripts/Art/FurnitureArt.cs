@@ -13,7 +13,7 @@ namespace TinyCity.Art
         /// <summary>A new canvas whose anchor is the centre of the object's tile.</summary>
         public static PixelCanvas NewCanvas() => new PixelCanvas(CanvasWidth, CanvasHeight, CanvasWidth / 2.0, CanvasHeight - 16);
 
-        public static PixelCanvas Render(ObjectType type, int variant, Palette palette, bool outdoors)
+        public static PixelCanvas Render(ObjectType type, int variant, Palette palette, bool outdoors, PlaceKind place = PlaceKind.Village)
         {
             var canvas = NewCanvas();
             var p = new IsoPainter(canvas);
@@ -201,6 +201,18 @@ namespace TinyCity.Art
                     {
                         Maypole(p, palette);
                     }
+                    else if (place == PlaceKind.Bar)
+                    {
+                        // The DJ booth for club night: a desk with two decks and a neon strip along the front.
+                        p.Box(0.15, 0.3, 0, 0.7, 0.4, 18, Palette.Charcoal);
+                        p.LeftWall(0.15, 0.7, 6, 0.7, 3, (s, t) => Palette.NeonPink);
+                        p.FlatDisc(0.33, 0.5, 18, 0.12, Palette.Iron);
+                        p.FlatDisc(0.67, 0.5, 18, 0.12, Palette.Iron);
+                        p.Post(0.33, 0.5, 18, 0.03, 1, Palette.NeonCyan);
+                        p.Post(0.67, 0.5, 18, 0.03, 1, Palette.NeonCyan);
+                        p.Box(0.2, 0.32, 18, 0.06, 0.06, 14, Palette.Iron);
+                        p.Box(0.2, 0.32, 32, 0.06, 0.06, 2, Palette.NeonLime);
+                    }
                     else
                     {
                         // A chalkboard on an easel for the quiz night.
@@ -209,6 +221,24 @@ namespace TinyCity.Art
                         p.LeftWall(0.28, 0.52, 10, 0.44, 22, (s, t) => s < 0.07 || s > 0.93 || t < 0.07 || t > 0.93 ? Palette.Wood : Noise.Value((int)(s * 20), (int)(t * 8), 1) < 0.15 ? Palette.White : Palette.Chalkboard);
                     }
 
+                    break;
+                case ObjectType.BarTable:
+                    HighStool(p, 0.5, 0.14);
+                    p.Post(0.5, 0.5, 0, 0.05, 26, Palette.Iron);
+                    p.FlatDisc(0.5, 0.5, 26, 0.26, Palette.NeonViolet);
+                    p.FlatDisc(0.5, 0.5, 27, 0.24, Palette.Charcoal);
+                    p.Post(0.42, 0.45, 27, 0.04, 5, Palette.GlassLight);
+                    p.Post(0.58, 0.55, 27, 0.04, 5, Palette.NeonPink);
+                    HighStool(p, 0.5, 0.86);
+                    break;
+                case ObjectType.DanceFloor:
+                    // Light-up squares in the city's neons, each one picked by the tile and the square.
+                    p.Top(0, 0, 0.5, 1, 1, (s, t) =>
+                    {
+                        var square = ((int)(s * 4) * 4) + (int)(t * 4);
+                        var edge = (s * 4) - Math.Floor(s * 4) < 0.1 || (t * 4) - Math.Floor(t * 4) < 0.1;
+                        return edge ? Palette.Iron : Noise.Value(square, variant, 7) < 0.8 ? Palette.Neons[(int)(Noise.Value(square, variant, 8) * Palette.Neons.Length)] : Palette.SlateLight;
+                    });
                     break;
                 default:
                     p.Box(0.3, 0.3, 0, 0.4, 0.4, 12, Palette.Stone);
@@ -249,6 +279,12 @@ namespace TinyCity.Art
         {
             p.Box(u - 0.12, v - 0.08, 0, 0.24, 0.16, 10, Palette.WoodDark);
             p.Box(u - 0.12, v - 0.08, 10, 0.24, 0.16, 2, colour);
+        }
+
+        private static void HighStool(IsoPainter p, double u, double v)
+        {
+            p.Post(u, v, 0, 0.04, 16, Palette.Metal);
+            p.FlatDisc(u, v, 16, 0.1, Palette.NeonPink);
         }
 
         private static void Stool(IsoPainter p, double u, double v)

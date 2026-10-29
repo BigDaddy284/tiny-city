@@ -37,6 +37,7 @@ namespace TinyCity.Tools.StressTest
             var days = args.Length > 1 ? int.Parse(args[1]) : 336;
             var aiDays = args.Length > 2 ? int.Parse(args[2]) : 3;
             var bigDays = args.Length > 3 ? int.Parse(args[3]) : 2;
+            Districts = args.Length > 4 ? int.Parse(args[4]) : 10;
 
             Line("# Tiny City stress test");
             Line();

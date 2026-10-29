@@ -69,7 +69,7 @@ namespace TinyCity.Simulation.AI
                 notes.Add("no work until " + (minutesToWork < 0 ? "further notice" : NextWorkText(now, minutesToWork)));
             }
 
-            var minutesToBed = ((ActivityPlanner.BedtimeMinute - now.MinuteOfDay) + GameTime.MinutesPerDay) % GameTime.MinutesPerDay;
+            var minutesToBed = SleepSchedule.MinutesToBed(r, now);
             notes.Add($"bedtime is in {Duration(minutesToBed)}");
             return string.Join("; ", notes);
         }
