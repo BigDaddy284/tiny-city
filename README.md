@@ -4,7 +4,9 @@ Cosy isometric AI-driven life simulation in a small neon cyberpunk city, built w
 
 ## A hobby project, offered as-is
 
-This is a hobby project, made for fun in spare time. It is offered as-is, with no warranty, no support and no promised updates. There may be bugs, and some may never be fixed. Issues are turned off on this repository and I'm not able to answer questions, take requests or fix problems. You're welcome to use it, learn from it and change it for your own use, at your own risk. Back up anything you care about, such as your saved towns in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\` and your own settings in `settings.json` (in the game folder's `TinyCity_Data\StreamingAssets\Configuration\`) and `player-settings.json` (beside the Saves folder).
+This is a hobby project, made for fun in spare time. It is offered as-is, with no warranty, no support and no promised updates. There may be bugs, and some may never be fixed. Issues are turned off on this repository and I'm not able to answer questions, take requests or fix problems. You're welcome to use it, learn from it and change it for your own use under the terms of the [MIT licence](LICENSE), at your own risk. Back up anything you care about, such as your saved towns in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\` and your own settings in `settings.json` (in the game folder's `TinyCity_Data\StreamingAssets\Configuration\`) and `player-settings.json` (beside the Saves folder).
+
+Other people's tools and work that the game uses are credited in [CREDITS.md](CREDITS.md).
 
 - Design: [GameDesignDocument.md](GameDesignDocument.md)
 - Building, testing and downloading Windows builds: [Documentation/BuildAndTest.md](Documentation/BuildAndTest.md)
