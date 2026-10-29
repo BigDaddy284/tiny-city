@@ -177,8 +177,8 @@ namespace TinyCity.Art
                 Rect(0 + front, -2 - liftFront, 2 + front, -1 - liftFront, shoe);
                 if (!away)
                 {
-                    // Toes point the way they face.
-                    Put(3 + front, -1 - liftFront, shoe);
+                    // Toes point the way they face, lit with the trim on techwear trainers.
+                    Put(3 + front, -1 - liftFront, look.Trim ?? shoe);
                 }
             }
 
@@ -199,14 +199,45 @@ namespace TinyCity.Art
                     Rect(-3, Row(-12), 2, Row(-10), look.Bottom);
                 }
 
+                if (look.Coat && !seated)
+                {
+                    // A long coat hangs to the knees behind the legs and, open, down the front.
+                    Rect(-4, Row(-12), -2, Row(-6), look.Top);
+                    Rect(2, Row(-12), 3, Row(-7), look.Top);
+                    if (look.Trim is Rgba hem)
+                    {
+                        Rect(-4, Row(-6), -2, Row(-6), hem);
+                        Rect(2, Row(-7), 2, Row(-7), hem);
+                    }
+                }
+
                 // The body, with rounded shoulders.
                 Rect(-4, Row(-20), 3, Row(-12), look.Top);
                 Put(-4, Row(-20), Rgba.Clear);
                 Put(3, Row(-20), Rgba.Clear);
                 if (!look.Skirt)
                 {
-                    // A belt between top and trousers.
-                    Rect(-4, Row(-12), 3, Row(-12), look.Top.Shade(0.8));
+                    // A belt between top and trousers, glowing on techwear.
+                    Rect(-4, Row(-12), 3, Row(-12), look.Trim ?? look.Top.Shade(0.8));
+                }
+                else if (look.Trim is Rgba skirtHem)
+                {
+                    var hem = seated ? Row(-11) : Row(-6);
+                    Rect(-5, hem, 4, hem, skirtHem);
+                }
+
+                if (look.Trim is Rgba trim)
+                {
+                    // The collar, and down the front a seam (or a stripe across the shoulders from behind).
+                    Rect(-2, Row(-20), 1, Row(-20), trim);
+                    if (away)
+                    {
+                        Rect(-3, Row(-17), 2, Row(-17), trim);
+                    }
+                    else
+                    {
+                        Rect(1, Row(-19), 1, Row(-13), trim);
+                    }
                 }
 
                 if (look.Apron is Rgba apron && !away)
@@ -214,6 +245,10 @@ namespace TinyCity.Art
                     Rect(-2, Row(-17), 3, Row(seated ? -10 : -7), apron);
                     Put(-1, Row(-18), apron);
                     Put(2, Row(-18), apron);
+                    if (look.Trim is Rgba edge)
+                    {
+                        Rect(-2, Row(seated ? -10 : -7), 3, Row(seated ? -10 : -7), edge);
+                    }
                 }
 
                 // Neck.
@@ -249,6 +284,18 @@ namespace TinyCity.Art
                     Fringe();
                 }
 
+                if (away && look.Visor != null)
+                {
+                    // The visor's strap round the back of the head.
+                    Rect(-4, Row(-25), 3, Row(-25), Palette.Charcoal);
+                }
+
+                if (away && look.HairTips is Rgba backTips && look.Style != HairStyle.Bald)
+                {
+                    var tipRow = look.Style == HairStyle.Short || look.Style == HairStyle.Messy ? -24 : -22;
+                    Rect(-3, Row(tipRow), 2, Row(tipRow), backTips);
+                }
+
                 switch (look.Style)
                 {
                     case HairStyle.Messy:
@@ -282,7 +329,7 @@ namespace TinyCity.Art
                 {
                     Rect(-6, Row(-30), 5, Row(-30), hat);
                     Rect(-3, Row(-34), 2, Row(-31), hat);
-                    Rect(-3, Row(-31), 2, Row(-31), Palette.Red);
+                    Rect(-3, Row(-31), 2, Row(-31), look.Trim ?? Palette.Red);
                 }
             }
 
@@ -300,10 +347,18 @@ namespace TinyCity.Art
                 Rect(-4, Row(-31), 3, Row(-28), hair);
                 Put(-4, Row(-31), Rgba.Clear);
                 Put(3, Row(-31), Rgba.Clear);
-                Rect(-4, Row(-27), -3, Row(look.Style == HairStyle.Short || look.Style == HairStyle.Messy ? -26 : -23), hair);
+                var sideEnd = look.Style == HairStyle.Short || look.Style == HairStyle.Messy ? -26 : -23;
+                Rect(-4, Row(-27), -3, Row(sideEnd), hair);
                 if (look.Style == HairStyle.Long)
                 {
                     Rect(3, Row(-28), 3, Row(-26), hair);
+                }
+
+                if (look.HairTips is Rgba tips)
+                {
+                    // Dyed ends: the front of the fringe and the bottom of the hair at the side.
+                    Rect(1, Row(-28), 3, Row(-28), tips);
+                    Rect(-4, Row(sideEnd), -3, Row(sideEnd), tips);
                 }
             }
 
@@ -314,7 +369,13 @@ namespace TinyCity.Art
 
                 Put(0, Row(-25), eye);
                 Put(2, Row(-25), eye);
-                if (look.Glasses)
+                if (look.Visor is Rgba visor)
+                {
+                    // A glowing band across both eyes, brightest in the middle.
+                    Rect(-1, Row(-25), 3, Row(-25), visor);
+                    Put(1, Row(-25), visor.Mix(Palette.White, 0.45));
+                }
+                else if (look.Glasses)
                 {
                     Put(-1, Row(-25), Palette.Charcoal);
                     Put(1, Row(-25), Palette.Charcoal);
@@ -452,6 +513,11 @@ namespace TinyCity.Art
             private void Arm(int col, int top, int length)
             {
                 Rect(col, top, col + 1, top + length - 1, Sleeve);
+                if (look.Trim is Rgba cuff)
+                {
+                    Rect(col, top + length - 1, col + 1, top + length - 1, cuff);
+                }
+
                 Rect(col, top + length, col + 1, top + length, look.Skin);
             }
         }

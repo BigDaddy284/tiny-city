@@ -194,3 +194,9 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 5. **Volumes:** in Settings, Master, Music, Ambience and Effects change the sound straight away, and 0 silences each one.
 6. **Replacement sounds:** put a WAV called `music-day.wav` in `TinyCity_Data\StreamingAssets\Audio` and restart. It plays instead of the built-in music (see `Documentation/SoundOverrides.md`).
 7. **Title bar:** on Windows 11 the window's title bar is the theme's dark navy, with light text, like Stills & Reels. Switch the theme to Light and it turns light. On Windows 10 it switches between the dark and light system title bars.
+
+## Cyberpunk outfits
+
+1. **Techwear:** every resident wears dark techwear with neon piping on the collar, down the front, at the cuffs, on the belt or skirt hem and on their trainer toes. From behind, a neon stripe crosses the shoulders.
+2. **Touches:** Nell and Felix wear glowing visors (cyan and violet); Mabel, Rosa, Priya, Ivy and Felix have neon hair tips; Arthur, Samuel (white lab coat) and Edith wear long coats that hang to the knees; Tom wears a white chef's jacket.
+3. **Readable:** everyone is easy to tell apart on the dark streets by day and at night, sitting and walking.

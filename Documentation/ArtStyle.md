@@ -84,10 +84,17 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
   of the four walking directions: towards the viewer down-right or down-left, or away up-left or up-right.
 - **Same light as the town.** The light still comes from the upper left whichever way they face, so the right-hand
   columns are a shade darker. They have the same `Outline` and stand on a soft `Shadow` when standing.
-- **Ten looks.** Each starter resident has their own clothes colour, hair colour and style, and a touch of their
-  own: Mabel's straw hat, Arthur's glasses, Rosa's apron and curls, Tom's beard and apron, Priya's long hair,
-  Ivy's bob and apron, Samuel's glasses and beard, Felix's messy hair, Edith's white bun and glasses. Anyone new
-  gets a look put together from their id, going grey at 65 and white at 75 (`ResidentLook`).
+- **Techwear with neon piping.** Everyone wears dark techwear (the `Tech…` colours, `CargoGrey`, `LabCoat`) with
+  piping in one neon colour (the `Neon…` colours): the collar, a seam down the front (a stripe across the shoulders
+  from behind), the cuffs, the belt or skirt hem, apron hems and the toes of their trainers. Some wear a glowing
+  visor across the eyes instead of glasses, neon-dyed hair tips, or a long coat that hangs open to the knees.
+  Approved by the owner on 29 October.
+- **Ten looks.** Each starter resident has their own techwear and piping colours, hair colour and style, and a touch
+  of their own: Mabel's cap and mint hair tips, Arthur's long navy coat and glasses, Nell's cyan visor, Rosa's curls
+  with pink tips and her apron, Tom's white chef's jacket and beard, Priya's long hair with violet tips, Ivy's bob
+  with pink tips and her apron, Samuel's lab coat, glasses and beard, Felix's violet visor and cyan tips, Edith's
+  long plum coat, white bun and glasses. Anyone new gets a look put together from their id (piping always, a visor,
+  dyed tips under 40 or a coat from 50 now and then), going grey at 65 and white at 75 (`ResidentLook`).
 - **Animation.** Four walking frames (a stride, a lifted foot, the other stride, the other foot) with a one-pixel
   bob, and two frames each for talking (mouth and a hand gesture), eating, reading, working, cheering and star
   jumps. Sitting puts the hips on the seat with the legs hanging down; sleeping shows the head on the pillow and the
@@ -275,16 +282,36 @@ once for each season. This table and `Images/palette.png` are made by `Tools/Art
 | Denim | `#4d5f86` |
 | Corduroy | `#7a5a3e` |
 | Khaki | `#a8946a` |
-| Clothes[0] | `#d9734e` |
-| Clothes[1] | `#5b7db1` |
-| Clothes[2] | `#6fae5c` |
-| Clothes[3] | `#c2577a` |
-| Clothes[4] | `#e0a33a` |
-| Clothes[5] | `#8e6cc0` |
-| Clothes[6] | `#d4b44a` |
-| Clothes[7] | `#3e8e8a` |
-| Clothes[8] | `#7fa7d9` |
-| Clothes[9] | `#b0a8a0` |
+| TechCharcoal | `#2c2e48` |
+| TechNavy | `#283a70` |
+| TechPlum | `#4e2860` |
+| TechOlive | `#2f5048` |
+| TechViolet | `#45348a` |
+| TechWine | `#62223f` |
+| TechPants | `#1f2136` |
+| CargoGrey | `#41455c` |
+| LabCoat | `#e2e8f6` |
+| NeonCyan | `#35e0ff` |
+| NeonPink | `#ff4fb0` |
+| NeonLime | `#a6ff4d` |
+| NeonAmber | `#ffb52e` |
+| NeonViolet | `#b45cff` |
+| NeonMint | `#3dffb4` |
+| Clothes[0] | `#2c2e48` |
+| Clothes[1] | `#283a70` |
+| Clothes[2] | `#4e2860` |
+| Clothes[3] | `#2f5048` |
+| Clothes[4] | `#45348a` |
+| Clothes[5] | `#62223f` |
+| Bottoms[0] | `#1f2136` |
+| Bottoms[1] | `#41455c` |
+| Bottoms[2] | `#2c2e48` |
+| Neons[0] | `#35e0ff` |
+| Neons[1] | `#ff4fb0` |
+| Neons[2] | `#a6ff4d` |
+| Neons[3] | `#ffb52e` |
+| Neons[4] | `#b45cff` |
+| Neons[5] | `#3dffb4` |
 | Hair[0] | `#2e2626` |
 | Hair[1] | `#4a3226` |
 | Hair[2] | `#6b4630` |
