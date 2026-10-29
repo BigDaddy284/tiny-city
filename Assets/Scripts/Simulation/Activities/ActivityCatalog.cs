@@ -131,11 +131,24 @@ namespace TinyCity.Simulation.Activities
             "attend-event", "Go to a city event", "joining in at a city event", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.GatheringSpot }, 3 * 60,
             new Dictionary<NeedType, double> { [NeedType.Social] = 1.2, [NeedType.Fun] = 1.0 });
 
+        /// <summary>A drink at the neon bar in the evening, ideally with company. Paid for, so only while the bar is open.</summary>
+        public static readonly ActivityDefinition BarDrink = new ActivityDefinition(
+            "bar-drink", "Have a drink at the bar", "having a drink at the neon bar", ActivityKind.Leisure, NeedType.Fun, new[] { ObjectType.BarTable }, 40,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.1, [NeedType.Social] = 0.9, [NeedType.Thirst] = 1.0 },
+            itemId: "cocktail", shared: true);
+
+        /// <summary>Dancing at the bar while it's open: free, good fun and good exercise, and tiring.</summary>
+        public static readonly ActivityDefinition Dance = new ActivityDefinition(
+            "dance", "Go dancing", "dancing at the neon bar", ActivityKind.Leisure, NeedType.Fun, new[] { ObjectType.DanceFloor }, 40,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.3, [NeedType.Social] = 0.6, [NeedType.Exercise] = 1.2 },
+            new Dictionary<NeedType, double> { [NeedType.Energy] = 2.0, [NeedType.Hygiene] = 2.0, [NeedType.Thirst] = 1.5 },
+            shared: true, needsOpenBusiness: true);
+
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
             Sleep, Eat, Snack, CafeMeal, Pastry, Drink, UseToilet, Shower, Work, Exercise, Read, WatchTown, Coffee, BuyGroceries, Chat,
-            Rest, SeeDoctor, Paint, PlayPiano, Chess, Fish, Garden, Bake, Knit, AttendEvent,
+            Rest, SeeDoctor, Paint, PlayPiano, Chess, Fish, Garden, Bake, Knit, AttendEvent, BarDrink, Dance,
         };
 
         /// <summary>Every hobby id, from the hobby activities.</summary>

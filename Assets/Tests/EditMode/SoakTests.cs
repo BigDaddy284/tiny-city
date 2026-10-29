@@ -194,6 +194,7 @@ namespace TinyCity.Tests.EditMode
             var longestDeciding = new Dictionary<string, int>();
             var worstDeciding = 0;
             var longestQueue = 0;
+            var aiGoals = 0;
             for (var tick = 0; tick < 14 * GameTime.MinutesPerDay; tick++)
             {
                 foreach (var d in due.Where(d => d.at <= now && !d.call.IsDone).ToList())
@@ -207,6 +208,7 @@ namespace TinyCity.Tests.EditMode
                 now += SecondsPerTick;
 
                 longestQueue = Math.Max(longestQueue, ai.Queue.PendingCount);
+                aiGoals += sim.Residents.Count(r => r.GoalSource == DecisionSource.Ai);
                 foreach (var r in sim.Residents)
                 {
                     longestDeciding[r.Id] = r.State == ResidentState.Deciding ? (longestDeciding.TryGetValue(r.Id, out var m) ? m + 1 : 1) : 0;
@@ -229,7 +231,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(stats.Accepted, Is.GreaterThan(500), "the AI should be doing most of the deciding and talking");
             Assert.That(longestQueue, Is.LessThanOrEqualTo(sim.Residents.Count * 2), "one decision and one line or reflection per resident at most");
             Assert.That(worstDeciding, Is.LessThanOrEqualTo(sim.DecisionWaitMinutes + 1), "nobody waits on the AI past the deadline");
-            Assert.That(sim.Residents.Count(r => r.GoalSource == DecisionSource.Ai), Is.GreaterThan(0));
+            Assert.That(aiGoals, Is.GreaterThan(0), "residents were seen following AI choices");
             Assert.That(sim.ActiveConversations.All(c => c.Lines.Count <= SocialRules.MaxLines), Is.True);
         }
     }

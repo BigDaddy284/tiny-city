@@ -29,6 +29,14 @@ namespace TinyCity.Tools.StressTest
 
         private static readonly StringBuilder Report = new StringBuilder();
 
+        /// <summary>Requests the game sends at once, and the stand-in Ollama's parallel slots to match.</summary>
+        private static int ParallelRequests = OllamaSettings.DefaultParallelRequests;
+
+        /// <summary>The settings' <c>decisionWaitSeconds</c> (0 = only the game-minute wait, as before).</summary>
+        private static int DecisionWaitSeconds = OllamaSettings.DefaultDecisionWaitSeconds;
+
+        private static OllamaSettings Settings() => new OllamaSettings { parallelRequests = ParallelRequests, decisionWaitSeconds = DecisionWaitSeconds };
+
         public static int Main(string[] args)
         {
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
@@ -37,6 +45,9 @@ namespace TinyCity.Tools.StressTest
             var days = args.Length > 1 ? int.Parse(args[1]) : 336;
             var aiDays = args.Length > 2 ? int.Parse(args[2]) : 3;
             var bigDays = args.Length > 3 ? int.Parse(args[3]) : 2;
+            Districts = args.Length > 4 ? int.Parse(args[4]) : 10;
+            ParallelRequests = args.Length > 5 ? int.Parse(args[5]) : OllamaSettings.DefaultParallelRequests;
+            DecisionWaitSeconds = args.Length > 6 ? int.Parse(args[6]) : OllamaSettings.DefaultDecisionWaitSeconds;
 
             Line("# Tiny City stress test");
             Line();
@@ -190,16 +201,17 @@ namespace TinyCity.Tools.StressTest
         }
 
         /// <summary>
-        /// A stand-in for one Ollama model: it works on one request at a time, in the order they arrive (as Ollama
-        /// does with one model loaded and no parallel slots), and drops a request the moment its caller gives up on it.
-        /// Each reply takes the profile's time; 1 in 30 is not JSON and 1 in 50 is lost (the caller times out).
+        /// A stand-in for one Ollama model with <see cref="Slots"/> parallel slots (OLLAMA_NUM_PARALLEL): it works on up
+        /// to that many requests at once, starting them in the order they arrive, and drops a request the moment its
+        /// caller gives up on it. Each reply takes the profile's time, stretched by <see cref="ParallelSlowdown"/> for
+        /// every other request running beside it; 1 in 30 is not JSON and 1 in 50 is lost (the caller times out).
         /// </summary>
         private sealed class SlowOllama
         {
             private readonly AiProfile profile;
             private readonly Queue<Job> waiting = new Queue<Job>();
-            private Job current;
-            private double freeAt;
+            private readonly List<Job> running = new List<Job>();
+            private readonly List<double> freeSlots = new List<double>();
             private int number;
 
             private sealed class Job
@@ -209,14 +221,30 @@ namespace TinyCity.Tools.StressTest
                 public double Seconds;
                 public string Reply;
                 public bool Lost;
+                public double Start;
                 public double Finish;
             }
 
-            public SlowOllama(AiProfile profile)
+            public SlowOllama(AiProfile profile, int slots = 1)
             {
                 this.profile = profile;
+                Slots = Math.Max(1, slots);
+                for (var i = 0; i < Slots; i++)
+                {
+                    freeSlots.Add(0);
+                }
+
                 Transport = new FakeAiTransport { Responder = Answer };
             }
+
+            /// <summary>
+            /// How much longer each reply takes for every other request being answered beside it. An assumption, not a
+            /// measurement: a small model on a graphics card is limited by memory bandwidth, so two at once take about
+            /// 1.3 times as long each (about 1.5 times the throughput), and four at once about 1.9 times.
+            /// </summary>
+            public const double ParallelSlowdown = 0.3;
+
+            public int Slots { get; }
 
             public FakeAiTransport Transport { get; }
 
@@ -226,7 +254,7 @@ namespace TinyCity.Tools.StressTest
 
             public int Calls { get; private set; }
 
-            /// <summary>Seconds spent working on requests, finished or not.</summary>
+            /// <summary>Slot-seconds spent working on requests, finished or not, divided by the number of slots.</summary>
             public double BusySeconds { get; private set; }
 
             /// <summary>Total seconds requests spent waiting for the model to be free.</summary>
@@ -293,51 +321,58 @@ namespace TinyCity.Tools.StressTest
             /// <summary>Works through the requests up to <see cref="Now"/>.</summary>
             public void Deliver()
             {
-                while (true)
+                var changed = true;
+                while (changed)
                 {
-                    if (current != null)
+                    changed = false;
+                    foreach (var job in running.ToList())
                     {
-                        if (current.Call.IsDone)
+                        if (job.Call.IsDone)
                         {
                             // The caller gave up (cancelled): Ollama stops generating when the connection closes.
-                            BusySeconds -= Math.Max(0, current.Finish - Math.Max(Now, current.Finish - current.Seconds));
-                            freeAt = Math.Min(current.Finish, Now);
-                            current = null;
+                            var stoppedAt = Math.Max(job.Start, Math.Min(job.Finish, Now));
+                            BusySeconds -= (job.Finish - stoppedAt) / Slots;
+                            running.Remove(job);
+                            freeSlots.Add(stoppedAt);
+                            changed = true;
+                        }
+                        else if (job.Finish <= Now)
+                        {
+                            if (!job.Lost)
+                            {
+                                job.Call.Succeed(job.Reply);
+                                Served++;
+                            }
+
+                            running.Remove(job);
+                            freeSlots.Add(job.Finish);
+                            changed = true;
+                        }
+                    }
+
+                    while (waiting.Count > 0 && running.Count < Slots)
+                    {
+                        var next = waiting.Dequeue();
+                        if (next.Call.IsDone)
+                        {
                             continue;
                         }
 
-                        if (current.Finish > Now)
-                        {
-                            return;
-                        }
-
-                        if (!current.Lost)
-                        {
-                            current.Call.Succeed(current.Reply);
-                            Served++;
-                        }
-
-                        freeAt = current.Finish;
-                        current = null;
+                        var slot = freeSlots.Min();
+                        freeSlots.Remove(slot);
+                        next.Start = Math.Max(slot, next.Arrived);
+                        QueuedSeconds += next.Start - next.Arrived;
+                        var seconds = next.Seconds * (1 + (ParallelSlowdown * running.Count));
+                        next.Finish = next.Start + seconds;
+                        BusySeconds += seconds / Slots;
+                        running.Add(next);
+                        changed = true;
                     }
+                }
 
-                    if (waiting.Count == 0)
-                    {
-                        freeAt = Math.Max(freeAt, Now);
-                        return;
-                    }
-
-                    var next = waiting.Dequeue();
-                    if (next.Call.IsDone)
-                    {
-                        continue;
-                    }
-
-                    var start = Math.Max(freeAt, next.Arrived);
-                    QueuedSeconds += start - next.Arrived;
-                    next.Finish = start + next.Seconds;
-                    BusySeconds += next.Seconds;
-                    current = next;
+                for (var i = 0; i < freeSlots.Count; i++)
+                {
+                    freeSlots[i] = Math.Max(freeSlots[i], Now);
                 }
             }
         }
@@ -348,6 +383,9 @@ namespace TinyCity.Tools.StressTest
             public int AiDecisions;
             public int WaitingMinutes;
             public int WorstWait;
+
+            /// <summary>The game minutes a resident may wait for a decision at this speed.</summary>
+            public int WaitLimit;
             public double WorstFrameMs;
             public double QueueSum;
             public int QueueSamples;
@@ -384,7 +422,13 @@ namespace TinyCity.Tools.StressTest
                 Line();
             }
 
-            Line($"The stand-in Ollama takes {profile.Description}, and works on one request at a time. One reply in 30 is not JSON and one in 50 never arrives (it times out). Frames run at 60 a second as in the game, with ticks, autosaves and AI updates where the game does them. Default settings: decisions wait up to {OllamaSettings.DefaultDecisionWaitMinutes} game minutes, requests time out after {OllamaSettings.DefaultTimeoutSeconds} s, {OllamaSettings.DefaultMaxRetries} retry. {days} game days at each speed.");
+            var parallel = ParallelRequests == 1
+                ? "works on one request at a time"
+                : $"works on up to {ParallelRequests} requests at once (OLLAMA_NUM_PARALLEL={ParallelRequests}, the game sending {ParallelRequests} at a time; each reply takes {SlowOllama.ParallelSlowdown:0.0}× longer for every other request beside it, an assumption to check on a real PC)";
+            var wait = DecisionWaitSeconds > 0
+                ? $"decisions wait up to {OllamaSettings.DefaultDecisionWaitMinutes} game minutes or {DecisionWaitSeconds} real seconds, whichever is longer"
+                : $"decisions wait up to {OllamaSettings.DefaultDecisionWaitMinutes} game minutes";
+            Line($"The stand-in Ollama takes {profile.Description}, and {parallel}. One reply in 30 is not JSON and one in 50 never arrives (it times out). Frames run at 60 a second as in the game, with ticks, autosaves and AI updates where the game does them. Settings: {wait}, requests time out after {OllamaSettings.DefaultTimeoutSeconds} s, {OllamaSettings.DefaultMaxRetries} retry. {days} game days at each speed.");
             Line();
             Line("| Speed | Real time | Free-time choices | Chosen by AI | AI lines in chats | Avg / longest queue | Avg reply (s) | Timed out | Not JSON | Stale | Dropped | Longest wait (game min) | AI share of each resident's choices (lowest / highest) | Model busy | Slowest frame (ms) |");
             Line("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
@@ -403,7 +447,7 @@ namespace TinyCity.Tools.StressTest
                     ok = false;
                 }
 
-                if (result.WorstWait > OllamaSettings.DefaultDecisionWaitMinutes + 1)
+                if (result.WorstWait > result.WaitLimit + 1)
                 {
                     Line($"**At {speed}x someone waited on the AI past the deadline.**");
                     ok = false;
@@ -425,10 +469,11 @@ namespace TinyCity.Tools.StressTest
         private static LoopResult RunLoop(AiProfile profile, int speed, int days, Func<TownSimulation> make, Action<SlowOllama, AiService, LoopResult, double> each)
         {
             var sim = make();
-            var ollama = new SlowOllama(profile);
-            var ai = new AiService(new OllamaSettings(), ollama.Transport);
+            var ollama = new SlowOllama(profile, ParallelRequests);
+            var ai = new AiService(Settings(), ollama.Transport);
             ai.Attach(sim);
-            var result = new LoopResult();
+            ai.SetGameSpeed(speed);
+            var result = new LoopResult { WaitLimit = ai.DecisionWaitMinutesAt(speed) };
             var deciding = new Dictionary<string, int>();
             var waiting = new HashSet<string>();
             var seenLines = new HashSet<string>();
@@ -557,7 +602,7 @@ namespace TinyCity.Tools.StressTest
             Line(backAt == null ? "- **The AI did not come back on its own.**" : $"- It reconnected {backAt - UpAt:0} s after Ollama came back (it checks every {AiService.RecheckSeconds:0} s).");
             Line($"- Over the run the AI made {result.AiDecisions} of {result.Decisions} free-time choices; the longest anyone waited on it was {result.WorstWait} game minutes.");
             Line();
-            return offlineAt != null && backAt != null && result.WorstWait <= OllamaSettings.DefaultDecisionWaitMinutes + 1;
+            return offlineAt != null && backAt != null && result.WorstWait <= result.WaitLimit + 1;
         }
     }
 }

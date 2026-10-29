@@ -43,15 +43,19 @@ namespace TinyCity.Simulation.Content
         public const string CafeId = "biz-cafe";
         public const string BakeryId = "biz-bakery";
         public const string ClinicId = "biz-clinic";
+        public const string BarMapId = "map-bar";
+        public const string BarId = "biz-bar";
+        public const string BarCounterId = "obj-bar-counter";
         public const string GroceriesItemId = "groceries";
         public const string VillageGreenId = "obj-village-green";
         public const string PondLawnId = "obj-village-pond-lawn";
         public const string QuizCornerId = "obj-cafe-quiz-corner";
+        public const string ClubCornerId = "obj-bar-club-corner";
 
         // T tree, . grass, = path, H house wall, ~ pond, g garden bed, G garden plot (work), w garden tap,
         // b/p park bench, e/r exercise spot, W workshop bench (work), a easel, h chess table, f fishing spot,
         // q village green and j pond-side lawn (gathering spots for community events). Doors: D the first three cottages (in reading
-        // order), 4-9 and 0 cottages 4-10, S store, C cafe, K bakery, L clinic.
+        // order), 4-9 and 0 cottages 4-10, S store, C cafe, K bakery, L clinic, N neon bar.
         // The top-left 27 x 15 corner is the Phase 3 village, unchanged so saved positions stay valid.
         private static readonly string[] VillageRows =
         {
@@ -72,10 +76,10 @@ namespace TinyCity.Simulation.Content
             "T...======================================.T",
             "T..............=.........................=.T",
             "T..............=........q.........T......=.T",
-            "T.HHHHH..HHHHH.=HHHHH..HHHHH.............=.T",
-            "T.HHHHH..HHHHH.=HHHHH..HHHHH..T..........=.T",
-            "T.HHHHH..HHHHH.=HHHHH..HHHHH.............=.T",
-            "T.HH4HH..HH5HH.=HH6HH..HH7HH.............=.T",
+            "T.HHHHH..HHHHH.=HHHHH..HHHHH.......HHHHH.=.T",
+            "T.HHHHH..HHHHH.=HHHHH..HHHHH..T....HHHHH.=.T",
+            "T.HHHHH..HHHHH.=HHHHH..HHHHH.......HHHHH.=.T",
+            "T.HH4HH..HH5HH.=HH6HH..HH7HH.......HHNHH.=.T",
             "T.========================================.T",
             "T.HHHHH..HHHHH..HHHHH.=................T...T",
             "T.HHHHH..HHHHH..HHHHH.=.....r...~f.........T",
@@ -137,6 +141,17 @@ namespace TinyCity.Simulation.Content
             "####D####",
         };
 
+        // c bar counter (work), o high tables, d and e the 3 x 3 dance floor (d is its first square), q club corner (gathering spot), t toilet, s sink.
+        private static readonly string[] BarRows =
+        {
+            "###########",
+            "#...c...#t#",
+            "#oeee...#.#",
+            "#.eed.q...#",
+            "#oeee...s.#",
+            "#####D#####",
+        };
+
         private static readonly Dictionary<char, TileType> VillageLegend = new Dictionary<char, TileType>
         {
             ['T'] = TileType.Tree,
@@ -162,6 +177,7 @@ namespace TinyCity.Simulation.Content
             ['C'] = TileType.Door,
             ['K'] = TileType.Door,
             ['L'] = TileType.Door,
+            ['N'] = TileType.Door,
             ['0'] = TileType.Door,
             ['1'] = TileType.Door,
             ['2'] = TileType.Door,
@@ -279,9 +295,27 @@ namespace TinyCity.Simulation.Content
             });
             objects.Add(new WorldObject("obj-clinic-bed-1", "Clinic bed", ObjectType.ClinicBed, Find(ClinicMapId, ClinicRows, 'm', 0)));
             objects.Add(new WorldObject("obj-clinic-bed-2", "Clinic bed", ObjectType.ClinicBed, Find(ClinicMapId, ClinicRows, 'm', 1)));
+            AddBuilding(maps, objects, portals, BarMapId, "Neon bar", BarRows, 'N', "bar", new Dictionary<char, (string id, string name, ObjectType type)>
+            {
+                ['c'] = (BarCounterId, "Bar counter", ObjectType.Counter),
+                ['d'] = ("obj-bar-dance-floor", "Dance floor", ObjectType.DanceFloor),
+                ['q'] = (ClubCornerId, "Neon bar", ObjectType.GatheringSpot),
+                ['t'] = ("obj-bar-toilet", "Bar toilet", ObjectType.Toilet),
+                ['s'] = ("obj-bar-sink", "Bar sink", ObjectType.Sink),
+            });
+            objects.Add(new WorldObject("obj-bar-table-1", "High table", ObjectType.BarTable, Find(BarMapId, BarRows, 'o', 0)));
+            objects.Add(new WorldObject("obj-bar-table-2", "Corner table", ObjectType.BarTable, Find(BarMapId, BarRows, 'o', 1)));
+            for (var i = 0; i < 8; i++)
+            {
+                objects.Add(new WorldObject($"obj-bar-dance-floor-{i + 2}", "Dance floor", ObjectType.DanceFloor, Find(BarMapId, BarRows, 'e', i)));
+            }
 
             return new TownWorld(TownId, "Tiny City", maps, objects, portals, CreateBusinesses(), new CommunityCalendar(CreateCommunityEvents()));
         }
+
+        /// <summary>The neon bar's evening hours, which are also Felix's shift.</summary>
+        private static readonly int BarOpens = GameTime.MinuteOfDayFor(18, 0);
+        private static readonly int BarCloses = GameTime.MinuteOfDayFor(23, 30);
 
         private static IEnumerable<Business> CreateBusinesses()
         {
@@ -299,16 +333,21 @@ namespace TinyCity.Simulation.Content
                 new ShopItem("pastry", "Pastry", Money.Pounds(2.4), 24),
             });
             yield return new Business(ClinicId, "Clinic", ClinicMapId, GameTime.MinuteOfDayFor(9, 0), GameTime.MinuteOfDayFor(17, 0), Job.Weekdays, new ShopItem[0]);
+            yield return new Business(BarId, "Neon bar", BarMapId, BarOpens, BarCloses, WedToSun, new[]
+            {
+                new ShopItem("cocktail", "A cocktail", Money.Pounds(5.5), 40),
+            });
         }
 
         /// <summary>
-        /// The village calendar: a Sunday afternoon get-together by the pond, a Wednesday quiz night at the café, and
-        /// the village fête once a year (which replaces that Sunday's get-together).
+        /// The village calendar: a Sunday afternoon get-together by the pond, a Wednesday quiz night at the café, a
+        /// Friday club night at the neon bar, and the village fête once a year (which replaces that Sunday's get-together).
         /// </summary>
         public static IEnumerable<CommunityEvent> CreateCommunityEvents()
         {
             yield return new CommunityEvent("get-together", "Sunday get-together", PondLawnId, Minute(15), Minute(17), days: 1 << (int)Weekday.Sunday, turnout: 0.45);
             yield return new CommunityEvent("quiz-night", "Quiz night", QuizCornerId, Minute(18), Minute(20), days: 1 << (int)Weekday.Wednesday, turnout: 0.4);
+            yield return new CommunityEvent("club-night", "Club night", ClubCornerId, Minute(20), Minute(23), days: 1 << (int)Weekday.Friday, turnout: 0.35);
             yield return new CommunityEvent("village-fete", "City festival", VillageGreenId, Minute(14), Minute(17), yearDay: FeteDayOfYear, turnout: 0.8);
         }
 
@@ -362,6 +401,9 @@ namespace TinyCity.Simulation.Content
         }
 
         private static int Minute(int hour, int minute = 0) => GameTime.MinuteOfDayFor(hour, minute);
+
+        /// <summary>Felix runs the neon bar in the evenings, Wednesday to Sunday.</summary>
+        private static Job BarJob => new Job("Bar host", BarCounterId, GameTime.MinuteOfDayFor(18, 0), GameTime.MinuteOfDayFor(23, 30), WedToSun, Money.Pounds(11.5));
 
         private static readonly Design[] Designs =
         {
@@ -442,7 +484,8 @@ namespace TinyCity.Simulation.Content
                 personality = new Personality(active: 0.7, sociable: 0.5, tidy: 0.2, bookish: 0.5),
                 homeMapId = "map-cottage-9", bedId = "obj-cottage9-bed",
                 needsLevel = 70, needAdjustments = { [NeedType.Energy] = 75, [NeedType.Fun] = 50 },
-                money = Money.Pounds(120), groceries = 2, rent = Money.Pounds(80), income = Money.Pounds(95), incomeLabel = "Jobseeker's allowance",
+                job = BarJob,
+                money = Money.Pounds(120), groceries = 2, rent = Money.Pounds(80),
             },
             new Design
             {
@@ -565,6 +608,24 @@ namespace TinyCity.Simulation.Content
             }
         }
 
+        /// <summary>
+        /// The neon bar opened after older saves were made: if Felix is still out of work, he takes the job running it
+        /// and his jobseeker's allowance stops. Returns whether anything changed.
+        /// </summary>
+        public static bool AddBarJobToOlderSave(TownSimulation simulation)
+        {
+            var felix = simulation.GetResident(FelixId);
+            if (felix == null || !felix.IsAlive || felix.Job != null || !simulation.World.TryGetObject(BarCounterId, out _))
+            {
+                return false;
+            }
+
+            felix.Job = BarJob;
+            felix.WeeklyIncomePence = 0;
+            felix.IncomeLabel = string.Empty;
+            return true;
+        }
+
         /// <summary>The background each resident starts with, so the AI has something to draw on from the first day.</summary>
         public static void AddLifeHistory(TownSimulation simulation, string residentId = ResidentId)
         {
@@ -617,7 +678,7 @@ namespace TinyCity.Simulation.Content
                     yield return (5, "Evenings with a medical journal and a pot of tea suit me fine.", new[] { "read", "fun" });
                     break;
                 case FelixId:
-                    yield return (7, "I left school last summer and I'm still looking for work in the city.", new[] { "money", "work" });
+                    yield return (7, "I left school last summer, and I've just got my first proper job: running the neon bar in the evenings.", new[] { BarMapId, "money", "work" });
                     yield return (4, "Money's tight, so I make the most of free things: the park, the trail, a chat.", new[] { "money", "exercise", "social" });
                     break;
                 case EdithId:

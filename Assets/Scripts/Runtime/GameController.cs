@@ -125,6 +125,7 @@ namespace TinyCity.Runtime
             UiTheme.Changed += ApplyThemeToCameras;
             ScreenSettings.Apply(Preferences);
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyCity] AI: {message}") };
+            Ai.SetGameSpeed(Speed);
 
             SidebarHidden = PlayerPrefs.GetInt(SidebarPrefsKey, 0) == 1;
             SlotNames = SaveStore.ReadIndex();
@@ -333,6 +334,9 @@ namespace TinyCity.Runtime
                 // Older saves have fewer residents; the newcomers move in at home.
                 var newcomers = StarterTown.AddMissingResidents(result.Simulation);
 
+                // The neon bar opened after older saves were made; Felix takes the job if he is still looking for work.
+                StarterTown.AddBarJobToOlderSave(result.Simulation);
+
                 UseSlot(slot);
                 SetSimulation(result.Simulation);
                 foreach (var warning in result.Warnings)
@@ -520,6 +524,9 @@ namespace TinyCity.Runtime
             {
                 lastSpeedIndex = SpeedIndex;
             }
+
+            // At 1x the clock runs one game minute per real second, so the speed is game minutes per second.
+            Ai?.SetGameSpeed(Speed);
         }
 
         /// <summary>Shows <paramref name="r"/> in the inspector, and optionally points the active panel at them.</summary>

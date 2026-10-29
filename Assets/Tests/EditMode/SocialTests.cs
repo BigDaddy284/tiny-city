@@ -142,7 +142,9 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Bedtime_EndsTheConversation()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(GameTime.FromDayAndTime(6, 22, 26));
+            var town = TestTown.MabelAndArthurOnTheGreen(GameTime.FromDayAndTime(6, 12, 0));
+            var firstBedtime = new[] { Mabel(town), Arthur(town) }.Min(SleepSchedule.BedtimeOf);
+            var sim = TestTown.MabelAndArthurOnTheGreen(GameTime.FromDayAndTime(6, 0, 0).AddMinutes(firstBedtime - 4));
             StartChat(sim);
 
             sim.Advance(10);

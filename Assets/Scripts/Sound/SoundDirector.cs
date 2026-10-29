@@ -112,7 +112,7 @@ namespace TinyCity.Sound
                 return SoundEffect.Cooking;
             }
 
-            if (id == ActivityCatalog.Drink.Id || id == ActivityCatalog.Coffee.Id)
+            if (id == ActivityCatalog.Drink.Id || id == ActivityCatalog.Coffee.Id || id == ActivityCatalog.BarDrink.Id)
             {
                 return SoundEffect.Drink;
             }

@@ -51,7 +51,8 @@ namespace TinyCity.Simulation.AI
     }
 
     /// <summary>
-    /// The single place AI requests go. It sends one request at a time, serves higher priorities first while
+    /// The single place AI requests go. It sends up to <see cref="MaxConcurrent"/> requests at a time (one unless
+    /// Ollama is set up to answer several at once), serves higher priorities first while
     /// ageing waiting requests so nobody starves, lets residents who were just served wait behind others of the same
     /// priority, replaces duplicates, enforces timeouts and a bounded number of
     /// attempts, and drops requests whose situation has changed. It never throws because of a bad answer.
@@ -85,19 +86,21 @@ namespace TinyCity.Simulation.AI
         private readonly IAiTransport transport;
         private readonly List<AiRequest> pending = new List<AiRequest>();
         private readonly Dictionary<string, double> lastServed = new Dictionary<string, double>();
+        private readonly List<Slot> active = new List<Slot>();
         private long nextId = 1;
-        private IAiCall activeCall;
-        private double activeSentAt;
-        private bool activeSuperseded;
 
-        public AiRequestQueue(IAiTransport transport, string url, double timeoutSeconds, int maxAttempts, int maxPending = DefaultMaxPending)
+        public AiRequestQueue(IAiTransport transport, string url, double timeoutSeconds, int maxAttempts, int maxPending = DefaultMaxPending, int maxConcurrent = 1)
         {
             this.transport = transport ?? throw new ArgumentNullException(nameof(transport));
             Url = url;
             TimeoutSeconds = Math.Max(1, timeoutSeconds);
             MaxAttempts = Math.Max(1, maxAttempts);
             MaxPending = Math.Max(1, maxPending);
+            MaxConcurrent = Math.Max(1, maxConcurrent);
         }
+
+        /// <summary>The most requests sent and not yet answered at once. Ollama answers them side by side when its OLLAMA_NUM_PARALLEL allows.</summary>
+        public int MaxConcurrent { get; }
 
         public string Url { get; }
 
@@ -114,7 +117,13 @@ namespace TinyCity.Simulation.AI
 
         public AiQueueStats Stats { get; } = new AiQueueStats();
 
-        public AiRequest Active { get; private set; }
+        /// <summary>The oldest request being answered now, or null.</summary>
+        public AiRequest Active => active.Count == 0 ? null : active[0].Request;
+
+        /// <summary>Every request being answered now, oldest first.</summary>
+        public IReadOnlyList<AiRequest> ActiveRequests => active.Select(a => a.Request).ToList();
+
+        public int ActiveCount => active.Count;
 
         public int PendingCount => pending.Count;
 
@@ -133,9 +142,9 @@ namespace TinyCity.Simulation.AI
                 Stats.Stale++;
             }
 
-            if (Active != null && Active.Key == request.Key)
+            foreach (var slot in active.Where(a => a.Request.Key == request.Key))
             {
-                activeSuperseded = true;
+                slot.Superseded = true;
             }
 
             request.Id = nextId++;
@@ -165,12 +174,12 @@ namespace TinyCity.Simulation.AI
 
         public void Update(double now)
         {
-            if (Active != null)
+            foreach (var slot in active.ToList())
             {
-                UpdateActive(now);
+                UpdateActive(slot, now);
             }
 
-            while (Active == null)
+            while (active.Count < MaxConcurrent)
             {
                 var next = NextReady(now);
                 if (next == null)
@@ -192,12 +201,11 @@ namespace TinyCity.Simulation.AI
         /// <summary>Abandons everything, telling each request's owner, e.g. when Ollama goes offline.</summary>
         public void CancelAll(string reason)
         {
-            if (Active != null)
+            foreach (var slot in active.ToList())
             {
-                activeCall?.Cancel();
-                var active = Active;
-                ClearActive();
-                GiveUp(active, reason);
+                slot.Call?.Cancel();
+                active.Remove(slot);
+                GiveUp(slot.Request, reason);
             }
 
             foreach (var request in pending.ToList())
@@ -211,24 +219,24 @@ namespace TinyCity.Simulation.AI
         /// <summary>Called after a successful connection check so earlier failures don't count against the service.</summary>
         public void ResetFailureCount() => Stats.ConsecutiveTransportFailures = 0;
 
-        private void UpdateActive(double now)
+        private void UpdateActive(Slot slot, double now)
         {
-            var request = Active;
-            if (activeSuperseded || !SafeIsStillWanted(request))
+            var request = slot.Request;
+            if (slot.Superseded || !SafeIsStillWanted(request))
             {
-                activeCall.Cancel();
-                ClearActive();
+                slot.Call.Cancel();
+                active.Remove(slot);
                 Stats.Stale++;
                 return;
             }
 
-            if (!activeCall.IsDone)
+            if (!slot.Call.IsDone)
             {
                 var limit = CurrentTimeoutSeconds;
-                if (now - activeSentAt > limit)
+                if (now - slot.SentAt > limit)
                 {
-                    activeCall.Cancel();
-                    ClearActive();
+                    slot.Call.Cancel();
+                    active.Remove(slot);
                     Stats.TimedOut++;
                     RetryOrGiveUp(request, $"no answer within {limit:0} seconds", now);
                 }
@@ -236,9 +244,9 @@ namespace TinyCity.Simulation.AI
                 return;
             }
 
-            var call = activeCall;
-            ClearActive();
-            Stats.RecordLatency(Math.Max(0, now - activeSentAt));
+            var call = slot.Call;
+            active.Remove(slot);
+            Stats.RecordLatency(Math.Max(0, now - slot.SentAt));
             if (!call.Succeeded)
             {
                 Stats.TransportErrors++;
@@ -321,23 +329,23 @@ namespace TinyCity.Simulation.AI
 
             request.Attempts++;
             Stats.Sent++;
-            Active = request;
-            activeSentAt = now;
-            activeSuperseded = false;
+            IAiCall call = null;
             var startError = "the request could not be started";
             try
             {
-                activeCall = transport.Post(Url, request.Body, TimeoutSeconds);
+                call = transport.Post(Url, request.Body, TimeoutSeconds);
             }
             catch (Exception e)
             {
-                activeCall = null;
                 startError = $"the request could not be started: {e.Message}";
             }
 
-            if (activeCall == null)
+            if (call != null)
             {
-                ClearActive();
+                active.Add(new Slot { Request = request, Call = call, SentAt = now });
+            }
+            else
+            {
                 Stats.TransportErrors++;
                 Stats.ConsecutiveTransportFailures++;
                 RetryOrGiveUp(request, startError, now);
@@ -371,11 +379,13 @@ namespace TinyCity.Simulation.AI
             }
         }
 
-        private void ClearActive()
+        /// <summary>A request on its way to Ollama.</summary>
+        private sealed class Slot
         {
-            Active = null;
-            activeCall = null;
-            activeSuperseded = false;
+            public AiRequest Request;
+            public IAiCall Call;
+            public double SentAt;
+            public bool Superseded;
         }
 
         private static bool SafeIsStillWanted(AiRequest request)

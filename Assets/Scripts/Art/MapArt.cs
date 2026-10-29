@@ -150,7 +150,7 @@ namespace TinyCity.Art
                 var p = obj.Location.Position;
                 var variant = Noise.Of(obj.Id);
                 var key = $"object-{obj.Type.ToString().ToLowerInvariant()}";
-                pieces.Add(new ArtPiece(obj.Name, Pick(key, 1, 1, () => FurnitureArt.Render(obj.Type, variant, palette, map.IsExterior)), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));
+                pieces.Add(new ArtPiece(obj.Name, Pick(key, 1, 1, () => FurnitureArt.Render(obj.Type, variant, palette, map.IsExterior, PlaceStyle.Of(world, map))), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));
             }
 
             return new MapArt(ground, pieces);

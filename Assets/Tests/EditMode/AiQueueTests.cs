@@ -69,6 +69,45 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void WithParallelRequests_SendsSeveralAtOnce_AndRefillsAsTheyFinish()
+        {
+            var parallel = new AiRequestQueue(transport, "http://ollama/api/chat", timeoutSeconds: 10, maxAttempts: 2, maxPending: 8, maxConcurrent: 3);
+            foreach (var key in new[] { "a", "b", "c", "d", "e" })
+            {
+                parallel.Enqueue(Request(key, residentId: "res-" + key), 0);
+            }
+
+            parallel.Update(0);
+            Assert.That(transport.Calls.Count, Is.EqualTo(3));
+            Assert.That(parallel.ActiveCount, Is.EqualTo(3));
+            Assert.That(parallel.PendingCount, Is.EqualTo(2));
+
+            transport.Calls[1].Succeed("{}");
+            parallel.Update(1);
+            Assert.That(handled, Is.EqualTo(new List<string> { "b" }));
+            Assert.That(transport.Calls.Count, Is.EqualTo(4), "a finished slot is filled straight away");
+            Assert.That(parallel.ActiveCount, Is.EqualTo(3));
+
+            parallel.Update(10.5);
+            Assert.That(parallel.Stats.TimedOut, Is.EqualTo(2), "each request keeps its own timeout");
+        }
+
+        [Test]
+        public void WithParallelRequests_ADuplicateStillReplacesTheOneBeingAnswered()
+        {
+            var parallel = new AiRequestQueue(transport, "http://ollama/api/chat", timeoutSeconds: 10, maxAttempts: 2, maxPending: 8, maxConcurrent: 2);
+            parallel.Enqueue(Request("a", residentId: "res-a"), 0);
+            parallel.Enqueue(Request("b", residentId: "res-b"), 0);
+            parallel.Update(0);
+            parallel.Enqueue(Request("a", residentId: "res-a"), 1);
+            parallel.Update(1);
+
+            Assert.That(transport.Calls[0].Cancelled, Is.True, "the old copy of a is cancelled");
+            Assert.That(transport.Calls.Count, Is.EqualTo(3), "the new copy of a is sent in its place");
+            Assert.That(parallel.ActiveRequests.Select(r => r.Key).OrderBy(k => k).ToList(), Is.EqualTo(new List<string> { "a", "b" }));
+        }
+
+        [Test]
         public void SendsOnlyOneRequestAtATime()
         {
             queue.Enqueue(Request("a"), 0);

@@ -13,6 +13,7 @@ namespace TinyCity.Art
         Bakery,
         Clinic,
         Shop,
+        Bar,
     }
 
     public static class PlaceStyle
@@ -31,6 +32,7 @@ namespace TinyCity.Art
                 case StarterTown.CafeMapId: return PlaceKind.Cafe;
                 case StarterTown.BakeryMapId: return PlaceKind.Bakery;
                 case StarterTown.ClinicMapId: return PlaceKind.Clinic;
+                case StarterTown.BarMapId: return PlaceKind.Bar;
             }
 
             return world?.BusinessOnMap(map.Id) != null ? PlaceKind.Shop : PlaceKind.Cottage;

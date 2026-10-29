@@ -68,12 +68,12 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
   upstairs, sliding glass doors with a neon frame, a dark plinth with a neon strip, neon corners and a neon roof
   edge in the home's door colour. On the roof: an air unit, a vent and an antenna with a red light.
 - **Shops:** taller blocks with large display windows (goods behind the glass), a neon tube along the shopfront and
-  a neon sign flat above the door with a picture: an apple (store), a cup (café), a loaf (bakery) or a red cross
-  (clinic). Each shop has its own neon colour.
+  a neon sign flat above the door with a picture: an apple (store), a cup (café), a loaf (bakery), a red cross
+  (clinic) or a cocktail glass (the violet neon bar). Each shop has its own neon colour.
 - **Rooms:** doll's-house cutaways. The two back walls are tall and the same height, meeting in a clean inside
   corner, with dark wall panels, a pink neon rail at waist height, a cyan LED skirting, windows showing the lit
   city outside, and pictures. The front walls are low with a cyan top edge, and walls inside the room are half
-  height. Floors are dark boards in homes and the café, and tiles in the store, bakery and clinic.
+  height. Floors are dark boards in homes and the café, and tiles in the store, bakery and clinic; the bar has dark slate tiles, a light-up dance floor and a DJ booth.
 
 ## Residents
 
