@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using TinyCity.Simulation;
 using TinyCity.Simulation.Activities;
 using TinyCity.Simulation.Residents;
@@ -85,13 +87,14 @@ namespace TinyCity.Art
     /// <summary>Where on a tile a resident using a piece of furniture is drawn, and how they sit, stand or lie there.</summary>
     public readonly struct Placement
     {
-        public Placement(double u, double v, double z, Stance stance, Facing facing)
+        public Placement(double u, double v, double z, Stance stance, Facing facing, bool behind = false)
         {
             U = u;
             V = v;
             Z = z;
             Stance = stance;
             Facing = facing;
+            Behind = behind;
         }
 
         /// <summary>Position on the tile, 0..1 along x (u) and y (v); 0.5, 0.5 is the centre.</summary>
@@ -106,18 +109,32 @@ namespace TinyCity.Art
 
         public Facing Facing { get; }
 
+        /// <summary>A seat on the far side of the furniture: the resident is drawn behind it, so the table hides their lap.</summary>
+        public bool Behind { get; }
+
         public static readonly Placement Centre = new Placement(0.5, 0.5, 0, Stance.Standing, Facing.DownRight);
 
         /// <summary>
         /// How to use each kind of furniture: seats and beds hold the resident where the picture has its seat or
-        /// pillow, and worktops are used from the front, facing them.
+        /// pillow, and worktops are used from the front, facing them. Furniture for more than one person has a place
+        /// for each <paramref name="seat"/> (0 is the first to arrive), such as the two chairs of a café table; a seat
+        /// past the last one shares the first.
         /// </summary>
-        public static Placement For(ObjectType type)
+        public static Placement For(ObjectType type, int seat = 0)
         {
+            if (seat > 0)
+            {
+                var other = OtherPlace(type, seat);
+                if (other != null)
+                {
+                    return other.Value;
+                }
+            }
+
             switch (type)
             {
                 case ObjectType.Armchair: return new Placement(0.52, 0.5, 13, Stance.Sitting, Facing.DownRight);
-                case ObjectType.Bench: return new Placement(0.5, 0.5, 12, Stance.Sitting, Facing.DownLeft);
+                case ObjectType.Bench: return new Placement(0.32, 0.5, 12, Stance.Sitting, Facing.DownLeft);
                 case ObjectType.CafeTable: return new Placement(0.5, 0.82, 12, Stance.Sitting, Facing.UpRight);
                 case ObjectType.ChessTable: return new Placement(0.92, 0.5, 10, Stance.Sitting, Facing.UpLeft);
                 case ObjectType.Piano: return new Placement(0.5, 0.78, 9, Stance.Sitting, Facing.UpRight);
@@ -139,6 +156,79 @@ namespace TinyCity.Art
                 default: return Centre;
             }
         }
+
+        /// <summary>The places after the first, or null where there are no more.</summary>
+        private static Placement? OtherPlace(ObjectType type, int seat)
+        {
+            switch (type)
+            {
+                case ObjectType.Bench when seat == 1: return new Placement(0.68, 0.5, 12, Stance.Sitting, Facing.DownLeft);
+                case ObjectType.CafeTable when seat == 1: return new Placement(0.5, 0.14, 12, Stance.Sitting, Facing.DownLeft, behind: true);
+                case ObjectType.ChessTable when seat == 1: return new Placement(0.06, 0.5, 10, Stance.Sitting, Facing.DownRight, behind: true);
+                case ObjectType.FishingSpot when seat == 1: return new Placement(0.7, 0.26, 4, Stance.Standing, Facing.DownRight);
+                case ObjectType.ExerciseSpot when seat == 1: return new Placement(0.28, 0.66, 1, Stance.Standing, Facing.DownRight);
+                case ObjectType.Counter:
+                case ObjectType.Workbench:
+                case ObjectType.ShopShelf:
+                case ObjectType.BakeryDisplay:
+                    return seat <= 2 ? new Placement(seat == 1 ? 0.2 : 0.8, 1.0, 0, Stance.Standing, Facing.UpRight) : (Placement?)null;
+                default: return null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Who sits where. Each resident using a piece of furniture keeps the first free place they found on arrival
+    /// until they leave it, so two people at a café table take a chair each instead of sitting on one another.
+    /// This is only for drawing and is never saved.
+    /// </summary>
+    public sealed class Seating
+    {
+        private readonly Dictionary<string, (string objectId, int seat)> places = new Dictionary<string, (string objectId, int seat)>();
+
+        /// <summary>Brings the places up to date: frees those of residents who have left and seats new arrivals.</summary>
+        public void Update(TownWorld world, IReadOnlyList<Resident> residents)
+        {
+            var inUse = new Dictionary<string, string>();
+            foreach (var r in residents)
+            {
+                if (r.IsAlive && r.State == ResidentState.Performing && r.TargetObjectId != null
+                    && world.TryGetObject(r.TargetObjectId, out var obj) && obj.Location == r.Location)
+                {
+                    inUse[r.Id] = obj.Id;
+                }
+            }
+
+            foreach (var id in places.Keys.ToList())
+            {
+                if (!inUse.TryGetValue(id, out var objectId) || objectId != places[id].objectId)
+                {
+                    places.Remove(id);
+                }
+            }
+
+            foreach (var r in residents)
+            {
+                if (!inUse.TryGetValue(r.Id, out var objectId) || places.ContainsKey(r.Id))
+                {
+                    continue;
+                }
+
+                var taken = new HashSet<int>(places.Values.Where(p => p.objectId == objectId).Select(p => p.seat));
+                var seat = 0;
+                while (taken.Contains(seat))
+                {
+                    seat++;
+                }
+
+                places[r.Id] = (objectId, seat);
+            }
+        }
+
+        /// <summary>The resident's place at the furniture they are using, 0 if none.</summary>
+        public int SeatOf(string residentId) => places.TryGetValue(residentId, out var place) ? place.seat : 0;
+
+        public void Clear() => places.Clear();
     }
 
     /// <summary>One frame of a resident's animation.</summary>
@@ -179,7 +269,7 @@ namespace TinyCity.Art
         /// What the resident is doing, read from the simulation: walking while travelling, talking in a chat, and
         /// otherwise the activity they are performing with the furniture they are using.
         /// </summary>
-        public static (ResidentAction action, Placement placement) Choose(TownWorld world, Resident resident, bool moving)
+        public static (ResidentAction action, Placement placement) Choose(TownWorld world, Resident resident, bool moving, int seat = 0)
         {
             if (resident.State == ResidentState.Travelling && moving)
             {
@@ -199,7 +289,7 @@ namespace TinyCity.Art
             var placement = Placement.Centre;
             if (resident.TargetObjectId != null && world.TryGetObject(resident.TargetObjectId, out var obj) && obj.Location == resident.Location)
             {
-                placement = Placement.For(obj.Type);
+                placement = Placement.For(obj.Type, seat);
             }
 
             return (ActionFor(resident.ActivityId, placement.Stance), placement);

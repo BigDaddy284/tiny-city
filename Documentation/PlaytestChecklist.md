@@ -176,3 +176,11 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 5. **Rooms:** dark panelled walls with a pink neon rail and cyan LED skirting, and windows that show the lit city.
 6. **Seasons:** teal trees in spring, pink in summer, orange in autumn, and snow on the paving and roofs in winter.
 
+
+## Café seats and finding people
+
+1. **Café:** there are four tables (window, middle, centre and corner). Two people at a table sit on opposite chairs facing each other; the one on the far chair is behind the table. A third customer goes to another table, and someone on their own picks an empty table over sitting with a stranger.
+2. **Benches and chess:** two people on a bench sit side by side; two chess players sit at either end of the board. When one leaves, the other stays put.
+3. **Inspector top row:** "Town journal" (J still works), then −, + and Watch everyone, with the number of camera panels in a box on the far right. The row of name buttons is gone.
+4. **People list:** click "People ▼". A scrolling list shows each person's name and age († for those who have died). Filter by Everyone, Living or Died and sort by first name, surname, oldest or youngest. Clicking a name shows them in the inspector and the active panel.
+5. **Find a person:** click the "Find a person…" box and type. Matching names appear underneath as you type (case doesn't matter, surnames count). Clicking one shows that person and clears the box. While typing, the game's keys (J, S, F5 and so on) don't fire; Escape or clicking the town leaves the box.

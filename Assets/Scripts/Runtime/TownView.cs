@@ -25,6 +25,7 @@ namespace TinyCity.Runtime
         private readonly Dictionary<string, Location> previous = new Dictionary<string, Location>();
         private readonly Dictionary<string, SpriteRenderer> moodIcons = new Dictionary<string, SpriteRenderer>();
         private readonly Dictionary<string, Facing> facings = new Dictionary<string, Facing>();
+        private readonly Seating seating = new Seating();
         private readonly Dictionary<string, Sprite> residentSprites = new Dictionary<string, Sprite>();
         private readonly Dictionary<Mood, Sprite> moodSprites = new Dictionary<Mood, Sprite>();
         private readonly SpriteFactory residentFactory = new SpriteFactory();
@@ -138,6 +139,7 @@ namespace TinyCity.Runtime
             moodIcons.Clear();
             previous.Clear();
             facings.Clear();
+            seating.Clear();
             residentSprites.Clear();
             moodSprites.Clear();
             residentFactory.Release();
@@ -200,6 +202,7 @@ namespace TinyCity.Runtime
         {
             var t = Mathf.Clamp01(tickProgress);
             var sharing = new Dictionary<Location, int>();
+            seating.Update(World, simulation.Residents);
             for (var i = 0; i < simulation.Residents.Count; i++)
             {
                 var r = simulation.Residents[i];
@@ -215,7 +218,7 @@ namespace TinyCity.Runtime
                 var here = r.Location;
                 var from = previous.TryGetValue(r.Id, out var p) && p.MapId == here.MapId ? p.Position : here.Position;
                 var moving = from != here.Position;
-                var (action, placement) = ResidentPose.Choose(World, r, moving);
+                var (action, placement) = ResidentPose.Choose(World, r, moving, seating.SeatOf(r.Id));
                 var facing = FacingOf(simulation, r, from, here, action, placement);
                 facings[r.Id] = facing;
 
@@ -235,7 +238,8 @@ namespace TinyCity.Runtime
                 var x = Mathf.Lerp(from.X, here.Position.X, t) + (float)(placement.U - 0.5);
                 var y = Mathf.Lerp(from.Y, here.Position.Y, t) + (float)(placement.V - 0.5);
                 renderer.transform.position = TileToWorld(here.MapId, x, y) + offset + new Vector3(0f, (float)placement.Z / SpriteFactory.PixelsPerUnit, 0f);
-                renderer.sortingOrder = IsoGrid.SortingOrder(Mathf.Max(from.X, here.Position.X), Mathf.Max(from.Y, here.Position.Y), IsoGrid.ResidentLayer);
+                // Someone on the far side of a table is drawn behind it (the tile's furniture starts at layer 1).
+                renderer.sortingOrder = IsoGrid.SortingOrder(Mathf.Max(from.X, here.Position.X), Mathf.Max(from.Y, here.Position.Y), placement.Behind ? 0 : IsoGrid.ResidentLayer);
                 renderer.color = TintOf(here.MapId);
 
                 var mood = Moods.Of(simulation, r);

@@ -151,6 +151,64 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void SharedFurniture_HasAPlaceForEachPerson()
+        {
+            foreach (ObjectType type in Enum.GetValues(typeof(ObjectType)))
+            {
+                for (var seat = 0; seat < WorldObject.CapacityOf(type); seat++)
+                {
+                    var p = Placement.For(type, seat);
+                    Assert.That(p.U >= 0 && p.U <= 1 && p.V >= 0 && p.V <= 1, Is.True, $"{type} seat {seat} keeps them on its tile");
+                }
+            }
+
+            foreach (var type in new[] { ObjectType.CafeTable, ObjectType.Bench, ObjectType.ChessTable })
+            {
+                var first = Placement.For(type, 0);
+                var second = Placement.For(type, 1);
+                Assert.That(first.U != second.U || first.V != second.V, Is.True, $"{type} seats two apart");
+                Assert.That(second.Stance, Is.EqualTo(Stance.Sitting), type.ToString());
+            }
+
+            var near = Placement.For(ObjectType.CafeTable, 0);
+            var far = Placement.For(ObjectType.CafeTable, 1);
+            Assert.That(far.Behind && !near.Behind, Is.True, "the far chair is drawn behind the table");
+            Assert.That(far.Facing.Away, Is.Not.EqualTo(near.Facing.Away), "they face each other");
+        }
+
+        [Test]
+        public void Seating_GivesEachPersonTheirOwnChair_UntilTheyLeave()
+        {
+            var sim = StarterTown.CreateNewGame();
+            var table = sim.World.Objects.First(o => o.Type == ObjectType.CafeTable);
+            var people = sim.Residents.Take(3).ToList();
+            foreach (var r in people.Take(2))
+            {
+                r.Location = table.Location;
+                r.State = ResidentState.Performing;
+                r.TargetObjectId = table.Id;
+                r.ActivityId = ActivityCatalog.Coffee.Id;
+            }
+
+            var seating = new Seating();
+            seating.Update(sim.World, sim.Residents);
+            Assert.That(new[] { seating.SeatOf(people[0].Id), seating.SeatOf(people[1].Id) }, Is.EquivalentTo(new[] { 0, 1 }));
+            var secondSeat = seating.SeatOf(people[1].Id);
+            Assert.That(ResidentPose.Choose(sim.World, people[1], false, secondSeat).placement.V,
+                Is.Not.EqualTo(ResidentPose.Choose(sim.World, people[0], false, seating.SeatOf(people[0].Id)).placement.V));
+
+            people[0].State = ResidentState.Idle;
+            seating.Update(sim.World, sim.Residents);
+            Assert.That(seating.SeatOf(people[1].Id), Is.EqualTo(secondSeat), "nobody shuffles along when someone leaves");
+
+            people[2].Location = table.Location;
+            people[2].State = ResidentState.Performing;
+            people[2].TargetObjectId = table.Id;
+            seating.Update(sim.World, sim.Residents);
+            Assert.That(seating.SeatOf(people[2].Id), Is.EqualTo(1 - secondSeat), "a newcomer takes the free chair");
+        }
+
+        [Test]
         public void ADayInTheVillage_ShowsEveryEverydayAnimation()
         {
             var sim = StarterTown.CreateNewGame();

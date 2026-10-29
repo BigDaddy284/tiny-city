@@ -113,6 +113,9 @@ namespace TinyCity.Simulation.Activities
 
         private const double TravelPenaltyPerStep = 0.15;
 
+        /// <summary>Each person already using an object makes it count as this many steps further away.</summary>
+        public const int CrowdedSteps = 8;
+
         /// <summary>Free-time activities are only worth starting if their main need has at least this much room to improve.</summary>
         private const double MinimumLeisureDeficit = 10;
 
@@ -165,6 +168,12 @@ namespace TinyCity.Simulation.Activities
                 return false;
             }
 
+            return UsersOf(resident, obj) < obj.Capacity;
+        }
+
+        /// <summary>How many other residents are using or heading for an object.</summary>
+        public int UsersOf(Resident resident, WorldObject obj)
+        {
             var users = 0;
             foreach (var other in residents)
             {
@@ -175,7 +184,17 @@ namespace TinyCity.Simulation.Activities
                 }
             }
 
-            return users < obj.Capacity;
+            return users;
+        }
+
+        /// <summary>
+        /// Steps to an object as the planner weighs them: somewhere already in use counts as further away, so people
+        /// spread out over the café tables and benches instead of all crowding onto the nearest one.
+        /// </summary>
+        private int WeighedDistance(Resident resident, WorldObject obj)
+        {
+            var d = pathfinder.Distance(resident.Location, obj.Location);
+            return d == Pathfinder.Unreachable ? d : d + (CrowdedSteps * UsersOf(resident, obj));
         }
 
         public static bool IsSleepTime(GameTime time) => GameTime.IsWithin(time.MinuteOfDay, BedtimeMinute, WakeMinute);
@@ -372,11 +391,12 @@ namespace TinyCity.Simulation.Activities
 
                 options.AddRange(world.Objects
                     .Where(obj => CanDo(resident, activity, obj, time))
-                    .Select(obj => new FreeTimeOption(activity, obj, pathfinder.Distance(resident.Location, obj.Location)) { PricePence = economy?.PriceOf(activity, obj) ?? 0 })
-                    .Where(o => o.Distance != Pathfinder.Unreachable)
-                    .OrderBy(o => o.Distance)
-                    .ThenBy(o => o.Target.Id, StringComparer.Ordinal)
-                    .Take(MaxTargetsPerActivity));
+                    .Select(obj => (option: new FreeTimeOption(activity, obj, pathfinder.Distance(resident.Location, obj.Location)) { PricePence = economy?.PriceOf(activity, obj) ?? 0 }, weighed: WeighedDistance(resident, obj)))
+                    .Where(o => o.option.Distance != Pathfinder.Unreachable)
+                    .OrderBy(o => o.weighed)
+                    .ThenBy(o => o.option.Target.Id, StringComparer.Ordinal)
+                    .Take(MaxTargetsPerActivity)
+                    .Select(o => o.option));
             }
 
             options.Add(new FreeTimeOption(null, null, 0));
@@ -492,7 +512,7 @@ namespace TinyCity.Simulation.Activities
             var bestDistance = int.MaxValue;
             foreach (var obj in world.Objects.Where(o => CanDo(resident, activity, o, time)))
             {
-                var d = pathfinder.Distance(resident.Location, obj.Location);
+                var d = WeighedDistance(resident, obj);
                 if (d != Pathfinder.Unreachable && d < bestDistance)
                 {
                     best = obj;
@@ -544,7 +564,7 @@ namespace TinyCity.Simulation.Activities
                 var baseScore = (primaryDeficit * Preference(resident.Personality, activity)) + (0.5 * secondary);
                 foreach (var obj in world.Objects.Where(o => CanDo(resident, activity, o, time)))
                 {
-                    var d = pathfinder.Distance(resident.Location, obj.Location);
+                    var d = WeighedDistance(resident, obj);
                     if (d == Pathfinder.Unreachable)
                     {
                         continue;

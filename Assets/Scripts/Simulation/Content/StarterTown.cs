@@ -106,13 +106,14 @@ namespace TinyCity.Simulation.Content
             "####D####",
         };
 
-        // y tables, c counter (work), t toilet, s sink, u piano, q quiz corner (gathering spot).
+        // y window and corner tables, m middle and n centre tables (added later, so the first two keep their places),
+        // c counter (work), t toilet, s sink, u piano, q quiz corner (gathering spot).
         private static readonly string[] CafeRows =
         {
             "###########",
-            "#y...y..#t#",
+            "#y.m.y..#t#",
             "#...q...#.#",
-            "#u........#",
+            "#u....n...#",
             "#...c...s.#",
             "#####D#####",
         };
@@ -263,6 +264,8 @@ namespace TinyCity.Simulation.Content
             });
             objects.Add(new WorldObject("obj-cafe-table-window", "Window table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'y', 0)));
             objects.Add(new WorldObject("obj-cafe-table-corner", "Corner table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'y', 1)));
+            objects.Add(new WorldObject("obj-cafe-table-middle", "Middle table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'm', 0)));
+            objects.Add(new WorldObject("obj-cafe-table-centre", "Centre table", ObjectType.CafeTable, Find(CafeMapId, CafeRows, 'n', 0)));
             AddBuilding(maps, objects, portals, BakeryMapId, "Bakery", BakeryRows, 'K', "bakery", new Dictionary<char, (string id, string name, ObjectType type)>
             {
                 ['v'] = ("obj-bakery-display", "Cake display", ObjectType.BakeryDisplay),

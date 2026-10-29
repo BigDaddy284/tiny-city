@@ -20,15 +20,26 @@ namespace TinyCity.Runtime
     internal sealed class Inspector
     {
         public const float Width = 380f;
-        private const int RosterPerRow = 5;
+        private const int SearchMatchesShown = 6;
+        private const float PeopleListHeight = 180f;
+        private const string SearchControl = "inspector-people-search";
         private const int TimelineShown = 40;
 
         private static readonly string[] TabNames = { "Now", "People", "Memories", "Work", "Timeline" };
+        private static readonly string[] FilterNames = { "Everyone", "Living", "Died" };
+        private static readonly string[] OrderNames = { "First name", "Surname", "Oldest", "Youngest" };
 
         private readonly GameController game;
         private GuiStyles styles;
         private int tab;
         private Vector2 scroll;
+        private bool peopleOpen;
+        private PeopleFilter peopleFilter;
+        private PeopleOrder peopleOrder;
+        private Vector2 peopleScroll;
+        private string search = string.Empty;
+        private GUIStyle countStyle;
+        private GUISkin countSkin;
         private (string residentId, long minute, string text) nextPlan;
         private List<TimelineEntry> timeline = new List<TimelineEntry>();
         private (string residentId, long minute, long history, TownSimulation sim) timelineFor;
@@ -108,9 +119,14 @@ namespace TinyCity.Runtime
 
             GUILayout.EndHorizontal();
 
+            // The journal, then the camera panels: fewer or more, everyone in view, and how many there are now.
             var panels = game.Panels;
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"Camera panels: {panels.Count}", styles.Small, GUILayout.Width(120f));
+            if (GUILayout.Toggle(game.JournalOpen, "Town journal", GUI.skin.button, GUILayout.Width(110f)) != game.JournalOpen)
+            {
+                game.ToggleJournal();
+            }
+
             if (GUILayout.Button("−", GUILayout.Width(28f)))
             {
                 game.SetPanelCount(panels.Count - 1);
@@ -126,29 +142,83 @@ namespace TinyCity.Runtime
                 game.WatchEveryone();
             }
 
+            GUILayout.FlexibleSpace();
+            GUILayout.Box(panels.Count.ToString(), CountStyle(), GUILayout.Width(28f));
             GUILayout.EndHorizontal();
-            if (GUILayout.Button(game.JournalOpen ? "Close the town journal (J)" : "Open the town journal (J)"))
-            {
-                game.ToggleJournal();
-            }
 
-            // Five names to a row, so a town of any size fits. Picking someone shows them here and in the active panel.
-            var roster = Simulation.Residents;
-            for (var row = 0; row < roster.Count; row += RosterPerRow)
-            {
-                GUILayout.BeginHorizontal();
-                foreach (var other in roster.Skip(row).Take(RosterPerRow))
-                {
-                    var name = other.IsAlive ? other.FirstName : $"{other.FirstName} †";
-                    if (GUILayout.Toggle(other == r, name, GUI.skin.button) && other != r)
-                    {
-                        game.Select(other, followInActivePanel: true);
-                    }
-                }
-
-                GUILayout.EndHorizontal();
-            }
+            DrawPeopleFinder(r);
         }
+
+        /// <summary>
+        /// A button that opens a list of everyone (filtered and sorted), and a box to find someone by name, whose
+        /// matches appear underneath as you type. Picking someone shows them here and in the active panel.
+        /// </summary>
+        private void DrawPeopleFinder(Resident r)
+        {
+            GUILayout.BeginHorizontal();
+            peopleOpen = GUILayout.Toggle(peopleOpen, peopleOpen ? "People ▲" : "People ▼", GUI.skin.button, GUILayout.Width(110f));
+            GUI.SetNextControlName(SearchControl);
+            search = GUILayout.TextField(search ?? string.Empty, 40);
+            if (string.IsNullOrEmpty(search) && GUI.GetNameOfFocusedControl() != SearchControl)
+            {
+                var box = GUILayoutUtility.GetLastRect();
+                GUI.Label(new Rect(box.x + 6f, box.y, box.width - 6f, box.height), "Find a person…", styles.Small);
+            }
+
+            GUILayout.EndHorizontal();
+
+            foreach (var match in PeopleList.Search(Simulation.Residents, search, SearchMatchesShown))
+            {
+                if (GUILayout.Button(Describe(match)))
+                {
+                    Pick(match);
+                    search = string.Empty;
+                    GUIUtility.keyboardControl = 0;
+                }
+            }
+
+            if (!peopleOpen)
+            {
+                return;
+            }
+
+            peopleFilter = (PeopleFilter)GUILayout.Toolbar((int)peopleFilter, FilterNames);
+            peopleOrder = (PeopleOrder)GUILayout.Toolbar((int)peopleOrder, OrderNames);
+            peopleScroll = GUILayout.BeginScrollView(peopleScroll, GUILayout.Height(PeopleListHeight));
+            var shown = PeopleList.Of(Simulation.Residents, peopleFilter, peopleOrder);
+            if (shown.Count == 0)
+            {
+                GUILayout.Label("Nobody here.", styles.Small);
+            }
+
+            foreach (var other in shown)
+            {
+                if (GUILayout.Toggle(other == r, Describe(other), GUI.skin.button) && other != r)
+                {
+                    Pick(other);
+                }
+            }
+
+            GUILayout.EndScrollView();
+        }
+
+        /// <summary>A box the same size as the − and + buttons, for the number of camera panels.</summary>
+        private GUIStyle CountStyle()
+        {
+            if (countStyle == null || countSkin != GUI.skin)
+            {
+                var button = GUI.skin.button;
+                countStyle = new GUIStyle(GUI.skin.box) { alignment = TextAnchor.MiddleCenter, margin = button.margin, padding = button.padding, fontSize = button.fontSize, fixedHeight = button.fixedHeight };
+                countSkin = GUI.skin;
+            }
+
+            return countStyle;
+        }
+
+        private void Pick(Resident other) => game.Select(other, followInActivePanel: true);
+
+        private static string Describe(Resident other) =>
+            $"{other.FullName}, {other.AgeYears}{(other.IsAlive ? string.Empty : " †")}";
 
         private void DrawNow(Resident r)
         {

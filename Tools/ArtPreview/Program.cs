@@ -163,6 +163,8 @@ namespace TinyCity.Tools.ArtPreview
             var world = sim.World;
             var season = Seasons.Of(sim.Time);
             var palette = Palette.For(season);
+            var seating = new Seating();
+            seating.Update(world, sim.Residents);
             foreach (var map in world.Maps)
             {
                 var here = sim.Residents.Where(r => r.IsAlive && r.Location.MapId == map.Id).ToList();
@@ -175,13 +177,13 @@ namespace TinyCity.Tools.ArtPreview
                 var extra = new System.Collections.Generic.List<(int sortX, int sortY, int layer, PixelCanvas canvas, double px, double py)>();
                 foreach (var r in here)
                 {
-                    var (action, placement) = ResidentPose.Choose(world, r, false);
+                    var (action, placement) = ResidentPose.Choose(world, r, false, seating.SeatOf(r.Id));
                     var look = ResidentLook.For(r.Id, r.AgeYears);
                     var pose = new ResidentPose(action, placement.Stance, placement.Facing, 1);
                     var dx = ((placement.U - placement.V) * IsoPainter.HalfTileWidth);
                     var dy = ((placement.U + placement.V - 1) * IsoPainter.HalfTileHeight) - placement.Z;
                     var pos = r.Location.Position;
-                    extra.Add((pos.X, pos.Y, 3, ResidentArt.Render(look, pose), dx, dy));
+                    extra.Add((pos.X, pos.Y, placement.Behind ? 0 : 3, ResidentArt.Render(look, pose), dx, dy));
                     var icon = MoodArt.Icon(Moods.Of(sim, r));
                     if (icon != null)
                     {

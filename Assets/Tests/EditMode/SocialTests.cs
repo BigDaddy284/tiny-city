@@ -248,6 +248,27 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void CafeTables_SeatTwo_AndNewcomersPreferAnEmptyOne()
+        {
+            var window = TestTown.Object(StarterTown.CreateNewGame(), "obj-cafe-table-window");
+            var sim = TestTown.WithResidents(TestTown.WeekendAfternoon, r => r.Id == StarterTown.ResidentId ? window.Location : (Location?)null, needsLevel: 60);
+            var mabel = Mabel(sim);
+            Assert.That(window.Capacity, Is.EqualTo(2), "one chair each side");
+
+            string FirstTable() => sim.FreeTimeOptionsFor(mabel).First(o => o.Activity == ActivityCatalog.Coffee).Target.Id;
+            Assert.That(FirstTable(), Is.EqualTo(window.Id), "the table she's standing at is nearest");
+
+            Arthur(sim).State = ResidentState.Performing;
+            Arthur(sim).TargetObjectId = window.Id;
+            Assert.That(sim.Planner.IsAvailableTo(mabel, window), Is.True, "there's still a chair");
+            Assert.That(FirstTable(), Is.Not.EqualTo(window.Id), "but an empty table is better than a stranger's");
+
+            sim.GetResident(StarterTown.NellId).State = ResidentState.Travelling;
+            sim.GetResident(StarterTown.NellId).TargetObjectId = window.Id;
+            Assert.That(sim.Planner.IsAvailableTo(mabel, window), Is.False, "both chairs taken");
+        }
+
+        [Test]
         public void ToneChangesRelationships_ByTheGameRules()
         {
             var book = new RelationshipBook();

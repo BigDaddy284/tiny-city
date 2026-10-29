@@ -59,7 +59,7 @@ namespace TinyCity.Simulation.World
 
         public Location Location { get; }
 
-        /// <summary>How many residents can use or head for it at once. Benches seat two; most things serve one.</summary>
+        /// <summary>How many residents can use or head for it at once. Benches and café tables (one chair each side) seat two; most things serve one.</summary>
         public int Capacity => CapacityOf(Type);
 
         /// <summary>
@@ -91,9 +91,9 @@ namespace TinyCity.Simulation.World
                 case ObjectType.FishingSpot:
                 case ObjectType.ExerciseSpot:
                 case ObjectType.Workbench:
+                case ObjectType.CafeTable:
                     return 2;
                 case ObjectType.GardenPlot:
-                case ObjectType.CafeTable:
                     return 4;
                 case ObjectType.ShopShelf:
                 case ObjectType.BakeryDisplay:
