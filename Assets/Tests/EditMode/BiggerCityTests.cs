@@ -12,7 +12,7 @@ using TinyCity.Simulation.World;
 
 namespace TinyCity.Tests.EditMode
 {
-    /// <summary>The city at twice the size: the apartment towers, new cottages and venues, and older saves still fitting.</summary>
+    /// <summary>The city at twice the size: the apartment towers, new cottages and venues.</summary>
     public class BiggerCityTests
     {
         private static readonly ActivityDefinition[] Venues =
@@ -29,13 +29,6 @@ namespace TinyCity.Tests.EditMode
             Assert.That(village.Width * village.Height, Is.GreaterThanOrEqualTo(2 * 44 * 28));
             Assert.That(village.Width, Is.EqualTo(64));
             Assert.That(village.Height, Is.EqualTo(40));
-        }
-
-        [Test]
-        public void TheTownBeforeItGrew_IsWhereItWas_SoOlderSavesFit()
-        {
-            // Worked out with the code from before the city grew; older saves refer to these places by position.
-            Assert.That(OldTownLayout(StarterTown.CreateWorld()), Is.EqualTo(7991904535593017144UL));
         }
 
         [Test]
@@ -117,47 +110,6 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(loaded.Success, Is.True, string.Join("; ", loaded.Errors));
             Assert.That(SaveSerializer.Save(loaded.Simulation), Is.EqualTo(saved));
-        }
-
-        /// <summary>
-        /// The town before it grew: every tile of the village's top-left 43 x 27 (open ground, trees, water, houses or
-        /// doors), every object there and in the older interiors, and every door. Saves refer to these places by position, so they must never move.
-        /// </summary>
-        private static ulong OldTownLayout(TownWorld world)
-        {
-            var hash = 14695981039346656037UL;
-            void Add(string text)
-            {
-                foreach (var c in text)
-                {
-                    hash ^= c;
-                    hash *= 1099511628211UL;
-                }
-            }
-
-            world.TryGetMap(StarterTown.VillageMapId, out var village);
-            for (var y = 0; y < 27; y++)
-            {
-                for (var x = 0; x < 43; x++)
-                {
-                    // Grass and paths are both open ground, so laying a new path over grass doesn't move anything.
-                    var tile = village.GetTile(new GridPos(x, y));
-                    Add((tile == TileType.Path ? TileType.Grass : tile).ToString());
-                }
-            }
-
-            bool Old(Location l) => l.MapId == StarterTown.VillageMapId ? l.Position.X < 43 && l.Position.Y < 27 : OldInteriors.Contains(l.MapId);
-            foreach (var o in world.Objects.Where(o => Old(o.Location)).OrderBy(o => o.Id, StringComparer.Ordinal))
-            {
-                Add($"{o.Id} {o.Type} {o.Location.MapId} {o.Location.Position.X},{o.Location.Position.Y};");
-            }
-
-            foreach (var p in world.Portals.Where(p => Old(p.From) && Old(p.To)).OrderBy(p => p.Id, StringComparer.Ordinal))
-            {
-                Add($"{p.Id} {p.From.MapId} {p.From.Position.X},{p.From.Position.Y} {p.To.MapId} {p.To.Position.X},{p.To.Position.Y};");
-            }
-
-            return hash;
         }
 
         private static readonly string[] OldInteriors =

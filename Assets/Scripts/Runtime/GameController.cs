@@ -309,36 +309,6 @@ namespace TinyCity.Runtime
                     continue;
                 }
 
-                if (result.UpgradedFromVersion == 1)
-                {
-                    // Version 1 saves predate memories; give the starter residents their background.
-                    StarterTown.AddLifeHistory(result.Simulation);
-                }
-
-                if (result.UpgradedFromVersion > 0 && result.UpgradedFromVersion < 4)
-                {
-                    // Saves from before the economy: wages for existing jobs, and starting money, food and rent.
-                    StarterTown.AddFinancesToOlderSave(result.Simulation);
-                }
-
-                if (result.UpgradedFromVersion > 0 && result.UpgradedFromVersion < 5)
-                {
-                    // Saves from before hobbies: the starter residents get theirs.
-                    StarterTown.AddHobbiesToOlderSave(result.Simulation);
-                }
-
-                if (result.UpgradedFromVersion > 0 && result.UpgradedFromVersion < 6)
-                {
-                    // Saves from before romance: starter residents take their usual openness to it.
-                    StarterTown.AddRomanceToOlderSave(result.Simulation);
-                }
-
-                // Older saves have fewer residents; the newcomers move in at home.
-                var newcomers = StarterTown.AddMissingResidents(result.Simulation);
-
-                // The neon bar opened after older saves were made; Felix takes the job if he is still looking for work.
-                StarterTown.AddBarJobToOlderSave(result.Simulation);
-
                 UseSlot(slot);
                 SetSimulation(result.Simulation);
                 foreach (var warning in result.Warnings)
@@ -347,8 +317,7 @@ namespace TinyCity.Runtime
                 }
 
                 Status = (useBackup ? $"The save of {CurrentTownName} was damaged, so its backup was loaded. " : $"Loaded {CurrentTownName}. ")
-                    + (result.Warnings.Count > 0 ? $"{result.Warnings.Count} problem(s) were repaired. " : string.Empty)
-                    + (newcomers > 0 ? $"{newcomers} new neighbour(s) moved in." : string.Empty);
+                    + (result.Warnings.Count > 0 ? $"{result.Warnings.Count} problem(s) were repaired." : string.Empty);
                 return true;
             }
 

@@ -13,7 +13,11 @@ namespace TinyCity.Runtime
     /// </summary>
     public static class SaveStore
     {
-        public static string Folder => Path.Combine(Application.persistentDataPath, "Saves");
+        /// <summary>
+        /// Where towns are kept since the fresh start of 30 October 2026. Saves from before it stay untouched in the old
+        /// "Saves" folder beside it and aren't read.
+        /// </summary>
+        public static string Folder => Path.Combine(Application.persistentDataPath, "Towns");
 
         public static string PathFor(string slot) => Path.Combine(Folder, slot + ".json");
 

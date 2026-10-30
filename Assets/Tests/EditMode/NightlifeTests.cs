@@ -8,7 +8,7 @@ using TinyCity.Simulation.Time;
 
 namespace TinyCity.Tests.EditMode
 {
-    /// <summary>The neon bar: Felix's evening job, a drink or a dance, club night, and older saves.</summary>
+    /// <summary>The neon bar: Felix's evening job, a drink or a dance, and club night.</summary>
     public class NightlifeTests
     {
         private static TinyCity.Simulation.Economy.Business Bar(TownSimulation sim) => sim.World.Businesses.First(b => b.Id == StarterTown.BarId);
@@ -68,21 +68,6 @@ namespace TinyCity.Tests.EditMode
             var world = StarterTown.CreateWorld();
             var friday = GameTime.FromDayAndTime(5, 21, 0);
             Assert.That(world.Calendar.OnAt(friday) is var evt && evt != null && new[] { evt }.Any(e => e.Id == "club-night" && e.PlaceObjectId == StarterTown.ClubCornerId), Is.True);
-        }
-
-        [Test]
-        public void AnOlderSave_GivesFelixTheBarJob_Once()
-        {
-            var sim = StarterTown.CreateNewGame();
-            var felix = sim.GetResident(StarterTown.FelixId);
-            felix.Job = null;
-            felix.WeeklyIncomePence = 9500;
-            felix.IncomeLabel = "Jobseeker's allowance";
-
-            Assert.That(StarterTown.AddBarJobToOlderSave(sim), Is.True);
-            Assert.That(felix.Job.WorkObjectId, Is.EqualTo(StarterTown.BarCounterId));
-            Assert.That(felix.WeeklyIncomePence, Is.EqualTo(0));
-            Assert.That(StarterTown.AddBarJobToOlderSave(sim), Is.False, "nothing changes the second time");
         }
     }
 }

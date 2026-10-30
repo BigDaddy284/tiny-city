@@ -92,31 +92,6 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Version1Save_IsUpgraded_WithEmptyMemories()
-        {
-            var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(StarterTown.CreateNewGame()));
-            root["version"] = 1.0;
-            root.Remove("memories");
-            root.Remove("conversations");
-            var resident = (Dictionary<string, object>)((List<object>)root["residents"])[0];
-            resident.Remove("goalSource");
-            resident.Remove("lastReflectionDay");
-
-            var result = SaveSerializer.Load(Json.Write(root), StarterTown.CreateWorld());
-
-            Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
-            Assert.That(result.Warnings, Is.Empty, string.Join("; ", result.Warnings));
-            Assert.That(result.UpgradedFromVersion, Is.EqualTo(1));
-            Assert.That(result.Simulation.Memories.All, Is.Empty);
-            Assert.That(result.Simulation.Residents[0].FullName, Is.EqualTo("Mabel Thornbury"));
-
-            StarterTown.AddLifeHistory(result.Simulation);
-            var resaved = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(result.Simulation));
-            Assert.That(resaved["version"], Is.EqualTo((double)SaveSerializer.CurrentVersion));
-            Assert.That(SaveSerializer.Load(SaveSerializer.Save(result.Simulation), StarterTown.CreateWorld()).Simulation.Memories.All.Count, Is.EqualTo(2));
-        }
-
-        [Test]
         public void DamagedMemoryRecords_AreSkipped_WithAWarning()
         {
             var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(StarterTown.CreateNewGame()));

@@ -15,16 +15,12 @@ namespace TinyCity.Simulation.Persistence
 {
     public sealed class SaveLoadResult
     {
-        internal SaveLoadResult(TownSimulation simulation, IReadOnlyList<string> errors, IReadOnlyList<string> warnings, int upgradedFromVersion = 0)
+        internal SaveLoadResult(TownSimulation simulation, IReadOnlyList<string> errors, IReadOnlyList<string> warnings)
         {
             Simulation = simulation;
             Errors = errors;
             Warnings = warnings;
-            UpgradedFromVersion = upgradedFromVersion;
         }
-
-        /// <summary>The older save version this was upgraded from, or 0 if it was already current.</summary>
-        public int UpgradedFromVersion { get; }
 
         /// <summary>The restored town, or null when <see cref="Errors"/> is not empty.</summary>
         public TownSimulation Simulation { get; }
@@ -44,28 +40,22 @@ namespace TinyCity.Simulation.Persistence
     /// </summary>
     public static class SaveSerializer
     {
-        /// <summary>Kept from the game's first name, The Tiny Town, so every older save still loads.</summary>
-        public const string Format = "tiny-town-save";
+        public const string Format = "tiny-city-save";
+
+        /// <summary>What saves were called before the fresh start of 30 October 2026. They aren't loaded.</summary>
+        public const string FormatBeforeFreshStart = "tiny-town-save";
 
         /// <summary>
         /// Bump this when the save layout changes, and teach <see cref="Load"/> to upgrade the older version so
         /// residents, memories and history survive.
         /// </summary>
         /// <remarks>
-        /// Version 1: residents. Version 2 adds memories, conversation history, each resident's decision source
-        /// and last reflection day; a version 1 save loads with empty memories and history. Version 3 adds
-        /// relationships, conversations in progress, who a resident is talking to or looking for, and the tone of
-        /// each line; older saves load with nobody having met and no conversation going on. Version 4 adds money,
-        /// groceries, rent and income, job work days and wages, business stock and takings, and the ledger; older
-        /// saves load with no money (the starter content then gives starter residents their finances). Version 5
-        /// adds health, illness, death date and cause, and hobbies; older saves load in health suited to each
-        /// resident's age, well, and without hobbies (the starter content then adds them). Version 6 adds romance
-        /// (feelings and break-up times on relationships, couples, and whether each resident is open to romance) and
-        /// the town history; older saves load with nobody in a couple, open to romance, and an empty history. Version 7 adds the day
-        /// each newcomer moved in; in older saves everyone has always lived here. Version 8 adds the day each child was
-        /// born and their parents, and a home may be missing (someone sleeping rough); older saves have neither.
+        /// Version 1 is the fresh start of 30 October 2026: residents (with money, health, hobbies, the day they moved
+        /// in or were born, and their parents), memories, conversation history and conversations in progress,
+        /// relationships and couples, the economy and the town history. Saves made before it used the format
+        /// <see cref="FormatBeforeFreshStart"/> and aren't loaded.
         /// </remarks>
-        public const int CurrentVersion = 8;
+        public const int CurrentVersion = 1;
 
         public static string Save(TownSimulation simulation)
         {
@@ -134,6 +124,11 @@ namespace TinyCity.Simulation.Persistence
                 return Fail("The save file does not contain a save object.");
             }
 
+            if (GetString(root, "format") == FormatBeforeFreshStart)
+            {
+                return Fail("This town was saved before Tiny City's fresh start and can't be loaded.");
+            }
+
             if (GetString(root, "format") != Format)
             {
                 return Fail("This is not a Tiny City save file.");
@@ -196,32 +191,17 @@ namespace TinyCity.Simulation.Persistence
             }
 
             var simulation = new TownSimulation(world, residents, new GameTime((long)minutes));
-            if (version >= 2)
-            {
-                ReadMemories(GetObject(root, "memories"), simulation, warnings);
-                ReadConversations(GetObject(root, "conversations"), simulation, warnings);
-            }
-
-            if (version >= 3)
-            {
-                ReadRelationships(GetList(root, "relationships"), simulation, warnings);
-                ReadSessions(GetList(root, "activeConversations"), simulation, warnings);
-            }
-
-            if (version >= 4)
-            {
-                ReadEconomy(GetObject(root, "economy"), simulation, warnings);
-            }
-
-            if (version >= 6)
-            {
-                ReadPartnerships(GetList(root, "partnerships"), simulation, warnings);
-                ReadHistory(GetObject(root, "history"), simulation, warnings);
-            }
+            ReadMemories(GetObject(root, "memories"), simulation, warnings);
+            ReadConversations(GetObject(root, "conversations"), simulation, warnings);
+            ReadRelationships(GetList(root, "relationships"), simulation, warnings);
+            ReadSessions(GetList(root, "activeConversations"), simulation, warnings);
+            ReadEconomy(GetObject(root, "economy"), simulation, warnings);
+            ReadPartnerships(GetList(root, "partnerships"), simulation, warnings);
+            ReadHistory(GetObject(root, "history"), simulation, warnings);
 
             ReconcileSocialState(simulation, warnings);
 
-            return new SaveLoadResult(simulation, errors, warnings, version < CurrentVersion ? version : 0);
+            return new SaveLoadResult(simulation, errors, warnings);
 
             SaveLoadResult Fail(string message) => new SaveLoadResult(null, new[] { message }, warnings);
         }

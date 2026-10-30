@@ -396,31 +396,6 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Version4Save_LoadsWell_ThenGetsHobbies()
-        {
-            var sim = StarterTown.CreateNewGame();
-            var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(sim));
-            root["version"] = 4.0;
-            foreach (var r in ((List<object>)root["residents"]).Cast<Dictionary<string, object>>())
-            {
-                foreach (var key in new[] { "health", "illness", "exposedDay", "sickDay", "death", "hobbies" })
-                {
-                    r.Remove(key);
-                }
-            }
-
-            var result = SaveSerializer.Load(Json.Write(root), StarterTown.CreateWorld());
-            Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
-            Assert.That(result.UpgradedFromVersion, Is.EqualTo(4));
-            var edith = Get(result.Simulation, StarterTown.EdithId);
-            Assert.That(edith.Health, Is.EqualTo(HealthRules.StartingHealthFor(edith.AgeYears)));
-            Assert.That(edith.Hobbies, Is.Empty);
-
-            StarterTown.AddHobbiesToOlderSave(result.Simulation);
-            Assert.That(edith.Hobbies.Contains("knitting"), Is.True);
-        }
-
-        [Test]
         public void DamagedHealthData_IsRepairedWithWarnings()
         {
             var sim = StarterTown.CreateNewGame();

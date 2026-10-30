@@ -233,19 +233,6 @@ namespace TinyCity.Tests.EditMode
             Assert.That(SaveSerializer.Save(again), Is.EqualTo(SaveSerializer.Save(reference)));
         }
 
-        [Test]
-        public void AnOlderSave_HasNoNewcomers()
-        {
-            var sim = StarterTown.CreateNewGame();
-            var json = SaveSerializer.Save(sim).Replace($"\"version\": {SaveSerializer.CurrentVersion}", "\"version\": 6");
-            json = string.Join("\n", json.Split('\n').Where(line => !line.Contains("\"movedInDay\"")));
-
-            var loaded = SaveSerializer.Load(json, StarterTown.CreateWorld());
-            Assert.That(loaded.Success, Is.True, string.Join("; ", loaded.Errors));
-            Assert.That(loaded.Simulation.Residents.Any(r => r.IsNewcomer), Is.False);
-            Assert.That(loaded.UpgradedFromVersion, Is.EqualTo(6));
-        }
-
         /// <summary>Someone already living in a home (or, for the village map, nowhere in particular), to fill the city up.</summary>
         private static Resident Lodger(TownSimulation sim, string id, string homeMapId)
         {

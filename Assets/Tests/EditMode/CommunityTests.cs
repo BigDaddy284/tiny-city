@@ -350,38 +350,6 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Version5Save_LoadsWithNoCouples_ThenTakesStarterOpenness()
-        {
-            var sim = StarterTown.CreateNewGame();
-            var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(sim));
-            root["version"] = 5.0;
-            root.Remove("partnerships");
-            root.Remove("history");
-            foreach (var r in ((List<object>)root["residents"]).Cast<Dictionary<string, object>>())
-            {
-                r.Remove("openToRomance");
-            }
-
-            foreach (var r in ((List<object>)root["relationships"]).Cast<Dictionary<string, object>>())
-            {
-                r.Remove("romance");
-                r.Remove("brokeUpMinutes");
-            }
-
-            var result = SaveSerializer.Load(Json.Write(root), StarterTown.CreateWorld());
-            Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
-            Assert.That(result.UpgradedFromVersion, Is.EqualTo(5));
-            Assert.That(result.Simulation.Relationships.Partnerships, Is.Empty);
-            Assert.That(result.Simulation.History.Events, Is.Empty);
-            var arthur = Get(result.Simulation, StarterTown.ArthurId);
-            Assert.That(arthur.OpenToRomance, Is.True, "older saves don't know");
-
-            StarterTown.AddRomanceToOlderSave(result.Simulation);
-            Assert.That(arthur.OpenToRomance, Is.False);
-            Assert.That(Get(result.Simulation, Ivy).OpenToRomance, Is.True);
-        }
-
-        [Test]
         public void DamagedCouplesAndHistory_AreSkippedWithWarnings()
         {
             var sim = StarterTown.CreateNewGame();
