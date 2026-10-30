@@ -105,3 +105,19 @@ The stand-in Ollama takes 0.3 to 0.5 s a reply (0.4 s on average, as measured by
 
 Without the AI, two game days of the 100-resident city: ticks take 0.79 ms on average, 99.9% under 46.6 ms, slowest 72.7 ms. At 10x that is about 0.8% of one core. The save is 3221 KB; saving takes 46 ms and loading 167 ms.
 
+
+## Camera panels (owner's PC, 30 October 2026)
+
+Measured with Settings → Test Camera Panels on build 0.0.76: Intel Core i9-10900F, NVIDIA GeForce RTX 3090, a 2558 × 1360 window. The game was capped at 240 fps.
+
+| Panels | Average ms | FPS | Slowest 1 in 20 (ms) |
+|---:|---:|---:|---:|
+| 1–7 | 4.2 | 237–240 | 4.2 |
+| 8 | 5.0 | 199 | 8.3 |
+| 9 | 10.7 | 94 | 16.7 |
+| 10 | 13.4 | 74 | 20.2 |
+| 12 | 14.7 | 68 | 19.8 |
+| 14 | 12.5 | 80 | 17.3 |
+| 16 | 14.2 | 70 | 20.8 |
+
+Every count up to 16 stayed above 60 fps, so the limit went from 10 to 16, enough for Watch Everyone to show all fifteen starting residents. From 9 panels a frame takes about three times as long, so slower graphics cards may want fewer; the test in Settings measures any PC.

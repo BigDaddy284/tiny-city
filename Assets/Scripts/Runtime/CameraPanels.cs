@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyCity.Simulation;
+using TinyCity.Simulation.Configuration;
 using TinyCity.Simulation.Memory;
 using TinyCity.Simulation.World;
 using UnityEngine;
@@ -15,7 +16,14 @@ namespace TinyCity.Runtime
     /// </summary>
     public sealed class CameraPanels
     {
-        public const int MaxPanels = 10;
+        /// <summary>
+        /// Sixteen, so Watch Everyone can show all fifteen starting residents. The owner's camera panel test (RTX 3090,
+        /// 2558 × 1360, 30 October 2026) stayed above 60 fps at every count up to 16.
+        /// </summary>
+        public const int MaxPanels = 16;
+
+        /// <summary>How many panels may be shown: <see cref="MaxPanels"/>, raised only while the panel test runs.</summary>
+        public int Limit { get; set; } = MaxPanels;
         public const float HeaderHeight = 22f;
         private const string PrefsKey = "TinyCity.Panels";
         private const float SpeechSeconds = 8f;
@@ -49,7 +57,7 @@ namespace TinyCity.Runtime
         /// <summary>Splits <paramref name="area"/> into <paramref name="count"/> cells: a near-square grid whose last row stretches to fill the width.</summary>
         public static Rect[] Layout(int count, Rect area)
         {
-            count = Mathf.Clamp(count, 1, MaxPanels);
+            count = Mathf.Clamp(count, 1, PanelTest.Largest);
             var columns = Mathf.CeilToInt(Mathf.Sqrt(count));
             var rows = Mathf.CeilToInt(count / (float)columns);
             var cells = new Rect[count];
@@ -68,7 +76,7 @@ namespace TinyCity.Runtime
         /// <summary>Adds a panel following <paramref name="residentId"/>, or a free one over the village. Returns false at the limit.</summary>
         public bool Add(TownView view, TownSimulation simulation, string residentId = null)
         {
-            if (panels.Count >= MaxPanels)
+            if (panels.Count >= Limit)
             {
                 return false;
             }
@@ -123,7 +131,7 @@ namespace TinyCity.Runtime
         /// <summary>Sets the number of panels, adding ones that follow residents nobody is watching yet.</summary>
         public void SetCount(int count, TownView view, TownSimulation simulation)
         {
-            count = Mathf.Clamp(count, 1, MaxPanels);
+            count = Mathf.Clamp(count, 1, Limit);
             while (panels.Count > count)
             {
                 Remove(panels.Count - 1);
@@ -136,10 +144,11 @@ namespace TinyCity.Runtime
             }
         }
 
-        /// <summary>One panel for each living resident (up to ten), each following them.</summary>
+        /// <summary>One panel for each living resident (up to <see cref="MaxPanels"/>), each following them.</summary>
         public void WatchEveryone(TownView view, TownSimulation simulation)
         {
-            var living = simulation.Residents.Where(r => r.IsAlive).Take(MaxPanels).ToList();
+            townViewReturn = null;
+            var living = simulation.Residents.Where(r => r.IsAlive).Take(Limit).ToList();
             SetCount(Mathf.Max(1, living.Count), view, simulation);
             for (var i = 0; i < living.Count; i++)
             {
@@ -361,17 +370,59 @@ namespace TinyCity.Runtime
             return simulation.World.TryGetMap(panel.MapId, out var map) ? $"Free camera · {map.Name}" : "Free camera";
         }
 
+        /// <summary>
+        /// True while the panels show Town View: one free camera over the whole city, put up by <see cref="ToggleTownView"/>
+        /// and left again by pressing it a second time, by Watch Everyone, or by changing the panels.
+        /// </summary>
+        public bool InTownView => townViewReturn != null && panels.Count == 1 && panels[0].IsFree && panels[0].MapId == townViewMapId;
+
+        private string townViewReturn;
+        private string townViewMapId;
+
+        /// <summary>
+        /// Switches to Town View, remembering the panels as they were, or, if Town View is showing, back to those panels.
+        /// </summary>
+        public void ToggleTownView(TownView view, TownSimulation simulation)
+        {
+            if (InTownView)
+            {
+                var back = townViewReturn;
+                townViewReturn = null;
+                ApplyLayout(back, view, simulation);
+                return;
+            }
+
+            var city = simulation.World.Maps.Where(m => m.IsExterior).OrderByDescending(m => m.Width * m.Height).FirstOrDefault();
+            if (city == null)
+            {
+                return;
+            }
+
+            townViewReturn = LayoutText();
+            townViewMapId = city.Id;
+            SetCount(1, view, simulation);
+            panels[0].LookAtMap(city.Id, view);
+            ActiveIndex = 0;
+        }
+
         public void SaveLayout()
         {
-            var parts = panels.Select(p => p.IsFree ? "map:" + p.MapId : "res:" + p.FollowId);
-            PlayerPrefs.SetString(PrefsKey, string.Join("|", parts));
+            PlayerPrefs.SetString(PrefsKey, LayoutText());
             PlayerPrefs.Save();
         }
 
+        /// <summary>The panels as they are, to put back later with <see cref="Restore"/>.</summary>
+        public string Snapshot() => LayoutText();
+
+        public void Restore(string snapshot, TownView view, TownSimulation simulation) => ApplyLayout(snapshot, view, simulation);
+
+        private string LayoutText() => string.Join("|", panels.Select(p => p.IsFree ? "map:" + p.MapId : "res:" + p.FollowId));
+
         /// <summary>Restores the panels from the last session, skipping anyone or anywhere that no longer exists.</summary>
-        public void LoadLayout(TownView view, TownSimulation simulation)
+        public void LoadLayout(TownView view, TownSimulation simulation) => ApplyLayout(PlayerPrefs.GetString(PrefsKey, string.Empty), view, simulation);
+
+        private void ApplyLayout(string saved, TownView view, TownSimulation simulation)
         {
-            var saved = PlayerPrefs.GetString(PrefsKey, string.Empty);
             var entries = saved.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries).Take(MaxPanels).ToList();
             if (entries.Count == 0)
             {

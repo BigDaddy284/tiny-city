@@ -97,10 +97,13 @@ namespace TinyCity.Simulation
         private WorldObject BedIn(TileMap home) =>
             World.Objects.Where(o => o.Location.MapId == home.Id && o.Type == ObjectType.Bed).OrderBy(o => o.Id, System.StringComparer.Ordinal).First();
 
-        /// <summary>Someone moves in now, if there's room. Returns them, or null. Called by the daily roll, and by tests.</summary>
-        internal Resident MoveInNewcomer()
+        /// <summary>
+        /// Someone moves in now, if there's room. Returns them, or null. Called by the daily roll, and by tests;
+        /// <paramref name="anyNumber"/> lifts the limit on newcomers (not on the living) for <see cref="Content.StarterTown.CreateCrowdedTown"/>.
+        /// </summary>
+        internal Resident MoveInNewcomer(bool anyNumber = false)
         {
-            if (!HasRoomForNewcomer)
+            if (anyNumber ? LivingCount >= PopulationRules.MaxLiving : !HasRoomForNewcomer)
             {
                 return null;
             }

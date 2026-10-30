@@ -25,8 +25,8 @@ Tiny City uses a locally installed [Ollama](https://ollama.com) service for resi
 Click **Settings** at the top right of the side panel. Under *Local AI (Ollama)*:
 
 - **Use local AI: On / Off** switches the AI at once. While it is off the game never contacts Ollama and residents use their built-in routine.
-- **Installed models** lists every model Ollama has (the game asks Ollama when the window opens; press **Refresh list** after installing one). Click a model to use it; the game checks and loads it first, and residents use their routine while it loads.
-- If the list can't be read, the window says why. Usually Ollama isn't running: start it and press **Refresh list**.
+- **Installed models** lists every model Ollama has (the game asks Ollama when the window opens; press **Refresh List** after installing one). Click a model to use it; the game checks and loads it first, and residents use their routine while it loads.
+- If the list can't be read, the window says why. Usually Ollama isn't running: start it and press **Refresh List**.
 
 These choices are kept in `player-settings.json` in the game's data folder (`%USERPROFILE%\AppData\LocalLow\<company>\Tiny City\`) and take the place of `enabled` and `model` below. Delete that file to go back to `settings.json`.
 

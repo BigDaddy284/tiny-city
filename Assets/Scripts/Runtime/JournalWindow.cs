@@ -70,7 +70,7 @@ namespace TinyCity.Runtime
 
             GUILayout.BeginArea(new Rect(Area.x + 14f, Area.y + 10f, Area.width - 28f, Area.height - 20f));
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Town journal", styles.Title);
+            GUILayout.Label("Town Journal", styles.Title);
             if (GUILayout.Button("Close (J)", GUILayout.Width(80f)))
             {
                 Toggle();
@@ -124,17 +124,17 @@ namespace TinyCity.Runtime
             GUILayout.EndScrollView();
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Export town history"))
+            if (GUILayout.Button("Export Town History"))
             {
                 game.ExportTownHistory();
             }
 
-            if (GUILayout.Button($"Export {selected.FirstName}'s life story"))
+            if (GUILayout.Button($"Export {selected.FirstName}'s Life Story"))
             {
                 game.ExportLifeStory(selected);
             }
 
-            if (GUILayout.Button("Open exports folder"))
+            if (GUILayout.Button("Open Exports Folder"))
             {
                 ExportStore.OpenFolder();
             }

@@ -106,7 +106,7 @@ namespace TinyCity.Runtime
             GUILayout.BeginHorizontal();
             GUILayout.Label("New town:", styles.Small, GUILayout.Width(70f));
             newTownName = GUILayout.TextField(newTownName ?? string.Empty, SaveSlotIndex.MaxNameLength);
-            if (GUILayout.Button("Start it", GUILayout.Width(70f)))
+            if (GUILayout.Button("Start It", GUILayout.Width(70f)))
             {
                 game.NewTownSlot(newTownName);
                 newTownName = string.Empty;
@@ -116,12 +116,12 @@ namespace TinyCity.Runtime
 
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Open saves folder"))
+            if (GUILayout.Button("Open Saves Folder"))
             {
                 SaveStore.OpenFolder();
             }
 
-            if (GUILayout.Button("Open exports folder"))
+            if (GUILayout.Button("Open Exports Folder"))
             {
                 ExportStore.OpenFolder();
             }
@@ -200,7 +200,7 @@ namespace TinyCity.Runtime
 
             GUI.enabled = !playing;
             var confirming = confirmDelete == slot && Time.unscaledTime < confirmUntil;
-            if (GUILayout.Button(confirming ? "Click again to delete" : "Delete"))
+            if (GUILayout.Button(confirming ? "Click Again to Delete" : "Delete"))
             {
                 if (confirming)
                 {

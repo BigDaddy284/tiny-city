@@ -28,7 +28,7 @@ namespace TinyCity.Runtime
 
         private static readonly string[] TabNames = { "Now", "People", "Memories", "Work", "Timeline" };
         private static readonly string[] FilterNames = { "Everyone", "Living", "Died" };
-        private static readonly string[] OrderNames = { "First name", "Surname", "Oldest", "Youngest" };
+        private static readonly string[] OrderNames = { "First Name", "Surname", "Oldest", "Youngest" };
 
         private readonly GameController game;
         private GuiStyles styles;
@@ -157,12 +157,18 @@ namespace TinyCity.Runtime
 
             GUILayout.EndHorizontal();
 
-            // The journal, then the camera panels: fewer or more, everyone in view, and how many there are now.
+            // The journal, Town View, then the camera panels: fewer or more, and everyone in view.
+            // Each button is as wide as its words, so the five fit the side panel's width.
             var panels = game.Panels;
             GUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(game.JournalOpen, "Town journal", GUI.skin.button, GUILayout.Width(110f)) != game.JournalOpen)
+            if (GUILayout.Toggle(game.JournalOpen, "Town Journal", GUI.skin.button, FitWidth("Town Journal")) != game.JournalOpen)
             {
                 game.ToggleJournal();
+            }
+
+            if (GUILayout.Toggle(panels.InTownView, "Town View", GUI.skin.button, FitWidth("Town View")) != panels.InTownView)
+            {
+                game.ToggleTownView();
             }
 
             if (GUILayout.Button("−", GUILayout.Width(28f)))
@@ -175,20 +181,18 @@ namespace TinyCity.Runtime
                 game.SetPanelCount(panels.Count + 1);
             }
 
-            if (GUILayout.Button("Watch everyone"))
+            if (GUILayout.Button("Watch Everyone", FitWidth("Watch Everyone")))
             {
                 game.WatchEveryone();
             }
 
-            GUILayout.FlexibleSpace();
-            GUILayout.Box(panels.Count.ToString(), CountStyle(), GUILayout.Width(28f));
             GUILayout.EndHorizontal();
 
             DrawPeopleFinder(r);
         }
 
         /// <summary>
-        /// How many people live in the city (in a box like the panel count), a button that opens a list of everyone
+        /// How many people live in the city (in a small box), a button that opens a list of everyone
         /// (filtered and sorted), and a box to find someone by name, whose matches appear underneath as you type.
         /// Picking someone shows them here and in the active panel.
         /// </summary>
@@ -301,6 +305,8 @@ namespace TinyCity.Runtime
         }
 
         /// <summary>A box the same size as the − and + buttons, for the number of camera panels.</summary>
+        private static GUILayoutOption FitWidth(string text) => GUILayout.Width(GUI.skin.button.CalcSize(new GUIContent(text)).x);
+
         private GUIStyle CountStyle()
         {
             if (countStyle == null || countSkin != GUI.skin)
@@ -470,12 +476,12 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Export life story"))
+            if (GUILayout.Button("Export Life Story"))
             {
                 game.ExportLifeStory(r);
             }
 
-            if (GUILayout.Button("In the journal"))
+            if (GUILayout.Button("In the Journal"))
             {
                 game.ShowJournalFor(r);
             }
@@ -533,7 +539,7 @@ namespace TinyCity.Runtime
                 game.TryLoad();
             }
 
-            if (GUILayout.Button(game.SavesOpen ? "Close saves (S)" : "Saved towns (S)"))
+            if (GUILayout.Button(game.SavesOpen ? "Close Saves (S)" : "Saved Towns (S)"))
             {
                 game.ToggleSaves();
             }

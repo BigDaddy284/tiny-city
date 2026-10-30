@@ -15,7 +15,7 @@ namespace TinyCity.Runtime
         private const float MaxWidth = 560f;
         private const float SaveDelaySeconds = 1f;
         private static readonly string[] OnOff = { "On", "Off" };
-        private static readonly string[] Windows = { "Windowed", "Borderless", "Full screen" };
+        private static readonly string[] Windows = { "Windowed", "Borderless", "Full Screen" };
         private static readonly string[] Themes = { "Dark", "Light" };
 
         private readonly GameController game;
@@ -109,6 +109,7 @@ namespace TinyCity.Runtime
             DrawAi(styles);
             DrawSound(styles);
             DrawScreen(styles);
+            DrawPanelTest(styles);
             DrawTheme(styles);
             GUILayout.EndScrollView();
             if (SaveError != null)
@@ -138,7 +139,7 @@ namespace TinyCity.Runtime
             GUILayout.Label("Installed models", styles.Text);
             GUILayout.FlexibleSpace();
             GUI.enabled = !ai.ListingModels;
-            if (GUILayout.Button(ai.ListingModels ? "Looking…" : "Refresh list", GUILayout.Width(110f)))
+            if (GUILayout.Button(ai.ListingModels ? "Looking…" : "Refresh List", GUILayout.Width(110f)))
             {
                 ai.RefreshModelList();
             }
@@ -177,6 +178,21 @@ namespace TinyCity.Runtime
             {
                 GUILayout.Label("While the AI is off, residents choose with their built-in routine. The town plays the same way, just without AI-written words.", styles.Small);
             }
+        }
+
+        private void DrawPanelTest(GuiStyles styles)
+        {
+            GUILayout.Label("CAMERA PANELS", styles.Section);
+            GUILayout.Label($"Fills a test copy of the city with {PanelTest.Largest} people and shows 1 to {PanelTest.Largest} panels in turn, about {Mathf.CeilToInt((float)(PanelTest.Largest * (PanelTest.SettleSeconds + PanelTest.MeasureSeconds) / 60.0))} minutes in all, and times how smoothly each runs, to find how many your PC handles well. Your own town is saved first and comes back afterwards.", styles.Small);
+            var test = game.PanelTest;
+            GUI.enabled = test == null;
+            if (GUILayout.Button(test == null ? "Test Camera Panels" : $"Testing {test.PanelCount} of {PanelTest.Largest}…", GUILayout.Width(220f)))
+            {
+                game.ToggleSettings();
+                game.StartPanelTest();
+            }
+
+            GUI.enabled = true;
         }
 
         private void DrawSound(GuiStyles styles)
