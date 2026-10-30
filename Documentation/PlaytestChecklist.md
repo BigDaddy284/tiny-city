@@ -283,3 +283,14 @@ Towns are saved in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Towns\`: 
 1. **Hidden by default:** zoom in on a room or the park. Beds, tables, the dance floor and other things no longer show their names.
 2. **In use:** when someone sits on a bench, sleeps in a bed or dances, that thing's name appears above it and goes again when they leave.
 3. **Mouse-over:** rest the pointer on a piece of furniture: its name appears, even when zoomed out, and goes when the pointer moves away. Residents' names and door signs still always show.
+
+## Camera cycle
+
+1. **The button:** "Cameras" sits beside Settings at the top of the side panel. It opens the Cameras window; Done or Escape closes it, and opening the journal, saves or Settings closes it too.
+2. **One panel:** turn Cycle cameras on, Every 30 min, Show Residents Only, and play at a fast speed. The panel moves to the next resident every half hour of game time, wrapping round after the last. The window says how long until the next turn, and Next Now moves on at once.
+3. **Several panels:** with four panels open, each turn shows four different residents, then the next four. Add or remove a panel and the cycle fills them straight away.
+4. **Buildings Only:** panels become free cameras looking into businesses and lived-in homes, never an empty flat. With Skip empty buildings on, only places with someone inside are shown.
+5. **Half and Half:** with four panels, the first two follow residents and the other two look into buildings. With one panel it goes resident, building, resident, building.
+6. **Cycle All:** everyone, then every building, in one list.
+7. **Pauses:** Town View pauses the cycle (the window says so) and pressing it again lets it carry on. The camera panel test also pauses it.
+8. **Kept:** quit and restart: the choices are still set, in player-settings.json.

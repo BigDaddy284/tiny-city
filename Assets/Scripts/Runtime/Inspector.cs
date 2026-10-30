@@ -130,12 +130,17 @@ namespace TinyCity.Runtime
             GUILayout.BeginHorizontal();
             GUILayout.Label("Tiny City", styles.Title);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Toggle(game.SettingsOpen, "Settings", GUI.skin.button, GUILayout.Width(90f), GUILayout.Height(28f)) != game.SettingsOpen)
+            if (GUILayout.Toggle(game.CamerasOpen, "Cameras", GUI.skin.button, FitWidth("Cameras"), GUILayout.Height(28f)) != game.CamerasOpen)
+            {
+                game.ToggleCameras();
+            }
+
+            if (GUILayout.Toggle(game.SettingsOpen, "Settings", GUI.skin.button, FitWidth("Settings"), GUILayout.Height(28f)) != game.SettingsOpen)
             {
                 game.ToggleSettings();
             }
 
-            if (GUILayout.Button("Hide ▶", GUILayout.Width(70f), GUILayout.Height(28f)))
+            if (GUILayout.Button("Hide ▶", FitWidth("Hide ▶"), GUILayout.Height(28f)))
             {
                 game.ToggleSidebar();
             }
