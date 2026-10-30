@@ -74,6 +74,8 @@ These are drawn by the game's own art code (`Tools/ArtPreview`), the same code t
 ### Watching
 - **Camera panels:** up to sixteen at once, each following a resident or looking around any place. **Watch Everyone** gives each resident their own panel, and **Town View** shows the whole city in one
 - **Hover cards:** point at a building to see its name, whether it's open and who is inside, and double-click to look inside
+- **Auto cycle:** the **Cameras** button sets the panels to take turns by themselves every 30 minutes to 12 game hours, showing residents, buildings, half of each or everything, shared out across however many panels are open
+- **Labels on demand:** furniture names show while someone is using it or when you point at it, so the view stays clear
 - **The inspector:** a side panel with the chosen resident's needs, plans, people, memories, work, money and life story, and a searchable list of everyone in town
 - **The town journal:** every birthday, friendship, romance, illness, move and death, searchable and exportable as text, with pop-up notifications for the big moments
 - **Saved towns:** several towns side by side, with autosave, copying, renaming and exporting
