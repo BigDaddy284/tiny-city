@@ -15,7 +15,7 @@ namespace TinyCity.Simulation.Configuration
     /// </summary>
     public sealed class PanelTest
     {
-        public const int Largest = 16;
+        public const int Largest = 50;
         public const double SettleSeconds = 1.5;
         public const double MeasureSeconds = 4.0;
 
