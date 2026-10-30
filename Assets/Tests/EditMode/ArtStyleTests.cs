@@ -135,8 +135,9 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void ResidentsAndMoods_AreLocked()
         {
+            // The first ten; the five who came when the city grew have a fingerprint of their own below.
             var hash = new Fingerprint();
-            foreach (var resident in StarterTown.CreateResidents(World))
+            foreach (var resident in StarterTown.CreateResidents(World).Take(10))
             {
                 var look = ResidentLook.For(resident.Id, resident.AgeYears);
                 foreach (var pose in ResidentArtTests.AllPoses())
@@ -151,6 +152,22 @@ namespace TinyCity.Tests.EditMode
             }
 
             Assert.That(hash.Value, Is.EqualTo(8545702447285596364UL), "Residents. " + Locked);
+        }
+
+        [Test]
+        public void TheFiveNewerResidents_AreLocked()
+        {
+            var hash = new Fingerprint();
+            foreach (var resident in StarterTown.CreateResidents(World).Skip(10))
+            {
+                var look = ResidentLook.For(resident.Id, resident.AgeYears);
+                foreach (var pose in ResidentArtTests.AllPoses())
+                {
+                    hash.Add(ResidentArt.Render(look, pose));
+                }
+            }
+
+            Assert.That(hash.Value, Is.EqualTo(12305934255016278853UL), "Marcus, Lola, Danny, Ruby and Walter. " + Locked);
         }
 
         [Test]

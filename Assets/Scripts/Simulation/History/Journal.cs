@@ -49,7 +49,7 @@ namespace TinyCity.Simulation.History
             }
         }
 
-        /// <summary>The big moments that pop up as a notification: deaths, love, new life stages, serious illness and newcomers.</summary>
+        /// <summary>The big moments that pop up as a notification: deaths, love, new life stages, serious illness, newcomers and new jobs.</summary>
         public static bool IsNotable(TownEventKind kind)
         {
             switch (kind)
@@ -66,6 +66,7 @@ namespace TinyCity.Simulation.History
                 case TownEventKind.Homeless:
                 case TownEventKind.Born:
                 case TownEventKind.MovedOut:
+                case TownEventKind.NewJob:
                     return true;
                 default:
                     return false;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyCity.Simulation.Economy;
+using TinyCity.Simulation.Residents;
 
 namespace TinyCity.Simulation.World
 {
@@ -14,7 +15,7 @@ namespace TinyCity.Simulation.World
         private readonly List<Portal> portals;
         private readonly HashSet<Location> blocked;
 
-        public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals, IEnumerable<Business> businesses = null, Community.CommunityCalendar calendar = null)
+        public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals, IEnumerable<Business> businesses = null, Community.CommunityCalendar calendar = null, IEnumerable<Job> jobOpenings = null)
         {
             if (string.IsNullOrWhiteSpace(townId))
             {
@@ -60,6 +61,15 @@ namespace TinyCity.Simulation.World
                 }
             }
 
+            JobOpenings = (jobOpenings ?? Enumerable.Empty<Job>()).ToList();
+            foreach (var job in JobOpenings)
+            {
+                if (!objectsById.ContainsKey(job.WorkObjectId) || JobOpenings.Count(j => j.WorkObjectId == job.WorkObjectId) != 1)
+                {
+                    throw new ArgumentException($"Job opening '{job.Title}' needs its own existing work object.");
+                }
+            }
+
             Calendar = calendar ?? new Community.CommunityCalendar(null);
             foreach (var e in Calendar.Events)
             {
@@ -95,6 +105,12 @@ namespace TinyCity.Simulation.World
 
         /// <summary>Shops, café, bakery and clinic, each with its own interior map.</summary>
         public IReadOnlyList<Business> Businesses { get; }
+
+        /// <summary>
+        /// Jobs that wait for someone to take them, such as running the city's venues: each is filled by a jobseeker
+        /// (see <c>TownSimulation.FillVacancies</c>) whenever nobody alive has it.
+        /// </summary>
+        public IReadOnlyList<Job> JobOpenings { get; }
 
         /// <summary>The village calendar of community events.</summary>
         public Community.CommunityCalendar Calendar { get; }

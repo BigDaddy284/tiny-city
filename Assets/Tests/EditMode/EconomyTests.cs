@@ -219,10 +219,10 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void AWeekInTheTenResidentTown_NobodyIsStuck_AndTheBooksBalance()
+        public void AWeekInTheFifteenResidentTown_NobodyIsStuck_AndTheBooksBalance()
         {
             var sim = StarterTown.CreateNewGame();
-            Assert.That(sim.Residents.Count, Is.EqualTo(10));
+            Assert.That(sim.Residents.Count, Is.EqualTo(15));
             var start = sim.Residents.ToDictionary(r => r.Id, r => r.MoneyPence);
             var lowSince = new Dictionary<(string, NeedType), long>();
             var worstStretch = 0L;

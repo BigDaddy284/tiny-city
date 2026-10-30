@@ -44,18 +44,24 @@ namespace TinyCity.Simulation.Content
 
         /// <summary>
         /// Makes the newcomer with this id, standing at <paramref name="arrival"/>, with no home yet (the simulation
-        /// gives them one). Names already taken by someone in town are skipped where possible.
+        /// gives them one). Their surname is one nobody in town has ever had, so a shared surname only ever comes
+        /// from family; with every surname taken (more newcomers than names) the rolled one is kept.
         /// </summary>
-        public static Resident Create(string id, int day, Location arrival, ICollection<string> takenNames)
+        public static Resident Create(string id, int day, Location arrival, ICollection<string> takenSurnames)
         {
             double Roll(int salt) => Chance.Roll("newcomer:" + id, 0, salt);
 
             var first = FirstNames[(int)(Roll(1) * FirstNames.Length)];
-            var last = LastNames[(int)(Roll(2) * LastNames.Length)];
-            for (var attempt = 0; attempt < 20 && takenNames.Contains(first + " " + last); attempt++)
+            var start = (int)(Roll(2) * LastNames.Length);
+            var last = LastNames[start];
+            for (var step = 0; step < LastNames.Length; step++)
             {
-                first = FirstNames[(int)(Roll(100 + attempt) * FirstNames.Length)];
-                last = LastNames[(int)(Roll(200 + attempt) * LastNames.Length)];
+                var candidate = LastNames[(start + step) % LastNames.Length];
+                if (!takenSurnames.Contains(candidate))
+                {
+                    last = candidate;
+                    break;
+                }
             }
 
             var age = 20 + (int)(Roll(3) * 41);

@@ -56,12 +56,12 @@ namespace TinyCity.Tests.EditMode
         public void EmptyTower_IsNamedForTheTowerAndOpensItsFirstFlat()
         {
             var sim = StarterTown.CreateNewGame();
-            var flats = sim.World.Maps.Where(m => m.Id.StartsWith(StarterTown.FlatMapPrefix + "a")).Select(m => m.Id).Reverse().ToList();
+            var flats = sim.World.Maps.Where(m => m.Id.StartsWith(StarterTown.FlatMapPrefix + "b")).Select(m => m.Id).Reverse().ToList();
             Assert.That(flats.Count, Is.EqualTo(8));
             var info = PlaceInfo.Of(sim, flats);
-            Assert.That(info.Title, Is.EqualTo("Skyline Tower"));
+            Assert.That(info.Title, Is.EqualTo("Aurora Tower"));
             Assert.That(info.Lines, Is.EqualTo(new[] { "Nobody lives here", "Nobody inside" }));
-            Assert.That(sim.World.GetMap(info.EnterMapId).Name, Is.EqualTo("Skyline Tower, flat 1"));
+            Assert.That(sim.World.GetMap(info.EnterMapId).Name, Is.EqualTo("Aurora Tower, flat 1"));
         }
 
         [Test]

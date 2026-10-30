@@ -34,18 +34,18 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void TenStarterResidents_AllLookDifferent()
+        public void FifteenStarterResidents_AllLookDifferent()
         {
             var world = StarterTown.CreateWorld();
             var looks = StarterTown.CreateResidents(world).Select(r => ResidentLook.For(r.Id, r.AgeYears)).ToList();
-            Assert.That(looks.Count, Is.EqualTo(10));
-            Assert.That(looks.Select(l => (l.Top, l.Trim)).Distinct().Count(), Is.EqualTo(10), "everyone wears their own colours (techwear and its neon piping)");
+            Assert.That(looks.Count, Is.EqualTo(15));
+            Assert.That(looks.Select(l => (l.Top, l.Trim)).Distinct().Count(), Is.EqualTo(15), "everyone wears their own colours (techwear and its neon piping)");
             Assert.That(looks.All(l => l.Trim != null), Is.True, "everyone's clothes have neon piping");
-            Assert.That(looks.Select(l => (l.Hair, l.Style)).Distinct().Count(), Is.EqualTo(10), "and has their own hair");
+            Assert.That(looks.Select(l => (l.Hair, l.Style)).Distinct().Count(), Is.EqualTo(15), "and has their own hair");
 
             var pose = new ResidentPose(ResidentAction.Stand, Stance.Standing, Facing.DownRight, 0);
             var pictures = looks.Select(l => Convert.ToBase64String(ResidentArt.Render(l, pose).ToBytesBottomUp())).ToList();
-            Assert.That(pictures.Distinct().Count(), Is.EqualTo(10));
+            Assert.That(pictures.Distinct().Count(), Is.EqualTo(15));
         }
 
         [Test]

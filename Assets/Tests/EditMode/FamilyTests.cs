@@ -40,7 +40,7 @@ namespace TinyCity.Tests.EditMode
             var baby = sim.HaveBaby(mabel, tom);
 
             Assert.That(baby, Is.Not.Null);
-            Assert.That(baby.Id, Is.EqualTo("res-0011"));
+            Assert.That(baby.Id, Is.EqualTo("res-0016"), "the next id after the fifteen starters");
             Assert.That(baby.AgeYears, Is.EqualTo(0));
             Assert.That(baby.IsBaby, Is.True);
             Assert.That(baby.LifeStage, Is.EqualTo(LifeStage.Baby));
