@@ -29,6 +29,9 @@ namespace TinyCity.Simulation.History
         Homeless,
         Born,
         MovedOut,
+
+        // Added with jobs at the venues.
+        NewJob,
     }
 
     /// <summary>Something that happened in the village and belongs to its history, separate from any one resident's memories.</summary>

@@ -11,7 +11,7 @@ namespace TinyCity.Simulation.Content
 {
     /// <summary>
     /// The starter town: a city with sixteen cottages and two apartment towers of eight flats, a general store, café,
-    /// bakery, clinic, neon bar, cue club, bowling alley, arcade, gym and market square, and ten residents.
+    /// bakery, clinic, neon bar, cue club, bowling alley, arcade, gym and market square, and fifteen residents.
     /// Ids here are stable because save files refer to them, so add new content around the existing ids.
     /// </summary>
     public static class StarterTown
@@ -35,6 +35,11 @@ namespace TinyCity.Simulation.Content
         public const string SamuelId = "res-0008";
         public const string FelixId = "res-0009";
         public const string EdithId = "res-0010";
+        public const string MarcusId = "res-0011";
+        public const string LolaId = "res-0012";
+        public const string DannyId = "res-0013";
+        public const string RubyId = "res-0014";
+        public const string WalterId = "res-0015";
         public const string StoreMapId = "map-store";
         public const string CafeMapId = "map-cafe";
         public const string BakeryMapId = "map-bakery";
@@ -454,7 +459,7 @@ namespace TinyCity.Simulation.Content
                 objects.Add(new WorldObject($"obj-gym-machine-{i + 1}", "Exercise machine", ObjectType.GymMachine, Find(GymMapId, GymRows, 'm', i)));
             }
 
-            return new TownWorld(TownId, "Tiny City", maps, objects, portals, CreateBusinesses(), new CommunityCalendar(CreateCommunityEvents()));
+            return new TownWorld(TownId, "Tiny City", maps, objects, portals, CreateBusinesses(), new CommunityCalendar(CreateCommunityEvents()), VenueJobs);
         }
 
         /// <summary>The market square, the fountain and the benches the bigger city added outdoors.</summary>
@@ -501,25 +506,37 @@ namespace TinyCity.Simulation.Content
                 new ShopItem("cocktail", "A cocktail", Money.Pounds(5.5), 40),
             }, adultsOnly: true);
 
-            // Nobody in town works at these yet, so they keep to their hours (see TownEconomy.IsOpen).
-            yield return new Business(CueClubId, "Cue club", CueClubMapId, GameTime.MinuteOfDayFor(12, 0), GameTime.MinuteOfDayFor(23, 30), Job.EveryDay, new[]
+            // The venues' hours are the shifts of their jobs (VenueJobs). Until a jobseeker takes one, nobody works
+            // there and the venue keeps to its hours; after that it opens only while its worker is in (TownEconomy.IsOpen).
+            yield return new Business(CueClubId, "Cue club", CueClubMapId, CueClubJob.StartMinuteOfDay, CueClubJob.EndMinuteOfDay, CueClubJob.WorkDays, new[]
             {
                 new ShopItem("pool-game", "A game of pool", Money.Pounds(2), 60),
                 new ShopItem("snooker-frame", "A frame of snooker", Money.Pounds(3), 40),
             });
-            yield return new Business(BowlingId, "Strike Lanes", BowlingMapId, GameTime.MinuteOfDayFor(10, 0), GameTime.MinuteOfDayFor(22, 0), Job.EveryDay, new[]
+            yield return new Business(BowlingId, "Strike Lanes", BowlingMapId, BowlingJob.StartMinuteOfDay, BowlingJob.EndMinuteOfDay, BowlingJob.WorkDays, new[]
             {
                 new ShopItem("bowling-game", "A game of bowling", Money.Pounds(4.5), 60),
             });
-            yield return new Business(ArcadeId, "Pixel Arcade", ArcadeMapId, GameTime.MinuteOfDayFor(10, 0), GameTime.MinuteOfDayFor(22, 0), Job.EveryDay, new[]
+            yield return new Business(ArcadeId, "Pixel Arcade", ArcadeMapId, ArcadeJob.StartMinuteOfDay, ArcadeJob.EndMinuteOfDay, ArcadeJob.WorkDays, new[]
             {
                 new ShopItem("arcade-credits", "Arcade credits", Money.Pounds(1.5), 80),
             });
-            yield return new Business(GymId, "Pulse Gym", GymMapId, GameTime.MinuteOfDayFor(6, 0), GameTime.MinuteOfDayFor(22, 0), Job.EveryDay, new[]
+            yield return new Business(GymId, "Pulse Gym", GymMapId, GymJob.StartMinuteOfDay, GymJob.EndMinuteOfDay, GymJob.WorkDays, new[]
             {
                 new ShopItem("gym-pass", "A day at the gym", Money.Pounds(3.5), 60),
             });
         }
+
+        private static Job CueClubJob => new Job("Cue club host", "obj-cue-club-counter", GameTime.MinuteOfDayFor(16, 0), GameTime.MinuteOfDayFor(23, 30), TueToSun, Money.Pounds(11));
+
+        private static Job BowlingJob => new Job("Lanes attendant", "obj-bowling-counter", GameTime.MinuteOfDayFor(12, 0), GameTime.MinuteOfDayFor(20, 0), TueToSun, Money.Pounds(10.5));
+
+        private static Job ArcadeJob => new Job("Arcade attendant", "obj-arcade-counter", GameTime.MinuteOfDayFor(14, 0), GameTime.MinuteOfDayFor(22, 0), MonToSat, Money.Pounds(10));
+
+        private static Job GymJob => new Job("Gym instructor", "obj-gym-desk", GameTime.MinuteOfDayFor(7, 0), GameTime.MinuteOfDayFor(15, 0), MonToSat, Money.Pounds(11));
+
+        /// <summary>The venues' jobs, held at the start by Marcus, Lola, Danny and Ruby; one that comes free goes to a jobseeker.</summary>
+        public static IReadOnlyList<Job> VenueJobs => new[] { GymJob, BowlingJob, ArcadeJob, CueClubJob };
 
         /// <summary>
         /// The village calendar: a Sunday afternoon get-together by the pond, a Wednesday quiz night at the café, a
@@ -678,6 +695,52 @@ namespace TinyCity.Simulation.Content
                 needsLevel = 72, needAdjustments = { [NeedType.Energy] = 80 },
                 money = Money.Pounds(1500), groceries = 5, rent = Money.Pounds(90), income = Money.Pounds(240), incomeLabel = "Pension",
             },
+
+            // The venues' staff and a retired neighbour, who moved in when the city grew.
+            new Design
+            {
+                id = MarcusId, first = "Marcus", last = "Vale", age = 29, birthday = 64, colour = "#4FB38A",
+                personality = new Personality(active: 0.9, sociable: 0.6, tidy: 0.65, bookish: 0.25),
+                homeMapId = "map-flat-a1", bedId = "obj-flat-a1-bed",
+                job = GymJob,
+                needsLevel = 76, needAdjustments = { [NeedType.Energy] = 90, [NeedType.Exercise] = 60 },
+                money = Money.Pounds(380), groceries = 4, rent = Money.Pounds(100),
+            },
+            new Design
+            {
+                id = LolaId, first = "Lola", last = "Brightwater", age = 22, birthday = 183, colour = "#E06AA8",
+                personality = new Personality(active: 0.6, sociable: 0.85, tidy: 0.35, bookish: 0.3),
+                homeMapId = "map-flat-a2", bedId = "obj-flat-a2-bed",
+                job = BowlingJob,
+                needsLevel = 74, needAdjustments = { [NeedType.Energy] = 85, [NeedType.Fun] = 55 },
+                money = Money.Pounds(180), groceries = 3, rent = Money.Pounds(100),
+            },
+            new Design
+            {
+                id = DannyId, first = "Danny", last = "Cho", age = 20, birthday = 238, colour = "#5A8FE0",
+                personality = new Personality(active: 0.4, sociable: 0.45, tidy: 0.3, bookish: 0.65),
+                homeMapId = "map-flat-a3", bedId = "obj-flat-a3-bed",
+                job = ArcadeJob,
+                needsLevel = 72, needAdjustments = { [NeedType.Energy] = 80, [NeedType.Social] = 55 },
+                money = Money.Pounds(150), groceries = 2, rent = Money.Pounds(100),
+            },
+            new Design
+            {
+                id = RubyId, first = "Ruby", last = "Starling", age = 41, birthday = 21, colour = "#C94F4F",
+                personality = new Personality(active: 0.45, sociable: 0.75, tidy: 0.6, bookish: 0.45),
+                homeMapId = "map-flat-a4", bedId = "obj-flat-a4-bed",
+                job = CueClubJob,
+                needsLevel = 74, needAdjustments = { [NeedType.Energy] = 85 },
+                money = Money.Pounds(520), groceries = 4, rent = Money.Pounds(100),
+            },
+            new Design
+            {
+                id = WalterId, first = "Walter", last = "Penn", age = 76, birthday = 309, colour = "#9C8B6E", openToRomance = false,
+                personality = new Personality(active: 0.35, sociable: 0.5, tidy: 0.7, bookish: 0.7),
+                homeMapId = "map-cottage-11", bedId = "obj-cottage11-bed",
+                needsLevel = 72, needAdjustments = { [NeedType.Energy] = 82 },
+                money = Money.Pounds(900), groceries = 5, rent = Money.Pounds(120), income = Money.Pounds(250), incomeLabel = "Pension",
+            },
         };
 
         /// <summary>Each starter resident's hobbies, chosen to suit them; shared ones give neighbours something to do together.</summary>
@@ -693,6 +756,11 @@ namespace TinyCity.Simulation.Content
             [SamuelId] = new[] { "chess", "piano" },
             [FelixId] = new[] { "chess", "painting" },
             [EdithId] = new[] { "knitting", "gardening" },
+            [MarcusId] = new[] { "fishing", "gardening" },
+            [LolaId] = new[] { "painting", "baking" },
+            [DannyId] = new[] { "chess", "piano" },
+            [RubyId] = new[] { "chess", "knitting" },
+            [WalterId] = new[] { "fishing", "gardening" },
         };
 
         private static IEnumerable<string> HobbiesOf(string residentId) =>
@@ -777,6 +845,26 @@ namespace TinyCity.Simulation.Content
                 case EdithId:
                     yield return (8, "I've lived in Tiny City all my eighty-two years and remember when the pond was a well.", new[] { "obj-village-bench-pond", "social" });
                     yield return (5, "My knees aren't what they were, but a cup of coffee at the café keeps me cheerful.", new[] { CafeMapId, "coffee", "social" });
+                    break;
+                case MarcusId:
+                    yield return (7, "I run the Pulse Gym's early shift; there's nothing like an empty gym at seven in the morning.", new[] { GymMapId, "obj-gym-desk", "work", "exercise" });
+                    yield return (4, "I moved into Skyline Tower for the view, and I'm still learning everyone's names.", new[] { "map-flat-a1", "social" });
+                    break;
+                case LolaId:
+                    yield return (7, "I hand out the shoes at Strike Lanes and know every regular's size by heart.", new[] { BowlingMapId, "obj-bowling-counter", "work" });
+                    yield return (5, "I love a busy room and a loud laugh; quiet evenings make me restless.", new[] { "social", "fun" });
+                    break;
+                case DannyId:
+                    yield return (7, "I look after the Pixel Arcade, and I hold the high score on two of its machines.", new[] { ArcadeMapId, "obj-arcade-counter", "work" });
+                    yield return (4, "I'm better with machines than with people, but I'm working on it.", new[] { "chat", "social" });
+                    break;
+                case RubyId:
+                    yield return (7, "I run the cue club in the evenings; I've played pool since I could see over the table.", new[] { CueClubMapId, "obj-cue-club-counter", "work" });
+                    yield return (5, "A good game of snooker settles any argument, as far as I'm concerned.", new[] { "fun", "social" });
+                    break;
+                case WalterId:
+                    yield return (7, "I retired from the railways and moved into Birch Cottage to be near the park.", new[] { "map-cottage-11", "social" });
+                    yield return (5, "A morning by the pond with a fishing rod is my idea of a good day.", new[] { "obj-village-bench-pond", "fishing", "fun" });
                     break;
             }
         }

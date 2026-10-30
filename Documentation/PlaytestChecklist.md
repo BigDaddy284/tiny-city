@@ -263,3 +263,10 @@ Towns are saved in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Towns\`: 
 2. **Zoom out:** in a free camera over the city, scroll out. It stops once the whole city fits in the panel and goes no further. Fully zoomed out, dragging does nothing. On an ultra-wide screen the space beside the city is empty: no building interiors show next to it.
 3. **Zoom in:** scroll in. It goes much closer than before, to about six rows of tiles, and zooms towards the pointer. Dragging pans but never leaves the city's edge.
 4. **Following:** a panel following someone outdoors can zoom out to the whole city and in to the same close view. Indoors the room still fits the panel.
+
+## Venue staff, fifteen residents and surnames
+
+1. **Fifteen residents:** a new town has fifteen people. Marcus (Pulse Gym, 07:00–15:00 Monday to Saturday), Lola (Strike Lanes, 12:00–20:00 Tuesday to Sunday), Danny (Pixel Arcade, 14:00–22:00 Monday to Saturday) and Ruby (cue club, 16:00–23:30 Tuesday to Sunday) live in Skyline Tower and work the venues; Walter, retired, lives in a cottage. Each has their own look.
+2. **Venues open with their staff:** hover over each venue during its hours: "Open now" while its worker is in, "Closed, nobody at work" if they're off sick, and "Closed today" on its day off. The Aurora tower's card says "Nobody lives here".
+3. **Taking a job:** if a venue worker dies, a newcomer or grown-up child on jobseeker's allowance takes the job at 09:00 the next day, with a notification and a journal entry under Life. Their allowance stops and they're paid by the hour.
+4. **Surnames:** run a town with newcomers for a few weeks. No newcomer shares a surname with anyone who lives or has lived in the city; only babies take a parent's surname.

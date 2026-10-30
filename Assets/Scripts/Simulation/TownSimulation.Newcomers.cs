@@ -36,6 +36,7 @@ namespace TinyCity.Simulation
             if (Time.MinuteOfDay == PopulationRules.HousingMinute)
             {
                 HouseTheHomeless();
+                FillVacancies();
             }
 
             if (!NewcomersEnabled || Time.MinuteOfDay != PopulationRules.ArrivalMinute || !PopulationRules.SomeoneArrives(World.TownId, Time.Day))
@@ -112,8 +113,9 @@ namespace TinyCity.Simulation
                 return null;
             }
 
-            var taken = new HashSet<string>(residents.Select(r => r.FullName));
-            var newcomer = Newcomers.Create(id, Time.Day, arrival.Value, taken);
+            // Everyone who has ever lived here, the dead too: their family name is still theirs.
+            var surnames = new HashSet<string>(residents.Select(r => r.LastName));
+            var newcomer = Newcomers.Create(id, Time.Day, arrival.Value, surnames);
             AddResident(newcomer);
             if (home != null)
             {

@@ -463,7 +463,7 @@ namespace TinyCity.Tests.EditMode
             }
 
             Assert.That(worstStretch, Is.LessThan(3 * 60), $"a critical need stayed near zero too long: {worst}");
-            Assert.That(sim.Residents.Count, Is.EqualTo(10), "nobody is ever removed from the records");
+            Assert.That(sim.Residents.Count, Is.EqualTo(15), "nobody is ever removed from the records");
             Assert.That(sim.Residents.Where(r => r.IsAlive).All(r => r.Health > 0), Is.True);
             Assert.That(sim.Residents.Where(r => !r.IsAlive).All(r => r.DiedAt != null && r.CauseOfDeath.Length > 0), Is.True);
             Assert.That(sim.Memories.All.Any(m => m.Summary.Contains("birthday")), Is.True);

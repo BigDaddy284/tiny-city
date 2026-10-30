@@ -29,7 +29,7 @@ namespace TinyCity.Tests.EditMode
             var sim = StarterTown.CreateNewGame();
             sim.Advance(8 * GameTime.MinutesPerDay);
 
-            Assert.That(sim.Residents.Count, Is.EqualTo(10));
+            Assert.That(sim.Residents.Count, Is.EqualTo(15));
             Assert.That(new SimulationSettings().newcomers, Is.True, "the game itself turns them on by default");
         }
 
@@ -54,7 +54,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(awayAtNight, Is.Empty);
 
             var first = newcomers[0];
-            Assert.That(first.Id, Is.EqualTo("res-0011"));
+            Assert.That(first.Id, Is.EqualTo("res-0016"));
             Assert.That(first.MovedInDay, Is.GreaterThanOrEqualTo(PopulationRules.FirstArrivalDay));
             Assert.That(StarterHomes().Contains(first.HomeMapId), Is.False, "a home nobody lived in");
             Assert.That(sim.World.GetMap(first.HomeMapId).IsExterior, Is.False);
@@ -95,9 +95,11 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(arrived.Count, Is.EqualTo(PopulationRules.MaxNewcomers));
             Assert.That(arrived.Select(r => r.HomeMapId).Distinct().Count(), Is.EqualTo(arrived.Count), "one home each");
-            Assert.That(arrived.Any(r => r.IsHomeless), Is.False, "22 free homes for 10 newcomers");
+            Assert.That(arrived.Any(r => r.IsHomeless), Is.False, "17 free homes for 10 newcomers");
             Assert.That(arrived.Select(r => r.Id).Distinct().Count(), Is.EqualTo(arrived.Count));
             Assert.That(arrived.Select(r => r.FullName).Distinct().Count(), Is.EqualTo(arrived.Count), "no two share a name");
+            var surnames = sim.Residents.Select(r => r.LastName).ToList();
+            Assert.That(surnames.Distinct().Count(), Is.EqualTo(surnames.Count), "nobody shares a surname with anyone already here: " + string.Join(", ", surnames));
 
             // A newcomer dying doesn't make room for another: ten is the most who can ever come.
             sim.Die(arrived[0], "old age");
@@ -105,11 +107,24 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void ANewcomer_NeverTakesASurnameSomeoneHereAlreadyHas()
+        {
+            var arrival = new Location(StarterTown.VillageMapId, new GridPos(41, 38));
+            var rolled = Newcomers.Create("res-0016", 1, arrival, new HashSet<string>()).LastName;
+
+            // Every surname but one is taken, the rolled one among them, so only the free one will do.
+            var all = Enumerable.Range(0, 200).Select(i => Newcomers.Create($"res-{1000 + i}", 1, arrival, new HashSet<string>()).LastName).Distinct().ToList();
+            var free = all.First(n => n != rolled);
+            var taken = new HashSet<string>(all.Where(n => n != free));
+            Assert.That(Newcomers.Create("res-0016", 1, arrival, taken).LastName, Is.EqualTo(free));
+        }
+
+        [Test]
         public void WithEveryHomeTaken_ANewcomerSleepsOnABench_UntilAHomeComesFree()
         {
             var sim = NewCity();
             var homes = sim.FreeHomes().ToList();
-            Assert.That(homes.Count, Is.EqualTo(22), "32 homes, 10 lived in");
+            Assert.That(homes.Count, Is.EqualTo(17), "32 homes, 15 lived in");
             var lodgers = new List<Resident>();
             foreach (var home in homes)
             {
@@ -145,16 +160,17 @@ namespace TinyCity.Tests.EditMode
             sim.MakeHomeless(mabel, "Test.");
             Lodger(sim, $"res-9{lodgers:000}", StarterTown.CottageMapId);
             Assert.That(sim.FreeHomes().Any(), Is.False);
-            var benchNights = 0;
+            // Each night she is found asleep on a bench at 02:00 or 04:00 (she may be up for a bite in between).
+            var benchNights = new HashSet<int>();
             for (var minute = 0; minute < 5 * GameTime.MinutesPerDay; minute++)
             {
                 sim.Tick();
-                if (sim.Time.Hour == 3 && sim.Time.Minute == 0)
+                if ((sim.Time.Hour == 2 || sim.Time.Hour == 4) && sim.Time.Minute == 0)
                 {
                     sim.World.TryGetObject(mabel.TargetObjectId ?? string.Empty, out var bench);
                     if (mabel.ActivityId == "sleep" && bench != null && bench.Type == ObjectType.Bench)
                     {
-                        benchNights++;
+                        benchNights.Add(sim.Time.Day);
                     }
                 }
 
@@ -164,7 +180,7 @@ namespace TinyCity.Tests.EditMode
                 }
             }
 
-            Assert.That(benchNights, Is.EqualTo(5));
+            Assert.That(benchNights.Count, Is.EqualTo(5));
             Assert.That(mabel.IsAlive, Is.True);
             Assert.That(mabel.Needs[NeedType.Hunger], Is.GreaterThan(10));
             Assert.That(sim.Residents.Where(r => r.IsAlive && !r.IsHomeless).All(r => r.ActivityId != "leftovers"), Is.True, "leftovers are only for the homeless");

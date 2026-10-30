@@ -115,6 +115,21 @@ namespace TinyCity.Art
 
             // Edith: white hair in a bun, glasses and a long plum coat with amber piping over a dark skirt.
             [StarterTown.EdithId] = new ResidentLook(Palette.Skin[0], Palette.HairWhite, HairStyle.Bun, Palette.TechPlum, Palette.TechPants, skirt: true, glasses: true, trim: Palette.NeonAmber, coat: true),
+
+            // Marcus, the gym instructor: short brown hair and a navy training top with lime piping.
+            [StarterTown.MarcusId] = new ResidentLook(Palette.Skin[3], Palette.HairBrown, HairStyle.Short, Palette.TechNavy, Palette.CargoGrey, trim: Palette.NeonLime),
+
+            // Lola, from the bowling lanes: a ginger ponytail with violet tips and a wine top and skirt piped in pink.
+            [StarterTown.LolaId] = new ResidentLook(Palette.Skin[1], Palette.HairGinger, HairStyle.Ponytail, Palette.TechWine, Palette.TechCharcoal, skirt: true, trim: Palette.NeonPink, hairTips: Palette.NeonViolet),
+
+            // Danny, from the arcade: messy black hair, a pink visor and a charcoal hoodie with cyan piping.
+            [StarterTown.DannyId] = new ResidentLook(Palette.Skin[2], Palette.HairBlack, HairStyle.Messy, Palette.TechCharcoal, Palette.TechPants, trim: Palette.NeonCyan, visor: Palette.NeonPink),
+
+            // Ruby, who runs the cue club: long dark hair and a plum jacket with mint piping.
+            [StarterTown.RubyId] = new ResidentLook(Palette.Skin[4], Palette.HairDarkBrown, HairStyle.Long, Palette.TechPlum, Palette.TechCharcoal, trim: Palette.NeonMint),
+
+            // Walter, retired: short white hair, a beard, glasses and a long olive coat with amber piping.
+            [StarterTown.WalterId] = new ResidentLook(Palette.Skin[1], Palette.HairWhite, HairStyle.Short, Palette.TechOlive, Palette.TechPants, beard: true, glasses: true, trim: Palette.NeonAmber, coat: true),
         };
 
         /// <summary>

@@ -54,10 +54,9 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = StarterTown.CreateNewGame();
             var mabel = sim.Residents[0];
-            var empty = sim.World.Objects.Where(o => o.Type == ObjectType.Bed && (o.Location.MapId.StartsWith(StarterTown.FlatMapPrefix, StringComparison.Ordinal) || o.Location.MapId == "map-cottage-11")).ToList();
+            var empty = sim.World.Objects.Where(o => o.Type == ObjectType.Bed && sim.Residents.All(r => r.HomeMapId != o.Location.MapId) && sim.World.BusinessOnMap(o.Location.MapId) == null).ToList();
 
-            Assert.That(empty.Count, Is.EqualTo(17));
-            Assert.That(empty.All(bed => sim.Residents.All(r => r.HomeMapId != bed.Location.MapId)), Is.True, "nobody lives in the new homes yet");
+            Assert.That(empty.Select(bed => bed.Location.MapId).Distinct().Count(), Is.EqualTo(17), "32 homes, 15 lived in");
             Assert.That(empty.Any(bed => sim.Planner.IsAvailableTo(mabel, bed)), Is.False, "and nobody can use them");
         }
 
@@ -66,13 +65,24 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = StarterTown.CreateNewGame();
             var r = sim.Residents[0];
-            var afternoon = GameTime.FromDayAndTime(6, 14, 0);
             var lateNight = GameTime.FromDayAndTime(6, 3, 0);
             foreach (var activity in Venues)
             {
                 var places = sim.World.Objects.Where(o => activity.UsableObjects.Contains(o.Type)).ToList();
                 Assert.That(places, Is.Not.Empty, activity.Id);
-                Assert.That(places.Any(o => sim.Planner.CanDo(r, activity, o, afternoon)), Is.True, $"{activity.Id} in the afternoon");
+
+                // An hour after it opens on its first open day of the week (the market square has no hours).
+                var business = sim.World.BusinessOnMap(places[0].Location.MapId);
+                // Its worker is in (with nobody there it would stay shut).
+                foreach (var worker in sim.Residents.Where(w => w.Job != null && sim.World.TryGetObject(w.Job.WorkObjectId, out var desk) && desk.Location.MapId == places[0].Location.MapId))
+                {
+                    sim.World.TryGetObject(worker.Job.WorkObjectId, out var desk);
+                    worker.Location = desk.Location;
+                }
+
+                var day = business == null ? 6 : Enumerable.Range(1, 7).First(d => business.IsOpenOn(GameTime.FromDayAndTime(d, 12, 0).Weekday));
+                var open = business == null ? GameTime.FromDayAndTime(6, 14, 0) : GameTime.FromDayAndTime(day, (business.OpenMinuteOfDay / 60) + 1, business.OpenMinuteOfDay % 60);
+                Assert.That(places.Any(o => sim.Planner.CanDo(r, activity, o, open)), Is.True, $"{activity.Id} at {open}");
                 if (activity != ActivityCatalog.BrowseMarket)
                 {
                     Assert.That(places.Any(o => sim.Planner.CanDo(r, activity, o, lateNight)), Is.False, $"{activity.Id} at 3 in the morning");

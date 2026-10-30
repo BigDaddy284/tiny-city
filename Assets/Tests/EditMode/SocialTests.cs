@@ -581,11 +581,12 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void AWeekInTheVillage_EveryoneMeetsEveryone()
+        public void AMonthInTheCity_EveryoneMeetsEveryone()
         {
-            // Eight days: since residents walk around furniture, the last pair (Priya and Samuel) first meet on day 8.
+            // Four weeks: with fifteen people, the venue staff working days and evenings, the last pairs meet on a day
+            // off (Danny, from the arcade, on Sundays, and Marcus and Lola, whose shifts never cross, on day 28).
             var sim = StarterTown.CreateNewGame();
-            sim.Advance(8 * 24 * 60);
+            sim.Advance(28 * 24 * 60 + 20 * 60); // to 03:00, when nobody should be chatting
 
             foreach (var r in sim.Residents)
             {
