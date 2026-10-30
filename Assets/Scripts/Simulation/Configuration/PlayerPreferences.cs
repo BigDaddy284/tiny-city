@@ -60,6 +60,17 @@ namespace TinyCity.Simulation.Configuration
 
         public ThemeChoice Theme { get; set; } = ThemeChoice.Dark;
 
+        /// <summary>Whether the camera panels take turns showing residents and buildings by themselves.</summary>
+        public bool CycleCameras { get; set; }
+
+        /// <summary>Game minutes between turns, one of <see cref="CameraCycle.Intervals"/>.</summary>
+        public int CycleMinutes { get; set; } = CameraCycle.DefaultInterval;
+
+        public CycleMode CycleMode { get; set; } = CycleMode.Everything;
+
+        /// <summary>Whether the cycle skips buildings nobody is in at the moment.</summary>
+        public bool CycleBusyOnly { get; set; } = true;
+
         /// <summary>Puts the player's AI choices into the Ollama settings the game runs with.</summary>
         public void ApplyTo(OllamaSettings ollama)
         {
@@ -99,6 +110,10 @@ namespace TinyCity.Simulation.Configuration
                 ["vsync"] = VSync,
                 ["frameLimit"] = FrameLimit,
                 ["theme"] = Theme.ToString(),
+                ["cycleCameras"] = CycleCameras,
+                ["cycleMinutes"] = CycleMinutes,
+                ["cycleMode"] = CycleMode.ToString(),
+                ["cycleBusyOnly"] = CycleBusyOnly,
             };
             return Json.Write(root);
         }
@@ -169,6 +184,25 @@ namespace TinyCity.Simulation.Configuration
 
             prefs.FrameLimit = Number(root, "frameLimit", prefs.FrameLimit, 0, MaxFrameLimit, found);
             prefs.Theme = Choice(root, "theme", prefs.Theme, found);
+            if (root.TryGetValue("cycleCameras", out var cycle) && cycle is bool cycling)
+            {
+                prefs.CycleCameras = cycling;
+            }
+
+            var minutes = Number(root, "cycleMinutes", prefs.CycleMinutes, CameraCycle.Intervals[0], CameraCycle.Intervals[CameraCycle.Intervals.Length - 1], found);
+            if (Array.IndexOf(CameraCycle.Intervals, minutes) < 0)
+            {
+                found.Add($"Player setting cycleMinutes {minutes} is not one of the choices; using {CameraCycle.DefaultInterval}.");
+                minutes = CameraCycle.DefaultInterval;
+            }
+
+            prefs.CycleMinutes = minutes;
+            prefs.CycleMode = Choice(root, "cycleMode", prefs.CycleMode, found);
+            if (root.TryGetValue("cycleBusyOnly", out var busy) && busy is bool busyOnly)
+            {
+                prefs.CycleBusyOnly = busyOnly;
+            }
+
             return prefs;
         }
 
