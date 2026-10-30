@@ -14,6 +14,9 @@ namespace TinyCity.Runtime
 
         public TileMap Map { get; private set; }
 
+        /// <summary>The art the map was last drawn with, kept so the pointer can find the building it is over.</summary>
+        public MapArt Art { get; private set; }
+
         /// <summary>The light last applied, so it is only re-applied when it changes.</summary>
         public Daylight? CurrentLight { get; private set; }
 
@@ -26,6 +29,7 @@ namespace TinyCity.Runtime
             Map = map;
             transform.localPosition = origin;
             var art = MapArt.Build(world, map, palette, overrides == null ? (System.Func<ArtRequest, PixelCanvas>)null : overrides.Find);
+            Art = art;
 
             lit.Add(Spawn("Ground", sprites.Create(art.Ground, $"{map.Id} ground"), IsoGrid.TileToWorld(0, 0), 0));
             foreach (var piece in art.Pieces)
@@ -91,6 +95,7 @@ namespace TinyCity.Runtime
             sprites.Release();
             CurrentLight = null;
             Map = null;
+            Art = null;
         }
 
         private void OnDestroy() => sprites.Release();

@@ -227,8 +227,11 @@ namespace TinyCity.Runtime
             }
         }
 
-        /// <summary>Clicks select a panel and the resident under the pointer; dragging pans a free panel; the wheel zooms.</summary>
-        public void HandleMouse(Event e, TownView view)
+        /// <summary>
+        /// Clicks select a panel and the resident under the pointer; a double click on a building shows its inside in
+        /// that panel; dragging pans a free panel; the wheel zooms.
+        /// </summary>
+        public void HandleMouse(Event e, TownView view, TownSimulation simulation)
         {
             var index = panels.FindIndex(p => p.ScreenRect.Contains(e.mousePosition));
             if (index < 0 || (e.mousePosition.y - panels[index].ScreenRect.y) < HeaderHeight)
@@ -246,6 +249,10 @@ namespace TinyCity.Runtime
                     {
                         ResidentClicked?.Invoke(clicked);
                     }
+                    else if (e.clickCount == 2 && BuildingUnder(panel, e.mousePosition, view, simulation) is PlaceInfo place)
+                    {
+                        ShowPlace(index, place.EnterMapId, view);
+                    }
 
                     e.Use();
                     break;
@@ -254,10 +261,24 @@ namespace TinyCity.Runtime
                     e.Use();
                     break;
                 case EventType.ScrollWheel:
-                    panel.Zoom = Mathf.Clamp(panel.Zoom * (1f + (e.delta.y * 0.08f)), CameraPanel.MinZoom, CameraPanel.MaxZoom);
+                    panel.ZoomAt(e.delta.y, e.mousePosition, view);
                     e.Use();
                     break;
             }
+        }
+
+        /// <summary>The building drawn under a point of a panel (GUI coordinates), described, or null.</summary>
+        private static PlaceInfo BuildingUnder(CameraPanel panel, Vector2 gui, TownView view, TownSimulation simulation)
+        {
+            var world = panel.Camera.ScreenToWorldPoint(new Vector3(gui.x, Screen.height - gui.y, 0f));
+            var mapId = view.MapAt(world);
+            if (mapId == null || !simulation.World.TryGetMap(mapId, out var map) || !map.IsExterior)
+            {
+                return null;
+            }
+
+            var building = view.BuildingAt(mapId, world);
+            return building == null ? null : PlaceInfo.Of(simulation, building.Value.inside);
         }
 
         private static string ResidentAt(CameraPanel panel, Vector2 gui, TownView view)
@@ -282,8 +303,11 @@ namespace TinyCity.Runtime
             return best;
         }
 
-        /// <summary>Draws names, door signs and speech bubbles inside each panel, then each panel's header bar.</summary>
-        public void DrawOverlays(TownView view, TownSimulation simulation, GuiStyles styles, Action<int> headerButtons)
+        /// <summary>
+        /// Draws names, door signs and speech bubbles inside each panel, then each panel's header bar, then the card
+        /// about the building under the pointer unless <paramref name="pointerFree"/> is false (it's over a window).
+        /// </summary>
+        public void DrawOverlays(TownView view, TownSimulation simulation, GuiStyles styles, Action<int> headerButtons, bool pointerFree)
         {
             NoteNewSpeech(simulation);
             for (var i = 0; i < panels.Count; i++)
@@ -295,6 +319,34 @@ namespace TinyCity.Runtime
                 DrawFrame(panel, i == ActiveIndex && panels.Count > 1);
                 headerButtons(i);
             }
+
+            if (pointerFree && Event.current.type == EventType.Repaint)
+            {
+                DrawBuildingCard(Event.current.mousePosition, view, simulation, styles);
+            }
+        }
+
+        private void DrawBuildingCard(Vector2 mouse, TownView view, TownSimulation simulation, GuiStyles styles)
+        {
+            var panel = panels.FirstOrDefault(p => p.ScreenRect.Contains(mouse));
+            if (panel == null || mouse.y - panel.ScreenRect.y < HeaderHeight || ResidentAt(panel, mouse, view) != null)
+            {
+                return;
+            }
+
+            var place = BuildingUnder(panel, mouse, view, simulation);
+            if (place == null)
+            {
+                return;
+            }
+
+            var content = new GUIContent($"<b>{place.Title}</b>\n{string.Join("\n", place.Lines)}\n<size=11><i>Double-click to look inside</i></size>");
+            var width = Mathf.Min(260f, panel.ScreenRect.width - 16f);
+            var height = styles.Card.CalcHeight(content, width);
+            var bounds = panel.ScreenRect;
+            var x = Mathf.Clamp(mouse.x + 16f, bounds.x + 4f, bounds.xMax - width - 4f);
+            var y = mouse.y + 18f + height <= bounds.yMax - 4f ? mouse.y + 18f : Mathf.Max(bounds.y + HeaderHeight, mouse.y - height - 8f);
+            GUI.Box(new Rect(x, y, width, height), content, styles.Card);
         }
 
         public string Describe(int index, TownSimulation simulation)
@@ -367,7 +419,7 @@ namespace TinyCity.Runtime
             {
                 foreach (var obj in simulation.World.Objects)
                 {
-                    Label(panel, origin, view.ToWorld(obj.Location) + new Vector3(0f, 0.32f, 0f), obj.Name, styles.Sign);
+                    Label(panel, origin, view.ToWorld(obj.Location) + new Vector3(0f, 0.32f, 0f), obj.Name, styles.Sign, GuiStyles.ThingGlow);
                 }
 
                 // Each door outside is labelled with the building it leads into.
@@ -376,7 +428,7 @@ namespace TinyCity.Runtime
                     if (simulation.World.TryGetMap(portal.From.MapId, out var outside) && outside.IsExterior
                         && simulation.World.TryGetMap(portal.To.MapId, out var inside) && !inside.IsExterior)
                     {
-                        Label(panel, origin, view.ToWorld(portal.From) + new Vector3(0f, 0.5f, 0f), inside.Name, styles.Sign);
+                        Label(panel, origin, view.ToWorld(portal.From) + new Vector3(0f, 0.5f, 0f), inside.Name, styles.Sign, GuiStyles.DoorGlow);
                     }
                 }
             }
@@ -388,7 +440,7 @@ namespace TinyCity.Runtime
                     continue;
                 }
 
-                Label(panel, origin, position + new Vector3(0f, 0.86f, 0f), r.FirstName, styles.Name);
+                Label(panel, origin, position + new Vector3(0f, 0.86f, 0f), r.FirstName, styles.Name, GuiStyles.PersonGlow);
 
                 // A bubble appears for each new line a resident says, and fades after a few seconds.
                 if (speech.TryGetValue(r.Id, out var bubble) && Time.unscaledTime < bubble.until && panel.TryScreenPoint(position + new Vector3(0f, 1.05f, 0f), out var above))
@@ -401,12 +453,46 @@ namespace TinyCity.Runtime
             }
         }
 
-        private static void Label(CameraPanel panel, Vector2 origin, Vector3 world, string text, GUIStyle style)
+        /// <summary>The offsets the glow is drawn at around a label: a soft ring, then a tighter, brighter one.</summary>
+        private static readonly (float x, float y, float alpha)[] GlowPasses = MakeGlowPasses();
+
+        /// <summary>A neon label: the text over a soft halo of <paramref name="glow"/>, with a thin dark shadow.</summary>
+        private static void Label(CameraPanel panel, Vector2 origin, Vector3 world, string text, GUIStyle style, Color glow)
         {
-            if (panel.TryScreenPoint(world, out var gui))
+            if (Event.current.type != EventType.Repaint || !panel.TryScreenPoint(world, out var gui))
             {
-                GUI.Label(new Rect(gui.x - origin.x - 70f, gui.y - origin.y - 10f, 140f, 20f), text, style);
+                return;
             }
+
+            var rect = new Rect(gui.x - origin.x - 90f, gui.y - origin.y - 10f, 180f, 20f);
+            var content = new GUIContent(text);
+            var before = GUI.color;
+            foreach (var (x, y, alpha) in GlowPasses)
+            {
+                GUI.color = new Color(glow.r, glow.g, glow.b, alpha);
+                style.Draw(new Rect(rect.x + x, rect.y + y, rect.width, rect.height), content, false, false, false, false);
+            }
+
+            GUI.color = GuiStyles.LabelShadow;
+            style.Draw(new Rect(rect.x + 1f, rect.y + 1f, rect.width, rect.height), content, false, false, false, false);
+            GUI.color = GuiStyles.LabelText;
+            style.Draw(rect, content, false, false, false, false);
+            GUI.color = before;
+        }
+
+        private static (float, float, float)[] MakeGlowPasses()
+        {
+            var passes = new List<(float, float, float)>();
+            foreach (var (radius, alpha) in new[] { (3f, 0.12f), (1.5f, 0.35f) })
+            {
+                for (var i = 0; i < 8; i++)
+                {
+                    var angle = i * Mathf.PI / 4f;
+                    passes.Add((Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, alpha));
+                }
+            }
+
+            return passes.ToArray();
         }
 
         private static void DrawFrame(CameraPanel panel, bool active)

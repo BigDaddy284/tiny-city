@@ -77,7 +77,7 @@ namespace TinyCity.Runtime
 
             GUILayout.Space(6f);
             tab = GUILayout.Toolbar(tab, TabNames);
-            scroll = GUILayout.BeginScrollView(scroll);
+            scroll = BeginVerticalScroll(scroll);
             GUILayout.Label($"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", styles.Title);
             if (r.IsNewcomer)
             {
@@ -120,7 +120,7 @@ namespace TinyCity.Runtime
                     break;
             }
 
-            GUILayout.EndScrollView();
+            EndVerticalScroll();
             DrawFooter();
             GUILayout.EndArea();
         }
@@ -233,7 +233,7 @@ namespace TinyCity.Runtime
                 return;
             }
 
-            peopleScroll = GUILayout.BeginScrollView(peopleScroll, GUILayout.Height(PeopleListHeight));
+            peopleScroll = BeginVerticalScroll(peopleScroll, GUILayout.Height(PeopleListHeight));
             var shown = PeopleList.Of(Simulation.Residents, peopleFilter, peopleOrder);
             if (shown.Count == 0)
             {
@@ -248,7 +248,7 @@ namespace TinyCity.Runtime
                 }
             }
 
-            GUILayout.EndScrollView();
+            EndVerticalScroll();
         }
 
         /// <summary>
@@ -259,7 +259,7 @@ namespace TinyCity.Runtime
         {
             GUILayout.Space(4f);
             var shown = PeopleList.Of(Simulation.Residents, peopleFilter, peopleOrder);
-            gridScroll = GUILayout.BeginScrollView(gridScroll);
+            gridScroll = BeginVerticalScroll(gridScroll);
             if (shown.Count == 0)
             {
                 GUILayout.Label("Nobody here.", styles.Small);
@@ -272,6 +272,31 @@ namespace TinyCity.Runtime
                 Pick(shown[picked]);
             }
 
+            EndVerticalScroll();
+        }
+
+        /// <summary>
+        /// The width left for what's inside a scroll view in the side panel once its scroll bar is drawn, so nothing
+        /// is wider than the panel and no sideways scroll bar is needed.
+        /// </summary>
+        private static float ScrollContentWidth()
+        {
+            var bar = GUI.skin.verticalScrollbar;
+            var barWidth = (bar.fixedWidth > 0f ? bar.fixedWidth : 12f) + bar.margin.horizontal;
+            return Width - 28f - barWidth - 4f;
+        }
+
+        /// <summary>A scroll view that only scrolls up and down: its content is kept to <see cref="ScrollContentWidth"/>.</summary>
+        private static Vector2 BeginVerticalScroll(Vector2 position, params GUILayoutOption[] options)
+        {
+            position = GUILayout.BeginScrollView(position, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, options);
+            GUILayout.BeginVertical(GUILayout.Width(ScrollContentWidth()));
+            return position;
+        }
+
+        private static void EndVerticalScroll()
+        {
+            GUILayout.EndVertical();
             GUILayout.EndScrollView();
         }
 
@@ -559,7 +584,7 @@ namespace TinyCity.Runtime
 
         private void NeedBar(NeedType need, double value)
         {
-            var rect = GUILayoutUtility.GetRect(Width - 28f, 18f);
+            var rect = GUILayoutUtility.GetRect(ScrollContentWidth(), 18f, GUILayout.ExpandWidth(false));
             GUI.Label(new Rect(rect.x, rect.y, 90f, rect.height), need.ToString(), styles.Small);
             var bar = new Rect(rect.x + 90f, rect.y + 3f, rect.width - 130f, rect.height - 6f);
             var p = UiTheme.Palette;
