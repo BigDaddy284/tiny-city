@@ -121,3 +121,7 @@ Measured with Settings → Test Camera Panels on build 0.0.76: Intel Core i9-109
 | 16 | 14.2 | 70 | 20.8 |
 
 Every count up to 16 stayed above 60 fps, so the limit went from 10 to 16, enough for Watch Everyone to show all fifteen starting residents. From 9 panels a frame takes about three times as long, so slower graphics cards may want fewer; the test in Settings measures any PC.
+
+### With 50 people (build 0.0.81)
+
+The same PC with the test filling a copy of the city to 50 people, so every panel follows someone: 1–2 panels about 230 fps, 7 panels 80 fps, 9 and 13 panels about 60–66 fps, 16 panels 52 fps, 25 panels 40 fps, 32 panels 31 fps and 50 panels 41 fps (the slowest frame in twenty 29–62 ms from 20 panels up). The limit stays at 16: smooth with today's fifteen residents and still above 50 fps with fifty. Much of the cost grows with the number of labels drawn in every panel, so object names now show only when in use or under the pointer.

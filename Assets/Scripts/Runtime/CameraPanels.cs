@@ -4,6 +4,7 @@ using System.Linq;
 using TinyCity.Simulation;
 using TinyCity.Simulation.Configuration;
 using TinyCity.Simulation.Memory;
+using TinyCity.Simulation.Residents;
 using TinyCity.Simulation.World;
 using UnityEngine;
 
@@ -319,11 +320,16 @@ namespace TinyCity.Runtime
         public void DrawOverlays(TownView view, TownSimulation simulation, GuiStyles styles, Action<int> headerButtons, bool pointerFree)
         {
             NoteNewSpeech(simulation);
+            var mouse = Event.current.mousePosition;
+            var inUse = new HashSet<string>(simulation.Residents
+                .Where(r => r.IsAlive && r.State == ResidentState.Performing && r.TargetObjectId != null)
+                .Select(r => r.TargetObjectId));
             for (var i = 0; i < panels.Count; i++)
             {
                 var panel = panels[i];
+                var pointer = pointerFree && panel.ScreenRect.Contains(mouse) && mouse.y - panel.ScreenRect.y >= HeaderHeight ? mouse : (Vector2?)null;
                 GUI.BeginGroup(panel.ScreenRect);
-                DrawLabels(panel, view, simulation, styles);
+                DrawLabels(panel, view, simulation, styles, inUse, pointer);
                 GUI.EndGroup();
                 DrawFrame(panel, i == ActiveIndex && panels.Count > 1);
                 headerButtons(i);
@@ -462,15 +468,28 @@ namespace TinyCity.Runtime
             }
         }
 
-        private void DrawLabels(CameraPanel panel, TownView view, TownSimulation simulation, GuiStyles styles)
+        /// <summary>
+        /// Names over residents, doors and things. A thing is named only while someone is using it (when the camera is
+        /// close enough) or while the pointer is over it (<paramref name="pointer"/>, in screen GUI coordinates).
+        /// </summary>
+        private void DrawLabels(CameraPanel panel, TownView view, TownSimulation simulation, GuiStyles styles, HashSet<string> inUse, Vector2? pointer)
         {
             var origin = panel.ScreenRect.position;
             var pixelsPerUnit = panel.ScreenRect.height / (2f * Mathf.Max(0.1f, panel.Camera.orthographicSize));
+            var hovered = pointer.HasValue ? ObjectAt(panel, pointer.Value, view, simulation, pixelsPerUnit) : null;
+            if (hovered != null)
+            {
+                Label(panel, origin, view.ToWorld(hovered.Location) + new Vector3(0f, 0.32f, 0f), hovered.Name, styles.Sign, GuiStyles.ThingGlow);
+            }
+
             if (pixelsPerUnit >= LabelPixelsPerUnit)
             {
                 foreach (var obj in simulation.World.Objects)
                 {
-                    Label(panel, origin, view.ToWorld(obj.Location) + new Vector3(0f, 0.32f, 0f), obj.Name, styles.Sign, GuiStyles.ThingGlow);
+                    if (obj != hovered && inUse.Contains(obj.Id))
+                    {
+                        Label(panel, origin, view.ToWorld(obj.Location) + new Vector3(0f, 0.32f, 0f), obj.Name, styles.Sign, GuiStyles.ThingGlow);
+                    }
                 }
 
                 // Each door outside is labelled with the building it leads into.
@@ -508,6 +527,33 @@ namespace TinyCity.Runtime
         private static readonly (float x, float y, float alpha)[] GlowPasses = MakeGlowPasses();
 
         /// <summary>A neon label: the text over a soft halo of <paramref name="glow"/>, with a thin dark shadow.</summary>
+        /// <summary>
+        /// The thing whose tile (and a little above it, where the furniture stands) is under <paramref name="gui"/>, the
+        /// nearest if several are, or null.
+        /// </summary>
+        private static WorldObject ObjectAt(CameraPanel panel, Vector2 gui, TownView view, TownSimulation simulation, float pixelsPerUnit)
+        {
+            WorldObject best = null;
+            var bestDistance = 1f;
+            foreach (var obj in simulation.World.Objects)
+            {
+                if (!panel.TryScreenPoint(view.ToWorld(obj.Location) + new Vector3(0f, 0.12f, 0f), out var centre))
+                {
+                    continue;
+                }
+
+                // A diamond a tile wide, stretched upwards to cover the furniture standing on it.
+                var distance = (Mathf.Abs(gui.x - centre.x) / (0.5f * pixelsPerUnit)) + (Mathf.Abs(gui.y - centre.y) / (0.37f * pixelsPerUnit));
+                if (distance <= bestDistance)
+                {
+                    best = obj;
+                    bestDistance = distance;
+                }
+            }
+
+            return best;
+        }
+
         private static void Label(CameraPanel panel, Vector2 origin, Vector3 world, string text, GUIStyle style, Color glow)
         {
             if (Event.current.type != EventType.Repaint || !panel.TryScreenPoint(world, out var gui))

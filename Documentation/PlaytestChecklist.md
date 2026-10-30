@@ -277,3 +277,9 @@ Towns are saved in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Towns\`: 
 2. **Button names:** every button's words start with a capital: Town Journal, Town View, Watch Everyone, Saved Towns, Export Life Story, Open Exports Folder, Refresh List, Full Screen and so on.
 3. **Sixteen panels:** + goes up to 16 panels, and Watch Everyone gives every one of the fifteen residents a panel.
 4. **Panel test:** in Settings, under Camera panels, click "Test Camera Panels". The town is saved, then a test copy of the city with 50 people takes its place. The window closes, the game runs at 1x and shows 1 panel, then 2, up to 50, about five seconds each (five minutes in all), with the status line counting. Afterwards your own town, panels and speed come back, exactly as they were (the test town is never saved) and the status line gives the suggested limit and where the results file is (in the exports folder, "Camera panel test - day N.txt"). Send that file over to set the limit.
+
+## Object names on demand
+
+1. **Hidden by default:** zoom in on a room or the park. Beds, tables, the dance floor and other things no longer show their names.
+2. **In use:** when someone sits on a bench, sleeps in a bed or dances, that thing's name appears above it and goes again when they leave.
+3. **Mouse-over:** rest the pointer on a piece of furniture: its name appears, even when zoomed out, and goes when the pointer moves away. Residents' names and door signs still always show.
