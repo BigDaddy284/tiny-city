@@ -7,7 +7,7 @@ using UnityEngine.TestTools;
 
 namespace TinyCity.Tests.PlayMode
 {
-    /// <summary>The Phase 5 observer view: one to ten camera panels watching the same town.</summary>
+    /// <summary>The Phase 5 observer view: one to sixteen camera panels watching the same town.</summary>
     public class CameraPanelTests
     {
         private GameController game;
@@ -82,7 +82,7 @@ namespace TinyCity.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Panels_GoUpToTen_AndDownToOne_EachWithItsOwnCamera()
+        public IEnumerator Panels_GoUpToTheLimit_AndDownToOne_EachWithItsOwnCamera()
         {
             game.SetPanelCount(CameraPanels.MaxPanels + 3);
             yield return null;
@@ -111,6 +111,7 @@ namespace TinyCity.Tests.PlayMode
 
             var living = game.Simulation.Residents.Where(r => r.IsAlive).Take(CameraPanels.MaxPanels).Select(r => r.Id).ToList();
             Assert.That(game.Panels.Count, Is.EqualTo(living.Count));
+            Assert.That(game.Simulation.Residents.Count(r => r.IsAlive), Is.LessThanOrEqualTo(CameraPanels.MaxPanels), "a new town's residents all fit, so everyone gets a panel");
             CollectionAssert.AreEquivalent(living, game.Panels.All.Select(p => p.FollowId).ToList());
         }
 

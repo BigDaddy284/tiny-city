@@ -53,7 +53,7 @@ namespace TinyCity.Runtime
         /// <summary>Talks to Ollama; residents fall back to their built-in routine whenever it can't help.</summary>
         public AiService Ai { get; private set; }
 
-        /// <summary>The camera panels, from one to ten. Panel 0 uses the main camera.</summary>
+        /// <summary>The camera panels, from one to sixteen. Panel 0 uses the main camera.</summary>
         public CameraPanels Panels { get; private set; }
 
         /// <summary>Pop-ups for the town's big moments.</summary>

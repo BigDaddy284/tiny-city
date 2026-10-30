@@ -16,7 +16,11 @@ namespace TinyCity.Runtime
     /// </summary>
     public sealed class CameraPanels
     {
-        public const int MaxPanels = 10;
+        /// <summary>
+        /// Sixteen, so Watch Everyone can show all fifteen starting residents. The owner's camera panel test (RTX 3090,
+        /// 2558 × 1360, 30 October 2026) stayed above 60 fps at every count up to 16.
+        /// </summary>
+        public const int MaxPanels = 16;
 
         /// <summary>How many panels may be shown: <see cref="MaxPanels"/>, raised only while the panel test runs.</summary>
         public int Limit { get; set; } = MaxPanels;
@@ -140,7 +144,7 @@ namespace TinyCity.Runtime
             }
         }
 
-        /// <summary>One panel for each living resident (up to ten), each following them.</summary>
+        /// <summary>One panel for each living resident (up to <see cref="MaxPanels"/>), each following them.</summary>
         public void WatchEveryone(TownView view, TownSimulation simulation)
         {
             townViewReturn = null;
