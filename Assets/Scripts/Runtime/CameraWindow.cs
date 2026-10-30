@@ -42,7 +42,7 @@ namespace TinyCity.Runtime
 
             var p = UiTheme.Palette;
             var width = Mathf.Min(MaxWidth, cameraArea.width - 40f);
-            Area = new Rect(cameraArea.x + ((cameraArea.width - width) / 2f), cameraArea.y + 36f, width, Mathf.Min(380f, cameraArea.height - 72f));
+            Area = new Rect(cameraArea.x + ((cameraArea.width - width) / 2f), cameraArea.y + 36f, width, Mathf.Min(420f, cameraArea.height - 72f));
             GUI.color = UiTheme.ToColor(p.Window, 0.98f);
             GUI.DrawTexture(Area, Texture2D.whiteTexture);
             GUI.color = UiTheme.ToColor(p.BarBorder);
@@ -80,7 +80,7 @@ namespace TinyCity.Runtime
             changed |= minutes != Prefs.CycleMinutes;
             Prefs.CycleMinutes = minutes;
 
-            var mode = (CycleMode)Choice("Show", (int)Prefs.CycleMode, Modes, styles);
+            var mode = (CycleMode)Choice("Show", (int)Prefs.CycleMode, Modes, styles, columns: 2);
             changed |= mode != Prefs.CycleMode;
             Prefs.CycleMode = mode;
 
@@ -116,11 +116,14 @@ namespace TinyCity.Runtime
             }
         }
 
-        private static int Choice(string label, int selected, string[] options, GuiStyles styles)
+        /// <summary>A labelled row of buttons; with <paramref name="columns"/>, they wrap onto more rows so long names fit.</summary>
+        private static int Choice(string label, int selected, string[] options, GuiStyles styles, int columns = 0)
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(label, styles.Text, GUILayout.Width(150f));
-            selected = GUILayout.Toolbar(selected, options, GUILayout.Height(26f));
+            selected = columns > 0
+                ? GUILayout.SelectionGrid(selected, options, columns, GUILayout.Height(26f * Mathf.Ceil(options.Length / (float)columns)))
+                : GUILayout.Toolbar(selected, options, GUILayout.Height(26f));
             GUILayout.EndHorizontal();
             return selected;
         }
