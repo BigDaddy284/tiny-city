@@ -12,8 +12,7 @@ namespace TinyCity.Simulation.Content
     /// <summary>
     /// The starter town: a city with sixteen cottages and two apartment towers of eight flats, a general store, café,
     /// bakery, clinic, neon bar, cue club, bowling alley, arcade, gym and market square, and ten residents.
-    /// Ids here are stable because save files refer to them; new content is added around existing ids so older saves
-    /// still fit.
+    /// Ids here are stable because save files refer to them, so add new content around the existing ids.
     /// </summary>
     public static class StarterTown
     {
