@@ -251,3 +251,16 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 5. **Limits:** no baby is born while fifty people are alive, a couple has at most three children, and parents are never older than 50. Family never fall for each other.
 6. **Save and load:** save with a baby and a child in town, then reload: they're still there with the same parents and birthdays.
 7. **Settings:** set `"babies": false` in `settings.json` and restart: no more babies.
+
+## Building cards and opening buildings
+
+1. **Hover:** outdoors, rest the pointer on a building. A card appears beside it with the building's name, then for a home who lives there ("Home of …" or "Nobody lives here") and for a business whether it's open ("Open now, 18:00–23:30", "Closed, open …", "Closed today" or "Closed, nobody at work"), then who is inside right now ("Inside: …" or "Nobody inside"). A tower's card is named for the tower and covers all eight flats.
+2. **Only buildings:** no card over the ground, trees, benches or a resident's figure, over a panel's header, or while the pointer is over the journal, saved towns, settings or the place menu. Where one tower stands in front of another, the card is for the one you can see.
+3. **Double-click:** double-clicking a building turns that panel into a free camera inside it, just like picking it from the place menu. For a tower it opens the first flat with someone in it, otherwise flat 1. A single click still only selects the panel, and clicking a resident still shows them in the inspector.
+
+## Neon labels and zoom
+
+1. **Labels:** residents' names, door signs and object names are pale text with a soft neon glow: pink for people, cyan for doors and violet for things. They are readable by day and by night, in Dark and Light themes.
+2. **Zoom out:** in a free camera over the city, scroll out. It stops once the whole city fits in the panel and goes no further. Fully zoomed out, dragging does nothing. On an ultra-wide screen the space beside the city is empty: no building interiors show next to it.
+3. **Zoom in:** scroll in. It goes much closer than before, to about six rows of tiles, and zooms towards the pointer. Dragging pans but never leaves the city's edge.
+4. **Following:** a panel following someone outdoors can zoom out to the whole city and in to the same close view. Indoors the room still fits the panel.

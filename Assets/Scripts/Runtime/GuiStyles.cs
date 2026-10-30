@@ -6,12 +6,25 @@ namespace TinyCity.Runtime
     /// <summary>
     /// The IMGUI styles shared by the inspector, windows and camera panels, in the colours of a <see cref="UiPalette"/>.
     /// <see cref="UiTheme"/> makes one per palette, inside OnGUI with its skin set. Labels drawn on the town itself
-    /// (resident names, object and door signs) keep the dark ink of the village art whatever the theme.
+    /// (resident names, object and door signs) are neon whatever the theme: pale text over a soft glow, pink for
+    /// people, cyan for doors and violet for things (the art palette's Poppy, door cyan, Purple, Cream and Outline).
     /// </summary>
     public sealed class GuiStyles
     {
-        /// <summary>The ink of labels drawn on the town.</summary>
-        public static readonly Color Ink = new Color(0.3f, 0.2f, 0.12f);
+        /// <summary>The text of labels drawn on the town.</summary>
+        public static readonly Color LabelText = Hex(0xf0e6ff);
+
+        /// <summary>The thin dark shadow under a town label's text.</summary>
+        public static readonly Color LabelShadow = Hex(0x140f2b);
+
+        /// <summary>The glow around residents' names.</summary>
+        public static readonly Color PersonGlow = Hex(0xff3d8b);
+
+        /// <summary>The glow around door signs.</summary>
+        public static readonly Color DoorGlow = Hex(0x35e0ff);
+
+        /// <summary>The glow around the names of things on the map.</summary>
+        public static readonly Color ThingGlow = Hex(0xb45cff);
 
         public GuiStyles(UiPalette p)
         {
@@ -24,9 +37,10 @@ namespace TinyCity.Runtime
             Title.normal.textColor = Text.normal.textColor = text;
             Small.normal.textColor = Section.normal.textColor = subText;
 
-            Name = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            Sign = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = true };
-            Name.normal.textColor = Sign.normal.textColor = Ink;
+            // White, so GUI.color gives each pass of a glowing label its colour.
+            Name = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, clipping = TextClipping.Overflow };
+            Sign = new GUIStyle(GUI.skin.label) { fontSize = 11, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, clipping = TextClipping.Overflow };
+            Name.normal.textColor = Sign.normal.textColor = Color.white;
 
             Header = new GUIStyle(GUI.skin.label) { fontSize = 12, fontStyle = FontStyle.Bold, clipping = TextClipping.Clip, alignment = TextAnchor.MiddleLeft };
             Header.normal.textColor = text;
@@ -34,6 +48,9 @@ namespace TinyCity.Runtime
 
             Bubble = new GUIStyle(GUI.skin.box) { fontSize = 13, wordWrap = true, alignment = TextAnchor.MiddleCenter, padding = new RectOffset(8, 8, 6, 6) };
             Bubble.normal.textColor = text;
+
+            Card = new GUIStyle(GUI.skin.box) { fontSize = 13, wordWrap = true, richText = true, alignment = TextAnchor.UpperLeft, padding = new RectOffset(10, 10, 6, 7) };
+            Card.normal.textColor = text;
 
             AiNote = new GUIStyle(GUI.skin.box) { fontSize = 12, wordWrap = true, alignment = TextAnchor.UpperLeft, padding = new RectOffset(6, 6, 4, 4) };
             AiNote.normal.background = PlaceholderArt.Solid(UiTheme.ToColor(p.Pill));
@@ -73,6 +90,9 @@ namespace TinyCity.Runtime
         /// <summary>Residents' names over their heads.</summary>
         public GUIStyle Name { get; }
 
+        /// <summary>The card about a building that appears while the pointer is over it.</summary>
+        public GUIStyle Card { get; }
+
         /// <summary>The text in a camera panel's header bar.</summary>
         public GUIStyle Header { get; }
 
@@ -88,5 +108,7 @@ namespace TinyCity.Runtime
 
         /// <summary>A clickable line in the journal.</summary>
         public GUIStyle Entry { get; }
+
+        private static Color Hex(int rgb) => new Color(((rgb >> 16) & 0xff) / 255f, ((rgb >> 8) & 0xff) / 255f, (rgb & 0xff) / 255f);
     }
 }

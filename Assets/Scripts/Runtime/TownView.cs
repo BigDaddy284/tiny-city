@@ -17,8 +17,11 @@ namespace TinyCity.Runtime
     /// </summary>
     public sealed class TownView : MonoBehaviour
     {
-        /// <summary>Space left between maps, in world units.</summary>
-        private const float MapGap = 6f;
+        /// <summary>
+        /// Space left between maps, in world units: wide enough that a camera over one map never shows the next, even
+        /// on an ultra-wide screen.
+        /// </summary>
+        private const float MapGap = 200f;
 
         private readonly Dictionary<string, Vector3> origins = new Dictionary<string, Vector3>();
         private readonly Dictionary<string, MapView> maps = new Dictionary<string, MapView>();
@@ -183,6 +186,44 @@ namespace TinyCity.Runtime
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// The building drawn at <paramref name="world"/> on map <paramref name="mapId"/>, with every place inside
+        /// it (one per door), or null when the point isn't over a building.
+        /// </summary>
+        public (BuildingPlan plan, IReadOnlyList<string> inside)? BuildingAt(string mapId, Vector3 world)
+        {
+            if (World == null || mapId == null || !maps.TryGetValue(mapId, out var view) || view.Art == null)
+            {
+                return null;
+            }
+
+            var local = world - Origin(mapId);
+            var plan = view.Art.BuildingAt(local.x * SpriteFactory.PixelsPerUnit, -local.y * SpriteFactory.PixelsPerUnit);
+            if (plan == null)
+            {
+                return null;
+            }
+
+            var inside = new List<string>();
+            foreach (var door in plan.Doors)
+            {
+                foreach (var portal in World.Portals)
+                {
+                    if (portal.From.MapId == mapId && portal.From.Position.Equals(door) && !inside.Contains(portal.To.MapId))
+                    {
+                        inside.Add(portal.To.MapId);
+                    }
+                }
+            }
+
+            if (plan.InteriorMapId != null && !inside.Contains(plan.InteriorMapId))
+            {
+                inside.Insert(0, plan.InteriorMapId);
+            }
+
+            return (plan, inside);
         }
 
         /// <summary>Remembers where everyone stands before a tick, so the figures can glide to their new tile.</summary>

@@ -655,7 +655,7 @@ namespace TinyCity.Runtime
             }
 
             HandleKeys(e);
-            Panels.DrawOverlays(view, Simulation, styles, DrawPanelHeader);
+            Panels.DrawOverlays(view, Simulation, styles, DrawPanelHeader, !OverWindow(e.mousePosition) && placeMenuPanel < 0);
             DrawPlaceMenu();
             journal.Draw(CameraArea(), styles);
             saves.Draw(CameraArea(), styles);
@@ -670,7 +670,7 @@ namespace TinyCity.Runtime
             if ((e.isMouse || e.type == EventType.ScrollWheel) && !OverWindow(e.mousePosition) && !overMenu)
             {
                 // After the buttons have had their chance, so header buttons and the inspector win over the panels.
-                Panels.HandleMouse(e, view);
+                Panels.HandleMouse(e, view, Simulation);
             }
         }
 
