@@ -38,8 +38,7 @@ namespace TinyCity.Simulation.Persistence
                 return $"Can't be read: {Error}";
             }
 
-            var older = Version < SaveSerializer.CurrentVersion ? " · from an older version, upgraded when loaded" : string.Empty;
-            return $"Day {Time.Day}, {Time.Weekday} {Time.ClockText} · {Living} of {Residents} residents alive{older}";
+            return $"Day {Time.Day}, {Time.Weekday} {Time.ClockText} · {Living} of {Residents} residents alive";
         }
 
         /// <summary>

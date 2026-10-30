@@ -337,42 +337,6 @@ namespace TinyCity.Tests.EditMode
             Assert.That(result.Simulation.Economy.GetBusiness(StarterTown.CafeId).Stock("coffee"), Is.EqualTo(40), "stock is capped");
         }
 
-        [Test]
-        public void Version3Save_GetsStarterFinances()
-        {
-            var sim = StarterTown.CreateNewGame();
-            var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(sim));
-            root["version"] = 3.0;
-            root.Remove("economy");
-            foreach (var r in ((List<object>)root["residents"]).Cast<Dictionary<string, object>>())
-            {
-                foreach (var key in new[] { "money", "groceries", "weeklyRent", "weeklyIncome", "incomeLabel", "unpaidWorkMinutes" })
-                {
-                    r.Remove(key);
-                }
-
-                if (r["job"] is Dictionary<string, object> job)
-                {
-                    job.Remove("workDays");
-                    job.Remove("hourlyWage");
-                }
-            }
-
-            var result = SaveSerializer.Load(Json.Write(root), StarterTown.CreateWorld());
-            Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
-            Assert.That(result.UpgradedFromVersion, Is.EqualTo(3));
-            var loaded = result.Simulation;
-            Assert.That(Mabel(loaded).MoneyPence, Is.EqualTo(0));
-            Assert.That(Mabel(loaded).Job.HourlyWagePence, Is.EqualTo(0));
-
-            StarterTown.AddFinancesToOlderSave(loaded);
-
-            Assert.That(Mabel(loaded).MoneyPence, Is.EqualTo(Mabel(sim).MoneyPence));
-            Assert.That(Mabel(loaded).Job.HourlyWagePence, Is.EqualTo(Money.Pounds(12)));
-            Assert.That(loaded.GetResident(StarterTown.ArthurId).WeeklyIncomePence, Is.GreaterThan(0));
-            Assert.That(loaded.Economy.GetBusiness(StarterTown.CafeId).Stock("coffee"), Is.EqualTo(40));
-        }
-
         private static Location Bed() => TestTown.Object(TestTown.WithResident(TestTown.WeekendAfternoon), StarterTown.BedId).Location;
     }
 }

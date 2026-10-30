@@ -17,8 +17,8 @@ namespace TinyCity.Simulation.Content
     /// </summary>
     public static class StarterTown
     {
-        /// <summary>Kept from the game's first name, The Tiny Town: saves refer to it.</summary>
-        public const string TownId = "town-tiny-town";
+        /// <summary>Saves refer to it, so a save can only be loaded into this town.</summary>
+        public const string TownId = "town-tiny-city";
         public const string VillageMapId = "map-village";
         public const string CottageMapId = "map-cottage-1";
         public const string WillowCottageMapId = "map-cottage-2";
@@ -699,34 +699,6 @@ namespace TinyCity.Simulation.Content
         private static IEnumerable<string> HobbiesOf(string residentId) =>
             StarterHobbies.TryGetValue(residentId, out var hobbies) ? hobbies : new string[0];
 
-        /// <summary>
-        /// Brings residents from a save older than version 5 into the hobbies and health systems: starter residents
-        /// get their hobbies. Health has already been set from age by the loader.
-        /// </summary>
-        public static void AddHobbiesToOlderSave(TownSimulation simulation)
-        {
-            foreach (var r in simulation.Residents)
-            {
-                if (r.Hobbies.Count == 0)
-                {
-                    r.SetHobbies(HobbiesOf(r.Id));
-                }
-            }
-        }
-
-        /// <summary>Residents from a save older than version 6 take their starter openness to romance; newcomers default to open.</summary>
-        public static void AddRomanceToOlderSave(TownSimulation simulation)
-        {
-            foreach (var r in simulation.Residents)
-            {
-                var design = Designs.FirstOrDefault(d => d.id == r.Id);
-                if (design != null)
-                {
-                    r.OpenToRomance = design.openToRomance;
-                }
-            }
-        }
-
         private static void ApplyFinances(Resident r, Design d)
         {
             r.MoneyPence = d.money;
@@ -746,68 +718,6 @@ namespace TinyCity.Simulation.Content
             }
 
             return simulation;
-        }
-
-        /// <summary>
-        /// Adds any starter resident a loaded save doesn't have yet, such as newcomers in an older save, at home in
-        /// bed with their background memories. Returns how many were added.
-        /// </summary>
-        public static int AddMissingResidents(TownSimulation simulation)
-        {
-            var added = 0;
-            foreach (var resident in CreateResidents(simulation.World))
-            {
-                if (simulation.GetResident(resident.Id) == null)
-                {
-                    simulation.AddResident(resident);
-                    AddLifeHistory(simulation, resident.Id);
-                    added++;
-                }
-            }
-
-            return added;
-        }
-
-        /// <summary>
-        /// Brings residents from a save older than version 4 into the economy: their job gets its wage and work days,
-        /// and they get their starting money, groceries, rent and income. Residents who aren't starter residents keep
-        /// what they have.
-        /// </summary>
-        public static void AddFinancesToOlderSave(TownSimulation simulation)
-        {
-            foreach (var d in Designs)
-            {
-                var r = simulation.GetResident(d.id);
-                if (r == null)
-                {
-                    continue;
-                }
-
-                if (d.job != null && r.Job != null && r.Job.WorkObjectId == d.job.WorkObjectId)
-                {
-                    r.Job = d.job;
-                }
-
-                ApplyFinances(r, d);
-            }
-        }
-
-        /// <summary>
-        /// The neon bar opened after older saves were made: if Felix is still out of work, he takes the job running it
-        /// and his jobseeker's allowance stops. Returns whether anything changed.
-        /// </summary>
-        public static bool AddBarJobToOlderSave(TownSimulation simulation)
-        {
-            var felix = simulation.GetResident(FelixId);
-            if (felix == null || !felix.IsAlive || felix.Job != null || !simulation.World.TryGetObject(BarCounterId, out _))
-            {
-                return false;
-            }
-
-            felix.Job = BarJob;
-            felix.WeeklyIncomePence = 0;
-            felix.IncomeLabel = string.Empty;
-            return true;
         }
 
         /// <summary>The background each resident starts with, so the AI has something to draw on from the first day.</summary>

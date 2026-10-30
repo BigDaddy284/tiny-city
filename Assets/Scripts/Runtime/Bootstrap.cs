@@ -36,12 +36,6 @@ namespace TinyCity.Runtime
         private void Awake()
         {
             EnsureCamera();
-            var copied = OldDataFolder.CopyIfNeeded();
-            if (copied != null)
-            {
-                Debug.Log($"[TinyCity] {copied}");
-            }
-
             Settings = SettingsLoader.Load(out var problems);
             SettingsProblems = problems;
             Debug.Log($"[TinyCity] Started version {Application.version}. Ollama: {Settings.ollama.endpoint} ({Settings.ollama.model}).");

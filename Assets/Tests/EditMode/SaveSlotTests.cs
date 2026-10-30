@@ -40,8 +40,8 @@ namespace TinyCity.Tests.EditMode
                 ["the file is damaged"] = good.Substring(0, good.Length / 2),
                 ["isn't a Tiny City save"] = "{\"hello\": 1}",
                 ["newer version"] = good.Replace($"\"version\": {SaveSerializer.CurrentVersion}", "\"version\": 99"),
-                ["no residents"] = "{\"format\": \"tiny-town-save\", \"version\": 6, \"gameMinutes\": 10, \"residents\": []}",
-                ["no valid date"] = "{\"format\": \"tiny-town-save\", \"version\": 6, \"residents\": [{}]}",
+                ["no residents"] = "{\"format\": \"tiny-city-save\", \"version\": 1, \"gameMinutes\": 10, \"residents\": []}",
+                ["no valid date"] = "{\"format\": \"tiny-city-save\", \"version\": 1, \"residents\": [{}]}",
             };
             foreach (var pair in cases)
             {
@@ -53,16 +53,6 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(SaveSummary.Read(null).IsReadable, Is.False);
             Assert.That(good, Does.Contain($"\"version\": {SaveSerializer.CurrentVersion}"), "the version test above edits the real text");
-        }
-
-        [Test]
-        public void Summary_NotesAnOlderVersion()
-        {
-            var old = "{\"format\": \"tiny-town-save\", \"version\": 2, \"gameMinutes\": 600, \"residents\": [{\"id\": \"res-0001\"}]}";
-            var summary = SaveSummary.Read(old);
-            Assert.That(summary.IsReadable, Is.True, summary.Error);
-            Assert.That(summary.Living, Is.EqualTo(1), "saves from before deaths count everyone as alive");
-            Assert.That(summary.Describe(), Does.Contain("older version"));
         }
 
         [Test]

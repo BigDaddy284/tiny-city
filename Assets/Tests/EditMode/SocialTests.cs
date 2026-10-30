@@ -557,41 +557,6 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Version2Save_Upgrades_AndTheNewNeighboursMoveIn()
-        {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon);
-            StarterTown.AddLifeHistory(sim);
-            var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(sim));
-            root["version"] = 2.0;
-            root.Remove("relationships");
-            root.Remove("activeConversations");
-            foreach (var r in ((List<object>)root["residents"]).Cast<Dictionary<string, object>>())
-            {
-                r.Remove("targetResidentId");
-                r.Remove("conversationId");
-            }
-
-            var result = SaveSerializer.Load(Json.Write(root), StarterTown.CreateWorld());
-
-            Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
-            Assert.That(result.Warnings, Is.Empty, string.Join("; ", result.Warnings));
-            Assert.That(result.UpgradedFromVersion, Is.EqualTo(2));
-            var loaded = result.Simulation;
-            Assert.That(loaded.Relationships.All, Is.Empty);
-            var everyone = StarterTown.CreateResidents(StarterTown.CreateWorld()).Select(r => r.Id).ToList();
-            Assert.That(StarterTown.AddMissingResidents(loaded), Is.EqualTo(everyone.Count - 1));
-            Assert.That(StarterTown.AddMissingResidents(loaded), Is.EqualTo(0));
-            Assert.That(loaded.Residents.Select(r => r.Id).ToList(), Is.EqualTo(everyone));
-            Assert.That(loaded.Memories.ForResident(StarterTown.NellId), Is.Not.Empty);
-            Assert.That(loaded.Memories.All.Select(m => m.Id).Distinct().Count(), Is.EqualTo(loaded.Memories.All.Count));
-
-            loaded.Advance(24 * 60);
-            var resaved = SaveSerializer.Load(SaveSerializer.Save(loaded), StarterTown.CreateWorld());
-            Assert.That(resaved.Success, Is.True);
-            Assert.That(resaved.Simulation.Residents.Count, Is.EqualTo(everyone.Count));
-        }
-
-        [Test]
         public void EveryResident_CanReachEveryPlaceTheyMayUse()
         {
             var sim = StarterTown.CreateNewGame();

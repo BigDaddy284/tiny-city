@@ -130,7 +130,7 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 9. **Autosave, F5 and quitting** save the town you're playing. When you restart the game, it reopens that town.
 10. **Typing:** while typing a name, the game's keys (S, J, Space and so on) are ignored. Click elsewhere or press Escape to use them again.
 
-Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `town.json`, `town-2.json`, … per town, each with a `.bak` backup, plus `slots.json` holding the town names.
+Towns are saved in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Towns\`: one `town.json`, `town-2.json`, … per town, each with a `.bak` backup, plus `slots.json` holding the town names.
 
 ## Phase 6, build 1: places
 
@@ -171,7 +171,7 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 ## Tiny City: name and neon look
 
 1. **Name:** the window title, the side panel ("Tiny City"), exported histories and life stories all say Tiny City. The build's folder and program are `TinyCity`.
-2. **Old saves:** on a PC that played The Tiny Town, start Tiny City once. Your saved towns appear in the saved towns window (S) and load as before, and your Settings choices are kept. The old folder (`AppData\LocalLow\The Tiny Town`) is left untouched. The panel layout and which town was open last start fresh.
+2. **Fresh start:** on a PC that played an earlier build, start the game. A new town begins, saved in the new `Towns` folder, and the saved towns window (S) lists only towns made since. The old `Saves` folder beside it is left untouched (it can be deleted), and your Settings choices are kept.
 3. **City by day:** navy paving plates, purple tarmac streets with a neon kerb, and flat-roofed blocks in magenta, violet, blue and teal with air units and antennas on the roof. Homes have two floors of windows and sliding glass doors; shops have big windows, a neon tube along the front and a neon picture sign above the door. Nothing sticks out from a wall, and no lines cross a door.
 4. **Evening and night:** from dusk, the roof edges, plinths, door frames, shop tubes and signs glow, windows light up amber or cyan, and antenna tips glow red. Residents walking past buildings go behind and in front of them correctly.
 5. **Rooms:** dark panelled walls with a pink neon rail and cyan LED skirting, and windows that show the lit city.
@@ -213,7 +213,7 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 
 1. **Bed and wake times:** at night, watch the whole town. People go to bed over about two hours rather than all at once. Younger people stay up later and older people turn in earlier. Mornings stagger the same way. Morning workers are always up in time for their shift.
 2. **The bar:** there is a violet building with a cocktail-glass sign east of the lower cottages, with its door onto the bottom street. Inside are a bar counter, two high tables with stools, a 3 × 3 light-up dance floor, a DJ booth, a toilet and a sink.
-3. **Felix's job:** from Wednesday to Sunday, Felix walks to the bar by 17:30 and works until 23:30. He goes to bed after his shift (about 00:15) and sleeps in. His inspector shows the job "Bar host" and his wages. An older save gives him the job when it is loaded, and his jobseeker's allowance stops.
+3. **Felix's job:** from Wednesday to Sunday, Felix walks to the bar by 17:30 and works until 23:30. He goes to bed after his shift (about 00:15) and sleeps in. His inspector shows the job "Bar host" and his wages.
 4. **Opening hours:** the inspector shows the bar as "closed" on Monday, Tuesday and in the daytime. From 18:00 it is "open" once Felix is in.
 5. **A night out:** on open evenings from 19:00, a few residents go for a drink at the high tables (paid, about £5.50) or to dance on the floor (free, arms up). Friends are sometimes invited along. Nobody heads out within an hour of their bedtime or with less than £30 to spend.
 6. **Club night:** on Fridays from 20:00 to 23:00, a "Club night" event gathers people at the DJ booth. It appears in the journal like the quiz night does.
@@ -231,7 +231,6 @@ Saves are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Saves\`: one `t
 3. **New homes:** six new cottages below the old ones, and sixteen flats in the towers. Nobody lives in them yet, and nobody wanders in to use them.
 4. **Venues:** the cue club (eight-ball sign), Strike Lanes (skittle), the Pixel Arcade (space invader) and the Pulse Gym (dumbbell) sit right of the old shops. In the daytime and evening, residents with money to spare head out to play pool or snooker, bowl, play the arcade games or work out, and pay for it. They're shut at night.
 5. **Market and park:** the market square has five striped stalls that residents browse, and a "Saturday market" event on Saturday mornings in the journal. The park below has a fountain residents sit round, plus more benches.
-6. **Older saves:** load a town saved before this build. Everyone is where they were and carries on, and the new parts of the city are there around them.
 
 ## Newcomers
 
