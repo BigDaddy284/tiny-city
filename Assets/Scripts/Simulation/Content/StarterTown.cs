@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyCity.Simulation.Community;
@@ -773,6 +774,21 @@ namespace TinyCity.Simulation.Content
             r.WeeklyRentPence = d.rent;
             r.WeeklyIncomePence = d.income;
             r.IncomeLabel = d.incomeLabel;
+        }
+
+        /// <summary>
+        /// A new city filled to <paramref name="people"/> living residents (at most <see cref="PopulationRules.MaxLiving"/>)
+        /// with newcomers who all arrive at once; those without a free home sleep on benches. Only for the camera panel
+        /// test, which throws it away afterwards: it is never saved.
+        /// </summary>
+        public static TownSimulation CreateCrowdedTown(int people)
+        {
+            var simulation = CreateNewGame();
+            while (simulation.LivingCount < Math.Min(people, PopulationRules.MaxLiving) && simulation.MoveInNewcomer(anyNumber: true) != null)
+            {
+            }
+
+            return simulation;
         }
 
         public static TownSimulation CreateNewGame()

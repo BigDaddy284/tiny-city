@@ -1,6 +1,11 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using System.Linq;
+using TinyCity.Simulation;
 using TinyCity.Simulation.Configuration;
+using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Residents;
+using TinyCity.Simulation.Time;
 
 namespace TinyCity.Tests.EditMode
 {
@@ -72,6 +77,20 @@ namespace TinyCity.Tests.EditMode
         public void EvenWhenNothingIsSmooth_OnePanelIsSuggested()
         {
             Assert.That(Run(3, _ => 50.0).SuggestedLimit(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TheCrowdedTestTown_HasFiftyPeople_WhoLiveTheirLives()
+        {
+            var sim = StarterTown.CreateCrowdedTown(PanelTest.Largest);
+
+            Assert.That(sim.LivingCount, Is.EqualTo(50));
+            Assert.That(sim.Residents.Select(r => r.Id).Distinct().Count(), Is.EqualTo(50));
+            Assert.That(sim.Residents.Count(r => !r.IsHomeless), Is.EqualTo(32), "every home taken, the rest on benches");
+            Assert.That(StarterTown.CreateCrowdedTown(80).LivingCount, Is.EqualTo(PopulationRules.MaxLiving));
+
+            sim.Advance(GameTime.MinutesPerDay);
+            Assert.That(sim.Residents.All(r => r.IsAlive), Is.True);
         }
     }
 }

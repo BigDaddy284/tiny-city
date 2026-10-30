@@ -183,7 +183,7 @@ namespace TinyCity.Runtime
         private void DrawPanelTest(GuiStyles styles)
         {
             GUILayout.Label("CAMERA PANELS", styles.Section);
-            GUILayout.Label($"Shows 1 to {PanelTest.Largest} panels in turn, about {Mathf.CeilToInt((float)(PanelTest.Largest * (PanelTest.SettleSeconds + PanelTest.MeasureSeconds) / 60.0))} minutes in all, and times how smoothly each runs, to find how many your PC handles well.", styles.Small);
+            GUILayout.Label($"Fills a test copy of the city with {PanelTest.Largest} people and shows 1 to {PanelTest.Largest} panels in turn, about {Mathf.CeilToInt((float)(PanelTest.Largest * (PanelTest.SettleSeconds + PanelTest.MeasureSeconds) / 60.0))} minutes in all, and times how smoothly each runs, to find how many your PC handles well. Your own town is saved first and comes back afterwards.", styles.Small);
             var test = game.PanelTest;
             GUI.enabled = test == null;
             if (GUILayout.Button(test == null ? "Test Camera Panels" : $"Testing {test.PanelCount} of {PanelTest.Largest}…", GUILayout.Width(220f)))
