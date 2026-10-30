@@ -201,6 +201,66 @@ namespace TinyCity.Runtime
 
             Sound?.Steer(Simulation, Panels.Active, view, Preferences);
             settingsWindow?.Update();
+            StepPanelTest();
+        }
+
+        /// <summary>The camera panel test while it runs, otherwise null.</summary>
+        public PanelTest PanelTest { get; private set; }
+
+        private string panelTestLayout;
+        private int panelTestSpeed;
+
+        /// <summary>
+        /// Shows 1 panel, then 2 and so on up to <see cref="PanelTest.Largest"/>, timing the frames at 1x, then puts the
+        /// panels and speed back, writes the results to the exports folder and says the suggested limit.
+        /// </summary>
+        public void StartPanelTest()
+        {
+            if (PanelTest != null)
+            {
+                return;
+            }
+
+            PanelTest = new PanelTest();
+            panelTestLayout = Panels.Snapshot();
+            panelTestSpeed = SpeedIndex;
+            SetSpeed(1);
+            Panels.Limit = PanelTest.Largest;
+            Panels.SetCount(PanelTest.PanelCount, view, Simulation);
+            Status = "Testing camera panels…";
+        }
+
+        private void StepPanelTest()
+        {
+            if (PanelTest == null || !PanelTest.AddFrame(UnityEngine.Time.unscaledDeltaTime))
+            {
+                return;
+            }
+
+            if (!PanelTest.Finished)
+            {
+                Panels.SetCount(PanelTest.PanelCount, view, Simulation);
+                Status = $"Testing camera panels: {PanelTest.PanelCount} of {PanelTest.Largest}…";
+                return;
+            }
+
+            var test = PanelTest;
+            PanelTest = null;
+            Panels.Limit = CameraPanels.MaxPanels;
+            Panels.Restore(panelTestLayout, view, Simulation);
+            SetSpeed(panelTestSpeed);
+            var machine = $"{SystemInfo.processorType}, {SystemInfo.graphicsDeviceName}, screen {Screen.width} × {Screen.height}";
+            try
+            {
+                var path = ExportStore.Write("Camera panel test", Simulation.Time.Day, test.Report(machine));
+                Status = $"Camera panel test done: smooth up to {test.SuggestedLimit()} panels. Results in {path}.";
+            }
+            catch (Exception e)
+            {
+                Status = $"Camera panel test done: smooth up to {test.SuggestedLimit()} panels (results couldn't be written: {e.Message}).";
+            }
+
+            Debug.Log("[TinyCity] " + test.Report(machine));
         }
 
         private void OnApplicationQuit()
@@ -601,6 +661,9 @@ namespace TinyCity.Runtime
         }
 
         public void WatchEveryone() => Panels.WatchEveryone(view, Simulation);
+
+        /// <summary>One panel over the whole city, or back to the panels shown before.</summary>
+        public void ToggleTownView() => Panels.ToggleTownView(view, Simulation);
 
         private void OnGUI()
         {

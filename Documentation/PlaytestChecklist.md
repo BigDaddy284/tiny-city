@@ -112,20 +112,20 @@ Start Ollama first (see [OllamaSetup.md](OllamaSetup.md)), then the game.
 4. **Go to someone:** clicking an entry shows that resident in the inspector, and the active camera panel follows them if they're alive.
 5. **Notifications:** deaths, couples, break-ups, getting back together, committing, a new life stage and serious illness pop up at the top left of the camera area for about 12 seconds (at most four at once). Clicking one goes to that resident. Birthdays and colds don't pop up; they're only in the journal.
 6. **Timeline tab:** the inspector's last tab is now "Timeline": the village records about that resident plus their important memories, newest first. Their own memories say "(their memory)". Reflections the AI wrote are in a blue box.
-7. **Export:** "Export life story" (Timeline tab or journal) and "Export town history" (journal) write text files. The status line shows where. "Open exports folder" opens it. The files are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Exports\`. In a life story, `[memory]` and `[AI]` mark what didn't come from the village records.
+7. **Export:** "Export Life Story" (Timeline tab or journal) and "Export Town History" (journal) write text files. The status line shows where. "Open Exports Folder" opens it. The files are in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Exports\`. In a life story, `[memory]` and `[AI]` mark what didn't come from the village records.
 8. **Old save:** a build 1 save loads normally. Its journal starts with what was recorded before (gatherings, couples, deaths) and fills in from then on.
 9. **Save and load:** F5, then F9: the journal is the same.
 10. **Place menu:** every panel header has a "Place ▾" button. It lists the village (outside) and every building. Picking one turns that panel into a free camera there, even if it was following someone indoors, and you can drag it around. A ✓ marks where a free panel is now. Click elsewhere or press Escape to close the list. In free mode, ◀ and ▶ (or Tab) step back and forward through the same list.
 
 ## Phase 5, build 3: save slots, copying and export
 
-1. **Your existing town:** it appears as "My first town" in the saved towns list (press S, or "Saved towns" at the bottom of the inspector). The inspector shows "Town: …" under the title.
+1. **Your existing town:** it appears as "My first town" in the saved towns list (press S, or "Saved Towns" at the bottom of the inspector). The inspector shows "Town: …" under the title.
 2. **Save list:** each town shows its name, the game date, how many residents are alive and when it was last saved. "(playing now)" marks the current one. A damaged file says it can't be read, and its Load button is greyed out.
 3. **New town:** type a name next to "New town:" and click "Start it". The town you were playing is saved first, then a fresh village starts in its own slot. Your old town is untouched.
 4. **Switching:** click Load on another town. The current one is saved first, so nothing is lost. The camera panels and inspector carry on with the loaded town.
 5. **Copy:** makes "Copy of <name>" as a new slot, exactly as the town was at that moment (the town you're playing is saved first). Load the copy and play it differently. The original stays as it was.
 6. **Rename:** type the new name and press Enter or OK. Names are kept after you quit.
-7. **Export:** copies the save file to the Exports folder as "<name> save - day N.json", to back it up or share it. "Open saves folder" and "Open exports folder" open those folders.
+7. **Export:** copies the save file to the Exports folder as "<name> save - day N.json", to back it up or share it. "Open Saves Folder" and "Open Exports Folder" open those folders.
 8. **Delete:** click Delete, then "Click again to delete" within 4 seconds. You can't delete the town you're playing.
 9. **Autosave, F5 and quitting** save the town you're playing. When you restart the game, it reopens that town.
 10. **Typing:** while typing a name, the game's keys (S, J, Space and so on) are ignored. Click elsewhere or press Escape to use them again.
@@ -165,7 +165,7 @@ Towns are saved in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Towns\`: 
 3. **AI on/off:** with Ollama running, switch **Use local AI** off: the AI line says "off (Settings)" and residents carry on by routine. Switch it on: it reconnects within a few seconds.
 4. **Model list:** the window lists your installed Ollama models, with the one in use highlighted. Pick another: the AI line shows it loading, then connected. Close Ollama and press **Refresh list**: a message says it couldn't be reached. Start it again and press Refresh list.
 5. **Sound:** the four sliders move and keep their values (there is no sound until the next update).
-6. **Screen:** try Windowed, Borderless and Full screen; step the resolution with ◀ ▶; turn VSync off and pick a frame limit. Each takes effect straight away.
+6. **Screen:** try Windowed, Borderless and Full Screen; step the resolution with ◀ ▶; turn VSync off and pick a frame limit. Each takes effect straight away.
 7. **Kept:** quit and start the game again. The theme, AI choice, model, volumes and screen settings are as you left them.
 
 ## Tiny City: name and neon look
@@ -182,9 +182,9 @@ Towns are saved in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Towns\`: 
 
 1. **Café:** there are four tables (window, middle, centre and corner). Two people at a table sit on opposite chairs facing each other; the one on the far chair is behind the table. A third customer goes to another table, and someone on their own picks an empty table over sitting with a stranger.
 2. **Benches and chess:** two people on a bench sit side by side; two chess players sit at either end of the board. When one leaves, the other stays put.
-3. **Inspector top row:** "Town journal" (J still works), then −, + and Watch everyone, with the number of camera panels in a box on the far right. The row of name buttons is gone.
+3. **Inspector top row:** "Town Journal" (J still works), "Town View", −, + and "Watch Everyone", all on one row with no box at the end. The row of name buttons is gone.
 4. **People list:** click "People ▼". A scrolling list shows each person's name and age († for those who have died). Filter by Everyone, Living or Died and sort by first name, surname, oldest or youngest. Clicking a name shows them in the inspector and the active panel.
-5. **Find a person:** the box left of "People ▼" shows how many people live in the city, like the panel count above it, and goes up when someone moves in or is born. Click the "Find a person…" box and type. Matching names appear underneath as you type (case doesn't matter, surnames count). Clicking one shows that person and clears the box. While typing, the game's keys (J, S, F5 and so on) don't fire; Escape or clicking the town leaves the box.
+5. **Find a person:** the box left of "People ▼" shows how many people live in the city and goes up when someone moves in or is born. Click the "Find a person…" box and type. Matching names appear underneath as you type (case doesn't matter, surnames count). Clicking one shows that person and clears the box. While typing, the game's keys (J, S, F5 and so on) don't fire; Escape or clicking the town leaves the box.
 
 ## Phase 6, build 3: sound and the themed window
 
@@ -270,3 +270,9 @@ Towns are saved in `%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City\Towns\`: 
 2. **Venues open with their staff:** hover over each venue during its hours: "Open now" while its worker is in, "Closed, nobody at work" if they're off sick, and "Closed today" on its day off. The Aurora tower's card says "Nobody lives here".
 3. **Taking a job:** if a venue worker dies, a newcomer or grown-up child on jobseeker's allowance takes the job at 09:00 the next day, with a notification and a journal entry under Life. Their allowance stops and they're paid by the hour.
 4. **Surnames:** run a town with newcomers for a few weeks. No newcomer shares a surname with anyone who lives or has lived in the city; only babies take a parent's surname.
+
+## Town View, button names and the camera panel test
+
+1. **Town View:** click "Town View" beside "Town Journal". The panels become one view of the whole city, and the button stays lit. Click it again: the panels you had come back, following the same people. From Town View, "Watch Everyone" also leaves it.
+2. **Button names:** every button's words start with a capital: Town Journal, Town View, Watch Everyone, Saved Towns, Export Life Story, Open Exports Folder, Refresh List, Full Screen and so on.
+3. **Panel test:** in Settings, under Camera panels, click "Test Camera Panels". The window closes, the game runs at 1x and shows 1 panel, then 2, up to 16, about five seconds each, with the status line counting. Afterwards your panels and speed come back and the status line gives the suggested limit and where the results file is (in the exports folder, "Camera panel test - day N.txt"). Send that file over to set the limit.
