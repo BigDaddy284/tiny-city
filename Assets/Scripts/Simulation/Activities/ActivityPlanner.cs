@@ -514,17 +514,45 @@ namespace TinyCity.Simulation.Activities
         /// has room to improve, at up to <see cref="MaxTargetsPerActivity"/> reachable objects each, then relaxing.
         /// AI decisions must pick one of these.
         /// </summary>
-        public IReadOnlyList<FreeTimeOption> FreeTimeOptions(Resident resident)
+        public IReadOnlyList<FreeTimeOption> FreeTimeOptions(Resident resident) => FreeTimeOptions(resident, everything: false);
+
+        /// <summary>
+        /// With <paramref name="everything"/> (Tiny City 2, where the AI makes every choice), every activity the
+        /// resident could start right now: eating, sleeping, the toilet, the doctor and their own job during its
+        /// hours too, whatever their needs. The game still checks each one is possible.
+        /// </summary>
+        public IReadOnlyList<FreeTimeOption> FreeTimeOptions(Resident resident, bool everything)
         {
             var time = clock();
             var options = new List<FreeTimeOption>();
             foreach (var activity in ActivityCatalog.All)
             {
-                var errand = (activity == ActivityCatalog.BuyGroceries && resident.Groceries < ShoppingWorthwhile) || activity == ActivityCatalog.AttendEvent;
-                if (!errand && (activity.PrimaryNeed == null || (activity.Kind != ActivityKind.Care && activity.Kind != ActivityKind.Leisure)
-                    || resident.Needs[activity.PrimaryNeed.Value] > Needs.Max - MinimumLeisureDeficit))
+                if (everything)
                 {
-                    continue;
+                    if (activity == ActivityCatalog.Chat || (activity == ActivityCatalog.Work && !(resident.Job != null && ShouldWork(resident, time)))
+                        || (activity == ActivityCatalog.SeeDoctor && resident.IllnessId == null))
+                    {
+                        continue;
+                    }
+
+                    if (activity == ActivityCatalog.Work)
+                    {
+                        if (world.TryGetObject(resident.Job.WorkObjectId, out var workplace) && pathfinder.Distance(resident.Location, workplace.Location) != Pathfinder.Unreachable)
+                        {
+                            options.Add(new FreeTimeOption(activity, workplace, pathfinder.Distance(resident.Location, workplace.Location)));
+                        }
+
+                        continue;
+                    }
+                }
+                else
+                {
+                    var errand = (activity == ActivityCatalog.BuyGroceries && resident.Groceries < ShoppingWorthwhile) || activity == ActivityCatalog.AttendEvent;
+                    if (!errand && (activity.PrimaryNeed == null || (activity.Kind != ActivityKind.Care && activity.Kind != ActivityKind.Leisure)
+                        || resident.Needs[activity.PrimaryNeed.Value] > Needs.Max - MinimumLeisureDeficit))
+                    {
+                        continue;
+                    }
                 }
 
                 options.AddRange(world.Objects

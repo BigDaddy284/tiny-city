@@ -70,7 +70,9 @@ namespace TinyCity.Simulation.AI
                 }
             }
 
-            sb.AppendLine("You have some free time. Choose one option to do now:");
+            sb.AppendLine(sim.AiRunsEverything
+                ? "Nobody decides for you. If you don't eat, drink, sleep, wash or go to work, nobody will do it for you, and hunger, tiredness and lost wages hurt. Choose one option to do now:"
+                : "You have some free time. Choose one option to do now:");
             foreach (var o in options)
             {
                 sb.AppendLine($"- action {PromptText.Quote(o.ActionId)}, target_id {PromptText.Quote(o.TargetId)}: {Describe(o)}");

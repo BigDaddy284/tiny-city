@@ -231,9 +231,13 @@ namespace TinyCity.Simulation.AI
                     var latency = s.LastLatencySeconds > 0 ? $", last answer {s.LastLatencySeconds:0.0}s (avg {s.AverageLatencySeconds:0.0}s)" : string.Empty;
                     return $"AI: connected to {Model}. Queue {Queue.PendingCount + Queue.ActiveCount}{latency}. Used {s.Accepted}, fell back {s.GaveUp}.";
                 case AiConnectionStatus.Disabled:
-                    return "AI: off (Settings). Residents use their built-in routine.";
+                    return Simulation?.AiRunsEverything == true
+                        ? "AI: off (Settings). The city waits until it's turned on."
+                        : "AI: off (Settings). Residents use their built-in routine.";
                 default:
-                    return $"AI: {Words(Status)} ({StatusDetail}). Residents use their built-in routine meanwhile.";
+                    return Simulation?.AiRunsEverything == true
+                        ? $"AI: {Words(Status)} ({StatusDetail}). The city waits until Ollama answers."
+                        : $"AI: {Words(Status)} ({StatusDetail}). Residents use their built-in routine meanwhile.";
             }
         }
 
@@ -492,7 +496,7 @@ namespace TinyCity.Simulation.AI
                     requestedLines[session.Id] = (session.LineRequestId, now);
                     Queue.Enqueue(LineRequest(sim, session), now);
                 }
-                else if (now - asked.askedAt > LineWaitSeconds && sim.UseSmallTalk(session.Id, asked.lineId))
+                else if (!sim.AiRunsEverything && now - asked.askedAt > LineWaitSeconds && sim.UseSmallTalk(session.Id, asked.lineId))
                 {
                     AddEvent($"{sim.GetResident(session.Lines.Last().SpeakerId)?.FirstName} used small talk: no AI line within {LineWaitSeconds:0}s");
                 }
@@ -515,6 +519,12 @@ namespace TinyCity.Simulation.AI
         /// </summary>
         private void RequestMemoryWork(TownSimulation sim, double now)
         {
+            // Memory work never holds up a choice or a line: it waits until nothing else is queued or being answered.
+            if (Queue.Pending.Concat(Queue.ActiveRequests).Any(q => q.Priority != AiPriority.Flavour))
+            {
+                return;
+            }
+
             var queued = new HashSet<string>(Queue.Pending.Concat(Queue.ActiveRequests).Select(q => q.Key));
             foreach (var r in sim.Residents)
             {
