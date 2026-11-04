@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using TinyCity.Simulation.Memory;
 using TinyCity.Simulation.Residents;
 using TinyCity.Simulation.Time;
 
@@ -16,6 +17,9 @@ namespace TinyCity.Simulation.AI
         public const int AskedEntries = 8;
 
         public const int MemoryCount = 4;
+
+        /// <summary>The newest insights given to the plan, as the generative agents feed reflections into tomorrow's plan.</summary>
+        public const int InsightCount = 3;
         public const int MaxPlaces = 30;
         public const int MaxTokens = 360;
         public const double Temperature = 0.7;
@@ -41,6 +45,13 @@ namespace TinyCity.Simulation.AI
 
             var cues = new List<string> { "plan", $"day-{day - 1}", r.Location.MapId };
             PromptText.AppendMemories(sb, sim.Memories.Recall(r.Id, sim.Time, cues, MemoryCount, sim.Memories.FocusOf(r.Id)));
+            var insights = sim.Memories.ForResident(r.Id).Where(m => m.Type == MemoryType.Insight)
+                .OrderByDescending(m => m.Time.TotalMinutes).ThenByDescending(m => m.Id, System.StringComparer.Ordinal).Take(InsightCount).ToList();
+            if (insights.Count > 0)
+            {
+                sb.AppendLine("Things you've realised lately: " + string.Join(" ", insights.Select(m => m.Summary)));
+            }
+
             PromptText.AppendPeople(sb, sim, r);
 
             var places = sim.FreeTimeOptionsFor(r)

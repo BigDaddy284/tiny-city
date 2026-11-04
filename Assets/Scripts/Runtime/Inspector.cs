@@ -466,6 +466,10 @@ namespace TinyCity.Runtime
                 {
                     GUILayout.Label("Reflection written by the AI: " + text, styles.AiNote);
                 }
+                else if (memory.Type == MemoryType.Insight)
+                {
+                    GUILayout.Label("Insight written by the AI: " + text, styles.AiNote);
+                }
                 else
                 {
                     GUILayout.Label(text, styles.Small);

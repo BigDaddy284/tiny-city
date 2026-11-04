@@ -57,6 +57,13 @@ namespace TinyCity.Simulation.AI
         private readonly Dictionary<string, int> requestedPlans = new Dictionary<string, int>();
         private readonly Dictionary<string, int> skippedPlans = new Dictionary<string, int>();
 
+        /// <summary>Tiny City 2: when an insight request was last sent or given up for each resident (real seconds).</summary>
+        private readonly Dictionary<string, double> insightAskedAt = new Dictionary<string, double>();
+        private long lastInsightCheckMinute = -1;
+
+        /// <summary>How long after an insight request was sent or given up before the same resident is asked again.</summary>
+        public const double InsightRetrySeconds = 300;
+
         /// <summary>Tiny City 2: the reaction question last sent for each resident.</summary>
         private readonly Dictionary<string, long> requestedReactions = new Dictionary<string, long>();
         private readonly Dictionary<string, (long lineId, double askedAt)> requestedLines = new Dictionary<string, (long, double)>();
@@ -129,6 +136,8 @@ namespace TinyCity.Simulation.AI
             requestedPlans.Clear();
             skippedPlans.Clear();
             requestedReactions.Clear();
+            insightAskedAt.Clear();
+            lastInsightCheckMinute = -1;
             requestedLines.Clear();
             Simulation = simulation;
             if (simulation != null)
@@ -206,6 +215,8 @@ namespace TinyCity.Simulation.AI
             requestedPlans.Clear();
             skippedPlans.Clear();
             requestedReactions.Clear();
+            insightAskedAt.Clear();
+            lastInsightCheckMinute = -1;
             requestedLines.Clear();
             SetSimulationEnabled(false);
             nextCheckAt = 0;
@@ -526,6 +537,7 @@ namespace TinyCity.Simulation.AI
                 }
             }
 
+            RequestInsights(sim, now);
             RequestMemoryWork(sim, now);
 
             if (requestedLines.Count > sim.ActiveConversations.Count)
@@ -762,6 +774,66 @@ namespace TinyCity.Simulation.AI
                     {
                         AddEvent($"{r.FirstName} used the built-in routine: {reason}");
                     }
+                });
+        }
+
+        /// <summary>Tiny City 2: once a game minute, asks for insights from anyone whose recent memories add up to enough.</summary>
+        private void RequestInsights(TownSimulation sim, double now)
+        {
+            if (!sim.AiRunsEverything || sim.Time.TotalMinutes == lastInsightCheckMinute)
+            {
+                return;
+            }
+
+            lastInsightCheckMinute = sim.Time.TotalMinutes;
+            foreach (var r in sim.Residents)
+            {
+                if ((insightAskedAt.TryGetValue(r.Id, out var asked) && now - asked < InsightRetrySeconds) || !sim.IsInsightDue(r))
+                {
+                    continue;
+                }
+
+                insightAskedAt[r.Id] = now;
+                Queue.Enqueue(InsightRequest(sim, r), now);
+            }
+        }
+
+        private AiRequest InsightRequest(TownSimulation sim, Resident r)
+        {
+            var evidence = sim.InsightEvidence(r.Id);
+            var ids = evidence.Select(m => m.Id).ToList();
+            return new AiRequest(
+                $"insight:{r.Id}",
+                r.Id,
+                AiPriority.Reflection,
+                $"insights for {r.FirstName}",
+                InsightPrompt.BuildBody(Model, r, evidence),
+                text =>
+                {
+                    if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
+                        || !InsightPrompt.TryParse(content, evidence, out var insights, out error))
+                    {
+                        return AiReplyCheck.Invalid(error);
+                    }
+
+                    var outcome = sim.ApplyInsights(r.Id, ids, insights);
+                    switch (outcome)
+                    {
+                        case DecisionOutcome.Applied:
+                            insightAskedAt.Remove(r.Id);
+                            AddEvent($"{r.FirstName} had a realisation");
+                            return AiReplyCheck.Accepted();
+                        case DecisionOutcome.InvalidText:
+                            return AiReplyCheck.Invalid("no usable insight");
+                        default:
+                            return AiReplyCheck.Stale(outcome.ToString());
+                    }
+                },
+                () => Simulation == sim && r.IsAlive,
+                reason =>
+                {
+                    insightAskedAt[r.Id] = lastNow;
+                    AddEvent($"{r.FirstName}'s insights were skipped for now: {reason}");
                 });
         }
 
