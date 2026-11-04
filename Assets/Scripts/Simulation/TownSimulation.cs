@@ -489,6 +489,46 @@ namespace TinyCity.Simulation
         public static int ReflectionDayFor(GameTime time) =>
             (int)((time.TotalMinutes - ReflectionDayStartMinute) / GameTime.MinutesPerDay) + 1;
 
+        /// <summary>
+        /// Tiny City 2: a living resident who is choosing what to do and has no plan for today yet (after waking,
+        /// at the start of a town, or after loading one) should plan their day before choosing.
+        /// </summary>
+        public bool NeedsDayPlan(Resident r) =>
+            r != null && r.IsAlive && r.State == ResidentState.Deciding && (r.DayPlan == null || r.DayPlan.Day != DayPlan.DayFor(Time));
+
+        /// <summary>
+        /// Stores an AI-written plan for today, after checking it is for today and still wanted. The plan only
+        /// guides later choices, so it changes nothing else.
+        /// </summary>
+        public DecisionOutcome ApplyDayPlan(string residentId, int day, IEnumerable<DayPlanEntry> entries)
+        {
+            var r = GetResident(residentId);
+            if (r == null)
+            {
+                return DecisionOutcome.UnknownResident;
+            }
+
+            if (!r.IsAlive)
+            {
+                return DecisionOutcome.NotAlive;
+            }
+
+            if (day != DayPlan.DayFor(Time) || r.DayPlan?.Day == day)
+            {
+                return DecisionOutcome.Stale;
+            }
+
+            var plan = DayPlan.Make(day, Time, entries);
+            if (plan == null)
+            {
+                return DecisionOutcome.InvalidText;
+            }
+
+            r.DayPlan = plan;
+            r.AddLog(Time, "Planned the day");
+            return DecisionOutcome.Applied;
+        }
+
         /// <summary>A resident is ready to reflect once they have gone to bed for the night and haven't reflected on today yet.</summary>
         public bool IsReflectionDue(Resident r) =>
             r != null && r.IsAlive && r.State == ResidentState.Performing && r.ActivityId == ActivityCatalog.Sleep.Id

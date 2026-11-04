@@ -52,6 +52,10 @@ namespace TinyCity.Simulation.AI
         private readonly IAiTransport transport;
         private readonly Dictionary<string, long> requestedDecisions = new Dictionary<string, long>();
         private readonly Dictionary<string, int> requestedReflections = new Dictionary<string, int>();
+
+        /// <summary>Tiny City 2: the plan day each resident was last asked to plan, and the day a plan was given up on.</summary>
+        private readonly Dictionary<string, int> requestedPlans = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> skippedPlans = new Dictionary<string, int>();
         private readonly Dictionary<string, (long lineId, double askedAt)> requestedLines = new Dictionary<string, (long, double)>();
         private readonly List<string> events = new List<string>();
         private IAiCall checkCall;
@@ -119,6 +123,8 @@ namespace TinyCity.Simulation.AI
             Queue.CancelAll("a different town was loaded");
             requestedDecisions.Clear();
             requestedReflections.Clear();
+            requestedPlans.Clear();
+            skippedPlans.Clear();
             requestedLines.Clear();
             Simulation = simulation;
             if (simulation != null)
@@ -193,6 +199,8 @@ namespace TinyCity.Simulation.AI
             Queue.CancelAll(reason);
             requestedDecisions.Clear();
             requestedReflections.Clear();
+            requestedPlans.Clear();
+            skippedPlans.Clear();
             requestedLines.Clear();
             SetSimulationEnabled(false);
             nextCheckAt = 0;
@@ -466,6 +474,11 @@ namespace TinyCity.Simulation.AI
                     continue;
                 }
 
+                if (WaitingForDayPlan(sim, r, now))
+                {
+                    continue;
+                }
+
                 if (r.State == ResidentState.Deciding
                     && (!requestedDecisions.TryGetValue(r.Id, out var asked) || asked != r.PendingDecisionId))
                 {
@@ -511,6 +524,32 @@ namespace TinyCity.Simulation.AI
                     requestedLines.Remove(finished);
                 }
             }
+        }
+
+        /// <summary>
+        /// Tiny City 2: a resident starting their day plans it before their first choice. Returns true while that
+        /// plan is still being asked for; once it is made, or given up on for today, their choices go ahead.
+        /// </summary>
+        private bool WaitingForDayPlan(TownSimulation sim, Resident r, double now)
+        {
+            if (!sim.AiRunsEverything || !sim.NeedsDayPlan(r))
+            {
+                return false;
+            }
+
+            var day = DayPlan.DayFor(sim.Time);
+            if (skippedPlans.TryGetValue(r.Id, out var skipped) && skipped == day)
+            {
+                return false;
+            }
+
+            if (!requestedPlans.TryGetValue(r.Id, out var asked) || asked != day)
+            {
+                requestedPlans[r.Id] = day;
+                Queue.Enqueue(DayPlanRequest(sim, r, day), now);
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -712,6 +751,42 @@ namespace TinyCity.Simulation.AI
                     {
                         AddEvent($"{r.FirstName} used the built-in routine: {reason}");
                     }
+                });
+        }
+
+        private AiRequest DayPlanRequest(TownSimulation sim, Resident r, int day)
+        {
+            return new AiRequest(
+                $"dayplan:{r.Id}",
+                r.Id,
+                AiPriority.Decision,
+                $"day {day} plan for {r.FirstName}",
+                DayPlanPrompt.BuildBody(Model, sim, r, day),
+                text =>
+                {
+                    if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
+                        || !DayPlanPrompt.TryParse(content, out var entries, out error))
+                    {
+                        return AiReplyCheck.Invalid(error);
+                    }
+
+                    var outcome = sim.ApplyDayPlan(r.Id, day, entries);
+                    switch (outcome)
+                    {
+                        case DecisionOutcome.Applied:
+                            AddEvent($"{r.FirstName} planned the day: {r.DayPlan.Entries.Count} parts ({Queue.Stats.LastLatencySeconds:0.0}s)");
+                            return AiReplyCheck.Accepted();
+                        case DecisionOutcome.InvalidText:
+                            return AiReplyCheck.Invalid("the plan had nothing usable in it");
+                        default:
+                            return AiReplyCheck.Stale(outcome.ToString());
+                    }
+                },
+                () => Simulation == sim && r.IsAlive && DayPlan.DayFor(sim.Time) == day && r.DayPlan?.Day != day,
+                reason =>
+                {
+                    skippedPlans[r.Id] = day;
+                    AddEvent($"{r.FirstName} goes without a plan today: {reason}");
                 });
         }
 

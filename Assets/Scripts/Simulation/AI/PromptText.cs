@@ -103,6 +103,23 @@ namespace TinyCity.Simulation.AI
             return $"{when} at {leave.ClockText}";
         }
 
+        /// <summary>Tiny City 2: today's plan, and which part of it is for now, if the resident has one.</summary>
+        public static void AppendDayPlan(StringBuilder sb, Resident r, GameTime now)
+        {
+            var plan = r.DayPlan;
+            if (plan == null || plan.Day != DayPlan.DayFor(now))
+            {
+                return;
+            }
+
+            sb.AppendLine($"Your plan for today: {plan.Describe()}.");
+            var current = plan.Now(now);
+            if (current != null)
+            {
+                sb.AppendLine($"Right now your plan says: {current.Text}. You can change your mind if something else matters more.");
+            }
+        }
+
         public static void AppendMemories(StringBuilder sb, IReadOnlyList<MemoryRecord> memories)
         {
             if (memories.Count == 0)

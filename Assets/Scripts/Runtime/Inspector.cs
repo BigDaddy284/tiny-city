@@ -351,8 +351,15 @@ namespace TinyCity.Runtime
 
             if (r.State == ResidentState.Deciding)
             {
-                var left = Mathf.Max(0, (int)(r.DecisionDeadline - Simulation.Time.TotalMinutes));
-                GUILayout.Label($"Waiting for the AI to suggest something; if nothing comes within {left} game minutes, their routine decides.", styles.Small);
+                if (Simulation.AiRunsEverything)
+                {
+                    GUILayout.Label(Simulation.NeedsDayPlan(r) ? "Planning their day with the AI; the city waits for them." : "Choosing what to do with the AI; the city waits for them.", styles.Small);
+                }
+                else
+                {
+                    var left = Mathf.Max(0, (int)(r.DecisionDeadline - Simulation.Time.TotalMinutes));
+                    GUILayout.Label($"Waiting for the AI to suggest something; if nothing comes within {left} game minutes, their routine decides.", styles.Small);
+                }
             }
             else if (!string.IsNullOrEmpty(r.Goal))
             {
@@ -372,7 +379,20 @@ namespace TinyCity.Runtime
                 }
             }
 
-            GUILayout.Label($"Next, by routine: {NextPlan(r)}", styles.Small);
+            if (r.DayPlan != null && r.DayPlan.Day == DayPlan.DayFor(Simulation.Time))
+            {
+                GUILayout.Label("Today's plan, written by the AI (a guide, not a game fact):", styles.Small);
+                var now = r.DayPlan.Now(Simulation.Time);
+                foreach (var entry in r.DayPlan.Entries)
+                {
+                    GUILayout.Label($"{(entry == now ? "▶ " : "   ")}{entry.ClockText} {entry.Text}", styles.AiNote);
+                }
+            }
+
+            if (!Simulation.AiRunsEverything)
+            {
+                GUILayout.Label($"Next, by routine: {NextPlan(r)}", styles.Small);
+            }
 
             var said = Simulation.Conversations.LastLineBy(r.Id);
             if (said != null)

@@ -38,6 +38,11 @@ namespace TinyCity.Simulation.AI
                 sb.AppendLine($"- {entry.Time.ClockText} {entry.Text}");
             }
 
+            if (r.DayPlan != null && r.DayPlan.Day == DayPlan.DayFor(sim.Time))
+            {
+                sb.AppendLine($"What you planned this morning: {r.DayPlan.Describe()}.");
+            }
+
             var said = sim.Conversations.Involving(r.Id)
                 .Where(c => c.Started.TotalMinutes >= dayStart.TotalMinutes)
                 .SelectMany(c => c.Lines)
