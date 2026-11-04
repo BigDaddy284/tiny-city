@@ -128,7 +128,7 @@ namespace TinyCity.Runtime
         private void DrawTownControls(Resident r)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Tiny City", styles.Title);
+            GUILayout.Label("Tiny City 2", styles.Title);
             GUILayout.FlexibleSpace();
             if (GUILayout.Toggle(game.CamerasOpen, "Cameras", GUI.skin.button, FitWidth("Cameras"), GUILayout.Height(28f)) != game.CamerasOpen)
             {

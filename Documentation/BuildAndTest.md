@@ -28,15 +28,18 @@ Reference: https://game.ci/docs/github/activation/
 |---|---|---|
 | Simulation tests (.NET) | No | `dotnet test DotNetTests` |
 | Unity Edit Mode and Play Mode tests | Yes | `game-ci/unity-test-runner`, results uploaded as `unity-test-results` |
-| Windows build | Yes | `game-ci/unity-builder` calling `TinyCity.Editor.BuildScript.BuildWindows`, uploaded as `TinyCity-Windows-0.0.<run>` |
+| Windows build (Tiny City, Tiny City 2) | Yes | `game-ci/unity-builder` calling `TinyCity.Editor.BuildScript.BuildWindows`, twice: v1 from `main`, v2 from the commit being built |
+| Package both versions | Yes (needs the builds) | Puts both builds in one artifact, `TinyCity-Windows-0.0.<run>` |
 
-The workflow runs on pushes to `main`, on pull requests, and manually from the **Actions** tab (**Run workflow**).
+The workflow runs on pushes to `main` and `v2`, on pull requests, and manually from the **Actions** tab (**Run workflow**).
 
 ## Getting the Windows build
 
 1. Open the repository's **Actions** tab and select the latest successful **Tests and Windows build** run.
 2. Download the `TinyCity-Windows-...` artifact at the bottom of the run page. It is a zip.
-3. Extract the whole zip (keep `TinyCity_Data` next to the .exe) and run `TinyCity.exe`.
+3. Extract the whole zip. It holds two folders: `Tiny City` (v1, the game on `main`) with `TinyCity.exe`, and `Tiny City 2` (v2, in development) with `TinyCity2.exe`. Keep each folder whole (each `_Data` folder next to its .exe).
+
+The two versions keep separate towns, settings and camera layouts (`%USERPROFILE%\AppData\LocalLow\Tiny City\Tiny City` and `...\Tiny City\Tiny City 2`), so playing one never changes the other.
 
 Windows may show a SmartScreen warning because the build is unsigned; choose **More info → Run anyway**.
 

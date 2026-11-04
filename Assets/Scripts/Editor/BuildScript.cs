@@ -9,12 +9,13 @@ namespace TinyCity.Editor
 {
     /// <summary>
     /// Command-line build entry point used by CI:
-    /// Unity -batchmode -quit -projectPath . -executeMethod TinyCity.Editor.BuildScript.BuildWindows -customBuildPath Builds/Windows/TinyCity.exe
+    /// Unity -batchmode -quit -projectPath . -executeMethod TinyCity.Editor.BuildScript.BuildWindows -customBuildPath Builds/Windows/TinyCity2.exe
     /// </summary>
     public static class BuildScript
     {
         public const string BootScenePath = "Assets/Scenes/Boot.unity";
-        private const string DefaultBuildPath = "Builds/Windows/TinyCity.exe";
+        public const string ProductName = "Tiny City 2";
+        private const string DefaultBuildPath = "Builds/Windows/TinyCity2.exe";
 
         [MenuItem("Tiny City/Build Windows")]
         public static void BuildWindows()
@@ -60,8 +61,10 @@ namespace TinyCity.Editor
 
         private static void ApplyPlayerSettings()
         {
+            // v2 has its own product name, so Windows gives it its own persistentDataPath and PlayerPrefs:
+            // its towns, settings and camera layout never touch v1's (which stays "Tiny City").
             PlayerSettings.companyName = "Tiny City";
-            PlayerSettings.productName = "Tiny City";
+            PlayerSettings.productName = ProductName;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
             PlayerSettings.defaultScreenWidth = 1280;
             PlayerSettings.defaultScreenHeight = 720;
