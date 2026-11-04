@@ -107,7 +107,7 @@ namespace TinyCity.Sound
         public static SoundEffect? EffectFor(TownWorld world, Resident r)
         {
             var id = r.ActivityId;
-            if (id == ActivityCatalog.Eat.Id || id == ActivityCatalog.Snack.Id || id == ActivityCatalog.Bake.Id)
+            if (id == ActivityCatalog.Eat.Id || id == ActivityCatalog.Snack.Id || id == ActivityCatalog.Bake.Id || id == ActivityCatalog.Cook.Id)
             {
                 return SoundEffect.Cooking;
             }
@@ -142,12 +142,12 @@ namespace TinyCity.Sound
                 return SoundEffect.Piano;
             }
 
-            if (id == ActivityCatalog.Fish.Id)
+            if (id == ActivityCatalog.Fish.Id || id == ActivityCatalog.CatchFish.Id)
             {
                 return SoundEffect.Splash;
             }
 
-            if (id == ActivityCatalog.Garden.Id)
+            if (id == ActivityCatalog.Garden.Id || id == ActivityCatalog.PlantCrops.Id || id == ActivityCatalog.WaterCrops.Id || id == ActivityCatalog.Harvest.Id)
             {
                 return SoundEffect.Digging;
             }

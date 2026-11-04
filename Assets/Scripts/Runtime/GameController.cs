@@ -418,6 +418,7 @@ namespace TinyCity.Runtime
             simulation.NewcomersEnabled = Settings.Simulation.newcomers;
             simulation.BabiesEnabled = Settings.Simulation.babies;
             simulation.AiRunsEverything = true;
+            simulation.FoodMustBeMade = true;
             Ai?.Attach(simulation);
             RestartCameraCycle();
             if (view.World == null)

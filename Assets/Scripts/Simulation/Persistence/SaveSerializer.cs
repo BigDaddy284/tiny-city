@@ -84,6 +84,13 @@ namespace TinyCity.Simulation.Persistence
                 ["relationships"] = simulation.Relationships.All.Select(WriteRelationship).ToList(),
                 ["activeConversations"] = simulation.ActiveConversations.Select(WriteSession).ToList(),
                 ["economy"] = WriteEconomy(simulation.Economy),
+                ["crops"] = simulation.Food.Crops.OrderBy(c => c.Key, StringComparer.Ordinal).Select(c => (object)new Dictionary<string, object>
+                {
+                    ["objectId"] = c.Key,
+                    ["plantedDay"] = c.Value.PlantedDay,
+                    ["wateredDays"] = c.Value.WateredDays,
+                    ["lastWateredDay"] = c.Value.LastWateredDay,
+                }).ToList(),
                 ["partnerships"] = simulation.Relationships.Partnerships.Select(p => (object)new Dictionary<string, object>
                 {
                     ["firstId"] = p.FirstId,
@@ -206,6 +213,19 @@ namespace TinyCity.Simulation.Persistence
             ReadRelationships(GetList(root, "relationships"), simulation, warnings);
             ReadSessions(GetList(root, "activeConversations"), simulation, warnings);
             ReadEconomy(GetObject(root, "economy"), simulation, warnings);
+            foreach (var crop in GetList(root, "crops").OfType<Dictionary<string, object>>())
+            {
+                var objectId = GetString(crop, "objectId");
+                if (objectId != null && world.TryGetObject(objectId, out var plot) && plot.Type == ObjectType.GardenPlot)
+                {
+                    simulation.Food.SetCrop(objectId, new Crop(GetInt(crop, "plantedDay", 0), Math.Max(0, GetInt(crop, "wateredDays", 0)), GetInt(crop, "lastWateredDay", 0)));
+                }
+                else
+                {
+                    warnings.Add($"A crop on \"{objectId}\", which isn't a garden plot, was dropped.");
+                }
+            }
+
             ReadPartnerships(GetList(root, "partnerships"), simulation, warnings);
             ReadHistory(GetObject(root, "history"), simulation, warnings);
 
@@ -255,6 +275,12 @@ namespace TinyCity.Simulation.Persistence
                 },
                 ["money"] = r.MoneyPence,
                 ["groceries"] = r.Groceries,
+                ["food"] = r.Food.Batches.Select(b => (object)new Dictionary<string, object>
+                {
+                    ["kind"] = b.Kind.ToString(),
+                    ["count"] = b.Count,
+                    ["goesOffDay"] = b.GoesOffDay,
+                }).ToList(),
                 ["weeklyRent"] = r.WeeklyRentPence,
                 ["weeklyIncome"] = r.WeeklyIncomePence,
                 ["incomeLabel"] = r.IncomeLabel,
@@ -397,6 +423,17 @@ namespace TinyCity.Simulation.Persistence
             resident.LastReflectionDay = Math.Max(0, GetInt(data, "lastReflectionDay", 0));
             resident.MoneyPence = GetLong(data, "money", 0);
             resident.Groceries = Math.Max(0, Math.Min(GetInt(data, "groceries", 0), 1000));
+            foreach (var batch in GetList(data, "food").OfType<Dictionary<string, object>>())
+            {
+                if (Enum.TryParse<FoodKind>(GetString(batch, "kind"), out var kind) && Enum.IsDefined(typeof(FoodKind), kind))
+                {
+                    resident.Food.Add(kind, Math.Max(0, GetInt(batch, "count", 0)), GetInt(batch, "goesOffDay", 0));
+                }
+                else
+                {
+                    warnings.Add($"{label}: unknown food \"{GetString(batch, "kind")}\" was dropped.");
+                }
+            }
             resident.WeeklyRentPence = Math.Max(0, GetLong(data, "weeklyRent", 0));
             resident.WeeklyIncomePence = Math.Max(0, GetLong(data, "weeklyIncome", 0));
             resident.IncomeLabel = TextRules.Clean(GetString(data, "incomeLabel"), 40);

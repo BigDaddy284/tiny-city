@@ -37,7 +37,8 @@ namespace TinyCity.Simulation.AI
                 ? "You have no job."
                 : $"Your job: {r.Job.Title.ToLowerInvariant()}, {Clock(r.Job.StartMinuteOfDay)} to {Clock(r.Job.EndMinuteOfDay)} on {r.Job.DaysText()}. Today is {sim.Time.Weekday}.");
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
-            sb.AppendLine($"Money: {PromptText.Purse(r)}.");
+            sb.AppendLine($"Money: {PromptText.Purse(r, sim)}.");
+            PromptText.AppendFood(sb, sim, r);
             if (r.IsHomeless)
             {
                 sb.AppendLine("You have nowhere to live yet, so you sleep on a park bench.");

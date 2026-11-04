@@ -168,9 +168,36 @@ namespace TinyCity.Simulation.AI
         private static string Work(Resident o) => o.Job == null ? string.Empty : $" ({o.Job.Title.ToLowerInvariant()})";
 
         /// <summary>Money and food at home, so the AI can weigh paid treats against what's in the cupboard.</summary>
-        public static string Purse(Resident r) =>
-            $"you have {Economy.Money.Format(r.MoneyPence)}, and food at home for {r.Groceries} meal{(r.Groceries == 1 ? string.Empty : "s")}"
+        public static string Purse(Resident r, TownSimulation sim = null) =>
+            $"you have {Economy.Money.Format(r.MoneyPence)}"
+            + (sim?.FoodMustBeMade == true ? string.Empty : $", and food at home for {r.Groceries} meal{(r.Groceries == 1 ? string.Empty : "s")}")
             + (r.MoneyPence < r.WeeklyRentPence ? $"; money is tight, rent of {Economy.Money.Format(r.WeeklyRentPence)} is due on Monday" : string.Empty);
+
+        /// <summary>
+        /// Tiny City 2: what food the resident has and how the town's garden plots are doing, because nothing is
+        /// free and someone has to choose to grow, catch and cook it.
+        /// </summary>
+        public static void AppendFood(StringBuilder sb, TownSimulation sim, Resident r)
+        {
+            if (!sim.FoodMustBeMade)
+            {
+                return;
+            }
+
+            sb.AppendLine($"Your food: {r.Food.Describe(sim.Time.Day)}.");
+            sb.Append("Nothing to eat is given away or sold ready-made in this city: every meal is grown or caught by someone, and raw food can be cooked into meals that fill you up more. Food goes off after a few days.");
+            var plots = sim.World.Objects.Where(o => o.Type == World.ObjectType.GardenPlot).ToList();
+            if (plots.Count > 0)
+            {
+                sb.Append(" Garden: ").Append(string.Join("; ", plots.Select(o =>
+                {
+                    var crop = sim.Food.CropAt(o.Id);
+                    return $"{o.Name} is {(crop == null ? "empty, ready for planting" : crop.Describe(sim.Time.Day))}";
+                }))).Append('.');
+            }
+
+            sb.AppendLine();
+        }
 
         public static string Relationship(TownSimulation sim, Resident r, Resident other)
         {

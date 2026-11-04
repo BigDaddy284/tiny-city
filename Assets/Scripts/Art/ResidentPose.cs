@@ -329,7 +329,7 @@ namespace TinyCity.Art
 
             if (activityId == ActivityCatalog.Eat.Id || activityId == ActivityCatalog.Snack.Id || activityId == ActivityCatalog.CafeMeal.Id
                 || activityId == ActivityCatalog.Pastry.Id || activityId == ActivityCatalog.Drink.Id || activityId == ActivityCatalog.Coffee.Id
-                || activityId == ActivityCatalog.BarDrink.Id)
+                || activityId == ActivityCatalog.BarDrink.Id || activityId == ActivityCatalog.EatMeal.Id || activityId == ActivityCatalog.EatRaw.Id)
             {
                 return ResidentAction.Eat;
             }
@@ -358,7 +358,8 @@ namespace TinyCity.Art
                 || activityId == ActivityCatalog.Chess.Id || activityId == ActivityCatalog.Fish.Id || activityId == ActivityCatalog.Garden.Id
                 || activityId == ActivityCatalog.Bake.Id || activityId == ActivityCatalog.BuyGroceries.Id
                 || activityId == ActivityCatalog.PlayPool.Id || activityId == ActivityCatalog.PlaySnooker.Id || activityId == ActivityCatalog.PlayArcade.Id
-                || activityId == ActivityCatalog.BrowseMarket.Id)
+                || activityId == ActivityCatalog.BrowseMarket.Id || activityId == ActivityCatalog.PlantCrops.Id || activityId == ActivityCatalog.WaterCrops.Id
+                || activityId == ActivityCatalog.Harvest.Id || activityId == ActivityCatalog.CatchFish.Id || activityId == ActivityCatalog.Cook.Id)
             {
                 return ResidentAction.Work;
             }

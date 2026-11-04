@@ -237,7 +237,10 @@ namespace TinyCity.Simulation.Activities
             activity.CanUse(obj) && (activity.Hobby == null || resident.Hobbies.Contains(activity.Hobby))
             && (activity != ActivityCatalog.AttendEvent || EventAt(obj, time) != null)
             && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _))
-            && SuitsHousing(resident, activity, obj);
+            && SuitsHousing(resident, activity, obj) && FoodSupply.Allows(Food, resident, activity, obj, time.Day);
+
+        /// <summary>Tiny City 2's food supply, or null (v1: only v1's free food exists).</summary>
+        public FoodSupply Food { get; set; }
 
         /// <summary>
         /// Only someone with nowhere to live sleeps on a bench, and only on one nobody else is using; nobody joins

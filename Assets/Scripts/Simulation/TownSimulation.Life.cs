@@ -99,6 +99,7 @@ namespace TinyCity.Simulation
         /// <summary>Called as an activity finishes normally, before the resident is freed.</summary>
         private void FinishActivity(Resident r, ActivityDefinition activity)
         {
+            FinishFood(r, activity);
             if (activity == ActivityCatalog.SeeDoctor && HealthRules.NeedsDoctor(r))
             {
                 r.IllnessTreated = true;
