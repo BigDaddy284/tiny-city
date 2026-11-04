@@ -379,6 +379,11 @@ namespace TinyCity.Runtime
                 }
             }
 
+            if (r.Reaction != null)
+            {
+                GUILayout.Label($"Noticed {r.Reaction.Seen}; asking the AI whether to go over and talk.", styles.Small);
+            }
+
             if (r.DayPlan != null && r.DayPlan.Day == DayPlan.DayFor(Simulation.Time))
             {
                 GUILayout.Label("Today's plan, written by the AI (a guide, not a game fact):", styles.Small);

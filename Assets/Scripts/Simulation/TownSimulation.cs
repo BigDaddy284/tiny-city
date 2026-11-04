@@ -236,7 +236,14 @@ namespace TinyCity.Simulation
             }
 
             StepConversations();
-            StartChanceMeetings();
+            if (AiRunsEverything)
+            {
+                Perceive();
+            }
+            else
+            {
+                StartChanceMeetings();
+            }
             Time = Time.AddMinutes(1);
         }
 
@@ -732,7 +739,7 @@ namespace TinyCity.Simulation
                 BeginPerforming(r, choice.Activity);
             }
 
-            if (choice.IsDiscretionary)
+            if (choice.IsDiscretionary && !AiRunsEverything)
             {
                 InviteToHobby(r, choice.Activity, choice.Target);
             }
@@ -779,7 +786,8 @@ namespace TinyCity.Simulation
         {
             var other = GetResident(r.TargetResidentId);
             r.MinutesRemaining--;
-            if (other == null || !SocialRules.CanBeApproached(other, Time, IsOutdoors(other)) || r.MinutesRemaining <= 0)
+            var reachable = AiRunsEverything ? FreeToTalk(other) : SocialRules.CanBeApproached(other, Time, IsOutdoors(other));
+            if (other == null || !reachable || r.MinutesRemaining <= 0)
             {
                 r.AddLog(Time, other != null && other.State == ResidentState.Talking
                     ? $"Went to find {other.FirstName}, but they'd got talking with someone else"
@@ -790,7 +798,7 @@ namespace TinyCity.Simulation
 
             if (Near(r.Location, other.Location, 1))
             {
-                if (SocialRules.CanJoinConversation(other, Time))
+                if (AiRunsEverything ? FreeToTalk(other) : SocialRules.CanJoinConversation(other, Time))
                 {
                     StartConversation(r, other);
                 }

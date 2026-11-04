@@ -263,6 +263,9 @@ namespace TinyCity.Simulation.Residents
         /// <summary>How many planned steps the resident has carried out since the game started (for diagnostics, not saved).</summary>
         public int PlanStepsTaken { get; internal set; }
 
+        /// <summary>Tiny City 2: someone they noticed, while the AI is asked whether they go and talk (not saved).</summary>
+        public Social.PendingReaction Reaction { get; internal set; }
+
         /// <summary>Tiny City 2: today's plan, written by the AI when the resident starts their day (not saved).</summary>
         public DayPlan DayPlan { get; internal set; }
 
