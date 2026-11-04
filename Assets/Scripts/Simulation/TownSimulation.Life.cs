@@ -100,6 +100,7 @@ namespace TinyCity.Simulation
         private void FinishActivity(Resident r, ActivityDefinition activity)
         {
             FinishFood(r, activity);
+            FinishCrafting(r, activity);
             if (activity == ActivityCatalog.SeeDoctor && HealthRules.NeedsDoctor(r))
             {
                 r.IllnessTreated = true;

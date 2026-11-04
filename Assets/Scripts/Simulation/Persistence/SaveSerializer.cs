@@ -281,6 +281,17 @@ namespace TinyCity.Simulation.Persistence
                     ["count"] = b.Count,
                     ["goesOffDay"] = b.GoesOffDay,
                 }).ToList(),
+                ["materials"] = Enum.GetValues(typeof(MaterialKind)).Cast<MaterialKind>().Where(m => r.Belongings.Count(m) > 0).Select(m => (object)new Dictionary<string, object>
+                {
+                    ["kind"] = m.ToString(),
+                    ["count"] = r.Belongings.Count(m),
+                }).ToList(),
+                ["tools"] = r.Belongings.Tools.Select(t => (object)new Dictionary<string, object>
+                {
+                    ["kind"] = t.tool.ToString(),
+                    ["tier"] = t.tier,
+                    ["usesLeft"] = t.usesLeft,
+                }).ToList(),
                 ["weeklyRent"] = r.WeeklyRentPence,
                 ["weeklyIncome"] = r.WeeklyIncomePence,
                 ["incomeLabel"] = r.IncomeLabel,
@@ -432,6 +443,30 @@ namespace TinyCity.Simulation.Persistence
                 else
                 {
                     warnings.Add($"{label}: unknown food \"{GetString(batch, "kind")}\" was dropped.");
+                }
+            }
+
+            foreach (var item in GetList(data, "materials").OfType<Dictionary<string, object>>())
+            {
+                if (Enum.TryParse<MaterialKind>(GetString(item, "kind"), out var kind) && Enum.IsDefined(typeof(MaterialKind), kind))
+                {
+                    resident.Belongings.Add(kind, GetInt(item, "count", 0));
+                }
+                else
+                {
+                    warnings.Add($"{label}: unknown material \"{GetString(item, "kind")}\" was dropped.");
+                }
+            }
+
+            foreach (var item in GetList(data, "tools").OfType<Dictionary<string, object>>())
+            {
+                if (Enum.TryParse<ToolKind>(GetString(item, "kind"), out var kind) && Enum.IsDefined(typeof(ToolKind), kind))
+                {
+                    resident.Belongings.SetTool(kind, GetInt(item, "usesLeft", 0), GetInt(item, "tier", 1));
+                }
+                else
+                {
+                    warnings.Add($"{label}: unknown tool \"{GetString(item, "kind")}\" was dropped.");
                 }
             }
             resident.WeeklyRentPence = Math.Max(0, GetLong(data, "weeklyRent", 0));

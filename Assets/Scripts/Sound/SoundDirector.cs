@@ -147,6 +147,16 @@ namespace TinyCity.Sound
                 return SoundEffect.Splash;
             }
 
+            if (ActivityCatalog.TryGet(id, out var gathered) && TinyCity.Simulation.Economy.CraftingRules.IsGathering(gathered))
+            {
+                return SoundEffect.Digging;
+            }
+
+            if (TinyCity.Simulation.Economy.CraftingRules.IsCrafting(id))
+            {
+                return SoundEffect.Typing;
+            }
+
             if (id == ActivityCatalog.Garden.Id || id == ActivityCatalog.PlantCrops.Id || id == ActivityCatalog.WaterCrops.Id || id == ActivityCatalog.Harvest.Id)
             {
                 return SoundEffect.Digging;
