@@ -125,3 +125,51 @@ Every count up to 16 stayed above 60 fps, so the limit went from 10 to 16, enoug
 ### With 50 people (build 0.0.81)
 
 The same PC with the test filling a copy of the city to 50 people, so every panel follows someone: 1–2 panels about 230 fps, 7 panels 80 fps, 9 and 13 panels about 60–66 fps, 16 panels 52 fps, 25 panels 40 fps, 32 panels 31 fps and 50 panels 41 fps (the slowest frame in twenty 29–62 ms from 20 panels up). The limit stays at 16: smooth with today's fifteen residents and still above 50 fps with fifty. Every panel draws its own name labels, which is likely part of that cost (not yet measured on its own); object names now show only when in use or under the pointer.
+
+## Tiny City 2: the AI budget (4 November 2026)
+
+Run on the `v2` branch with `dotnet run -c Release -- <report.md> 0 0 0 10 1 0 1` (the last argument is how many game days of Tiny City 2 to run at each speed). The city is the fifteen starter residents with `AiRunsEverything`, so every choice goes to the model and the clock waits whenever anyone is deciding, as in the game. The same stand-in Ollama is used, with the same caveats: nothing here was measured against a real model or in the Windows build.
+
+| Finding | Before | After |
+|---|---|---|
+| Every "Saw …" memory was sent to the model to be rated | About 350 rating requests a game day, the biggest single kind | Observations keep the game's figure (`PerceptionRules.ObservationImportance`), and the rest are rated only once a resident has `AiService.RatingBatchMin` (4) to rate or the oldest has waited `RatingMaxWaitMinutes` (6 game hours): about 30 a day |
+| Residents were asked whether to go over and talk to almost everyone they passed | About 250 reaction requests a game day | Each resident is offered at most one reaction every `PerceptionRules.ReactEveryMinutes` (120): about 100 a day |
+| Calls per game day with qwen2.5:7b on a graphics card | About 1,000 | About 400 to 430 |
+
+What it means for play: with one request at a time, decisions alone (about 190 a game day, 3 s each on a mid-range GPU) take up much of a game day at 1x, and residents tend to decide at the same moments (waking, finishing work), so they queue. The city then runs at about 0.6x when 1x is chosen and about 0.9x at 4x. With `parallelRequests` 2 (and Ollama's `OLLAMA_NUM_PARALLEL` 2) the same run reached 0.65x, 0.87x and 1.06x, with the average wait for a choice down from 14 s to 10 s. On the CPU only the city runs at about a seventh of normal speed whatever is chosen. A small model (qwen2.5:0.5b) keeps up at 1x and reaches about 2.5x at 4x. Nobody died in any run, though the stand-in picks options in turn, so that says nothing about a real model.
+
+### Tiny City 2 with qwen2.5:7b on a graphics card
+
+The AI makes every choice and the clock waits for it, as in the v2 game. The stand-in Ollama takes 1.5 to 4 s a reply, like Qwen2.5 7B on a mid-range GPU and works on 1 request at a time; one reply in 30 is not JSON and one in 50 never arrives. It picks options in turn rather than sensibly, so needs and deaths here say nothing about how a real model plays. 1 game day at each speed.
+
+| Speed | Real time | Actually ran at | Clock held | Requests per game day | decisions | day plans | lines | reacts | insights | reflections | ratings | Avg wait for a choice (s) | Longest (s) | Avg reply (s) | Gave up | Deaths |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1x | 40 min | 0.60x | 48% | 427 | 192 | 30 | 58 | 116 | 0 | 8 | 23 | 14.2 | 131 | 3.2 | 1 | 0 |
+| 2x | 29 min | 0.82x | 64% | 402 | 181 | 29 | 52 | 103 | 0 | 9 | 28 | 14.4 | 131 | 3.2 | 0 | 0 |
+| 4x | 26 min | 0.94x | 80% | 392 | 173 | 29 | 70 | 82 | 0 | 8 | 30 | 14.9 | 131 | 3.2 | 0 | 0 |
+
+"Requests per game day" and the columns by kind count every request sent to the model, retries included. "Wait for a choice" is real time from a resident starting to decide until they act, which is what holds the clock. "Actually ran at" is game minutes per real second, so 1.00x means the city never had to wait.
+
+### Tiny City 2 with qwen2.5:7b on the CPU only
+
+The AI makes every choice and the clock waits for it, as in the v2 game. The stand-in Ollama takes 12 to 30 s a reply, like Qwen2.5 7B without a usable GPU and works on 1 request at a time; one reply in 30 is not JSON and one in 50 never arrives. It picks options in turn rather than sensibly, so needs and deaths here say nothing about how a real model plays. 0.5 game days at each speed.
+
+| Speed | Real time | Actually ran at | Clock held | Requests per game day | decisions | day plans | lines | reacts | insights | reflections | ratings | Avg wait for a choice (s) | Longest (s) | Avg reply (s) | Gave up | Deaths |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1x | 1.6 h | 0.13x | 89% | 466 | 212 | 32 | 90 | 96 | 0 | 2 | 34 | 138.4 | 877 | 24.3 | 0 | 0 |
+| 2x | 1.5 h | 0.14x | 94% | 450 | 212 | 32 | 74 | 96 | 0 | 2 | 34 | 137.6 | 877 | 24.2 | 0 | 0 |
+| 4x | 1.4 h | 0.14x | 97% | 450 | 212 | 32 | 74 | 96 | 0 | 2 | 34 | 137.8 | 877 | 24.2 | 0 | 0 |
+
+"Requests per game day" and the columns by kind count every request sent to the model, retries included. "Wait for a choice" is real time from a resident starting to decide until they act, which is what holds the clock. "Actually ran at" is game minutes per real second, so 1.00x means the city never had to wait.
+
+### Tiny City 2 with qwen2.5:0.5b
+
+The AI makes every choice and the clock waits for it, as in the v2 game. The stand-in Ollama takes 0.3 to 0.5 s a reply (0.4 s on average, as measured by the owner with qwen2.5:0.5b at 10x) and works on 1 request at a time; one reply in 30 is not JSON and one in 50 never arrives. It picks options in turn rather than sensibly, so needs and deaths here say nothing about how a real model plays. 1 game day at each speed.
+
+| Speed | Real time | Actually ran at | Clock held | Requests per game day | decisions | day plans | lines | reacts | insights | reflections | ratings | Avg wait for a choice (s) | Longest (s) | Avg reply (s) | Gave up | Deaths |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1x | 27 min | 0.91x | 20% | 496 | 199 | 30 | 103 | 116 | 0 | 10 | 38 | 3.0 | 30 | 0.5 | 1 | 0 |
+| 2x | 16 min | 1.54x | 37% | 527 | 205 | 28 | 124 | 121 | 0 | 9 | 40 | 3.2 | 30 | 0.5 | 1 | 0 |
+| 4x | 10 min | 2.47x | 47% | 426 | 185 | 27 | 67 | 103 | 0 | 10 | 34 | 3.4 | 30 | 0.5 | 0 | 0 |
+
+"Requests per game day" and the columns by kind count every request sent to the model, retries included. "Wait for a choice" is real time from a resident starting to decide until they act, which is what holds the clock. "Actually ran at" is game minutes per real second, so 1.00x means the city never had to wait.

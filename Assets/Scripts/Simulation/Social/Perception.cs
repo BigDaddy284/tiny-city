@@ -9,10 +9,14 @@ namespace TinyCity.Simulation.Social
         /// <summary>The cheap filter: the same two people are only offered a reaction this often.</summary>
         public const int ReactCooldownMinutes = 180;
 
+        /// <summary>The AI budget: each resident is offered at most one reaction this often, whoever they see.</summary>
+        public const int ReactEveryMinutes = 120;
+
         /// <summary>A reaction not answered within this many game minutes is dropped (the moment has passed).</summary>
         public const int ReactWaitMinutes = 15;
 
-        /// <summary>What noticing someone is worth as a memory before the AI rates it.</summary>
+        /// <summary>What noticing someone is worth as a memory. The game's figure stands (the AI isn't asked to rate
+        /// these), because observations are the most common memory and rating each would double the AI's work.</summary>
         public const int ObservationImportance = 2;
     }
 

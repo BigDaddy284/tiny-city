@@ -57,6 +57,14 @@ namespace TinyCity.Simulation.AI
         private readonly Dictionary<string, int> requestedPlans = new Dictionary<string, int>();
         private readonly Dictionary<string, int> skippedPlans = new Dictionary<string, int>();
 
+        /// <summary>
+        /// Tiny City 2's AI budget: a resident's new memories are rated once there are this many to rate in one
+        /// request, or once the oldest has waited <see cref="RatingMaxWaitMinutes"/> game minutes.
+        /// </summary>
+        public const int RatingBatchMin = 4;
+
+        public const int RatingMaxWaitMinutes = 6 * 60;
+
         /// <summary>Tiny City 2: when an insight request was last sent or given up for each resident (real seconds).</summary>
         private readonly Dictionary<string, double> insightAskedAt = new Dictionary<string, double>();
         private long lastInsightCheckMinute = -1;
@@ -596,7 +604,8 @@ namespace TinyCity.Simulation.AI
                 }
 
                 var batch = sim.Memories.NeedingRating(r.Id).Take(ImportancePrompt.MaxPerRequest).ToList();
-                if (batch.Count > 0)
+                if (batch.Count > 0 && (!sim.AiRunsEverything || batch.Count >= RatingBatchMin
+                    || sim.Time.TotalMinutes - batch[0].Time.TotalMinutes >= RatingMaxWaitMinutes))
                 {
                     Queue.Enqueue(ImportanceRequest(sim, r, batch), now);
                 }

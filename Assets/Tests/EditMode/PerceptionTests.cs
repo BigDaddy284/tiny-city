@@ -38,7 +38,8 @@ namespace TinyCity.Tests.EditMode
             Assert.That(mabel.Reaction, Is.Not.Null);
             Assert.That(mabel.Reaction.OtherId, Is.EqualTo(arthur.Id));
             Assert.That(mabel.Reaction.Seen, Does.Contain(arthur.FullName));
-            Assert.That(sim.Memories.ForResident(mabel.Id).Any(m => m.Summary.StartsWith("Saw " + arthur.FullName)), Is.True);
+            var seen = sim.Memories.ForResident(mabel.Id).Single(m => m.Summary.StartsWith("Saw " + arthur.FullName));
+            Assert.That(seen.ImportanceRated, Is.True, "observations keep the game's figure, so the AI isn't asked to rate them");
 
             for (var i = 0; i < 10; i++)
             {

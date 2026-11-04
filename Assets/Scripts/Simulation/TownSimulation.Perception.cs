@@ -18,6 +18,9 @@ namespace TinyCity.Simulation
         /// <summary>When each (noticer, noticed) pair was last offered a reaction; not saved, so after loading people are noticed afresh.</summary>
         private readonly Dictionary<string, long> lastNoticed = new Dictionary<string, long>(StringComparer.Ordinal);
 
+        /// <summary>When each resident was last offered a reaction (not saved).</summary>
+        private readonly Dictionary<string, long> lastReacted = new Dictionary<string, long>(StringComparer.Ordinal);
+
         private long nextReactionId = 1;
 
         /// <summary>Someone who can be walked up to and talked to: alive, not a baby, not already chatting, asleep or at work.</summary>
@@ -63,7 +66,8 @@ namespace TinyCity.Simulation
                     r.Reaction = null;
                 }
 
-                if (!CanReact(r))
+                if (!CanReact(r)
+                    || (lastReacted.TryGetValue(r.Id, out var reacted) && Time.TotalMinutes - reacted < PerceptionRules.ReactEveryMinutes))
                 {
                     continue;
                 }
@@ -85,7 +89,13 @@ namespace TinyCity.Simulation
                     lastNoticed[key] = Time.TotalMinutes;
                     var seen = $"{other.FullName}, {DoingText(other)}";
                     var map = World.GetMap(r.Location.MapId);
-                    Memories.Add(r.Id, Time, MemoryType.Event, PerceptionRules.ObservationImportance, $"Saw {seen} in {map.Name}", new[] { other.Id }, new[] { other.Id, "seen", r.Location.MapId });
+                    var memory = Memories.Add(r.Id, Time, MemoryType.Event, PerceptionRules.ObservationImportance, $"Saw {seen} in {map.Name}", new[] { other.Id }, new[] { other.Id, "seen", r.Location.MapId });
+                    if (memory != null)
+                    {
+                        Memories.RateImportance(memory.Id, PerceptionRules.ObservationImportance);
+                    }
+
+                    lastReacted[r.Id] = Time.TotalMinutes;
                     r.Reaction = new PendingReaction(nextReactionId++, other.Id, Time.TotalMinutes, seen);
                     break;
                 }
