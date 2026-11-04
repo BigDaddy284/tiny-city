@@ -18,7 +18,7 @@ namespace TinyCity.Simulation.History
         /// <summary>One of the resident's own memories recorded by the game.</summary>
         Memory,
 
-        /// <summary>An end-of-day reflection the AI wrote for them.</summary>
+        /// <summary>An end-of-day reflection or an insight the AI wrote for them.</summary>
         AiReflection,
     }
 
@@ -57,7 +57,7 @@ namespace TinyCity.Simulation.History
             // Town events already cover birthdays, illness and life stages; memories add the resident's own side.
             foreach (var m in sim.Memories.ForResident(residentId))
             {
-                if (m.Type == MemoryType.Reflection)
+                if (m.Type == MemoryType.Reflection || m.Type == MemoryType.Insight)
                 {
                     entries.Add(new TimelineEntry(m.Time, m.Summary, TimelineSource.AiReflection));
                 }

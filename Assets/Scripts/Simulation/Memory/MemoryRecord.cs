@@ -13,6 +13,9 @@ namespace TinyCity.Simulation.Memory
 
         /// <summary>Background that came with the resident, such as moving into their home.</summary>
         LifeHistory,
+
+        /// <summary>Tiny City 2: a higher-level thought the AI drew from several memories (tagged with their ids).</summary>
+        Insight,
     }
 
     /// <summary>
