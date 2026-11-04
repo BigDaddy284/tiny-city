@@ -11,6 +11,9 @@ namespace TinyCity.Simulation.Economy
         Income,
         Rent,
         Purchase,
+
+        /// <summary>Tiny City 2: money from another resident for food they bought.</summary>
+        Sale,
     }
 
     /// <summary>One change to a resident's money. Every change goes through the ledger, so balances can be explained.</summary>

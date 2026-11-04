@@ -225,13 +225,23 @@ namespace TinyCity.Simulation.Activities
             "eat-raw", "Eat something raw", "eating raw food", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.Kitchen, ObjectType.Bench }, 15,
             new Dictionary<NeedType, double> { [NeedType.Hunger] = 2.0 });
 
+        /// <summary>Selling food from a market stall: others nearby can buy a portion each at the game's price.</summary>
+        public static readonly ActivityDefinition RunStall = new ActivityDefinition(
+            "run-stall", "Sell food at a stall", "selling food at a market stall", ActivityKind.Errand, null, new[] { ObjectType.MarketStall }, 90,
+            new Dictionary<NeedType, double> { [NeedType.Social] = 0.4 });
+
+        /// <summary>Buying a portion of food from someone selling at a stall.</summary>
+        public static readonly ActivityDefinition BuyFood = new ActivityDefinition(
+            "buy-food", "Buy food at a stall", "buying food at a stall", ActivityKind.Errand, null, new[] { ObjectType.MarketStall }, 5,
+            new Dictionary<NeedType, double> { [NeedType.Social] = 0.5 });
+
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
             Sleep, Eat, Snack, CafeMeal, Pastry, Drink, UseToilet, Shower, Work, Exercise, Read, WatchTown, Coffee, BuyGroceries, Chat,
             Rest, SeeDoctor, Paint, PlayPiano, Chess, Fish, Garden, Bake, Knit, AttendEvent, BarDrink, Dance,
             PlayPool, PlaySnooker, Bowling, PlayArcade, GymWorkout, BrowseMarket, Leftovers,
-            PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw,
+            PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw, RunStall, BuyFood,
         };
 
         /// <summary>Every hobby id, from the hobby activities.</summary>

@@ -185,7 +185,7 @@ namespace TinyCity.Simulation.AI
             }
 
             sb.AppendLine($"Your food: {r.Food.Describe(sim.Time.Day)}.");
-            sb.Append("Nothing to eat is given away or sold ready-made in this city: every meal is grown or caught by someone, and raw food can be cooked into meals that fill you up more. Food goes off after a few days.");
+            sb.Append("Nobody hands out food in this city: every meal is grown or caught by someone, and raw food can be cooked into meals that fill you up more. People can sell food at a market stall or give or sell it to each other in a chat, if they choose to. Food goes off after a few days.");
             var plots = sim.World.Objects.Where(o => o.Type == World.ObjectType.GardenPlot).ToList();
             if (plots.Count > 0)
             {

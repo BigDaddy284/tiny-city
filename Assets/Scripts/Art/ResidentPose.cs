@@ -359,7 +359,8 @@ namespace TinyCity.Art
                 || activityId == ActivityCatalog.Bake.Id || activityId == ActivityCatalog.BuyGroceries.Id
                 || activityId == ActivityCatalog.PlayPool.Id || activityId == ActivityCatalog.PlaySnooker.Id || activityId == ActivityCatalog.PlayArcade.Id
                 || activityId == ActivityCatalog.BrowseMarket.Id || activityId == ActivityCatalog.PlantCrops.Id || activityId == ActivityCatalog.WaterCrops.Id
-                || activityId == ActivityCatalog.Harvest.Id || activityId == ActivityCatalog.CatchFish.Id || activityId == ActivityCatalog.Cook.Id)
+                || activityId == ActivityCatalog.Harvest.Id || activityId == ActivityCatalog.CatchFish.Id || activityId == ActivityCatalog.Cook.Id
+                || activityId == ActivityCatalog.RunStall.Id || activityId == ActivityCatalog.BuyFood.Id)
             {
                 return ResidentAction.Work;
             }

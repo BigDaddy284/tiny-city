@@ -70,6 +70,27 @@ namespace TinyCity.Simulation.AI
             return v is string s && bool.TryParse(s.Trim(), out value);
         }
 
+        /// <summary>Reads a finite number written either as a number or as numeric text.</summary>
+        public static bool TryGetNumber(Dictionary<string, object> obj, string key, out double value)
+        {
+            value = 0;
+            if (obj == null || !obj.TryGetValue(key, out var v))
+            {
+                return false;
+            }
+
+            if (v is double number)
+            {
+                value = number;
+            }
+            else if (!(v is string s && double.TryParse(s.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value)))
+            {
+                return false;
+            }
+
+            return !double.IsNaN(value) && !double.IsInfinity(value);
+        }
+
         /// <summary>Reads a whole number written either as a number or as numeric text.</summary>
         public static bool TryGetInt(Dictionary<string, object> obj, string key, out int value)
         {

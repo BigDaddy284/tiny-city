@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using TinyCity.Simulation.Economy;
 using TinyCity.Simulation.Memory;
 using TinyCity.Simulation.Residents;
 using TinyCity.Simulation.Social;
@@ -10,13 +12,25 @@ namespace TinyCity.Simulation.AI
     /// <summary>What the AI wrote for one line of a conversation, before the game checks it.</summary>
     public sealed class DialogueReply
     {
-        public DialogueReply(string say, string tone, string topic, bool end)
+        public DialogueReply(string say, string tone, string topic, bool end, int giveFood = 0, long pricePence = 0, bool acceptOffer = false)
         {
             Say = say;
             Tone = tone;
             Topic = topic;
             End = end;
+            GiveFood = giveFood;
+            PricePence = pricePence;
+            AcceptOffer = acceptOffer;
         }
+
+        /// <summary>Tiny City 2: portions of food offered to the other person (0 for none).</summary>
+        public int GiveFood { get; }
+
+        /// <summary>What the offer costs them, in pence; 0 is a gift.</summary>
+        public long PricePence { get; }
+
+        /// <summary>Tiny City 2: whether they take the food the other person offered.</summary>
+        public bool AcceptOffer { get; }
 
         public string Say { get; }
 
@@ -83,10 +97,28 @@ namespace TinyCity.Simulation.AI
                 sb.AppendLine("This is your last line, so say goodbye naturally.");
             }
 
+            var food = sim.FoodMustBeMade;
+            if (food)
+            {
+                sb.AppendLine($"Your food: {speaker.Food.Describe(sim.Time.Day)}. Your money: {Economy.Money.Format(speaker.MoneyPence)}.");
+                var offer = session.FoodOffer;
+                if (offer != null && offer.ToId == speaker.Id)
+                {
+                    sb.AppendLine($"{listener.FirstName} has just offered you {offer.Portions} portion{(offer.Portions == 1 ? string.Empty : "s")} of food " +
+                        (offer.PricePence > 0 ? $"for {Economy.Money.Format(offer.PricePence)}." : "as a gift."));
+                }
+            }
+
             sb.Append("Reply as JSON: \"say\" is your next line (one or two sentences, under 25 words, no narration), ")
               .Append("\"tone\" is one of warm, playful, neutral or disagree, ")
               .Append("\"topic\" is what you are talking about in a few words, ")
               .Append("and \"end\" is true if you want to wrap up the chat.");
+            if (food)
+            {
+                sb.Append($" If you want to hand over some of your food, \"give_food\" is how many portions (0 to {FoodRules.MaxOfferPortions}) and \"price\" what you ask for them in pounds (0 for a gift); otherwise give_food is 0.")
+                  .Append(" \"accept_food\" is true if you take food you have just been offered.");
+            }
+
             return sb.ToString();
         }
 
@@ -101,6 +133,9 @@ namespace TinyCity.Simulation.AI
                     ["tone"] = new Dictionary<string, object> { ["type"] = "string", ["enum"] = Tones.Cast<object>().ToList() },
                     ["topic"] = new Dictionary<string, object> { ["type"] = "string" },
                     ["end"] = new Dictionary<string, object> { ["type"] = "boolean" },
+                    ["give_food"] = new Dictionary<string, object> { ["type"] = "integer" },
+                    ["price"] = new Dictionary<string, object> { ["type"] = "number" },
+                    ["accept_food"] = new Dictionary<string, object> { ["type"] = "boolean" },
                 },
                 ["required"] = new List<object> { "say", "tone", "topic", "end" },
             };
@@ -122,7 +157,10 @@ namespace TinyCity.Simulation.AI
                 return false;
             }
 
-            reply = new DialogueReply(say, AiJson.GetString(obj, "tone"), AiJson.GetString(obj, "topic"), AiJson.TryGetBool(obj, "end", out var end) && end);
+            var give = AiJson.TryGetNumber(obj, "give_food", out var g) && g >= 1 && g <= FoodRules.MaxOfferPortions ? (int)g : 0;
+            var price = AiJson.TryGetNumber(obj, "price", out var p) && p > 0 && p * 100 <= FoodRules.MaxOfferPence ? (long)Math.Round(p * 100) : 0;
+            reply = new DialogueReply(say, AiJson.GetString(obj, "tone"), AiJson.GetString(obj, "topic"), AiJson.TryGetBool(obj, "end", out var end) && end,
+                give, price, AiJson.TryGetBool(obj, "accept_food", out var accept) && accept);
             return true;
         }
 
