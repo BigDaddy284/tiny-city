@@ -4,6 +4,7 @@
         "enabled": true,
         "endpoint": "http://localhost:11434",
         "model": "qwen2.5:7b",
+        "embeddingModel": "nomic-embed-text",
         "timeoutSeconds": 60,
         "maxRetries": 1,
         "decisionWaitMinutes": 20,

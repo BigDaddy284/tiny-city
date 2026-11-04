@@ -2,7 +2,7 @@ name: Tests and Windows build
 
 on:
   push:
-    branches: [main]
+    branches: [main, v2]
   pull_request:
   workflow_dispatch:
 
@@ -78,11 +78,26 @@ jobs:
           name: unity-test-results
           path: test-results
 
+  # The v2 branch ships both versions in one download: v1 is built from main exactly as main builds
+  # itself, v2 from this commit. Each is its own Unity project build with its own product name, so
+  # their saves and settings live in separate folders on the player's PC.
   windows-build:
-    name: Windows build
+    name: Windows build (${{ matrix.title }})
     needs: licence-check
     if: needs.licence-check.outputs.available == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - title: Tiny City
+            ref: main
+            buildName: TinyCity
+            cache: Library-windows-v1
+          - title: Tiny City 2
+            ref: ''
+            buildName: TinyCity2
+            cache: Library-windows-v2
     steps:
       # The Unity editor image needs more disk than a standard runner has free.
       - name: Free disk space
@@ -91,11 +106,13 @@ jobs:
           sudo docker image prune --all --force
           df -h /
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
       - uses: actions/cache@v4
         with:
           path: Library
-          key: Library-windows-${{ hashFiles('Packages/manifest.json', 'ProjectSettings/ProjectVersion.txt') }}
-          restore-keys: Library-windows-
+          key: ${{ matrix.cache }}-${{ hashFiles('Packages/manifest.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: ${{ matrix.cache }}-
       - uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -103,12 +120,37 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: StandaloneWindows64
-          buildName: TinyCity
+          buildName: ${{ matrix.buildName }}
           buildMethod: TinyCity.Editor.BuildScript.BuildWindows
           versioning: Custom
           version: 0.0.${{ github.run_number }}
       - uses: actions/upload-artifact@v4
         with:
-          name: TinyCity-Windows-0.0.${{ github.run_number }}
+          name: part-${{ matrix.buildName }}
           path: build/StandaloneWindows64
+          if-no-files-found: error
+          retention-days: 1
+
+  package:
+    name: Package both versions
+    needs: windows-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: part-TinyCity
+          path: package/Tiny City
+      - uses: actions/download-artifact@v4
+        with:
+          name: part-TinyCity2
+          path: package/Tiny City 2
+      - name: Check both games are there
+        run: |
+          test -f "package/Tiny City/TinyCity.exe"
+          test -f "package/Tiny City 2/TinyCity2.exe"
+          ls -la package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TinyCity-Windows-0.0.${{ github.run_number }}
+          path: package
           if-no-files-found: error

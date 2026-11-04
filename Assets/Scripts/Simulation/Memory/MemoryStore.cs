@@ -52,17 +52,92 @@ namespace TinyCity.Simulation.Memory
         /// The memories most worth mentioning right now: important, recent, and sharing tags with the current
         /// situation. Ties go to the newer memory so the result is deterministic.
         /// </summary>
-        public IReadOnlyList<MemoryRecord> Recall(string residentId, GameTime now, IEnumerable<string> cues, int count)
+        /// <remarks>
+        /// With a <paramref name="focus"/> (the embedding of what is on the resident's mind), memories close to it in
+        /// meaning score up to <see cref="RelevanceWeight"/> more, as in the generative agents retrieval. Without one,
+        /// or for memories not yet embedded, the score is exactly v1's.
+        /// </remarks>
+        public IReadOnlyList<MemoryRecord> Recall(string residentId, GameTime now, IEnumerable<string> cues, int count, float[] focus = null)
         {
             var cueSet = new HashSet<string>(cues ?? Enumerable.Empty<string>());
             return ForResident(residentId)
-                .Select(m => (memory: m, score: Score(m, now, cueSet)))
+                .Select(m => (memory: m, score: Score(m, now, cueSet) + Relevance(m, focus)))
                 .OrderByDescending(x => x.score)
                 .ThenByDescending(x => x.memory.Time.TotalMinutes)
                 .ThenByDescending(x => x.memory.Id, StringComparer.Ordinal)
                 .Take(Math.Max(0, count))
                 .Select(x => x.memory)
                 .ToList();
+        }
+
+        /// <summary>How much a memory's closeness in meaning can add to its recall score, on the 1–10 importance scale.</summary>
+        public const double RelevanceWeight = 8.0;
+
+        /// <summary>
+        /// What is on the resident's mind: the embedding of their newest memory that has one, or null. Used as the
+        /// focus for <see cref="Recall"/> until each prompt has its own.
+        /// </summary>
+        public float[] FocusOf(string residentId) =>
+            records.Where(m => m.ResidentId == residentId && m.Embedding != null)
+                .OrderByDescending(m => m.Time.TotalMinutes)
+                .ThenByDescending(m => m.Id, StringComparer.Ordinal)
+                .Select(m => m.Embedding)
+                .FirstOrDefault();
+
+        /// <summary>The resident's memories whose importance the AI hasn't rated yet, oldest first.</summary>
+        public IEnumerable<MemoryRecord> NeedingRating(string residentId) =>
+            ForResident(residentId).Where(m => !m.ImportanceRated).OrderBy(m => m.Time.TotalMinutes).ThenBy(m => m.Id, StringComparer.Ordinal);
+
+        /// <summary>Memories with no embedding yet, newest first, so what just happened becomes searchable soonest.</summary>
+        public IEnumerable<MemoryRecord> NeedingEmbedding() =>
+            records.Where(m => m.Embedding == null).OrderByDescending(m => m.Time.TotalMinutes).ThenByDescending(m => m.Id, StringComparer.Ordinal);
+
+        public MemoryRecord Get(string id) => records.FirstOrDefault(m => m.Id == id);
+
+        /// <summary>Records the AI's rating of a memory. Returns false if the memory has been forgotten meanwhile.</summary>
+        public bool RateImportance(string id, int importance)
+        {
+            var m = Get(id);
+            if (m == null)
+            {
+                return false;
+            }
+
+            m.Importance = ClampImportance(importance);
+            m.ImportanceRated = true;
+            return true;
+        }
+
+        /// <summary>Stores a memory's embedding. Rejects empty vectors and ones with numbers that aren't finite.</summary>
+        public bool SetEmbedding(string id, float[] embedding)
+        {
+            var m = Get(id);
+            if (m == null || embedding == null || embedding.Length == 0 || embedding.Any(x => float.IsNaN(x) || float.IsInfinity(x)))
+            {
+                return false;
+            }
+
+            m.Embedding = embedding;
+            return true;
+        }
+
+        /// <summary>Cosine similarity, 0 when either vector is missing, empty, of another length or all zero.</summary>
+        public static double Similarity(float[] a, float[] b)
+        {
+            if (a == null || b == null || a.Length == 0 || a.Length != b.Length)
+            {
+                return 0;
+            }
+
+            double dot = 0, na = 0, nb = 0;
+            for (var i = 0; i < a.Length; i++)
+            {
+                dot += a[i] * (double)b[i];
+                na += a[i] * (double)a[i];
+                nb += b[i] * (double)b[i];
+            }
+
+            return na <= 0 || nb <= 0 ? 0 : dot / Math.Sqrt(na * nb);
         }
 
         public bool HasMemoryWithTag(string residentId, string tag, GameTime since) =>
@@ -77,6 +152,9 @@ namespace TinyCity.Simulation.Memory
 
         internal static int ClampImportance(int importance) =>
             Math.Max(MemoryRecord.MinImportance, Math.Min(MemoryRecord.MaxImportance, importance));
+
+        private static double Relevance(MemoryRecord m, float[] focus) =>
+            focus == null || m.Embedding == null ? 0 : RelevanceWeight * Math.Max(0, Similarity(m.Embedding, focus));
 
         private static double Score(MemoryRecord m, GameTime now, HashSet<string> cues)
         {

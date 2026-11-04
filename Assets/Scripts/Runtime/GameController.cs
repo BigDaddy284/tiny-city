@@ -385,8 +385,9 @@ namespace TinyCity.Runtime
 
         public void StartNewTown(string message)
         {
-            SetSimulation(StarterTown.CreateNewGame());
-            Status = message;
+            var profiles = ProfilesLoader.Load(out var problems);
+            SetSimulation(StarterTown.CreateNewGame(profiles));
+            Status = problems.Count == 0 ? message : $"{message} residents.json: {problems.Count} problem(s), see Player.log.".Trim();
         }
 
         private void SetSimulation(TownSimulation simulation)

@@ -167,6 +167,11 @@ namespace TinyCity.Tests.EditMode
                 {
                     content = "{\"say\":\"Lovely day for it.\",\"tone\":\"" + (number % 3 == 0 ? "playful" : "warm") + "\",\"topic\":\"the weather\",\"end\":false}";
                 }
+                else if (call.Body.Contains("\"ratings\""))
+                {
+                    var ids = System.Text.RegularExpressions.Regex.Matches(call.Body, "mem-\\d{6}").Cast<System.Text.RegularExpressions.Match>().Select(m => m.Value).Distinct();
+                    content = "{\"ratings\":[" + string.Join(",", ids.Select(id => "{\"id\":\"" + id + "\",\"importance\":3}")) + "]}";
+                }
                 else if (call.Body.Contains(ReflectionMarker))
                 {
                     content = "{\"summary\":\"A quiet, pleasant day in the village.\",\"importance\":2}";
@@ -229,7 +234,7 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Connected), "a few bad replies shouldn't take the AI offline");
             Assert.That(stats.Accepted, Is.GreaterThan(500), "the AI should be doing most of the deciding and talking");
-            Assert.That(longestQueue, Is.LessThanOrEqualTo(sim.Residents.Count * 2), "one decision and one line or reflection per resident at most");
+            Assert.That(longestQueue, Is.LessThanOrEqualTo((sim.Residents.Count * 3) + 1), "one decision, one line or reflection and one memory rating per resident at most, plus one embedding batch");
             Assert.That(worstDeciding, Is.LessThanOrEqualTo(sim.DecisionWaitMinutes + 1), "nobody waits on the AI past the deadline");
             Assert.That(aiGoals, Is.GreaterThan(0), "residents were seen following AI choices");
             Assert.That(sim.ActiveConversations.All(c => c.Lines.Count <= SocialRules.MaxLines), Is.True);

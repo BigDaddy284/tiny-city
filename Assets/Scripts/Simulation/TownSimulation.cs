@@ -495,6 +495,9 @@ namespace TinyCity.Simulation
                 return DecisionOutcome.InvalidText;
             }
 
+            // The AI rated this one as it wrote it.
+            memory.ImportanceRated = true;
+
             r.LastReflectionDay = day;
             return DecisionOutcome.Applied;
         }

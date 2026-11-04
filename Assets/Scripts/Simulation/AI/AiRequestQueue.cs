@@ -333,7 +333,7 @@ namespace TinyCity.Simulation.AI
             var startError = "the request could not be started";
             try
             {
-                call = transport.Post(Url, request.Body, TimeoutSeconds);
+                call = transport.Post(request.Url ?? Url, request.Body, TimeoutSeconds);
             }
             catch (Exception e)
             {

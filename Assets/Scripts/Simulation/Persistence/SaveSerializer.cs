@@ -40,7 +40,10 @@ namespace TinyCity.Simulation.Persistence
     /// </summary>
     public static class SaveSerializer
     {
-        public const string Format = "tiny-city-save";
+        public const string Format = "tiny-city-2-save";
+
+        /// <summary>Tiny City (v1) saves. Tiny City 2 is a separate game, so they aren't loaded here.</summary>
+        public const string FormatTinyCityOne = "tiny-city-save";
 
         /// <summary>What saves were called before the fresh start of 30 October 2026. They aren't loaded.</summary>
         public const string FormatBeforeFreshStart = "tiny-town-save";
@@ -50,7 +53,9 @@ namespace TinyCity.Simulation.Persistence
         /// residents, memories and history survive.
         /// </summary>
         /// <remarks>
-        /// Version 1 is the fresh start of 30 October 2026: residents (with money, health, hobbies, the day they moved
+        /// Version 1 of Tiny City 2 (4 November 2026) is v1's layout plus each resident's profile text and the
+        /// business they own, and whether each memory's importance was rated by the AI. Embeddings aren't saved:
+        /// they are made again by Ollama after loading. Before that, v1's version 1 was the fresh start of 30 October 2026: residents (with money, health, hobbies, the day they moved
         /// in or were born, and their parents), memories, conversation history and conversations in progress,
         /// relationships and couples, the economy and the town history. Saves made before it used the format
         /// <see cref="FormatBeforeFreshStart"/> and aren't loaded.
@@ -127,6 +132,11 @@ namespace TinyCity.Simulation.Persistence
             if (GetString(root, "format") == FormatBeforeFreshStart)
             {
                 return Fail("This town was saved before Tiny City's fresh start and can't be loaded.");
+            }
+
+            if (GetString(root, "format") == FormatTinyCityOne)
+            {
+                return Fail("This town is from Tiny City (v1). Open it in Tiny City instead: Tiny City 2 keeps its own towns.");
             }
 
             if (GetString(root, "format") != Format)
@@ -248,6 +258,8 @@ namespace TinyCity.Simulation.Persistence
                 ["weeklyRent"] = r.WeeklyRentPence,
                 ["weeklyIncome"] = r.WeeklyIncomePence,
                 ["incomeLabel"] = r.IncomeLabel,
+                ["about"] = r.About,
+                ["ownsBusinessId"] = r.OwnsBusinessId,
                 ["unpaidWorkMinutes"] = r.UnpaidWorkMinutes,
                 ["health"] = r.Health,
                 ["illness"] = r.IllnessId == null ? null : new Dictionary<string, object>
@@ -388,6 +400,19 @@ namespace TinyCity.Simulation.Persistence
             resident.WeeklyRentPence = Math.Max(0, GetLong(data, "weeklyRent", 0));
             resident.WeeklyIncomePence = Math.Max(0, GetLong(data, "weeklyIncome", 0));
             resident.IncomeLabel = TextRules.Clean(GetString(data, "incomeLabel"), 40);
+            resident.About = TextRules.Clean(GetString(data, "about"), ResidentProfile.MaxAboutLength);
+            var owns = GetString(data, "ownsBusinessId");
+            if (!string.IsNullOrEmpty(owns))
+            {
+                if (world.Businesses.Any(b => b.Id == owns))
+                {
+                    resident.OwnsBusinessId = owns;
+                }
+                else
+                {
+                    warnings.Add($"{label}: owned a business that isn't in the city, so they no longer own one.");
+                }
+            }
             ReadHealth(resident, data, label, warnings);
             resident.UnpaidWorkMinutes = job == null ? 0 : Math.Max(0, Math.Min(GetInt(data, "unpaidWorkMinutes", 0), GameTime.MinutesPerDay));
             foreach (var entry in GetList(data, "log").OfType<Dictionary<string, object>>().Take(Resident.MaxLogEntries))
@@ -516,6 +541,7 @@ namespace TinyCity.Simulation.Persistence
             ["gameMinutes"] = m.Time.TotalMinutes,
             ["type"] = m.Type.ToString(),
             ["importance"] = m.Importance,
+            ["importanceRated"] = m.ImportanceRated,
             ["summary"] = m.Summary,
             ["participants"] = m.Participants.Cast<object>().ToList(),
             ["tags"] = m.Tags.Cast<object>().ToList(),
@@ -731,7 +757,10 @@ namespace TinyCity.Simulation.Persistence
                 }
 
                 var tags = GetList(m, "tags").OfType<string>().Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList();
-                var record = new MemoryRecord(id, residentId, new GameTime((long)minutes), type, MemoryStore.ClampImportance(GetInt(m, "importance", 1)), summary, participants, tags);
+                var record = new MemoryRecord(id, residentId, new GameTime((long)minutes), type, MemoryStore.ClampImportance(GetInt(m, "importance", 1)), summary, participants, tags)
+                {
+                    ImportanceRated = GetBool(m, "importanceRated", false),
+                };
                 simulation.Memories.Restore(record, Math.Max(next, NumberAfter(id)));
             }
 

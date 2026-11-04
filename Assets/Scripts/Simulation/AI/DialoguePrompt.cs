@@ -42,7 +42,7 @@ namespace TinyCity.Simulation.AI
         public static string BuildBody(string model, TownSimulation sim, ConversationSession session)
         {
             var speaker = sim.GetResident(session.SpeakerId);
-            var memories = sim.Memories.Recall(speaker.Id, sim.Time, new[] { session.ListenerId, "chat", "social" }, MemoryCount);
+            var memories = sim.Memories.Recall(speaker.Id, sim.Time, new[] { session.ListenerId, "chat", "social" }, MemoryCount, sim.Memories.FocusOf(speaker.Id));
             return OllamaProtocol.BuildChatBody(model, PromptText.Persona(speaker), UserText(sim, session, memories), Schema(), Temperature, MaxTokens);
         }
 

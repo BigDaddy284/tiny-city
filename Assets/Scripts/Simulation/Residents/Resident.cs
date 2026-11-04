@@ -167,6 +167,12 @@ namespace TinyCity.Simulation.Residents
         /// <summary>What <see cref="WeeklyIncomePence"/> is called, e.g. "Pension".</summary>
         public string IncomeLabel { get; internal set; } = string.Empty;
 
+        /// <summary>A few lines about who they are, from the player's profile (see <see cref="ResidentProfile"/>). Given to the AI as their background.</summary>
+        public string About { get; internal set; } = string.Empty;
+
+        /// <summary>The business they own and run as its boss, or null. Comes from the profile, or the AI choosing to take one on.</summary>
+        public string OwnsBusinessId { get; internal set; }
+
         /// <summary>Minutes worked since wages were last paid; paid when the shift ends.</summary>
         public int UnpaidWorkMinutes { get; internal set; }
 

@@ -41,7 +41,7 @@ namespace TinyCity.Simulation.AI
 
         public static string BuildBody(string model, TownSimulation sim, Resident r, IReadOnlyList<FreeTimeOption> options)
         {
-            var memories = sim.Memories.Recall(r.Id, sim.Time, Cues(sim, r, options), MemoryCount);
+            var memories = sim.Memories.Recall(r.Id, sim.Time, Cues(sim, r, options), MemoryCount, sim.Memories.FocusOf(r.Id));
             return OllamaProtocol.BuildChatBody(model, PromptText.Persona(r), UserText(sim, r, options, memories), Schema(options), Temperature, MaxTokens);
         }
 
