@@ -161,6 +161,13 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
+            if (game.Speed > 0)
+            {
+                var waiting = game.HoldingForAi
+                    ? (game.Ai == null || game.Ai.Status != TinyCity.Simulation.AI.AiConnectionStatus.Connected ? "  Paused: waiting for Ollama." : "  Waiting for the AI to think.")
+                    : string.Empty;
+                GUILayout.Label($"Running at {game.ActualSpeed:0.0}x of {game.Speed}x.{waiting}", styles.Small);
+            }
 
             // The journal, Town View, then the camera panels: fewer or more, and everyone in view.
             // Each button is as wide as its words, so the five fit the side panel's width.

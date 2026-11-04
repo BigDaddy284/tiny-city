@@ -62,6 +62,8 @@ Invalid values are reported in `Player.log`, and the game uses the defaults inst
 
 ## How the AI is used
 
+In **Tiny City 2** the AI makes every choice: eating, sleeping, going to work and free time alike. There is no built-in routine to fall back on. While anyone is waiting for an answer, or Ollama isn't connected, the city's clock waits, so the speed you pick (1x, 2x or 4x) is the most it will run; the inspector shows the speed it is actually reaching. A bad answer is asked for again. The notes below describe Tiny City (v1).
+
 - The game decides everything that has rules: needs, sleep, work hours, walking, map changes and saving. When a resident has free time, the game lists the activities that are currently valid and the AI picks one, with a short reason and something to say. The game checks the answer against the current situation and ignores anything else.
 - In a conversation the game decides who speaks, how many lines there are and when it ends. For each line the AI writes the words, a tone (warm, playful, neutral or disagree), the topic and whether the speaker wants to wrap up. The tone changes the relationship by fixed game rules. The conversation pauses while it waits for a line. If the line doesn't arrive within 6 real seconds (at any game speed), or the answer is unusable, the resident uses built-in small talk for it.
 - One request is sent at a time, or up to `parallelRequests` at once. Decisions come first, then conversation lines, then reflections. A bad answer is retried at most `maxRetries` times; after that, or if the answer takes too long, the resident uses the routine.

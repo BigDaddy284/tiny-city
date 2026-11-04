@@ -116,6 +116,22 @@ namespace TinyCity.Simulation
         /// </summary>
         public bool AiDecisionsEnabled { get; set; }
 
+        /// <summary>
+        /// Tiny City 2: the AI makes every choice. Each time a resident is free they wait for the AI (with no
+        /// deadline and no routine to fall back on), their options include eating, sleeping and work, nothing the
+        /// routine wants interrupts them, and conversations wait for AI lines instead of using small talk. The
+        /// world's rules (needs, health, money, opening hours) still apply. Off by default, so test towns and v1
+        /// behaviour keep the routine.
+        /// </summary>
+        public bool AiRunsEverything { get; set; }
+
+        /// <summary>
+        /// True while a living resident is waiting for an AI choice or a conversation for an AI line. In Tiny City 2
+        /// the game holds its clock while this is true, so nobody acts on stale thinking.
+        /// </summary>
+        public bool WaitingForAi =>
+            Residents.Any(r => r.IsAlive && r.State == ResidentState.Deciding) || ActiveConversations.Any(c => c.AwaitingLine);
+
         /// <summary>Game minutes a resident waits for an AI suggestion before the built-in routine decides.</summary>
         public int DecisionWaitMinutes
         {
@@ -273,7 +289,7 @@ namespace TinyCity.Simulation
                         FinishActivity(r, activity);
                         r.ResetActivity();
                     }
-                    else if (Planner.ShouldInterrupt(r, activity, Time))
+                    else if (!AiRunsEverything && Planner.ShouldInterrupt(r, activity, Time))
                     {
                         r.AddLog(Time, $"Stopped {activity.Verb}: something more important came up");
                         r.ResetActivity();
@@ -298,7 +314,7 @@ namespace TinyCity.Simulation
                     break;
 
                 case ResidentState.Travelling when r.TargetResidentId != null:
-                    if (Planner.ShouldInterrupt(r, activity, Time))
+                    if (!AiRunsEverything && Planner.ShouldInterrupt(r, activity, Time))
                     {
                         r.AddLog(Time, "Changed plans on the way to a chat");
                         r.ResetActivity();
@@ -309,7 +325,7 @@ namespace TinyCity.Simulation
                     break;
 
                 case ResidentState.Travelling:
-                    if (Planner.ShouldInterrupt(r, activity, Time))
+                    if (!AiRunsEverything && Planner.ShouldInterrupt(r, activity, Time))
                     {
                         r.AddLog(Time, $"Changed plans on the way to {activity.Name.ToLowerInvariant()}");
                         r.ResetActivity();
@@ -317,6 +333,9 @@ namespace TinyCity.Simulation
                     }
 
                     Move(r, activity);
+                    break;
+
+                case ResidentState.Deciding when AiRunsEverything:
                     break;
 
                 case ResidentState.Deciding:
@@ -452,6 +471,14 @@ namespace TinyCity.Simulation
                 return false;
             }
 
+            if (AiRunsEverything)
+            {
+                // No routine to fall back on: ask again with a fresh decision id.
+                r.PendingDecisionId = nextDecisionId++;
+                r.AddLog(Time, $"Thought again ({TextRules.Clean(why, 60)})");
+                return true;
+            }
+
             r.AddLog(Time, $"Went with the usual routine ({TextRules.Clean(why, 60)})");
             r.ResetActivity();
             StartChoice(r, Planner.Choose(r, Time));
@@ -508,7 +535,7 @@ namespace TinyCity.Simulation
         /// </summary>
         public IReadOnlyList<FreeTimeOption> FreeTimeOptionsFor(Resident r)
         {
-            var options = Planner.FreeTimeOptions(r).ToList();
+            var options = Planner.FreeTimeOptions(r, everything: AiRunsEverything).ToList();
             var relax = options[options.Count - 1];
             options.RemoveAt(options.Count - 1);
             options.AddRange(ChatPartners(r).Take(SocialRules.MaxChatOptions).Select(p => new FreeTimeOption(p.partner, p.distance)));
@@ -558,12 +585,35 @@ namespace TinyCity.Simulation
                 return false;
             }
 
+            if (AiRunsEverything)
+            {
+                // Tiny City 2 has no built-in small talk: ask the AI for the line again.
+                session.LineRequestId = nextLineRequestId++;
+                return false;
+            }
+
             AddSmallTalk(session);
             return true;
         }
 
         private void StartNextActivity(Resident r)
         {
+            if (AiRunsEverything)
+            {
+                if (AiDecisionsEnabled && TryFollowPlan(r))
+                {
+                    return;
+                }
+
+                // Wait for the AI, however long it takes; the game holds its clock meanwhile.
+                r.ResetActivity();
+                r.State = ResidentState.Deciding;
+                r.PendingDecisionId = nextDecisionId++;
+                r.DecisionDeadline = long.MaxValue;
+                r.Goal = "Thinking about what to do";
+                return;
+            }
+
             var choice = Planner.Choose(r, Time);
             var lonely = r.Needs[NeedType.Social] < NeedRules.ComfortThreshold(NeedType.Social, r.Personality);
             var chatty = r.Personality.Sociable >= SocialRules.ChattyPersonality && choice?.Priority == PlanPriority.Leisure && choice.Activity != ActivityCatalog.AttendEvent;
@@ -777,7 +827,7 @@ namespace TinyCity.Simulation
                 if (session.AwaitingLine)
                 {
                     session.WaitedMinutes++;
-                    if (!AiDecisionsEnabled || Time.TotalMinutes >= session.LineDeadline)
+                    if (!AiRunsEverything && (!AiDecisionsEnabled || Time.TotalMinutes >= session.LineDeadline))
                     {
                         AddSmallTalk(session);
                     }
@@ -790,7 +840,7 @@ namespace TinyCity.Simulation
                     continue;
                 }
 
-                if (AiDecisionsEnabled)
+                if (AiDecisionsEnabled || AiRunsEverything)
                 {
                     session.AwaitingLine = true;
                     session.LineRequestId = nextLineRequestId++;

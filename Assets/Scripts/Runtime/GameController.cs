@@ -25,7 +25,8 @@ namespace TinyCity.Runtime
         private const string SidebarPrefsKey = "TinyCity.SidebarHidden";
 
         /// <summary>Game minutes per real second. At 1x one in-game day lasts 24 real minutes.</summary>
-        public static readonly int[] Speeds = { 0, 1, 2, 4, 10 };
+        /// <summary>Tiny City 2 runs at 1x, 2x and 4x at most: the AI makes every choice, and the clock waits for it.</summary>
+        public static readonly int[] Speeds = { 0, 1, 2, 4 };
 
         private const int AutosaveEveryGameMinutes = 6 * 60;
         private const int MaxTicksPerFrame = 600;
@@ -94,6 +95,16 @@ namespace TinyCity.Runtime
         public int Speed => Speeds[SpeedIndex];
 
         public string Status { get; private set; } = string.Empty;
+
+        /// <summary>
+        /// True while the clock is held for the AI: someone is waiting for a choice or a line, or Ollama isn't
+        /// connected. Tiny City 2 has no routine to fall back on, so time waits instead.
+        /// </summary>
+        public bool HoldingForAi => Simulation != null && Simulation.AiRunsEverything
+            && (Ai == null || Ai.Status != TinyCity.Simulation.AI.AiConnectionStatus.Connected || Simulation.WaitingForAi);
+
+        /// <summary>Game minutes actually passing per real second, averaged over the last few seconds.</summary>
+        public float ActualSpeed { get; private set; }
 
         /// <summary>The resident shown in the inspector.</summary>
         public Resident SelectedResident => Simulation.GetResident(selectedId) ?? Simulation.Residents[0];
@@ -188,6 +199,13 @@ namespace TinyCity.Runtime
                 accumulator += UnityEngine.Time.unscaledDeltaTime * Speed;
                 while (accumulator >= 1f && ticks < MaxTicksPerFrame)
                 {
+                    if (HoldingForAi)
+                    {
+                        // Don't bank the waiting time, or the city would rush to catch up once the AI answers.
+                        accumulator = Mathf.Min(accumulator, 1f);
+                        break;
+                    }
+
                     accumulator -= 1f;
                     TickOnce();
                     ticks++;
@@ -199,6 +217,8 @@ namespace TinyCity.Runtime
                 }
             }
 
+            var dt = Mathf.Max(UnityEngine.Time.unscaledDeltaTime, 0.0001f);
+            ActualSpeed = Mathf.Lerp(ActualSpeed, ticks / dt, Mathf.Clamp01(dt / 3f));
             UpdateView(Speed > 0 && ticks <= 1 ? accumulator : 1f);
             if (Notifications != null && Notifications.Update(Simulation, UnityEngine.Time.unscaledTime) > 0)
             {
@@ -397,6 +417,7 @@ namespace TinyCity.Runtime
             simulation.CommunityEventsEnabled = Settings.Simulation.communityEvents;
             simulation.NewcomersEnabled = Settings.Simulation.newcomers;
             simulation.BabiesEnabled = Settings.Simulation.babies;
+            simulation.AiRunsEverything = true;
             Ai?.Attach(simulation);
             RestartCameraCycle();
             if (view.World == null)
