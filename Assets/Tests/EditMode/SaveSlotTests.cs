@@ -40,8 +40,8 @@ namespace TinyCity.Tests.EditMode
                 ["the file is damaged"] = good.Substring(0, good.Length / 2),
                 ["isn't a Tiny City save"] = "{\"hello\": 1}",
                 ["newer version"] = good.Replace($"\"version\": {SaveSerializer.CurrentVersion}", "\"version\": 99"),
-                ["no residents"] = "{\"format\": \"tiny-city-save\", \"version\": 1, \"gameMinutes\": 10, \"residents\": []}",
-                ["no valid date"] = "{\"format\": \"tiny-city-save\", \"version\": 1, \"residents\": [{}]}",
+                ["no residents"] = "{\"format\": \"tiny-city-2-save\", \"version\": 1, \"gameMinutes\": 10, \"residents\": []}",
+                ["no valid date"] = "{\"format\": \"tiny-city-2-save\", \"version\": 1, \"residents\": [{}]}",
             };
             foreach (var pair in cases)
             {

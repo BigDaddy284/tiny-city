@@ -113,12 +113,12 @@ namespace TinyCity.Tests.EditMode
         [TestCase("not json")]
         [TestCase("[]")]
         [TestCase("{\"format\":\"something-else\",\"version\":1}")]
-        [TestCase("{\"format\":\"tiny-city-save\"}")]
-        [TestCase("{\"format\":\"tiny-city-save\",\"version\":99,\"townId\":\"town-tiny-city\",\"gameMinutes\":0,\"residents\":[]}")]
-        [TestCase("{\"format\":\"tiny-city-save\",\"version\":1,\"townId\":\"another-town\",\"gameMinutes\":0,\"residents\":[]}")]
-        [TestCase("{\"format\":\"tiny-city-save\",\"version\":1,\"townId\":\"town-tiny-city\",\"gameMinutes\":-5,\"residents\":[]}")]
-        [TestCase("{\"format\":\"tiny-city-save\",\"version\":1,\"townId\":\"town-tiny-city\",\"gameMinutes\":0,\"residents\":[]}")]
-        [TestCase("{\"format\":\"tiny-city-save\",\"version\":1,\"townId\":\"town-tiny-city\",\"gameMinutes\":0,\"residents\":[{\"firstName\":\"No id\"}]}")]
+        [TestCase("{\"format\":\"tiny-city-2-save\"}")]
+        [TestCase("{\"format\":\"tiny-city-2-save\",\"version\":99,\"townId\":\"town-tiny-city\",\"gameMinutes\":0,\"residents\":[]}")]
+        [TestCase("{\"format\":\"tiny-city-2-save\",\"version\":1,\"townId\":\"another-town\",\"gameMinutes\":0,\"residents\":[]}")]
+        [TestCase("{\"format\":\"tiny-city-2-save\",\"version\":1,\"townId\":\"town-tiny-city\",\"gameMinutes\":-5,\"residents\":[]}")]
+        [TestCase("{\"format\":\"tiny-city-2-save\",\"version\":1,\"townId\":\"town-tiny-city\",\"gameMinutes\":0,\"residents\":[]}")]
+        [TestCase("{\"format\":\"tiny-city-2-save\",\"version\":1,\"townId\":\"town-tiny-city\",\"gameMinutes\":0,\"residents\":[{\"firstName\":\"No id\"}]}")]
         public void InvalidSaves_AreRejectedWithAReason(string json)
         {
             var result = SaveSerializer.Load(json, StarterTown.CreateWorld());
@@ -143,7 +143,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void DuplicateResidentIds_AreRejected()
         {
-            const string json = "{\"format\":\"tiny-city-save\",\"version\":1,\"townId\":\"town-tiny-city\",\"gameMinutes\":0," +
+            const string json = "{\"format\":\"tiny-city-2-save\",\"version\":1,\"townId\":\"town-tiny-city\",\"gameMinutes\":0," +
                 "\"residents\":[{\"id\":\"res-1\"},{\"id\":\"res-1\"}]}";
 
             Assert.That(SaveSerializer.Load(json, StarterTown.CreateWorld()).Success, Is.False);

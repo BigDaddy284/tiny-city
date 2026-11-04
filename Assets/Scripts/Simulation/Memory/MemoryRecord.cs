@@ -46,7 +46,19 @@ namespace TinyCity.Simulation.Memory
         public MemoryType Type { get; }
 
         /// <summary>From 1 (minor) to 10 (life-changing).</summary>
-        public int Importance { get; }
+        public int Importance { get; internal set; }
+
+        /// <summary>
+        /// True once the AI has rated how much this mattered to the resident (the game's own figure is a first guess).
+        /// Saved, so a loaded town doesn't ask again.
+        /// </summary>
+        public bool ImportanceRated { get; internal set; }
+
+        /// <summary>
+        /// What the memory means, as numbers from Ollama's embedding model, used to find memories related to what
+        /// is on a resident's mind. Null until made. Not saved: they are made again after loading.
+        /// </summary>
+        public float[] Embedding { get; internal set; }
 
         public string Summary { get; }
 

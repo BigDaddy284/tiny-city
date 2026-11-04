@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyCity.Simulation.Configuration;
+using TinyCity.Simulation.Memory;
 using TinyCity.Simulation.Residents;
 using TinyCity.Simulation.Social;
 
@@ -62,6 +63,8 @@ namespace TinyCity.Simulation.AI
         private bool listWanted;
         private List<string> installedModels = new List<string>();
         private double gameMinutesPerSecond = 1;
+        private double lastNow;
+        private double embedPausedUntil;
 
         public AiService(OllamaSettings settings, IAiTransport transport)
         {
@@ -82,6 +85,14 @@ namespace TinyCity.Simulation.AI
         public string StatusDetail { get; private set; }
 
         public string Model => settings.model;
+
+        public string EmbeddingModel => settings.embeddingModel ?? string.Empty;
+
+        /// <summary>True while the embedding model is installed in Ollama, so memories can be found by meaning.</summary>
+        public bool EmbeddingsAvailable { get; private set; }
+
+        /// <summary>The most memories embedded in one request.</summary>
+        public const int EmbedBatch = 16;
 
         public string Endpoint => settings.endpoint;
 
@@ -191,6 +202,7 @@ namespace TinyCity.Simulation.AI
 
         public void Update(double now)
         {
+            lastNow = now;
             UpdateModelList(now);
             if (!settings.enabled)
             {
@@ -326,6 +338,13 @@ namespace TinyCity.Simulation.AI
             }
 
             Remember(names);
+            var embeddings = !string.IsNullOrWhiteSpace(EmbeddingModel) && OllamaProtocol.HasModel(names, EmbeddingModel);
+            if (!embeddings && !string.IsNullOrWhiteSpace(EmbeddingModel) && EmbeddingsAvailable != embeddings)
+            {
+                AddEvent($"{EmbeddingModel} is not installed, so memories are found without their meaning. Run: ollama pull {EmbeddingModel}");
+            }
+
+            EmbeddingsAvailable = embeddings;
             if (!OllamaProtocol.HasModel(names, Model))
             {
                 if (Status != AiConnectionStatus.ModelMissing)
@@ -479,6 +498,8 @@ namespace TinyCity.Simulation.AI
                 }
             }
 
+            RequestMemoryWork(sim, now);
+
             if (requestedLines.Count > sim.ActiveConversations.Count)
             {
                 foreach (var finished in requestedLines.Keys.Where(id => sim.GetConversation(id) == null).ToList())
@@ -486,6 +507,120 @@ namespace TinyCity.Simulation.AI
                     requestedLines.Remove(finished);
                 }
             }
+        }
+
+        /// <summary>
+        /// Background memory work at the lowest priority: one importance rating request per resident with unrated
+        /// memories, and one embedding request for the town, each only while none like it is waiting or in flight.
+        /// </summary>
+        private void RequestMemoryWork(TownSimulation sim, double now)
+        {
+            var queued = new HashSet<string>(Queue.Pending.Concat(Queue.ActiveRequests).Select(q => q.Key));
+            foreach (var r in sim.Residents)
+            {
+                if (!r.IsAlive || queued.Contains($"importance:{r.Id}"))
+                {
+                    continue;
+                }
+
+                var batch = sim.Memories.NeedingRating(r.Id).Take(ImportancePrompt.MaxPerRequest).ToList();
+                if (batch.Count > 0)
+                {
+                    Queue.Enqueue(ImportanceRequest(sim, r, batch), now);
+                }
+            }
+
+            if (EmbeddingsAvailable && now >= embedPausedUntil && !queued.Contains("embed"))
+            {
+                var batch = sim.Memories.NeedingEmbedding().Take(EmbedBatch).ToList();
+                if (batch.Count > 0)
+                {
+                    Queue.Enqueue(EmbedRequest(sim, batch), now);
+                }
+            }
+        }
+
+        private AiRequest ImportanceRequest(TownSimulation sim, Resident r, IReadOnlyList<MemoryRecord> batch)
+        {
+            var ids = batch.Select(m => m.Id).ToList();
+            return new AiRequest(
+                $"importance:{r.Id}",
+                r.Id,
+                AiPriority.Flavour,
+                $"memory ratings for {r.FirstName}",
+                ImportancePrompt.BuildBody(Model, r, batch),
+                text =>
+                {
+                    if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
+                        || !ImportancePrompt.TryParse(content, ids, out var ratings, out error))
+                    {
+                        return AiReplyCheck.Invalid(error);
+                    }
+
+                    foreach (var pair in ratings)
+                    {
+                        sim.Memories.RateImportance(pair.Key, pair.Value);
+                    }
+
+                    // A memory the AI skipped keeps the game's figure rather than being asked about forever.
+                    foreach (var id in ids.Where(id => !ratings.ContainsKey(id)))
+                    {
+                        var m = sim.Memories.Get(id);
+                        if (m != null)
+                        {
+                            sim.Memories.RateImportance(id, m.Importance);
+                        }
+                    }
+
+                    return AiReplyCheck.Accepted();
+                },
+                () => Simulation == sim && r.IsAlive && ids.Any(id => sim.Memories.Get(id)?.ImportanceRated == false),
+                reason =>
+                {
+                    // Keep the game's figure, so a model that can't rate doesn't make the queue ask again and again.
+                    foreach (var id in ids)
+                    {
+                        var m = sim.Memories.Get(id);
+                        if (m != null && !m.ImportanceRated)
+                        {
+                            sim.Memories.RateImportance(id, m.Importance);
+                        }
+                    }
+
+                    AddEvent($"{r.FirstName}'s memories kept the game's ratings: {reason}");
+                });
+        }
+
+        private AiRequest EmbedRequest(TownSimulation sim, IReadOnlyList<MemoryRecord> batch)
+        {
+            var ids = batch.Select(m => m.Id).ToList();
+            return new AiRequest(
+                "embed",
+                null,
+                AiPriority.Flavour,
+                $"meaning of {ids.Count} memories",
+                OllamaProtocol.BuildEmbedBody(EmbeddingModel, batch.Select(m => m.Summary)),
+                text =>
+                {
+                    if (!OllamaProtocol.TryReadEmbeddings(text, ids.Count, out var vectors, out var error))
+                    {
+                        return AiReplyCheck.Invalid(error);
+                    }
+
+                    for (var i = 0; i < ids.Count; i++)
+                    {
+                        sim.Memories.SetEmbedding(ids[i], vectors[i]);
+                    }
+
+                    return AiReplyCheck.Accepted();
+                },
+                () => Simulation == sim && EmbeddingsAvailable,
+                reason =>
+                {
+                    embedPausedUntil = lastNow + RecheckSeconds;
+                    AddEvent($"Embeddings paused for {RecheckSeconds:0}s: {reason}");
+                },
+                OllamaProtocol.EmbedUrl(Endpoint));
         }
 
         private AiRequest LineRequest(TownSimulation sim, ConversationSession session)

@@ -1,0 +1,126 @@
+{
+  "format": "tiny-city-2-profiles",
+  "residents": [
+    {
+      "id": "res-0001",
+      "firstName": "Mabel",
+      "lastName": "Thornbury",
+      "age": 34,
+      "about": "I moved into Rose Cottage last spring and became the city's community gardener. Reading in my armchair with a cup of tea is my favourite way to unwind.",
+      "money": 450
+    },
+    {
+      "id": "res-0002",
+      "firstName": "Arthur",
+      "lastName": "Bramble",
+      "age": 71,
+      "about": "I ran the local post office for forty years, so I know everyone's comings and goings. Since I retired I miss the chatter at the counter; a good natter on the pond bench helps.",
+      "money": 800
+    },
+    {
+      "id": "res-0003",
+      "firstName": "Nell",
+      "lastName": "Finch",
+      "age": 27,
+      "about": "I moved to Tiny City a month ago to set up the repair workshop. I'd rather fix a squeaky gate than make small talk, but I'm trying to meet people.",
+      "money": 300
+    },
+    {
+      "id": "res-0004",
+      "firstName": "Rosa",
+      "lastName": "Pennywhistle",
+      "age": 46,
+      "about": "I took over the general store from my aunt; I know what everyone buys before they ask. I like everything in its place: tins lined up, labels facing out.",
+      "money": 600
+    },
+    {
+      "id": "res-0005",
+      "firstName": "Tom",
+      "lastName": "Hartley",
+      "age": 31,
+      "about": "I trained as a chef downtown and came home to cook at the neighbourhood café. My soup of the day is never the same twice, and I'm proud of that.",
+      "money": 350
+    },
+    {
+      "id": "res-0006",
+      "firstName": "Priya",
+      "lastName": "Lane",
+      "age": 38,
+      "about": "Serving at the café means I hear all the city news first. I paint watercolours on my days off and dream of a little exhibition.",
+      "money": 400
+    },
+    {
+      "id": "res-0007",
+      "firstName": "Ivy",
+      "lastName": "Marsh",
+      "age": 23,
+      "about": "I'm up before everyone else to bake the neighbourhood's bread; the bakery was my grandmother's. I go for a run along the fitness trail whenever my legs aren't covered in flour.",
+      "money": 250
+    },
+    {
+      "id": "res-0008",
+      "firstName": "Samuel",
+      "lastName": "Okafor",
+      "age": 54,
+      "about": "I've been the city doctor for twenty years; I've stitched up half the neighbourhood at some point. Evenings with a medical journal and a pot of tea suit me fine.",
+      "money": 1200
+    },
+    {
+      "id": "res-0009",
+      "firstName": "Felix",
+      "lastName": "Wren",
+      "age": 19,
+      "about": "I left school last summer, and I've just got my first proper job: running the neon bar in the evenings. Money's tight, so I make the most of free things: the park, the trail, a chat.",
+      "money": 120
+    },
+    {
+      "id": "res-0010",
+      "firstName": "Edith",
+      "lastName": "Crumb",
+      "age": 82,
+      "about": "I've lived in Tiny City all my eighty-two years and remember when the pond was a well. My knees aren't what they were, but a cup of coffee at the café keeps me cheerful.",
+      "money": 1500
+    },
+    {
+      "id": "res-0011",
+      "firstName": "Marcus",
+      "lastName": "Vale",
+      "age": 29,
+      "about": "I run the Pulse Gym's early shift; there's nothing like an empty gym at seven in the morning. I moved into Skyline Tower for the view, and I'm still learning everyone's names.",
+      "money": 380
+    },
+    {
+      "id": "res-0012",
+      "firstName": "Lola",
+      "lastName": "Brightwater",
+      "age": 22,
+      "about": "I hand out the shoes at Strike Lanes and know every regular's size by heart. I love a busy room and a loud laugh; quiet evenings make me restless.",
+      "money": 180
+    },
+    {
+      "id": "res-0013",
+      "firstName": "Danny",
+      "lastName": "Cho",
+      "age": 20,
+      "about": "I look after the Pixel Arcade, and I hold the high score on two of its machines. I'm better with machines than with people, but I'm working on it.",
+      "money": 150
+    },
+    {
+      "id": "res-0014",
+      "firstName": "Ruby",
+      "lastName": "Starling",
+      "age": 41,
+      "about": "I run the cue club in the evenings; I've played pool since I could see over the table. A good game of snooker settles any argument, as far as I'm concerned.",
+      "money": 520
+    },
+    {
+      "id": "res-0015",
+      "firstName": "Walter",
+      "lastName": "Penn",
+      "age": 76,
+      "about": "I retired from the railways and moved into Birch Cottage to be near the park. A morning by the pond with a fishing rod is my idea of a good day.",
+      "money": 900
+    }
+  ]
+}
+

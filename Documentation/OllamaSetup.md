@@ -9,7 +9,10 @@ Tiny City uses a locally installed [Ollama](https://ollama.com) service for resi
 
    ```powershell
    ollama pull qwen2.5:7b
+   ollama pull nomic-embed-text
    ```
+
+   The second one is Tiny City 2's embedding model (about 270 MB), which lets residents find memories by what they mean. Without it the game still runs, finding memories by importance, recency and topic only.
 
 3. Check it is installed:
 
@@ -39,6 +42,7 @@ These choices are kept in `player-settings.json` in the game's data folder (`%US
 | `enabled` | `true` | `false` never contacts Ollama; residents use their built-in routine. |
 | `endpoint` | `http://localhost:11434` | Where Ollama listens. Another PC on your network works too, e.g. `http://192.168.1.20:11434`. |
 | `model` | `qwen2.5:7b` | Any installed Ollama chat model. |
+| `embeddingModel` | `nomic-embed-text` | Tiny City 2: the Ollama embedding model used for memories. Empty, or not installed, turns finding memories by meaning off. |
 | `timeoutSeconds` | `60` | Longest wait for one answer (1 to 600). |
 | `maxRetries` | `1` | Extra attempts after a bad answer, timeout or connection error (0 to 3). |
 | `decisionWaitMinutes` | `20` | Game minutes a resident waits for the AI before deciding by routine (1 to 240). At 1x speed that is 20 real seconds. |
@@ -62,6 +66,7 @@ Invalid values are reported in `Player.log`, and the game uses the defaults inst
 - In a conversation the game decides who speaks, how many lines there are and when it ends. For each line the AI writes the words, a tone (warm, playful, neutral or disagree), the topic and whether the speaker wants to wrap up. The tone changes the relationship by fixed game rules. The conversation pauses while it waits for a line. If the line doesn't arrive within 6 real seconds (at any game speed), or the answer is unusable, the resident uses built-in small talk for it.
 - One request is sent at a time, or up to `parallelRequests` at once. Decisions come first, then conversation lines, then reflections. A bad answer is retried at most `maxRetries` times; after that, or if the answer takes too long, the resident uses the routine.
 - After three connection errors in a row, the game treats Ollama as offline and checks again every 30 seconds.
+- Tiny City 2's memory stream: in the background, at the lowest priority, the AI rates how much each new memory matters to the resident (1 to 10, up to 8 memories per request), and the embedding model turns each memory into numbers (16 per request). Memories close in meaning to what is on a resident's mind are then recalled first. Ratings are saved; embeddings are made again after loading.
 - At bedtime each resident reflects on their day once. The AI suggests the memory and how important it was; the game stores it, capped at importance 6.
 
 ## Answering several requests at once (bigger towns, high speeds)

@@ -12,6 +12,7 @@ namespace TinyCity.Simulation.Configuration
     {
         public const string DefaultEndpoint = "http://localhost:11434";
         public const string DefaultModel = "qwen2.5:7b";
+        public const string DefaultEmbeddingModel = "nomic-embed-text";
         public const int DefaultTimeoutSeconds = 60;
         public const int MaxTimeoutSeconds = 600;
         public const int DefaultMaxRetries = 1;
@@ -27,6 +28,12 @@ namespace TinyCity.Simulation.Configuration
         public bool enabled = true;
         public string endpoint = DefaultEndpoint;
         public string model = DefaultModel;
+
+        /// <summary>
+        /// Ollama's embedding model, which turns memories into numbers for finding related ones. Empty, or a model
+        /// that isn't installed, leaves memories found by importance, recency and tags only.
+        /// </summary>
+        public string embeddingModel = DefaultEmbeddingModel;
         public int timeoutSeconds = DefaultTimeoutSeconds;
 
         /// <summary>Extra attempts after a malformed answer, timeout or connection error.</summary>

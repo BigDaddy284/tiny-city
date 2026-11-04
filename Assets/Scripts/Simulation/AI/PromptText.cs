@@ -15,6 +15,7 @@ namespace TinyCity.Simulation.AI
         {
             var job = r.Job == null ? "a resident" : $"the {r.Job.Title.ToLowerInvariant()}";
             return $"You are {r.FullName}, aged {r.AgeYears}, {job} in Tiny City, a small, neon-lit city. " +
+                (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Your background, in your own words: {r.About} ") +
                 $"Your personality: {r.Personality.Describe().ToLowerInvariant()}. " +
                 (r.Hobbies.Count > 0 ? $"Your hobbies: {string.Join(", ", r.Hobbies)}. " : string.Empty) +
                 "Stay in character: warm, down to earth and a little playful. Never mention being an AI. Answer with JSON only.";

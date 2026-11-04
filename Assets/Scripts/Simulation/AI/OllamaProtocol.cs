@@ -18,6 +18,62 @@ namespace TinyCity.Simulation.AI
 
         public static string TagsUrl(string endpoint) => Trim(endpoint) + "/api/tags";
 
+        public static string EmbedUrl(string endpoint) => Trim(endpoint) + "/api/embed";
+
+        /// <summary>A request for one embedding per text from Ollama's embedding model (POST /api/embed).</summary>
+        public static string BuildEmbedBody(string model, IEnumerable<string> texts) => Json.Write(new Dictionary<string, object>
+        {
+            ["model"] = model,
+            ["keep_alive"] = KeepAlive,
+            ["input"] = (texts ?? Enumerable.Empty<string>()).Cast<object>().ToList(),
+        });
+
+        /// <summary>
+        /// Reads the embeddings from a /api/embed response. Fails unless there is exactly one vector per text asked
+        /// for, every vector the same non-zero length and every number finite.
+        /// </summary>
+        public static bool TryReadEmbeddings(string responseJson, int expected, out List<float[]> embeddings, out string error)
+        {
+            embeddings = new List<float[]>();
+            if (!TryParse(responseJson, out var root, out error))
+            {
+                return false;
+            }
+
+            if (!(root.TryGetValue("embeddings", out var value) && value is List<object> vectors) || vectors.Count != expected)
+            {
+                error = $"Ollama's reply did not hold {expected} embedding(s)";
+                return false;
+            }
+
+            foreach (var v in vectors)
+            {
+                if (!(v is List<object> numbers) || numbers.Count == 0 || (embeddings.Count > 0 && numbers.Count != embeddings[0].Length))
+                {
+                    error = "an embedding was empty or of a different length";
+                    embeddings.Clear();
+                    return false;
+                }
+
+                var vector = new float[numbers.Count];
+                for (var i = 0; i < numbers.Count; i++)
+                {
+                    if (!(numbers[i] is double d) || double.IsNaN(d) || double.IsInfinity(d))
+                    {
+                        error = "an embedding held something that isn't a number";
+                        embeddings.Clear();
+                        return false;
+                    }
+
+                    vector[i] = (float)d;
+                }
+
+                embeddings.Add(vector);
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// A non-streaming chat request. <paramref name="schema"/> is a JSON schema Ollama uses to constrain the answer
         /// (structured outputs); the game still validates whatever comes back.

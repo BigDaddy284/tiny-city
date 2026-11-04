@@ -558,10 +558,20 @@ namespace TinyCity.Simulation.Content
         /// <summary>Mabel, the original resident.</summary>
         public static Resident CreateResident(TownWorld world) => CreateResidents(world)[0];
 
-        public static IReadOnlyList<Resident> CreateResidents(TownWorld world)
+        public static IReadOnlyList<Resident> CreateResidents(TownWorld world) => CreateResidents(world, null);
+
+        /// <summary>
+        /// The residents a new city starts with. With <paramref name="profiles"/> (from <c>residents.json</c>), only
+        /// the residents they list start, in their order, with the profile's name, age, money, background and
+        /// business; their look, home, job and hobbies come with their id. With none, everyone starts as designed.
+        /// </summary>
+        public static IReadOnlyList<Resident> CreateResidents(TownWorld world, IReadOnlyList<ResidentProfile> profiles)
         {
             var residents = new List<Resident>();
-            foreach (var d in Designs)
+            var chosen = profiles == null || profiles.Count == 0
+                ? Designs.Select(d => (design: d, profile: (ResidentProfile)null))
+                : profiles.Select(p => (design: Designs.FirstOrDefault(d => d.id == p.Id), profile: p)).Where(x => x.design != null);
+            foreach (var (d, profile) in chosen)
             {
                 var needs = new Needs(d.needsLevel);
                 foreach (var pair in d.needAdjustments)
@@ -569,15 +579,35 @@ namespace TinyCity.Simulation.Content
                     needs[pair.Key] = pair.Value;
                 }
 
-                var r = new Resident(d.id, d.first, d.last, d.age, d.birthday, d.colour, d.personality, d.homeMapId, d.bedId, d.job, Bed(world, d.bedId), needs);
+                var r = new Resident(d.id, profile?.FirstName ?? d.first, profile?.LastName ?? d.last, profile?.Age ?? d.age, d.birthday, d.colour, d.personality, d.homeMapId, d.bedId, d.job, Bed(world, d.bedId), needs);
                 ApplyFinances(r, d);
                 r.SetHobbies(HobbiesOf(d.id));
                 r.OpenToRomance = d.openToRomance;
+                r.About = profile?.About ?? DefaultAbout(d.id);
+                if (profile != null)
+                {
+                    r.MoneyPence = profile.MoneyPence;
+                    r.OwnsBusinessId = world.Businesses.Any(b => b.Id == profile.OwnsBusinessId) ? profile.OwnsBusinessId : null;
+                }
+
                 residents.Add(r);
             }
 
             return residents;
         }
+
+        /// <summary>The ids a profile can use: one per starter resident.</summary>
+        public static IReadOnlyList<string> StarterResidentIds => Designs.Select(d => d.id).ToList();
+
+        /// <summary>
+        /// The profiles <c>residents.json</c> starts with: every starter resident as designed, with their background
+        /// in their own words and no business owned (someone has to choose to take one on).
+        /// </summary>
+        public static IReadOnlyList<ResidentProfile> DefaultProfiles() =>
+            Designs.Select(d => new ResidentProfile(d.id, d.first, d.last, d.age, DefaultAbout(d.id), d.money)).ToList();
+
+        private static string DefaultAbout(string residentId) =>
+            TextRules.Clean(string.Join(" ", LifeHistory(residentId).Select(h => h.summary)), ResidentProfile.MaxAboutLength);
 
         private sealed class Design
         {
@@ -791,10 +821,13 @@ namespace TinyCity.Simulation.Content
             return simulation;
         }
 
-        public static TownSimulation CreateNewGame()
+        public static TownSimulation CreateNewGame() => CreateNewGame(null);
+
+        /// <summary>A new city whose residents come from <paramref name="profiles"/>; see <see cref="CreateResidents(TownWorld, IReadOnlyList{ResidentProfile})"/>.</summary>
+        public static TownSimulation CreateNewGame(IReadOnlyList<ResidentProfile> profiles)
         {
             var world = CreateWorld();
-            var simulation = new TownSimulation(world, CreateResidents(world), StartTime);
+            var simulation = new TownSimulation(world, CreateResidents(world, profiles), StartTime);
             foreach (var resident in simulation.Residents)
             {
                 AddLifeHistory(simulation, resident.Id);

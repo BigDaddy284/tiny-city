@@ -57,7 +57,8 @@ namespace TinyCity.Simulation.AI
             string body,
             Func<string, AiReplyCheck> handleReply,
             Func<bool> isStillWanted = null,
-            Action<string> onGiveUp = null)
+            Action<string> onGiveUp = null,
+            string url = null)
         {
             if (string.IsNullOrEmpty(key))
             {
@@ -72,7 +73,11 @@ namespace TinyCity.Simulation.AI
             HandleReply = handleReply ?? throw new ArgumentNullException(nameof(handleReply));
             IsStillWanted = isStillWanted ?? (() => true);
             OnGiveUp = onGiveUp ?? (_ => { });
+            Url = url;
         }
+
+        /// <summary>Where to send it, or null for the queue's own address (the chat endpoint).</summary>
+        public string Url { get; }
 
         /// <summary>Assigned by the queue; unique for the queue's lifetime.</summary>
         public long Id { get; internal set; }
