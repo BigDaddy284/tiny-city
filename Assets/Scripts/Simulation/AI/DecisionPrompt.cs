@@ -57,6 +57,8 @@ namespace TinyCity.Simulation.AI
             {
                 sb.AppendLine("You have nowhere to live yet, so you sleep on a park bench.");
             }
+
+            PromptText.AppendDayPlan(sb, r, sim.Time);
             PromptText.AppendMemories(sb, memories);
             PromptText.AppendPeople(sb, sim, r);
 
