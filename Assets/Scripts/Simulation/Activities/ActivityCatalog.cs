@@ -186,12 +186,52 @@ namespace TinyCity.Simulation.Activities
             "browse-market", "Browse the market", "browsing the market stalls", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.MarketStall }, 30,
             new Dictionary<NeedType, double> { [NeedType.Fun] = 0.7, [NeedType.Social] = 0.8 });
 
+        // Tiny City 2's food (see Economy.FoodRules): nothing here exists in v1, and v1's free food doesn't exist here.
+
+        /// <summary>Sowing a crop on an empty garden plot. It still has to be watered before it can be picked.</summary>
+        public static readonly ActivityDefinition PlantCrops = new ActivityDefinition(
+            "plant-crops", "Plant crops", "planting crops", ActivityKind.Errand, null, new[] { ObjectType.GardenPlot }, 45,
+            new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.5 },
+            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 2.0, [NeedType.Thirst] = 1.3 });
+
+        /// <summary>Watering a growing crop, once a day.</summary>
+        public static readonly ActivityDefinition WaterCrops = new ActivityDefinition(
+            "water-crops", "Water the crops", "watering the crops", ActivityKind.Errand, null, new[] { ObjectType.GardenPlot }, 15,
+            new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.3 });
+
+        /// <summary>Picking a ready crop: vegetables for whoever picks it.</summary>
+        public static readonly ActivityDefinition Harvest = new ActivityDefinition(
+            "harvest", "Pick the crops", "picking vegetables", ActivityKind.Errand, null, new[] { ObjectType.GardenPlot }, 30,
+            new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.4 },
+            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 1.5 });
+
+        /// <summary>Fishing for food rather than fun: anyone can, and it gives fish.</summary>
+        public static readonly ActivityDefinition CatchFish = new ActivityDefinition(
+            "catch-fish", "Fish for food", "fishing for food", ActivityKind.Errand, null, new[] { ObjectType.FishingSpot }, 60,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.3 });
+
+        /// <summary>Turning raw food into cooked meals, which keep and fill you up better.</summary>
+        public static readonly ActivityDefinition Cook = new ActivityDefinition(
+            "cook", "Cook meals", "cooking", ActivityKind.Errand, null, new[] { ObjectType.Kitchen }, 40,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.2 });
+
+        /// <summary>Eating one cooked meal.</summary>
+        public static readonly ActivityDefinition EatMeal = new ActivityDefinition(
+            "eat-meal", "Eat a cooked meal", "eating a meal", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.Kitchen, ObjectType.Bench }, 25,
+            new Dictionary<NeedType, double> { [NeedType.Hunger] = 3.2, [NeedType.Fun] = 0.2 });
+
+        /// <summary>Eating raw vegetables or fish: it does, but not for long.</summary>
+        public static readonly ActivityDefinition EatRaw = new ActivityDefinition(
+            "eat-raw", "Eat something raw", "eating raw food", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.Kitchen, ObjectType.Bench }, 15,
+            new Dictionary<NeedType, double> { [NeedType.Hunger] = 2.0 });
+
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
             Sleep, Eat, Snack, CafeMeal, Pastry, Drink, UseToilet, Shower, Work, Exercise, Read, WatchTown, Coffee, BuyGroceries, Chat,
             Rest, SeeDoctor, Paint, PlayPiano, Chess, Fish, Garden, Bake, Knit, AttendEvent, BarDrink, Dance,
             PlayPool, PlaySnooker, Bowling, PlayArcade, GymWorkout, BrowseMarket, Leftovers,
+            PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw,
         };
 
         /// <summary>Every hobby id, from the hobby activities.</summary>

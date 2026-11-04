@@ -493,7 +493,9 @@ namespace TinyCity.Runtime
         private void DrawWork(Resident r)
         {
             GUILayout.Label(DescribeLivelihood(r), styles.Text);
-            GUILayout.Label($"Money: {Money.Format(r.MoneyPence)} · food at home for {r.Groceries} meal(s)", styles.Text);
+            GUILayout.Label(Simulation.FoodMustBeMade
+                ? $"Money: {Money.Format(r.MoneyPence)} · food: {r.Food.Describe(Simulation.Time.Day)}"
+                : $"Money: {Money.Format(r.MoneyPence)} · food at home for {r.Groceries} meal(s)", styles.Text);
             var bills = r.WeeklyRentPence > 0 ? $"Rent {Money.Format(r.WeeklyRentPence)} a week, due Monday morning" : "No rent";
             var income = r.WeeklyIncomePence > 0 ? $" · {r.IncomeLabel} {Money.Format(r.WeeklyIncomePence)} a week" : string.Empty;
             GUILayout.Label(bills + income, styles.Small);

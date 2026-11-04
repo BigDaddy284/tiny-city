@@ -34,6 +34,7 @@ namespace TinyCity.Tools.StressTest
             {
                 var sim = StarterTown.CreateNewGame();
                 sim.AiRunsEverything = true;
+                sim.FoodMustBeMade = true;
                 var ollama = new SlowOllama(profile, ParallelRequests);
                 var ai = new AiService(Settings(), ollama.Transport);
                 ai.Attach(sim);

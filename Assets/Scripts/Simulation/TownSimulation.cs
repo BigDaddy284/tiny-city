@@ -85,7 +85,7 @@ namespace TinyCity.Simulation
             Time = time;
             Pathfinder = new Pathfinder(world);
             Economy = new TownEconomy(world, this.residents);
-            Planner = new ActivityPlanner(world, Pathfinder, this.residents, Economy, () => Time);
+            Planner = new ActivityPlanner(world, Pathfinder, this.residents, Economy, () => Time) { Food = Food };
         }
 
         public TownWorld World { get; }
@@ -218,6 +218,7 @@ namespace TinyCity.Simulation
             StepCommunityEvents();
             StepNewcomers();
             StepBirths();
+            StepFood();
             foreach (var resident in residents)
             {
                 if (!resident.IsAlive)
@@ -1090,6 +1091,13 @@ namespace TinyCity.Simulation
 
         private void BeginPerforming(Resident r, ActivityDefinition activity)
         {
+            if (FoodRules.EatsFood(activity) && !Food.TakeAtStart(r, activity, out var noFood))
+            {
+                r.AddLog(Time, $"Couldn't {activity.Name.ToLowerInvariant()}: {noFood}");
+                r.ResetActivity();
+                return;
+            }
+
             if (activity.ItemId != null || activity.UsesGroceries || activity.NeedsOpenBusiness)
             {
                 World.TryGetObject(r.TargetObjectId, out var target);
