@@ -177,5 +177,122 @@ namespace TinyCity.Tests.EditMode
             Assert.That(prompt, Does.Contain("Your food:").And.Contain("2 fish").And.Contain("Garden:").And.Contain("watered today"));
             Assert.That(prompt, Does.Not.Contain("food at home for"));
         }
-    }
+    
+        [Test]
+        public void ASeller_AtAStall_SellsAPortionToABuyer_AndRemembersTheDay()
+        {
+            var sim = TestTown.WithResidents(TestTown.WeekendAfternoon);
+            sim.FoodMustBeMade = true;
+            sim.Tick();
+            var seller = sim.Residents[0];
+            var buyer = sim.Residents[1];
+            seller.Food.Clear();
+            seller.Food.Add(FoodKind.Meal, 2, sim.Time.Day + 3);
+            var stall = sim.World.Objects.First(o => o.Type == TinyCity.Simulation.World.ObjectType.MarketStall);
+
+            Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.BuyFood, stall, sim.Time), Is.False, "nobody is selling yet");
+            Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.RunStall, stall, sim.Time), Is.EqualTo(buyer.Food.Total > 0));
+
+            seller.ResetActivity();
+            seller.TargetObjectId = stall.Id;
+            seller.ActivityId = ActivityCatalog.RunStall.Id;
+            seller.State = ResidentState.Performing;
+            seller.MinutesRemaining = 30;
+            seller.Location = stall.Location;
+            Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.BuyFood, stall, sim.Time), Is.True);
+            Assert.That(sim.Planner.CanDo(seller, ActivityCatalog.BuyFood, stall, sim.Time), Is.False, "not from yourself");
+
+            var money = (seller.MoneyPence, buyer.MoneyPence);
+            var meals = buyer.Food.Count(FoodKind.Meal);
+            buyer.ResetActivity();
+            buyer.TargetObjectId = stall.Id;
+            buyer.ActivityId = ActivityCatalog.BuyFood.Id;
+            buyer.State = ResidentState.Travelling;
+            buyer.Location = stall.Location;
+            sim.Tick();
+
+            Assert.That(buyer.Food.Count(FoodKind.Meal), Is.EqualTo(meals + 1));
+            Assert.That(seller.Food.Count(FoodKind.Meal), Is.EqualTo(1));
+            Assert.That(buyer.MoneyPence, Is.EqualTo(money.Item2 - FoodRules.MealPricePence));
+            Assert.That(seller.MoneyPence, Is.EqualTo(money.Item1 + FoodRules.MealPricePence));
+            Assert.That(sim.Economy.Ledger.All.Any(t => t.ResidentId == seller.Id && t.Kind == TransactionKind.Sale), Is.True);
+
+            for (var i = 0; i < 40 && seller.ActivityId == ActivityCatalog.RunStall.Id; i++)
+            {
+                sim.Tick();
+            }
+
+            Assert.That(sim.Memories.ForResident(seller.Id).Any(m => m.Summary.StartsWith("I sold 1 portion of food at a market stall")), Is.True);
+        }
+
+        [Test]
+        public void FoodOfferedInAChat_MovesOnlyIfTheOtherAccepts_AndIsPaidFor()
+        {
+            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            sim.AiDecisionsEnabled = true;
+            sim.FoodMustBeMade = true;
+            ConversationSessionFor(sim, out var session);
+            var first = sim.GetResident(session.SpeakerId);
+            var second = sim.GetResident(session.ListenerId);
+            first.Food.Clear();
+            second.Food.Clear();
+            first.Food.Add(FoodKind.Fish, 3, sim.Time.Day + 2);
+            second.MoneyPence = 1000;
+
+            Assert.That(DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]), Does.Contain("give_food").And.Contain("Your food: 3 fish"));
+            Assert.That(sim.ApplyConversationLine(session.Id, session.LineRequestId, first.Id, "Fancy some fish?", "warm", "fish", false, giveFood: 2, pricePence: 300), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(first.Food.Total, Is.EqualTo(3), "nothing moves until they accept");
+
+            WaitForLine(sim, session);
+            Assert.That(DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]), Does.Contain("offered you 2 portions of food for £3.00"));
+            Assert.That(sim.ApplyConversationLine(session.Id, session.LineRequestId, second.Id, "Go on then.", "warm", "fish", false, acceptOffer: true), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(second.Food.Count(FoodKind.Fish), Is.EqualTo(2));
+            Assert.That(first.Food.Count(FoodKind.Fish), Is.EqualTo(1));
+            Assert.That(second.MoneyPence, Is.EqualTo(700));
+            Assert.That(sim.Memories.ForResident(second.Id).Any(m => m.Summary.Contains("sold me 2 portions of food")), Is.True);
+            Assert.That(session.FoodOffer, Is.Null);
+
+            WaitForLine(sim, session);
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, first.Id, "Here, have the last.", "warm", "fish", false, giveFood: 1);
+            WaitForLine(sim, session);
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, second.Id, "No thanks.", "neutral", "fish", false, acceptOffer: false);
+            Assert.That(first.Food.Count(FoodKind.Fish), Is.EqualTo(1), "a refused offer moves nothing");
+        }
+
+        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":2,\"price\":1.5,\"accept_food\":true}", 2, 150, true)]
+        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":99,\"price\":-4}", 0, 0, false)]
+        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false}", 0, 0, false)]
+        public void DialogueReplies_ReadFoodOffersWithinLimits(string content, int give, long price, bool accept)
+        {
+            Assert.That(DialoguePrompt.TryParse(content, out var reply, out _), Is.True);
+            Assert.That((reply.GiveFood, reply.PricePence, reply.AcceptOffer), Is.EqualTo((give, price, accept)));
+        }
+
+        private static void ConversationSessionFor(TownSimulation sim, out TinyCity.Simulation.Social.ConversationSession session)
+        {
+            foreach (var r in sim.Residents)
+            {
+                r.Needs[NeedType.Social] = 10;
+            }
+
+            for (var i = 0; i < 10 && sim.ActiveConversations.Count == 0; i++)
+            {
+                sim.Tick();
+            }
+
+            Assert.That(sim.ActiveConversations.Count, Is.EqualTo(1));
+            session = sim.ActiveConversations[0];
+            WaitForLine(sim, session);
+        }
+
+        private static void WaitForLine(TownSimulation sim, TinyCity.Simulation.Social.ConversationSession session)
+        {
+            for (var i = 0; i < 30 && !session.AwaitingLine; i++)
+            {
+                sim.Tick();
+            }
+
+            Assert.That(session.AwaitingLine, Is.True);
+        }
+}
 }

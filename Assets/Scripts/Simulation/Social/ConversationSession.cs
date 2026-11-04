@@ -8,6 +8,27 @@ namespace TinyCity.Simulation.Social
     /// A conversation in progress. The game sets its length, whose turn it is and when the next line is due; the AI
     /// (or built-in small talk) only supplies each line. Saved with the town so a loaded game carries on mid-chat.
     /// </summary>
+    /// <summary>Tiny City 2: food one speaker has offered the other in a chat, waiting for their answer. Not saved.</summary>
+    public sealed class FoodOffer
+    {
+        public FoodOffer(string fromId, string toId, int portions, long pricePence)
+        {
+            FromId = fromId;
+            ToId = toId;
+            Portions = portions;
+            PricePence = pricePence;
+        }
+
+        public string FromId { get; }
+
+        public string ToId { get; }
+
+        public int Portions { get; }
+
+        /// <summary>0 for a gift.</summary>
+        public long PricePence { get; }
+    }
+
     public sealed class ConversationSession
     {
         internal ConversationSession(string id, string initiatorId, string partnerId, GameTime started, int maxLines, string place)
@@ -36,6 +57,9 @@ namespace TinyCity.Simulation.Social
 
         /// <summary>What the last AI line said they were talking about, if anything.</summary>
         public string Topic { get; internal set; } = string.Empty;
+
+        /// <summary>Tiny City 2: food offered and not yet answered (not saved, so a loaded chat has none).</summary>
+        public FoodOffer FoodOffer { get; internal set; }
 
         /// <summary>Game minute when the next line should be said.</summary>
         public long NextLineAt { get; internal set; }

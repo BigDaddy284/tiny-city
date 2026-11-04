@@ -107,6 +107,29 @@ namespace TinyCity.Simulation.Economy
 
         public int TakeRaw(int count) => Take(null, count, raw: true);
 
+        /// <summary>
+        /// Hands up to <paramref name="count"/> portions to someone else, cooked meals first, each keeping the day it
+        /// goes off. Returns how many moved (fewer if the other has no room).
+        /// </summary>
+        public int MoveTo(FoodStock other, int count)
+        {
+            var moved = 0;
+            foreach (var b in batches.OrderBy(b => b.Kind == FoodKind.Meal ? 0 : 1).ThenBy(b => b.GoesOffDay).ToList())
+            {
+                if (moved >= count)
+                {
+                    break;
+                }
+
+                var n = other.Add(b.Kind, Math.Min(b.Count, count - moved), b.GoesOffDay);
+                b.Count -= n;
+                moved += n;
+            }
+
+            batches.RemoveAll(b => b.Count <= 0);
+            return moved;
+        }
+
         /// <summary>Throws away everything that goes off on or before this day. Returns how many portions went.</summary>
         public int Spoil(int day)
         {
@@ -186,6 +209,16 @@ namespace TinyCity.Simulation.Economy
         /// <summary>Raw portions one cooking turns into as many meals.</summary>
         public const int CookPortions = 4;
 
+        /// <summary>What a portion costs at someone's stall: the game's fixed prices, so a seller only chooses to sell.</summary>
+        public const long MealPricePence = 600;
+
+        public const long RawPricePence = 250;
+
+        /// <summary>The most portions offered in one go in a chat, and the highest price asked for them.</summary>
+        public const int MaxOfferPortions = 6;
+
+        public const long MaxOfferPence = 5000;
+
         public static int DaysToKeep(FoodKind kind) => kind == FoodKind.Fish ? FishDays : kind == FoodKind.Meal ? MealDays : VegetableDays;
 
         public static string Portions(FoodKind kind, int n)
@@ -209,7 +242,8 @@ namespace TinyCity.Simulation.Economy
         /// <summary>Tiny City 2's food activities, which don't exist in v1.</summary>
         public static bool IsMadeFood(ActivityDefinition a) =>
             a == ActivityCatalog.PlantCrops || a == ActivityCatalog.WaterCrops || a == ActivityCatalog.Harvest || a == ActivityCatalog.CatchFish
-            || a == ActivityCatalog.Cook || a == ActivityCatalog.EatMeal || a == ActivityCatalog.EatRaw;
+            || a == ActivityCatalog.Cook || a == ActivityCatalog.EatMeal || a == ActivityCatalog.EatRaw
+            || a == ActivityCatalog.RunStall || a == ActivityCatalog.BuyFood;
 
         /// <summary>Activities that use up a portion as they start.</summary>
         public static bool EatsFood(ActivityDefinition a) => a == ActivityCatalog.EatMeal || a == ActivityCatalog.EatRaw;
@@ -224,6 +258,9 @@ namespace TinyCity.Simulation.Economy
         private readonly Dictionary<string, Crop> crops = new Dictionary<string, Crop>(StringComparer.Ordinal);
 
         public bool MustBeMade { get; set; }
+
+        /// <summary>Who is selling food at this stall right now, or null. Set by the simulation.</summary>
+        public Func<WorldObject, Resident> SellerAt { get; set; }
 
         public IReadOnlyDictionary<string, Crop> Crops => crops;
 
@@ -280,8 +317,22 @@ namespace TinyCity.Simulation.Economy
                 return r.Food.Count(FoodKind.Meal) > 0;
             }
 
+            if (a == ActivityCatalog.RunStall)
+            {
+                return r.Food.Total > 0 && food.SellerAt?.Invoke(obj) == null;
+            }
+
+            if (a == ActivityCatalog.BuyFood)
+            {
+                var seller = food.SellerAt?.Invoke(obj);
+                return seller != null && seller != r && seller.Food.Total > 0 && r.MoneyPence >= PriceOfNext(seller.Food);
+            }
+
             return true;
         }
+
+        /// <summary>What the next portion from this stock sells for: a cooked meal if there is one.</summary>
+        public static long PriceOfNext(FoodStock stock) => stock.Count(FoodKind.Meal) > 0 ? FoodRules.MealPricePence : FoodRules.RawPricePence;
 
         /// <summary>Takes the portion an eating activity uses as it starts. False, with a reason, if there's none.</summary>
         internal bool TakeAtStart(Resident r, ActivityDefinition a, out string reason)

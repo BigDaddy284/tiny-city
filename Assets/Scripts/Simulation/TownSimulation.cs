@@ -86,6 +86,7 @@ namespace TinyCity.Simulation
             Pathfinder = new Pathfinder(world);
             Economy = new TownEconomy(world, this.residents);
             Planner = new ActivityPlanner(world, Pathfinder, this.residents, Economy, () => Time) { Food = Food };
+            Food.SellerAt = SellerAt;
         }
 
         public TownWorld World { get; }
@@ -592,7 +593,8 @@ namespace TinyCity.Simulation
         }
 
         /// <summary>Applies an AI-written conversation line, after checking it is for the turn the conversation is waiting on.</summary>
-        public DecisionOutcome ApplyConversationLine(string conversationId, long lineRequestId, string speakerId, string text, string tone, string topic, bool wantsToEnd)
+        public DecisionOutcome ApplyConversationLine(string conversationId, long lineRequestId, string speakerId, string text, string tone, string topic, bool wantsToEnd,
+            int giveFood = 0, long pricePence = 0, bool acceptOffer = false)
         {
             var session = GetConversation(conversationId);
             if (session == null || !session.AwaitingLine || session.LineRequestId != lineRequestId || lineRequestId <= 0 || session.SpeakerId != speakerId)
@@ -617,6 +619,7 @@ namespace TinyCity.Simulation
                 parsedTone = ConversationTone.Neutral;
             }
 
+            ApplyFoodInChat(session, speaker, giveFood, pricePence, acceptOffer);
             AddLine(session, clean, parsedTone, fromAi: true, SocialRules.CleanTopic(topic), wantsToEnd);
             return DecisionOutcome.Applied;
         }
@@ -1091,7 +1094,7 @@ namespace TinyCity.Simulation
 
         private void BeginPerforming(Resident r, ActivityDefinition activity)
         {
-            if (FoodRules.EatsFood(activity) && !Food.TakeAtStart(r, activity, out var noFood))
+            if (FoodMustBeMade && FoodRules.IsMadeFood(activity) && !StartFood(r, activity, out var noFood))
             {
                 r.AddLog(Time, $"Couldn't {activity.Name.ToLowerInvariant()}: {noFood}");
                 r.ResetActivity();
