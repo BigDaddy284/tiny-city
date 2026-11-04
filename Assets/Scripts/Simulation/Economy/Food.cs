@@ -210,8 +210,11 @@ namespace TinyCity.Simulation.Economy
         public const int CookPortions = 4;
 
         /// <summary>Uses a tool once, and says so if it broke.</summary>
-        internal static string WearNote(Resident r, ToolKind tool) =>
-            r.Belongings.Wear(tool) ? $" (with {CraftingRules.WithArticle(tool)}, which broke)" : $" (with {CraftingRules.WithArticle(tool)})";
+        internal static string WearNote(Resident r, ToolKind tool)
+        {
+            var name = CraftingRules.WithArticle(tool, r.Belongings.TierOf(tool));
+            return r.Belongings.Wear(tool) ? $" (with {name}, which broke)" : $" (with {name})";
+        }
 
         /// <summary>What a portion costs at someone's stall: the game's fixed prices, so a seller only chooses to sell.</summary>
         public const long MealPricePence = 600;
@@ -290,15 +293,9 @@ namespace TinyCity.Simulation.Economy
                 return !FoodRules.IsMadeFood(a) && !CraftingRules.IsCrafting(a);
             }
 
-            if (a == ActivityCatalog.GatherStone)
+            if (CraftingRules.IsCrafting(a))
             {
-                return r.Belongings.Has(ToolKind.Pickaxe);
-            }
-
-            var tool = CraftingRules.ToolMadeBy(a);
-            if (tool != null)
-            {
-                return !r.Belongings.Has(tool.Value) && r.Belongings.Count(MaterialKind.Wood) >= CraftingRules.WoodFor(tool.Value);
+                return CraftingRules.Allows(r.Belongings, a);
             }
 
             if (FoodRules.IsFreeFood(a))

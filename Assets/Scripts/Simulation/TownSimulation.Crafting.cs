@@ -5,7 +5,7 @@ using TinyCity.Simulation.Residents;
 
 namespace TinyCity.Simulation
 {
-    /// <summary>Tiny City 2's gathering and crafting: wood and stone from the resource area, tools made at a workbench.</summary>
+    /// <summary>Tiny City 2's gathering and crafting: three tiers of wood and stone from the resource area, tools in three tiers made at a workbench.</summary>
     public sealed partial class TownSimulation
     {
         private void FinishCrafting(Resident r, ActivityDefinition activity)
@@ -15,37 +15,39 @@ namespace TinyCity.Simulation
                 return;
             }
 
-            if (activity == ActivityCatalog.GatherWood)
+            var gathering = CraftingRules.GatheringFor(activity);
+            if (gathering != null)
             {
-                var axe = r.Belongings.Has(ToolKind.Axe);
-                var kept = r.Belongings.Add(MaterialKind.Wood, axe ? CraftingRules.WoodWithAxe : CraftingRules.WoodByHand);
-                r.AddLog(Time, $"Gathered {kept} wood" + (axe ? FoodRules.WearNote(r, ToolKind.Axe) : " by hand"));
-                return;
-            }
-
-            if (activity == ActivityCatalog.GatherStone)
-            {
-                if (!r.Belongings.Has(ToolKind.Pickaxe))
+                var tier = r.Belongings.TierOf(gathering.Tool);
+                var amount = gathering.YieldWith(tier);
+                var material = CraftingRules.Name(gathering.Material);
+                if (amount <= 0)
                 {
-                    r.AddLog(Time, "Couldn't break any stone without a pickaxe");
+                    r.AddLog(Time, $"Couldn't get any {material} without a better {CraftingRules.Name(gathering.Tool)}");
                     return;
                 }
 
-                var kept = r.Belongings.Add(MaterialKind.Stone, CraftingRules.StoneWithPickaxe);
-                r.AddLog(Time, $"Broke off {kept} stone" + FoodRules.WearNote(r, ToolKind.Pickaxe));
+                var kept = r.Belongings.Add(gathering.Material, amount);
+                r.AddLog(Time, $"Gathered {kept} {material}" + (tier > 0 ? FoodRules.WearNote(r, gathering.Tool) : " by hand"));
+                if (CraftingRules.TierOf(gathering.Material) == CraftingRules.MaxTier && kept > 0)
+                {
+                    Memories.Add(r.Id, Time, MemoryType.Event, 4, $"I gathered {kept} {material}, the rarest kind.", tags: new[] { "crafting", gathering.Material.ToString() });
+                }
+
                 return;
             }
 
-            var tool = CraftingRules.ToolMadeBy(activity).Value;
-            if (r.Belongings.Has(tool) || !r.Belongings.Take(MaterialKind.Wood, CraftingRules.WoodFor(tool)))
+            var recipe = CraftingRules.RecipeFor(activity);
+            if (r.Belongings.TierOf(recipe.Tool) >= recipe.Tier || !r.Belongings.Pay(recipe))
             {
-                r.AddLog(Time, $"Couldn't make {CraftingRules.WithArticle(tool)}: not enough wood");
+                r.AddLog(Time, $"Couldn't make {CraftingRules.WithArticle(recipe.Tool, recipe.Tier)}: not enough materials");
                 return;
             }
 
-            r.Belongings.SetTool(tool, CraftingRules.ToolUses);
-            r.AddLog(Time, $"Made {CraftingRules.WithArticle(tool)}");
-            Memories.Add(r.Id, Time, MemoryType.Event, 4, $"I made {CraftingRules.WithArticle(tool)} at the workbench.", tags: new[] { "crafting", tool.ToString() });
+            r.Belongings.SetTool(recipe.Tool, CraftingRules.UsesFor(recipe.Tier), recipe.Tier);
+            var made = CraftingRules.WithArticle(recipe.Tool, recipe.Tier);
+            r.AddLog(Time, $"Made {made}");
+            Memories.Add(r.Id, Time, MemoryType.Event, 3 + recipe.Tier, $"I made {made} at the workbench.", tags: new[] { "crafting", recipe.Tool.ToString() });
         }
     }
 }

@@ -147,7 +147,7 @@ namespace TinyCity.Sound
                 return SoundEffect.Splash;
             }
 
-            if (id == ActivityCatalog.GatherWood.Id || id == ActivityCatalog.GatherStone.Id)
+            if (ActivityCatalog.TryGet(id, out var gathered) && TinyCity.Simulation.Economy.CraftingRules.IsGathering(gathered))
             {
                 return SoundEffect.Digging;
             }

@@ -249,9 +249,29 @@ namespace TinyCity.Simulation.Activities
             new Dictionary<NeedType, double> { [NeedType.Exercise] = 1.0 },
             new Dictionary<NeedType, double> { [NeedType.Energy] = 1.7, [NeedType.Hygiene] = 2.2, [NeedType.Thirst] = 1.5 });
 
-        public static readonly ActivityDefinition CraftAxe = Craft("craft-axe", "Make an axe", "making an axe");
+        /// <summary>Hardwood: needs a stone axe or better.</summary>
+        public static readonly ActivityDefinition GatherHardwood = Gather("gather-hardwood", "Cut hardwood", "cutting hardwood", ObjectType.Woodland, 1.6);
 
-        public static readonly ActivityDefinition CraftPickaxe = Craft("craft-pickaxe", "Make a pickaxe", "making a pickaxe");
+        /// <summary>Heartwood: needs an iron axe.</summary>
+        public static readonly ActivityDefinition GatherHeartwood = Gather("gather-heartwood", "Cut heartwood", "cutting heartwood", ObjectType.Woodland, 1.7);
+
+        /// <summary>Iron ore: needs a stone pickaxe or better.</summary>
+        public static readonly ActivityDefinition GatherIron = Gather("gather-iron", "Mine iron ore", "mining iron ore", ObjectType.RockPile, 1.8);
+
+        /// <summary>Crystal: needs an iron pickaxe.</summary>
+        public static readonly ActivityDefinition GatherCrystal = Gather("gather-crystal", "Mine crystal", "mining crystal", ObjectType.RockPile, 1.9);
+
+        public static readonly ActivityDefinition CraftAxe = Craft("craft-axe", "Make a wooden axe", "making a wooden axe");
+
+        public static readonly ActivityDefinition CraftPickaxe = Craft("craft-pickaxe", "Make a wooden pickaxe", "making a wooden pickaxe");
+
+        public static readonly ActivityDefinition CraftStoneAxe = Craft("craft-stone-axe", "Make a stone axe", "making a stone axe");
+
+        public static readonly ActivityDefinition CraftStonePickaxe = Craft("craft-stone-pickaxe", "Make a stone pickaxe", "making a stone pickaxe");
+
+        public static readonly ActivityDefinition CraftIronAxe = Craft("craft-iron-axe", "Make an iron axe", "making an iron axe");
+
+        public static readonly ActivityDefinition CraftIronPickaxe = Craft("craft-iron-pickaxe", "Make an iron pickaxe", "making an iron pickaxe");
 
         public static readonly ActivityDefinition CraftHoe = Craft("craft-hoe", "Make a hoe", "making a hoe");
 
@@ -265,7 +285,13 @@ namespace TinyCity.Simulation.Activities
             PlayPool, PlaySnooker, Bowling, PlayArcade, GymWorkout, BrowseMarket, Leftovers,
             PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw, RunStall, BuyFood,
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
+            GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
         };
+
+        private static ActivityDefinition Gather(string id, string name, string verb, ObjectType where, double effort) => new ActivityDefinition(
+            id, name, verb, ActivityKind.Errand, null, new[] { where }, 60,
+            new Dictionary<NeedType, double> { [NeedType.Exercise] = 1.0 },
+            new Dictionary<NeedType, double> { [NeedType.Energy] = effort, [NeedType.Hygiene] = 2.2, [NeedType.Thirst] = 1.5 });
 
         private static ActivityDefinition Craft(string id, string name, string verb) => new ActivityDefinition(
             id, name, verb, ActivityKind.Errand, null, new[] { ObjectType.Workbench }, 30,

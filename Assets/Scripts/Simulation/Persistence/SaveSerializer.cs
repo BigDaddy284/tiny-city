@@ -289,6 +289,7 @@ namespace TinyCity.Simulation.Persistence
                 ["tools"] = r.Belongings.Tools.Select(t => (object)new Dictionary<string, object>
                 {
                     ["kind"] = t.tool.ToString(),
+                    ["tier"] = t.tier,
                     ["usesLeft"] = t.usesLeft,
                 }).ToList(),
                 ["weeklyRent"] = r.WeeklyRentPence,
@@ -461,7 +462,7 @@ namespace TinyCity.Simulation.Persistence
             {
                 if (Enum.TryParse<ToolKind>(GetString(item, "kind"), out var kind) && Enum.IsDefined(typeof(ToolKind), kind))
                 {
-                    resident.Belongings.SetTool(kind, GetInt(item, "usesLeft", 0));
+                    resident.Belongings.SetTool(kind, GetInt(item, "usesLeft", 0), GetInt(item, "tier", 1));
                 }
                 else
                 {
