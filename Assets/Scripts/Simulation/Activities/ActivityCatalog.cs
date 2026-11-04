@@ -235,6 +235,28 @@ namespace TinyCity.Simulation.Activities
             "buy-food", "Buy food at a stall", "buying food at a stall", ActivityKind.Errand, null, new[] { ObjectType.MarketStall }, 5,
             new Dictionary<NeedType, double> { [NeedType.Social] = 0.5 });
 
+        // Tiny City 2's gathering and crafting (see Economy.CraftingRules).
+
+        /// <summary>Gathering wood: a little by hand, much more with an axe.</summary>
+        public static readonly ActivityDefinition GatherWood = new ActivityDefinition(
+            "gather-wood", "Gather wood", "gathering wood", ActivityKind.Errand, null, new[] { ObjectType.Woodland }, 60,
+            new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.8 },
+            new Dictionary<NeedType, double> { [NeedType.Energy] = 1.5, [NeedType.Hygiene] = 2.0, [NeedType.Thirst] = 1.4 });
+
+        /// <summary>Breaking stone off the rocks, which needs a pickaxe.</summary>
+        public static readonly ActivityDefinition GatherStone = new ActivityDefinition(
+            "gather-stone", "Break stone", "breaking stone", ActivityKind.Errand, null, new[] { ObjectType.RockPile }, 60,
+            new Dictionary<NeedType, double> { [NeedType.Exercise] = 1.0 },
+            new Dictionary<NeedType, double> { [NeedType.Energy] = 1.7, [NeedType.Hygiene] = 2.2, [NeedType.Thirst] = 1.5 });
+
+        public static readonly ActivityDefinition CraftAxe = Craft("craft-axe", "Make an axe", "making an axe");
+
+        public static readonly ActivityDefinition CraftPickaxe = Craft("craft-pickaxe", "Make a pickaxe", "making a pickaxe");
+
+        public static readonly ActivityDefinition CraftHoe = Craft("craft-hoe", "Make a hoe", "making a hoe");
+
+        public static readonly ActivityDefinition CraftRod = Craft("craft-rod", "Make a fishing rod", "making a fishing rod");
+
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
@@ -242,7 +264,12 @@ namespace TinyCity.Simulation.Activities
             Rest, SeeDoctor, Paint, PlayPiano, Chess, Fish, Garden, Bake, Knit, AttendEvent, BarDrink, Dance,
             PlayPool, PlaySnooker, Bowling, PlayArcade, GymWorkout, BrowseMarket, Leftovers,
             PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw, RunStall, BuyFood,
+            GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
         };
+
+        private static ActivityDefinition Craft(string id, string name, string verb) => new ActivityDefinition(
+            id, name, verb, ActivityKind.Errand, null, new[] { ObjectType.Workbench }, 30,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.4 });
 
         /// <summary>Every hobby id, from the hobby activities.</summary>
         public static IEnumerable<string> HobbyIds => All.Where(a => a.Hobby != null).Select(a => a.Hobby);

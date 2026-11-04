@@ -60,6 +60,12 @@ namespace TinyCity.Simulation.World
 
         /// <summary>A stall on the market square, browsed by two at a time.</summary>
         MarketStall,
+
+        /// <summary>Tiny City 2: a stand of trees where wood can be gathered, two at a time.</summary>
+        Woodland,
+
+        /// <summary>Tiny City 2: a pile of rocks where stone can be broken off with a pickaxe, two at a time.</summary>
+        RockPile,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -104,6 +110,8 @@ namespace TinyCity.Simulation.World
                 case ObjectType.FishingSpot:
                 case ObjectType.GatheringSpot:
                 case ObjectType.DanceFloor:
+                case ObjectType.Woodland:
+                case ObjectType.RockPile:
                     return false;
                 default:
                     return true;
@@ -126,6 +134,8 @@ namespace TinyCity.Simulation.World
                 case ObjectType.SnookerTable:
                 case ObjectType.BowlingLane:
                 case ObjectType.MarketStall:
+                case ObjectType.Woodland:
+                case ObjectType.RockPile:
                     return 2;
                 case ObjectType.Fountain:
                     return 4;

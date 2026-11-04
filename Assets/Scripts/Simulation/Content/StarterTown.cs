@@ -29,6 +29,9 @@ namespace TinyCity.Simulation.Content
         public const string BedId = "obj-cottage1-bed";
         public const string GardenPlotId = "obj-village-garden-plot";
         public const string WorkbenchId = "obj-village-workbench";
+
+        /// <summary>Tiny City 2: the workbench anyone can use to make tools.</summary>
+        public const string CraftingBenchId = "obj-village-crafting-bench";
         public const string RosaId = "res-0004";
         public const string TomId = "res-0005";
         public const string PriyaId = "res-0006";
@@ -115,9 +118,9 @@ namespace TinyCity.Simulation.Content
             "T.HHZHH..HHZHH.HHZHH..=......n..=........=.....................T",
             "T.==============================F=========.....................T",
             "T.HHHHH..HHHHH.HHHHH..=.........=..n.....==========n===========T",
-            "T.HHHHH..HHHHH.HHHHH..=.........=........=.....................T",
-            "T.HHHHH..HHHHH.HHHHH..=.....T...=n...T...=.............n.....T.T",
-            "T.HHZHH..HHZHH.HHZHH..=.........=........=....T.....T..........T",
+            "T.HHHHH..HHHHH.HHHHH..=.........=........=...l..l..............T",
+            "T.HHHHH..HHHHH.HHHHH..=.....T...=n...T...=...........c.n.....T.T",
+            "T.HHZHH..HHZHH.HHZHH..=.........=........=..o.T..o..T..........T",
             "T.=====================..T......=.......T=................T....T",
             "T........................................=.....................T",
             "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
@@ -265,6 +268,9 @@ namespace TinyCity.Simulation.Content
             ['Q'] = TileType.Path,
             ['F'] = TileType.Path,
             ['n'] = TileType.Path,
+            ['l'] = TileType.Grass,
+            ['o'] = TileType.Grass,
+            ['c'] = TileType.Grass,
             ['0'] = TileType.Door,
             ['1'] = TileType.Door,
             ['2'] = TileType.Door,
@@ -347,7 +353,14 @@ namespace TinyCity.Simulation.Content
                 ['f'] = ("obj-village-fishing", "Fishing spot", ObjectType.FishingSpot),
                 ['q'] = (VillageGreenId, "City plaza", ObjectType.GatheringSpot),
                 ['j'] = (PondLawnId, "Pond-side lawn", ObjectType.GatheringSpot),
+                ['c'] = (CraftingBenchId, "Crafting bench", ObjectType.Workbench),
             });
+
+            // Tiny City 2's resource area in the open south-east corner: two woodlands and two rock piles.
+            objects.Add(new WorldObject("obj-village-woodland-1", "Woodland", ObjectType.Woodland, Find(VillageMapId, VillageRows, 'l', 0)));
+            objects.Add(new WorldObject("obj-village-woodland-2", "Woodland", ObjectType.Woodland, Find(VillageMapId, VillageRows, 'l', 1)));
+            objects.Add(new WorldObject("obj-village-rocks-1", "Rock pile", ObjectType.RockPile, Find(VillageMapId, VillageRows, 'o', 0)));
+            objects.Add(new WorldObject("obj-village-rocks-2", "Rock pile", ObjectType.RockPile, Find(VillageMapId, VillageRows, 'o', 1)));
 
             // Benches share letters, so give them ids by position.
             objects.Add(new WorldObject("obj-village-bench-pond", "Pond bench", ObjectType.Bench, Find(VillageMapId, VillageRows, 'b', 0)));

@@ -209,6 +209,10 @@ namespace TinyCity.Simulation.Economy
         /// <summary>Raw portions one cooking turns into as many meals.</summary>
         public const int CookPortions = 4;
 
+        /// <summary>Uses a tool once, and says so if it broke.</summary>
+        internal static string WearNote(Resident r, ToolKind tool) =>
+            r.Belongings.Wear(tool) ? $" (with {CraftingRules.WithArticle(tool)}, which broke)" : $" (with {CraftingRules.WithArticle(tool)})";
+
         /// <summary>What a portion costs at someone's stall: the game's fixed prices, so a seller only chooses to sell.</summary>
         public const long MealPricePence = 600;
 
@@ -283,7 +287,18 @@ namespace TinyCity.Simulation.Economy
         {
             if (food == null || !food.MustBeMade)
             {
-                return !FoodRules.IsMadeFood(a);
+                return !FoodRules.IsMadeFood(a) && !CraftingRules.IsCrafting(a);
+            }
+
+            if (a == ActivityCatalog.GatherStone)
+            {
+                return r.Belongings.Has(ToolKind.Pickaxe);
+            }
+
+            var tool = CraftingRules.ToolMadeBy(a);
+            if (tool != null)
+            {
+                return !r.Belongings.Has(tool.Value) && r.Belongings.Count(MaterialKind.Wood) >= CraftingRules.WoodFor(tool.Value);
             }
 
             if (FoodRules.IsFreeFood(a))
@@ -383,14 +398,16 @@ namespace TinyCity.Simulation.Economy
                 }
 
                 SetCrop(obj.Id, null);
-                var kept = r.Food.Add(FoodKind.Vegetables, FoodRules.HarvestPortions, today + FoodRules.VegetableDays);
-                return $"Picked {FoodRules.Portions(FoodKind.Vegetables, kept)} at the {obj.Name.ToLowerInvariant()}";
+                var hoe = r.Belongings.Has(ToolKind.Hoe);
+                var kept = r.Food.Add(FoodKind.Vegetables, FoodRules.HarvestPortions + (hoe ? CraftingRules.HoeExtraPortions : 0), today + FoodRules.VegetableDays);
+                return $"Picked {FoodRules.Portions(FoodKind.Vegetables, kept)} at the {obj.Name.ToLowerInvariant()}" + (hoe ? FoodRules.WearNote(r, ToolKind.Hoe) : string.Empty);
             }
 
             if (a == ActivityCatalog.CatchFish)
             {
-                var kept = r.Food.Add(FoodKind.Fish, FoodRules.CatchPortions, today + FoodRules.FishDays);
-                return $"Caught {FoodRules.Portions(FoodKind.Fish, kept)}";
+                var rod = r.Belongings.Has(ToolKind.FishingRod);
+                var kept = r.Food.Add(FoodKind.Fish, FoodRules.CatchPortions + (rod ? CraftingRules.RodExtraPortions : 0), today + FoodRules.FishDays);
+                return $"Caught {FoodRules.Portions(FoodKind.Fish, kept)}" + (rod ? FoodRules.WearNote(r, ToolKind.FishingRod) : string.Empty);
             }
 
             if (a == ActivityCatalog.Cook)

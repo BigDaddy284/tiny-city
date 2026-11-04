@@ -161,6 +161,9 @@ namespace TinyCity.Simulation.Residents
         /// <summary>Tiny City 2: the food they have, grown, caught or cooked. Empty in v1, which uses <see cref="Groceries"/>.</summary>
         public Economy.FoodStock Food { get; } = new Economy.FoodStock();
 
+        /// <summary>Tiny City 2: the materials they have gathered and the tools they have made.</summary>
+        public Economy.Belongings Belongings { get; } = new Economy.Belongings();
+
         /// <summary>Paid every Monday morning, in pence: rent for their home.</summary>
         public long WeeklyRentPence { get; internal set; }
 

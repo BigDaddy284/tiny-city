@@ -197,6 +197,7 @@ namespace TinyCity.Simulation.AI
             }
 
             sb.AppendLine();
+            sb.AppendLine($"Your things: {r.Belongings.Describe()}. {Economy.CraftingRules.Recipes()}");
         }
 
         public static string Relationship(TownSimulation sim, Resident r, Resident other)

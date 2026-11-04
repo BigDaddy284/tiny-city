@@ -306,6 +306,44 @@ namespace TinyCity.Art
                     break;
                 }
 
+                case ObjectType.Woodland:
+                    // Tiny City 2's woodland: a young tree, two stumps and a pile of cut logs.
+                    foreach (var (tu, tv, tall) in new[] { (0.22, 0.22, 1.0), (0.5, 0.18, 0.75) })
+                    {
+                        p.Post(tu, tv, 0, 0.04, 10 * tall, Palette.WoodDark);
+                        for (var tier = 0; tier < 3; tier++)
+                        {
+                            var leaf = palette.IsWinter && tier == 2 ? Palette.Snow : tier % 2 == 0 ? palette.PineLeavesDark : palette.PineLeaves;
+                            p.Post(tu, tv, (8 + (tier * 8)) * tall, (0.2 - (tier * 0.055)) * tall, 9 * tall, leaf);
+                        }
+                    }
+
+                    foreach (var (su, sv) in new[] { (0.72, 0.26), (0.24, 0.72) })
+                    {
+                        p.Post(su, sv, 0, 0.11, 7, Palette.Wood);
+                        p.FlatDisc(su, sv, 7, 0.09, Palette.WoodLight);
+                    }
+
+                    for (var i = 0; i < 3; i++)
+                    {
+                        p.Box(0.48 + (i * 0.13), 0.5, 0, 0.11, 0.38, 6, Palette.WoodLight, Palette.Wood, Palette.WoodDark);
+                    }
+
+                    p.Box(0.54, 0.5, 6, 0.11, 0.38, 6, Palette.WoodLight, Palette.Wood, Palette.WoodDark);
+                    p.Box(0.67, 0.5, 6, 0.11, 0.38, 6, Palette.WoodLight, Palette.Wood, Palette.WoodDark);
+                    SnowOn(p, palette, outdoors, 0.54, 0.5, 12, 0.24, 0.38);
+                    break;
+                case ObjectType.RockPile:
+                    // Tiny City 2's rock pile: rough boulders, the top one cracked open.
+                    foreach (var (ru, rv, rz, du, dv, dz) in new[] { (0.14, 0.3, 0.0, 0.42, 0.5, 14.0), (0.5, 0.2, 0.0, 0.36, 0.4, 10.0), (0.46, 0.6, 0.0, 0.34, 0.3, 8.0), (0.24, 0.36, 14.0, 0.26, 0.3, 9.0) })
+                    {
+                        p.Box(ru, rv, rz, du, dv, dz, Palette.Metal, Palette.Stone, Palette.StoneDark);
+                        p.Top(ru, rv, rz + dz, du, dv, (a, b) => Noise.Value((int)(a * 5), (int)(b * 5), variant + (int)(ru * 10)) < 0.3 ? Palette.Stone : Palette.Metal);
+                    }
+
+                    p.Box(0.3, 0.44, 23, 0.1, 0.03, 0.5, Palette.StoneDark);
+                    SnowOn(p, palette, outdoors, 0.24, 0.36, 23, 0.26, 0.3);
+                    break;
                 default:
                     p.Box(0.3, 0.3, 0, 0.4, 0.4, 12, Palette.Stone);
                     break;
