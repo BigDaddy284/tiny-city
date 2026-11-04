@@ -224,5 +224,42 @@ namespace TinyCity.Tests.EditMode
             // Ratings that never come back usable keep the game's figure instead of being asked for forever.
             Assert.That(sim.Memories.All.All(m => m.ImportanceRated), Is.True);
         }
+    
+        [Test]
+        public void TinyCityTwo_RatesNewMemoriesOnlyInBatches()
+        {
+            var sim = StarterTown.CreateNewGame();
+            sim.AiRunsEverything = true;
+            foreach (var m in sim.Memories.All.Where(m => !m.ImportanceRated).ToList())
+            {
+                sim.Memories.RateImportance(m.Id, m.Importance);
+            }
+
+            var transport = FakeAiTransport.WorkingOllama(body => body.Contains("ratings") ? "{\"ratings\":[]}" : null);
+            var ai = new AiService(new OllamaSettings(), transport);
+            ai.Attach(sim);
+            var id = sim.Residents[0].Id;
+            var now = 0.0;
+            void Run()
+            {
+                for (var i = 0; i < 40; i++)
+                {
+                    ai.Update(now);
+                    now += 0.5;
+                }
+            }
+
+            for (var i = 1; i < AiService.RatingBatchMin; i++)
+            {
+                sim.Memories.Add(id, sim.Time, MemoryType.Event, 3, "Something small happened " + i, new string[0], new string[0]);
+            }
+
+            Run();
+            Assert.That(transport.Calls.Any(c => c.Body != null && c.Body.Contains("Rate how much each one matters")), Is.False, "too few to be worth a request yet");
+
+            sim.Memories.Add(id, sim.Time, MemoryType.Event, 3, "One more thing happened", new string[0], new string[0]);
+            Run();
+            Assert.That(transport.Calls.Any(c => c.Body != null && c.Body.Contains("Rate how much each one matters")), Is.True);
+        }
     }
 }

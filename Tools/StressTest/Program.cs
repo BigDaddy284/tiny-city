@@ -48,6 +48,7 @@ namespace TinyCity.Tools.StressTest
             Districts = args.Length > 4 ? int.Parse(args[4]) : 10;
             ParallelRequests = args.Length > 5 ? int.Parse(args[5]) : OllamaSettings.DefaultParallelRequests;
             DecisionWaitSeconds = args.Length > 6 ? int.Parse(args[6]) : OllamaSettings.DefaultDecisionWaitSeconds;
+            var v2Days = args.Length > 7 ? double.Parse(args[7], CultureInfo.InvariantCulture) : 1;
 
             Line("# Tiny City stress test");
             Line();
@@ -63,7 +64,13 @@ namespace TinyCity.Tools.StressTest
             }
 
             ok &= Outage(section++);
-            ok &= bigDays == 0 || BigCity(section, bigDays);
+            ok &= bigDays == 0 || BigCity(section++, bigDays);
+            foreach (var profile in AiProfile.All)
+            {
+                // The CPU-only model is so slow that half a day is plenty to see the pattern.
+                var d = profile.MinSeconds >= 10 ? Math.Min(v2Days, 0.5) : v2Days;
+                ok &= v2Days <= 0 || AiRunsEverything(section++, profile, d);
+            }
 
             File.WriteAllText(path, Report.ToString());
             Console.WriteLine(Report.ToString());
@@ -289,9 +296,29 @@ namespace TinyCity.Tools.StressTest
                 Calls++;
                 string content;
                 var extra = 1.0;
+                var kind = KindOf(call.Body);
+                CallsByKind[kind] = (CallsByKind.TryGetValue(kind, out var k) ? k : 0) + 1;
                 if (number % 30 == 5)
                 {
                     content = "Hmm, let me think about that.";
+                }
+                else if (kind == "day plan")
+                {
+                    content = "{\"plan\":[{\"hour\":8,\"plan\":\"Breakfast at home\"},{\"hour\":9,\"plan\":\"Work\"},{\"hour\":13,\"plan\":\"Lunch\"},{\"hour\":18,\"plan\":\"See friends\"},{\"hour\":22,\"plan\":\"Bed\"}]}";
+                    extra += PlanReplyExtra;
+                }
+                else if (kind == "react")
+                {
+                    content = "{\"react\":" + (number % 3 == 0 ? "true" : "false") + ",\"reason\":\"Why not\"}";
+                }
+                else if (kind == "insight")
+                {
+                    content = "{\"insights\":[{\"insight\":\"The city keeps me busy.\",\"because\":[1,2]}]}";
+                }
+                else if (kind == "rating")
+                {
+                    var ids = Regex.Matches(call.Body, "mem-\\d{6}").Cast<Match>().Select(m => m.Value).Distinct();
+                    content = "{\"ratings\":[" + string.Join(",", ids.Select(id => "{\"id\":\"" + id + "\",\"importance\":3}")) + "]}";
                 }
                 else if (call.Body.Contains("You are chatting with"))
                 {
@@ -312,6 +339,18 @@ namespace TinyCity.Tools.StressTest
                 waiting.Enqueue(new Job { Call = call, Arrived = Now, Seconds = latency, Reply = FakeAiTransport.ChatReply(content), Lost = number % 50 == 17 });
                 return null;
             }
+
+            /// <summary>Requests answered, by what they were for.</summary>
+            public Dictionary<string, int> CallsByKind { get; } = new Dictionary<string, int>();
+
+            private static string KindOf(string body) =>
+                body.Contains("Plan the rest of your day") ? "day plan"
+                : body.Contains("go over to talk") ? "react"
+                : body.Contains("What do they tell you") ? "insight"
+                : body.Contains("Rate how much each one matters") ? "rating"
+                : body.Contains("You are chatting with") ? "line"
+                : body.Contains("diary-style memory") ? "reflection"
+                : "decision";
 
             /// <summary>Picks one of the options the prompt offers, the way a well-behaved model would.</summary>
             private string PickFreeTimeOption(string body)
