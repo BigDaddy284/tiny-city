@@ -43,10 +43,10 @@ namespace TinyCity.Tests.PlayMode
 
         /// <summary>
         /// The CI runner has no Ollama, so this checks the real web request path reports a refused connection and
-        /// the town carries on with its built-in routine.
+        /// Tiny City 2 has no built-in routine, so the residents wait for the AI and the clock holds.
         /// </summary>
         [UnityTest]
-        public IEnumerator WithoutOllama_AiReportsOffline_AndTheTownKeepsRunning()
+        public IEnumerator WithoutOllama_AiReportsOffline_AndTheTownWaitsForIt()
         {
             yield return null;
             var game = Object.FindAnyObjectByType<GameController>();
@@ -63,7 +63,8 @@ namespace TinyCity.Tests.PlayMode
             Assert.That(game.Simulation.AiDecisionsEnabled, Is.False);
 
             game.AdvanceMinutes(120);
-            Assert.That(game.Simulation.Residents[0].State, Is.Not.EqualTo(TinyCity.Simulation.Residents.ResidentState.Deciding));
+            Assert.That(game.Simulation.Residents[0].State, Is.EqualTo(TinyCity.Simulation.Residents.ResidentState.Deciding));
+            Assert.That(game.HoldingForAi, Is.True);
         }
     }
 }

@@ -49,7 +49,7 @@ The built game reads `TinyCity_Data/StreamingAssets/Configuration/settings.json`
 
 ## AI in tests
 
-Automated tests never contact a real Ollama. Edit Mode tests use `FakeAiTransport`, a scripted stand-in that can answer well, answer badly, answer late or refuse the connection. The Play Mode test `WithoutOllama_AiReportsOffline_AndTheTownKeepsRunning` relies on the CI runner having no Ollama. A real-model check is manual: see the Phase 2 steps in [PlaytestChecklist.md](PlaytestChecklist.md).
+Automated tests never contact a real Ollama. Edit Mode tests use `FakeAiTransport`, a scripted stand-in that can answer well, answer badly, answer late or refuse the connection. The Play Mode test `WithoutOllama_AiReportsOffline_AndTheTownWaitsForIt` relies on the CI runner having no Ollama (in Tiny City 2 the residents then wait and the clock holds). A real-model check is manual: see the Phase 2 steps in [PlaytestChecklist.md](PlaytestChecklist.md).
 
 ## Running tests in a cloud coding session
 

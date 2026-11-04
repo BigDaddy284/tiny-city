@@ -118,6 +118,8 @@ namespace TinyCity.Tests.PlayMode
         [UnityTest]
         public IEnumerator FollowPanel_StaysWithItsResident_IndoorsAndOut()
         {
+            // CI has no Ollama, and in Tiny City 2 nobody moves without it, so this camera test uses the old routine.
+            game.Simulation.AiRunsEverything = false;
             var resident = game.Simulation.Residents.First(r => r.IsAlive);
             game.Select(resident, followInActivePanel: true);
             var panel = game.Panels.Active;
