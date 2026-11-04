@@ -56,6 +56,9 @@ namespace TinyCity.Simulation.AI
         /// <summary>Tiny City 2: the plan day each resident was last asked to plan, and the day a plan was given up on.</summary>
         private readonly Dictionary<string, int> requestedPlans = new Dictionary<string, int>();
         private readonly Dictionary<string, int> skippedPlans = new Dictionary<string, int>();
+
+        /// <summary>Tiny City 2: the reaction question last sent for each resident.</summary>
+        private readonly Dictionary<string, long> requestedReactions = new Dictionary<string, long>();
         private readonly Dictionary<string, (long lineId, double askedAt)> requestedLines = new Dictionary<string, (long, double)>();
         private readonly List<string> events = new List<string>();
         private IAiCall checkCall;
@@ -125,6 +128,7 @@ namespace TinyCity.Simulation.AI
             requestedReflections.Clear();
             requestedPlans.Clear();
             skippedPlans.Clear();
+            requestedReactions.Clear();
             requestedLines.Clear();
             Simulation = simulation;
             if (simulation != null)
@@ -201,6 +205,7 @@ namespace TinyCity.Simulation.AI
             requestedReflections.Clear();
             requestedPlans.Clear();
             skippedPlans.Clear();
+            requestedReactions.Clear();
             requestedLines.Clear();
             SetSimulationEnabled(false);
             nextCheckAt = 0;
@@ -472,6 +477,12 @@ namespace TinyCity.Simulation.AI
                 if (!r.IsAlive)
                 {
                     continue;
+                }
+
+                if (r.Reaction != null && (!requestedReactions.TryGetValue(r.Id, out var askedReaction) || askedReaction != r.Reaction.Id))
+                {
+                    requestedReactions[r.Id] = r.Reaction.Id;
+                    Queue.Enqueue(ReactionRequest(sim, r, r.Reaction), now);
                 }
 
                 if (WaitingForDayPlan(sim, r, now))
@@ -752,6 +763,40 @@ namespace TinyCity.Simulation.AI
                         AddEvent($"{r.FirstName} used the built-in routine: {reason}");
                     }
                 });
+        }
+
+        private AiRequest ReactionRequest(TownSimulation sim, Resident r, PendingReaction reaction)
+        {
+            var other = sim.GetResident(reaction.OtherId);
+            return new AiRequest(
+                $"react:{r.Id}",
+                r.Id,
+                AiPriority.Dialogue,
+                $"{r.FirstName} noticed {other?.FirstName}",
+                ReactionPrompt.BuildBody(Model, sim, r, reaction),
+                text =>
+                {
+                    if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
+                        || !ReactionPrompt.TryParse(content, out var reply, out error))
+                    {
+                        return AiReplyCheck.Invalid(error);
+                    }
+
+                    var outcome = sim.ApplyReaction(r.Id, reaction.Id, reply.GoOver, reply.Reason);
+                    if (outcome != DecisionOutcome.Applied)
+                    {
+                        return AiReplyCheck.Stale(outcome.ToString());
+                    }
+
+                    if (reply.GoOver)
+                    {
+                        AddEvent($"{r.FirstName} noticed {other?.FirstName} and went over to talk");
+                    }
+
+                    return AiReplyCheck.Accepted();
+                },
+                () => Simulation == sim && r.IsAlive && r.Reaction == reaction,
+                reason => sim.DropReaction(r.Id, reaction.Id));
         }
 
         private AiRequest DayPlanRequest(TownSimulation sim, Resident r, int day)
