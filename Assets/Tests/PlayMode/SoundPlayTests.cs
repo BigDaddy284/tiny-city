@@ -51,14 +51,25 @@ namespace TinyCity.Tests.PlayMode
             yield return null;
             var game = Object.FindAnyObjectByType<GameController>();
             yield return WaitUntilReady(game);
-            var before = game.Sound.EffectsPlayed;
-            for (var i = 0; i < 240 && game.Sound.EffectsPlayed == before; i++)
-            {
-                game.AdvanceMinutes(5);
-                yield return null;
-            }
 
-            Assert.That(game.Sound.EffectsPlayed, Is.GreaterThan(before), "someone near the camera does something audible");
+            // CI has no Ollama, and in Tiny City 2 nobody moves without it, so this uses the old routine.
+            var aiRunsEverything = game.Simulation.AiRunsEverything;
+            game.Simulation.AiRunsEverything = false;
+            try
+            {
+                var before = game.Sound.EffectsPlayed;
+                for (var i = 0; i < 240 && game.Sound.EffectsPlayed == before; i++)
+                {
+                    game.AdvanceMinutes(5);
+                    yield return null;
+                }
+
+                Assert.That(game.Sound.EffectsPlayed, Is.GreaterThan(before), "someone near the camera does something audible");
+            }
+            finally
+            {
+                game.Simulation.AiRunsEverything = aiRunsEverything;
+            }
         }
     }
 }

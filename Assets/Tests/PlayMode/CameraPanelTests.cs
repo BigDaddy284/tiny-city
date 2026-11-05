@@ -34,6 +34,12 @@ namespace TinyCity.Tests.PlayMode
         public void BackToOnePanel()
         {
             game?.SetPanelCount(1);
+
+            // Leave the game on Tiny City 2's own land, so later tests (and its saves) see the real game.
+            if (game != null && game.Simulation.World.TownId != FlatLand.TownId)
+            {
+                game.ShowTown(FlatLand.CreateNewGame());
+            }
         }
 
         [UnityTest]

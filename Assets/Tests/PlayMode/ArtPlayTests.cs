@@ -30,6 +30,16 @@ namespace TinyCity.Tests.PlayMode
             }
         }
 
+        [TearDown]
+        public void BackToTheGamesOwnLand()
+        {
+            // Leave the game on Tiny City 2's own land, so later tests (and its saves) see the real game.
+            if (game != null && game.Simulation.World.TownId != FlatLand.TownId)
+            {
+                game.ShowTown(FlatLand.CreateNewGame());
+            }
+        }
+
         [Test]
         public void EveryMap_IsDrawn_WithCrispSprites()
         {
