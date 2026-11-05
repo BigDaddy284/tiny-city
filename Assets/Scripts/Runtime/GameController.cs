@@ -676,6 +676,7 @@ namespace TinyCity.Runtime
             }
 
             view.ApplyTime(Simulation.Time);
+            view.ShowBlocks(Simulation.Construction);
             view.UpdateResidents(Simulation, Mathf.Clamp01(tickProgress));
             Panels.Update(CameraArea(), view, Simulation);
         }

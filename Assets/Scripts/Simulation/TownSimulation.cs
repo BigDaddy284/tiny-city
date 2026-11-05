@@ -83,10 +83,12 @@ namespace TinyCity.Simulation
             }
 
             Time = time;
-            Pathfinder = new Pathfinder(world);
+            Construction = new Building.Construction(world);
+            Pathfinder = new Pathfinder(world, Construction.IsBlocked);
             Economy = new TownEconomy(world, this.residents);
             Planner = new ActivityPlanner(world, Pathfinder, this.residents, Economy, () => Time) { Food = Food };
             Food.SellerAt = SellerAt;
+            Food.BuildingAllows = BuildingAllows;
         }
 
         public TownWorld World { get; }
@@ -96,6 +98,9 @@ namespace TinyCity.Simulation
         public IReadOnlyList<Resident> Residents => residents;
 
         public Pathfinder Pathfinder { get; }
+
+        /// <summary>Tiny City 2's buildings on their plots.</summary>
+        public Building.Construction Construction { get; }
 
         public ActivityPlanner Planner { get; }
 
@@ -220,6 +225,7 @@ namespace TinyCity.Simulation
             StepNewcomers();
             StepBirths();
             StepFood();
+            StepSketches();
             foreach (var resident in residents)
             {
                 if (!resident.IsAlive)
@@ -1116,6 +1122,11 @@ namespace TinyCity.Simulation
                 {
                     r.AddLog(Time, $"Paid {Money.Format(price)} ({activity.Name.ToLowerInvariant()})");
                 }
+            }
+
+            if (FoodMustBeMade && activity == ActivityCatalog.PlanBuilding)
+            {
+                StartSketch(r);
             }
 
             r.State = ResidentState.Performing;

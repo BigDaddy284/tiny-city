@@ -91,6 +91,16 @@ namespace TinyCity.Simulation.Persistence
                     ["wateredDays"] = c.Value.WateredDays,
                     ["lastWateredDay"] = c.Value.LastWateredDay,
                 }).ToList(),
+                ["projects"] = simulation.Construction.Projects.Values.OrderBy(p => p.PlotId, StringComparer.Ordinal).Select(p => (object)new Dictionary<string, object>
+                {
+                    ["plotId"] = p.PlotId,
+                    ["ownerId"] = p.OwnerId,
+                    ["name"] = p.Plan.Name,
+                    ["height"] = p.Plan.Height,
+                    ["rows"] = p.Plan.Rows.Select(row => (object)row).ToList(),
+                    ["placed"] = p.Placed,
+                    ["startedDay"] = p.StartedDay,
+                }).ToList(),
                 ["partnerships"] = simulation.Relationships.Partnerships.Select(p => (object)new Dictionary<string, object>
                 {
                     ["firstId"] = p.FirstId,
@@ -178,6 +188,29 @@ namespace TinyCity.Simulation.Persistence
                 return Fail("The save file has no residents.");
             }
 
+            // Buildings first, so a finished home's bed is in the world while the residents who sleep in it are read.
+            var projects = new List<(string plotId, string ownerId, Building.BuildPlan plan, int placed, int startedDay)>();
+            var early = new Building.Construction(world);
+            foreach (var item in GetList(root, "projects").OfType<Dictionary<string, object>>())
+            {
+                var plotId = GetString(item, "plotId");
+                var rows = GetList(item, "rows").OfType<string>().ToList();
+                if (plotId == null || !world.TryGetObject(plotId, out var plot) || plot.Type != ObjectType.BuildPlot || early.At(plotId) != null)
+                {
+                    warnings.Add($"A building on \"{plotId}\", which isn't a free plot, was dropped.");
+                }
+                else if (!Building.BuildPlan.TryParse(GetString(item, "name"), GetInt(item, "height", 1), rows, out var plan, out var planError))
+                {
+                    warnings.Add($"The building on \"{plotId}\" was dropped: {planError}.");
+                }
+                else
+                {
+                    var entry = (plotId, GetString(item, "ownerId"), plan, GetInt(item, "placed", 0), GetInt(item, "startedDay", 0));
+                    projects.Add(entry);
+                    early.Add(new Building.Project(entry.plotId, entry.Item2, plan, entry.Item4, entry.Item5));
+                }
+            }
+
             var residents = new List<Resident>();
             for (var i = 0; i < residentList.Count; i++)
             {
@@ -213,6 +246,19 @@ namespace TinyCity.Simulation.Persistence
             ReadRelationships(GetList(root, "relationships"), simulation, warnings);
             ReadSessions(GetList(root, "activeConversations"), simulation, warnings);
             ReadEconomy(GetObject(root, "economy"), simulation, warnings);
+            foreach (var (plotId, ownerId, plan, placed, startedDay) in projects)
+            {
+                if (simulation.Construction.At(plotId) != null || simulation.GetResident(ownerId) == null)
+                {
+                    warnings.Add($"A building on \"{plotId}\", which isn't a free plot with a known owner, was dropped.");
+                }
+                else
+                {
+                    simulation.Construction.Add(new Building.Project(plotId, ownerId, plan, placed, startedDay));
+                }
+            }
+
+            simulation.Pathfinder.Forget();
             foreach (var crop in GetList(root, "crops").OfType<Dictionary<string, object>>())
             {
                 var objectId = GetString(crop, "objectId");

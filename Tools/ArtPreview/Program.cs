@@ -19,6 +19,12 @@ namespace TinyCity.Tools.ArtPreview
                 return;
             }
 
+            if (args.Length > 0 && args[0] == "--blocks")
+            {
+                WriteBlocks(args.Length > 1 ? args[1] : "blocks.png");
+                return;
+            }
+
             if (args.Length > 0 && args[0] == "--residents")
             {
                 WriteResidents(args.Length > 1 ? args[1] : "residents.png");
@@ -66,6 +72,44 @@ namespace TinyCity.Tools.ArtPreview
                     Png.Write(Path.Combine(output, $"{name}-night.png"), Compose(art, Lighting.At(23 * 60, season, map.IsExterior)));
                     Console.WriteLine($"{name}: {art.Pieces.Count} pieces, drawn in {built} ms");
                 }
+            }
+        }
+
+        /// <summary>Draws the open land with a finished building of every material on its plots, by day and by night.</summary>
+        private static void WriteBlocks(string path)
+        {
+            var world = StarterTown.CreateWorld();
+            var residents = StarterTown.CreateResidents(world);
+            var sim = new TinyCity.Simulation.TownSimulation(world, residents, GameTime.FromDayAndTime(6, 12, 0));
+            var plans = new[]
+            {
+                ("wooden cabin", 4, new[] { "", "..WWWWWWWWWW", "..W........W", "..W.B......W", "..W........W", "..W........W", "..W........W", "..WWWWDWWWWW" }),
+                ("stone cottage", 5, new[] { "SSSSSSSSSSSS", "S..........S", "C..........C", "S.....B....S", "S..........S", "C..........C", "S..........S", "SSSSDSSSSSSS" }),
+                ("hardwood house", 5, new[] { "HHHHHHHHHHHHHH", "H......H.....H", "H......H.....H", "H.B....D.....H", "H......H.....H", "H......H.....H", "H......H.....H", "H......H.....H", "H......H.....H", "HHHHHHHHHHDHHH" }),
+                ("iron workshop", 3, new[] { "", "", "IIIIIIII", "I......I", "I......I", "I......I", "I......I", "IIDDIIII" }),
+                ("heartwood hall", 5, new[] { "TTTTCTTTTTTCTTTT", "T..............T", "C..............C", "T......B.......T", "T..............T", "C..............C", "T..............T", "TTTTTTDTTTTTTTTT" }),
+                ("crystal tower", 6, new[] { "..CCCC..", ".C....C.", "C......C", "C..B...C", "C......C", "C......C", ".C....C.", "..CDDC.." }),
+            };
+            var plots = world.ObjectsOfType(TinyCity.Simulation.World.ObjectType.BuildPlot).ToList();
+            for (var i = 0; i < plots.Count && i < plans.Length; i++)
+            {
+                var (name, height, rows) = plans[i];
+                if (!TinyCity.Simulation.Building.BuildPlan.TryParse(name, height, rows, out var plan, out var error))
+                {
+                    throw new InvalidOperationException($"{name}: {error}");
+                }
+
+                sim.Construction.Add(new TinyCity.Simulation.Building.Project(plots[i].Id, residents[i].Id, plan, plan.Cells.Count, 0));
+            }
+
+            var map = world.GetMap(StarterTown.OpenLandMapId);
+            foreach (var (season, minute, suffix) in new[] { (Season.Summer, 12 * 60, ""), (Season.Summer, 23 * 60, "-night"), (Season.Winter, 12 * 60, "-winter") })
+            {
+                var palette = Palette.For(season);
+                var art = MapArt.Build(world, map, palette);
+                var extra = BlockArt.Pieces(world, sim.Construction, map, palette)
+                    .Select(b => (b.SortX, b.SortY, (int)b.Layer, b.Canvas, 0.0, 0.0)).ToList();
+                Png.Write(path.Replace(".png", suffix + ".png"), Compose(art, Lighting.At(minute, season, true), extra));
             }
         }
 

@@ -198,6 +198,22 @@ namespace TinyCity.Simulation.AI
 
             sb.AppendLine();
             sb.AppendLine($"Your things: {r.Belongings.Describe()}. {Economy.CraftingRules.RecipesText()}");
+            var project = sim.Construction.Of(r.Id);
+            if (project == null)
+            {
+                var free = sim.World.Objects.Count(o => o.Type == World.ObjectType.BuildPlot && sim.Construction.At(o.Id) == null);
+                sb.AppendLine($"Building: the open land, through the gate at the bottom of the city, has {free} empty plot{(free == 1 ? string.Empty : "s")} where anyone can plan a building of their own and build it from blocks of the materials they gather; one with a bed becomes their home once it is finished.");
+            }
+            else if (project.IsFinished)
+            {
+                sb.AppendLine($"Your building: you built a {project.Plan.Name} on the open land{(project.Plan.IsHome ? (r.BedObjectId == Building.Construction.BedIdOf(project.PlotId) ? ", and you live in it" : string.Empty) : string.Empty)}.");
+            }
+            else
+            {
+                var needs = string.Join(", ", project.StillNeeded().Select(n => $"{n.count} {Economy.CraftingRules.Name(n.material)}"));
+                var home = project.Plan.IsHome ? " It has a bed, so it will be your home once finished." : string.Empty;
+                sb.AppendLine($"Your building: a {project.Plan.Name} on the open land, {project.Placed} of {project.Plan.Cells.Count} blocks laid; it still needs {(needs.Length > 0 ? needs : "no more materials")}.{home}");
+            }
         }
 
         public static string Relationship(TownSimulation sim, Resident r, Resident other)

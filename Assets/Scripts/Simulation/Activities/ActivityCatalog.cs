@@ -277,6 +277,17 @@ namespace TinyCity.Simulation.Activities
 
         public static readonly ActivityDefinition CraftRod = Craft("craft-rod", "Make a fishing rod", "making a fishing rod");
 
+        /// <summary>Tiny City 2: sketching a building for an empty plot; the plan itself comes from the AI.</summary>
+        public static readonly ActivityDefinition PlanBuilding = new ActivityDefinition(
+            "plan-building", "Plan a building", "planning a building", ActivityKind.Errand, null, new[] { ObjectType.BuildPlot }, 30,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.5 });
+
+        /// <summary>Tiny City 2: laying the next blocks of their own building.</summary>
+        public static readonly ActivityDefinition Build = new ActivityDefinition(
+            "build", "Build", "building", ActivityKind.Errand, null, new[] { ObjectType.BuildPlot }, 60,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.3, [NeedType.Exercise] = 0.6 },
+            new Dictionary<NeedType, double> { [NeedType.Energy] = 1.5, [NeedType.Hygiene] = 1.8, [NeedType.Thirst] = 1.4 });
+
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
@@ -286,6 +297,7 @@ namespace TinyCity.Simulation.Activities
             PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw, RunStall, BuyFood,
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
             GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
+            PlanBuilding, Build,
         };
 
         private static ActivityDefinition Gather(string id, string name, string verb, ObjectType where, double effort) => new ActivityDefinition(

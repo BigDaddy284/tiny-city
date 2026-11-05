@@ -232,9 +232,9 @@ namespace TinyCity.Tests.EditMode
 
                 var trees = Tiles(map).Count(t => map.GetTile(t) == TileType.Tree);
                 Assert.That(art.Pieces.Count(p => p.Name.StartsWith("Tree ", StringComparison.Ordinal)), Is.EqualTo(trees), map.Id);
-                if (map.IsExterior)
+                if (map.IsExterior && map.Id != StarterTown.OpenLandMapId)
                 {
-                    Assert.That(art.Pieces.Count(p => p.Layer == ArtLayer.Glow), Is.GreaterThan(14));
+                    Assert.That(art.Pieces.Count(p => p.Layer == ArtLayer.Glow), Is.GreaterThan(14), "the city's windows glow");
                 }
                 else
                 {

@@ -66,6 +66,9 @@ namespace TinyCity.Simulation.World
 
         /// <summary>Tiny City 2: a pile of rocks where stone can be broken off with a pickaxe, two at a time.</summary>
         RockPile,
+
+        /// <summary>Tiny City 2: the marker in front of an empty plot where a resident can plan and build with blocks.</summary>
+        BuildPlot,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -112,6 +115,7 @@ namespace TinyCity.Simulation.World
                 case ObjectType.DanceFloor:
                 case ObjectType.Woodland:
                 case ObjectType.RockPile:
+                case ObjectType.BuildPlot:
                     return false;
                 default:
                     return true;
@@ -140,6 +144,7 @@ namespace TinyCity.Simulation.World
                 case ObjectType.Fountain:
                     return 4;
                 case ObjectType.GardenPlot:
+                case ObjectType.BuildPlot:
                     return 4;
                 case ObjectType.ShopShelf:
                 case ObjectType.BakeryDisplay:

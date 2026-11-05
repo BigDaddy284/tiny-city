@@ -499,6 +499,17 @@ namespace TinyCity.Runtime
             if (Simulation.FoodMustBeMade)
             {
                 GUILayout.Label($"Things: {r.Belongings.Describe()}", styles.Small);
+                var project = Simulation.Construction.Of(r.Id);
+                if (project != null)
+                {
+                    GUILayout.Label(project.IsFinished
+                        ? $"Built a {project.Plan.Name}"
+                        : $"Building a {project.Plan.Name}: {project.Placed}/{project.Plan.Cells.Count} blocks", styles.Small);
+                }
+                else if (r.Sketch != null)
+                {
+                    GUILayout.Label("Planning a building…", styles.Small);
+                }
             }
 
             var bills = r.WeeklyRentPence > 0 ? $"Rent {Money.Format(r.WeeklyRentPence)} a week, due Monday morning" : "No rent";
