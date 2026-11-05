@@ -19,7 +19,16 @@ namespace TinyCity.Runtime
     /// </summary>
     internal sealed class Inspector
     {
-        public const float Width = 380f;
+        public const float DefaultWidth = 380f;
+        public const float MinWidth = 320f;
+        private const float GripWidth = 6f;
+        private const string WidthPrefsKey = "TinyCity.SidebarWidth";
+
+        /// <summary>The side panel's width: drag its left edge to change it (owner, 5 November); kept in PlayerPrefs.</summary>
+        public static float Width { get; private set; } = DefaultWidth;
+
+        private static bool widthLoaded;
+        private bool resizing;
         private const int SearchMatchesShown = 6;
         private const float PeopleListHeight = 180f;
         private const int GridColumns = 2;
@@ -54,10 +63,50 @@ namespace TinyCity.Runtime
 
         private TownSimulation Simulation => game.Simulation;
 
+        private static float MaxWidth => Mathf.Max(MinWidth, Screen.width * 0.75f);
+
+        /// <summary>Drags the panel's left edge: press on it, move, let go. The width is remembered between runs.</summary>
+        private void HandleResize()
+        {
+            if (!widthLoaded)
+            {
+                widthLoaded = true;
+                Width = PlayerPrefs.GetFloat(WidthPrefsKey, DefaultWidth);
+            }
+
+            Width = Mathf.Clamp(Width, MinWidth, MaxWidth);
+            var grip = new Rect(Screen.width - Width - (GripWidth / 2f), 0f, GripWidth, Screen.height);
+            var e = Event.current;
+            switch (e.type)
+            {
+                case EventType.MouseDown when e.button == 0 && grip.Contains(e.mousePosition):
+                    resizing = true;
+                    e.Use();
+                    break;
+                case EventType.MouseDrag when resizing:
+                    Width = Mathf.Clamp(Screen.width - e.mousePosition.x, MinWidth, MaxWidth);
+                    e.Use();
+                    break;
+                case EventType.MouseUp when resizing:
+                    resizing = false;
+                    PlayerPrefs.SetFloat(WidthPrefsKey, Width);
+                    PlayerPrefs.Save();
+                    e.Use();
+                    break;
+                case EventType.Repaint:
+                    // A thin bar shows where to grab, brighter while dragging.
+                    GUI.color = UiTheme.ToColor(UiTheme.Palette.BarBorder);
+                    GUI.DrawTexture(new Rect(grip.x + 1f, 0f, resizing ? 4f : 2f, Screen.height), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                    break;
+            }
+        }
+
         public void Draw(GuiStyles guiStyles)
         {
             styles = guiStyles;
             var r = game.SelectedResident;
+            HandleResize();
             var area = new Rect(Screen.width - Width, 0f, Width, Screen.height);
             GUI.color = UiTheme.ToColor(UiTheme.Palette.Panel);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
