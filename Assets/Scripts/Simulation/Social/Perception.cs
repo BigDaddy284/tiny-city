@@ -7,7 +7,7 @@ namespace TinyCity.Simulation.Social
         public const int SightDistance = 6;
 
         /// <summary>The cheap filter: the same two people are only offered a reaction this often.</summary>
-        public const int ReactCooldownMinutes = 180;
+        public const int ReactCooldownMinutes = 360;
 
         /// <summary>A reaction not answered within this many game minutes is dropped (the moment has passed).</summary>
         public const int ReactWaitMinutes = 15;

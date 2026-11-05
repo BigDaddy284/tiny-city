@@ -65,6 +65,18 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void TinyCity2_PlansFurtherAhead_SoItAsksLessOften()
+        {
+            var sim = DecidingTown(out var r);
+            Assert.That(sim.PlanStepLimit, Is.EqualTo(TownSimulation.MaxPlanSteps));
+            sim.AiRunsEverything = true;
+            Assert.That(sim.PlanStepLimit, Is.EqualTo(TownSimulation.MaxPlanStepsWhenAiRuns));
+            var content = "{\"action\":\"relax\",\"target_id\":\"none\",\"then\":[" + string.Join(",", Enumerable.Repeat("{\"action\":\"relax\"}", 8)) + "]}";
+            Assert.That(DecisionPrompt.TryParse(content, sim.FreeTimeOptionsFor(r), out var reply, out var error, sim.PlanStepLimit), Is.True, error);
+            Assert.That(reply.Then.Count, Is.EqualTo(TownSimulation.MaxPlanStepsWhenAiRuns - 1));
+        }
+
+        [Test]
         public void AStepThatNoLongerFits_IsSkipped()
         {
             var sim = DecidingTown(out var r);

@@ -38,6 +38,9 @@ namespace TinyCity.Runtime
         private static readonly string[] TabNames = { "Now", "People", "Memories", "Work", "Timeline" };
         private static readonly string[] FilterNames = { "Everyone", "Living", "Died" };
         private static readonly string[] OrderNames = { "First Name", "Surname", "Oldest", "Youngest" };
+        private static readonly string[] OrderNamesV2 = { "First Name", "Surname" };
+        private const int TradesShown = 20;
+        private static readonly string[] TabNamesV2 = { "Now", "People", "Memories", "Things", "Timeline" };
 
         private readonly GameController game;
         private GuiStyles styles;
@@ -125,9 +128,9 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.Space(6f);
-            tab = GUILayout.Toolbar(tab, TabNames);
+            tab = GUILayout.Toolbar(tab, Simulation.FoodMustBeMade ? TabNamesV2 : TabNames);
             scroll = BeginVerticalScroll(scroll);
-            GUILayout.Label($"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", styles.Title);
+            GUILayout.Label(Simulation.AiRunsEverything ? $"{r.FullName}{RoleText(r)}" : $"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", styles.Title);
             if (r.IsNewcomer)
             {
                 GUILayout.Label($"Moved to the city on day {r.MovedInDay}", styles.Text);
@@ -207,9 +210,10 @@ namespace TinyCity.Runtime
             GUILayout.EndHorizontal();
             if (game.Speed > 0)
             {
+                var thinking = Simulation.AiRunsEverything ? Simulation.Residents.Count(x => x.IsAlive && x.State == ResidentState.Deciding) : 0;
                 var waiting = game.HoldingForAi
-                    ? (game.Ai == null || game.Ai.Status != TinyCity.Simulation.AI.AiConnectionStatus.Connected ? "  Paused: waiting for Ollama." : "  Waiting for the AI to think.")
-                    : string.Empty;
+                    ? "  Paused: waiting for Ollama."
+                    : thinking > 0 ? $"  {thinking} thinking." : string.Empty;
                 GUILayout.Label($"Running at {game.ActualSpeed:0.0}x of {game.Speed}x.{waiting}", styles.Small);
             }
 
@@ -272,7 +276,12 @@ namespace TinyCity.Runtime
             peopleFilter = (PeopleFilter)GUILayout.Toolbar((int)peopleFilter, FilterNames);
             expanded = GUILayout.Toggle(expanded, expanded ? "Back" : "Expand", GUI.skin.button, GUILayout.Width(70f));
             GUILayout.EndHorizontal();
-            peopleOrder = (PeopleOrder)GUILayout.Toolbar((int)peopleOrder, OrderNames);
+            if (Simulation.AiRunsEverything && (int)peopleOrder >= OrderNamesV2.Length)
+            {
+                peopleOrder = PeopleOrder.FirstName;
+            }
+
+            peopleOrder = (PeopleOrder)GUILayout.Toolbar((int)peopleOrder, Simulation.AiRunsEverything ? OrderNamesV2 : OrderNames);
             if (expanded)
             {
                 return;
@@ -362,8 +371,15 @@ namespace TinyCity.Runtime
 
         private void Pick(Resident other) => game.Select(other, followInActivePanel: true);
 
-        private static string Describe(Resident other) =>
-            $"{other.FullName}, {other.AgeYears}{(other.IsAlive ? string.Empty : " †")}";
+        /// <summary>
+        /// A person's button: in Tiny City 2 nobody dies, so instead of an age it shows the role they chose, if any
+        /// (owner, 5 November).
+        /// </summary>
+        private string Describe(Resident other) => Simulation.AiRunsEverything
+            ? $"{other.FullName}{RoleText(other)}"
+            : $"{other.FullName}, {other.AgeYears}{(other.IsAlive ? string.Empty : " †")}";
+
+        private static string RoleText(Resident r) => string.IsNullOrEmpty(r.Role) ? string.Empty : $" ({r.Role})";
 
         private void DrawNow(Resident r)
         {
@@ -521,6 +537,12 @@ namespace TinyCity.Runtime
 
         private void DrawWork(Resident r)
         {
+            if (Simulation.FoodMustBeMade)
+            {
+                DrawThings(r);
+                return;
+            }
+
             GUILayout.Label(DescribeLivelihood(r), styles.Text);
             GUILayout.Label(Simulation.FoodMustBeMade
                 ? $"Money: {Money.Format(r.MoneyPence)} · food: {r.Food.Describe(Simulation.Time.Day)}"
@@ -547,6 +569,97 @@ namespace TinyCity.Runtime
             GUILayout.Space(4f);
             GUILayout.Label("Recent payments", styles.Text);
             foreach (var payment in Simulation.Economy.Ledger.For(r.Id).Reverse().Take(10))
+            {
+                var sign = payment.AmountPence >= 0 ? "+" : string.Empty;
+                GUILayout.Label($"Day {payment.Time.Day} {payment.Time.ClockText}  {sign}{Money.Format(payment.AmountPence)}  {payment.Description}", styles.Small);
+            }
+        }
+
+        /// <summary>
+        /// Tiny City 2's Things tab (owner, 5 November): what the resident is carrying, item by item, then their
+        /// trades (food and money changing hands, tax), newest first, and the money in and out.
+        /// </summary>
+        private void DrawThings(Resident r)
+        {
+            var day = Simulation.Time.Day;
+            GUILayout.Label(string.IsNullOrEmpty(r.Role) ? "No role chosen" : $"Role: {r.Role}", styles.Text);
+            GUILayout.Label($"Money: {Money.Format(r.MoneyPence)}", styles.Text);
+            GUILayout.Space(4f);
+            GUILayout.Label("CARRYING", styles.Section);
+            if (r.Food.Total == 0)
+            {
+                GUILayout.Label("Food: none", styles.Small);
+            }
+
+            foreach (var batch in r.Food.Batches)
+            {
+                var off = batch.GoesOffDay - day;
+                var when = off <= 0 ? "goes off today" : off == 1 ? "goes off tomorrow" : $"goes off in {off} days (day {batch.GoesOffDay})";
+                GUILayout.Label($"{FoodRules.Portions(batch.Kind, batch.Count)}, {when}", styles.Small);
+            }
+
+            var anyMaterial = false;
+            foreach (MaterialKind kind in Enum.GetValues(typeof(MaterialKind)))
+            {
+                var n = r.Belongings.Count(kind);
+                if (n > 0)
+                {
+                    anyMaterial = true;
+                    GUILayout.Label($"{Capital(CraftingRules.Name(kind))}: {n}", styles.Small);
+                }
+            }
+
+            if (!anyMaterial)
+            {
+                GUILayout.Label("Materials: none", styles.Small);
+            }
+
+            var anyTool = false;
+            foreach (var (tool, tier, usesLeft) in r.Belongings.Tools)
+            {
+                anyTool = true;
+                GUILayout.Label($"{Capital(CraftingRules.Name(tool, tier))}: {usesLeft} use{(usesLeft == 1 ? string.Empty : "s")} left", styles.Small);
+            }
+
+            if (!anyTool)
+            {
+                GUILayout.Label("Tools: none", styles.Small);
+            }
+
+            var project = Simulation.Construction.Of(r.Id);
+            if (project != null)
+            {
+                GUILayout.Label(project.IsFinished
+                    ? $"Built a {project.Plan.Name}"
+                    : $"Building a {project.Plan.Name}: {project.Placed}/{project.Plan.Cells.Count} blocks", styles.Small);
+            }
+            else if (r.Sketch != null)
+            {
+                GUILayout.Label("Planning a building…", styles.Small);
+            }
+
+            GUILayout.Space(4f);
+            GUILayout.Label("TRADES", styles.Section);
+            var trades = Simulation.TradesOf(r.Id).Take(TradesShown).ToList();
+            if (trades.Count == 0)
+            {
+                GUILayout.Label("No trades yet.", styles.Small);
+            }
+
+            foreach (var trade in trades)
+            {
+                GUILayout.Label($"Day {trade.Time.Day} {trade.Time.ClockText}  {trade.Summary}", styles.Small);
+            }
+
+            GUILayout.Space(4f);
+            GUILayout.Label("MONEY IN AND OUT", styles.Section);
+            var payments = Simulation.Economy.Ledger.For(r.Id).Reverse().Take(10).ToList();
+            if (payments.Count == 0)
+            {
+                GUILayout.Label("No money has changed hands yet.", styles.Small);
+            }
+
+            foreach (var payment in payments)
             {
                 var sign = payment.AmountPence >= 0 ? "+" : string.Empty;
                 GUILayout.Label($"Day {payment.Time.Day} {payment.Time.ClockText}  {sign}{Money.Format(payment.AmountPence)}  {payment.Description}", styles.Small);
@@ -832,6 +945,8 @@ namespace TinyCity.Runtime
             var next = Simulation.World.Calendar.Next(Simulation.Time);
             return next == null ? "Nothing on the city calendar" : $"Next: {next.Value.evt.Name}, {next.Value.start.Weekday} (day {next.Value.start.Day}) at {next.Value.start.ClockText}";
         }
+
+        private static string Capital(string text) => string.IsNullOrEmpty(text) ? text : char.ToUpperInvariant(text[0]) + text.Substring(1);
 
         private static string Words(string pascal) =>
             string.Concat(pascal.Select((c, i) => i > 0 && char.IsUpper(c) ? " " + char.ToLowerInvariant(c) : c.ToString()));

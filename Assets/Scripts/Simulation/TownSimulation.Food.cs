@@ -124,6 +124,8 @@ namespace TinyCity.Simulation
             stallSales[seller.Id] = (sold.Item1 + 1, sold.Item2 + price);
             r.AddLog(Time, $"{(price > 0 ? "Bought" : "Was given")} {FoodRules.Portions(kind, 1)} from {seller.FullName}{paid}");
             seller.AddLog(Time, $"{(price > 0 ? "Sold" : "Gave")} {FoodRules.Portions(kind, 1)} to {r.FullName}{paid}");
+            Memories.Add(r.Id, Time, MemoryType.Event, 3, price > 0 ? $"I bought {FoodRules.Portions(kind, 1)} from {seller.FullName} at a market stall for {Money.Format(price)}." : $"{seller.FullName} gave me {FoodRules.Portions(kind, 1)} at a market stall.",
+                new[] { seller.Id }, new[] { seller.Id, "food", TradeTag });
             return true;
         }
 
@@ -164,8 +166,8 @@ namespace TinyCity.Simulation
                             var price = offer.PricePence > 0 ? $" for {Money.Format(offer.PricePence)}" : " for nothing";
                             giver.AddLog(Time, $"Gave {speaker.FullName} {what}{price}");
                             speaker.AddLog(Time, $"Got {what} from {giver.FullName}{price}");
-                            Memories.Add(giver.Id, Time, MemoryType.Event, 4, offer.PricePence > 0 ? $"I sold {speaker.FullName} {what} for {Money.Format(offer.PricePence)}." : $"I gave {speaker.FullName} {what}.", new[] { speaker.Id }, new[] { speaker.Id, "food" });
-                            Memories.Add(speaker.Id, Time, MemoryType.Event, 4, offer.PricePence > 0 ? $"{giver.FullName} sold me {what} for {Money.Format(offer.PricePence)}." : $"{giver.FullName} gave me {what}.", new[] { giver.Id }, new[] { giver.Id, "food" });
+                            Memories.Add(giver.Id, Time, MemoryType.Event, 4, offer.PricePence > 0 ? $"I sold {speaker.FullName} {what} for {Money.Format(offer.PricePence)}." : $"I gave {speaker.FullName} {what}.", new[] { speaker.Id }, new[] { speaker.Id, "food", TradeTag });
+                            Memories.Add(speaker.Id, Time, MemoryType.Event, 4, offer.PricePence > 0 ? $"{giver.FullName} sold me {what} for {Money.Format(offer.PricePence)}." : $"{giver.FullName} gave me {what}.", new[] { giver.Id }, new[] { giver.Id, "food", TradeTag });
                         }
                     }
                 }
@@ -186,6 +188,64 @@ namespace TinyCity.Simulation
         /// man's demand for a share of the other person's food and materials, which that person's next line pays or
         /// refuses. Only someone whose role <see cref="WorldBrief.CanTax"/> can ask; whether anyone pays is up to them.
         /// </summary>
+        /// <summary>Tiny City 2: the memory tag on every trade (food or money changing hands, tax), which the inspector lists.</summary>
+        public const string TradeTag = "trade";
+
+        /// <summary>
+        /// Tiny City 2's barter (owner, 5 November: nobody starts with money): a material or a tool handed over in a
+        /// chat at once, by name (<see cref="CraftingRules.ItemNames"/>). Materials go up to what the giver has and the
+        /// other can carry; a tool goes only to someone without one of that kind.
+        /// </summary>
+        private void ApplyGoodsInChat(ConversationSession session, Resident speaker, string item, int amount)
+        {
+            if (!FoodMustBeMade || string.IsNullOrWhiteSpace(item))
+            {
+                return;
+            }
+
+            var other = GetResident(session.ParticipantIds.FirstOrDefault(id => id != speaker.Id));
+            if (other == null || !other.IsAlive)
+            {
+                return;
+            }
+
+            string what = null;
+            if (CraftingRules.TryMaterial(item, out var material))
+            {
+                var n = Math.Min(Math.Max(1, amount), speaker.Belongings.Count(material));
+                n = Math.Min(n, CraftingRules.MaxMaterials - other.Belongings.Count(material));
+                if (n > 0 && speaker.Belongings.Take(material, n))
+                {
+                    other.Belongings.Add(material, n);
+                    what = $"{n} {CraftingRules.Name(material)}";
+                }
+            }
+            else if (CraftingRules.TryTool(item, out var tool) && speaker.Belongings.Has(tool) && !other.Belongings.Has(tool))
+            {
+                var tier = speaker.Belongings.TierOf(tool);
+                other.Belongings.SetTool(tool, speaker.Belongings.UsesLeft(tool), tier);
+                speaker.Belongings.SetTool(tool, 0);
+                what = CraftingRules.WithArticle(tool, tier);
+            }
+
+            if (what == null)
+            {
+                return;
+            }
+
+            speaker.AddLog(Time, $"Gave {other.FullName} {what}");
+            other.AddLog(Time, $"Got {what} from {speaker.FullName}");
+            Memories.Add(speaker.Id, Time, MemoryType.Event, 4, $"I gave {other.FullName} {what}.", new[] { other.Id }, new[] { other.Id, "goods", TradeTag });
+            Memories.Add(other.Id, Time, MemoryType.Event, 4, $"{speaker.FullName} gave me {what}.", new[] { speaker.Id }, new[] { speaker.Id, "goods", TradeTag });
+        }
+
+        /// <summary>Tiny City 2: whether anyone alive has any money; while nobody does, prompts leave money out.</summary>
+        public bool MoneyInUse => Residents.Any(r => r.IsAlive && r.MoneyPence > 0);
+
+        /// <summary>Tiny City 2: a resident's trades, newest first.</summary>
+        public IEnumerable<MemoryRecord> TradesOf(string residentId) =>
+            Memories.ForResident(residentId).Where(m => m.Tags.Contains(TradeTag)).OrderByDescending(m => m.Time.TotalMinutes).ThenByDescending(m => m.Id, StringComparer.Ordinal);
+
         private void ApplyMoneyAndTaxInChat(ConversationSession session, Resident speaker, long giveMoneyPence, int taxPercent, bool payTax)
         {
             if (!FoodMustBeMade)
@@ -206,14 +266,14 @@ namespace TinyCity.Simulation
                         var paid = PayTax(speaker, taxer, demand.Percent);
                         speaker.AddLog(Time, $"Paid {taxer.FullName} {demand.Percent}% tax: {paid}");
                         taxer.AddLog(Time, $"Collected {demand.Percent}% tax from {speaker.FullName}: {paid}");
-                        Memories.Add(speaker.Id, Time, MemoryType.Event, 5, $"{taxer.FullName} taxed me {demand.Percent}% and I paid: {paid}.", new[] { taxer.Id }, new[] { taxer.Id, "tax" });
-                        Memories.Add(taxer.Id, Time, MemoryType.Event, 5, $"I taxed {speaker.FullName} {demand.Percent}% and they paid: {paid}.", new[] { speaker.Id }, new[] { speaker.Id, "tax" });
+                        Memories.Add(speaker.Id, Time, MemoryType.Event, 5, $"{taxer.FullName} taxed me {demand.Percent}% and I paid: {paid}.", new[] { taxer.Id }, new[] { taxer.Id, "tax", TradeTag });
+                        Memories.Add(taxer.Id, Time, MemoryType.Event, 5, $"I taxed {speaker.FullName} {demand.Percent}% and they paid: {paid}.", new[] { speaker.Id }, new[] { speaker.Id, "tax", TradeTag });
                     }
                     else
                     {
                         speaker.AddLog(Time, $"Refused to pay {taxer.FullName}'s tax");
-                        Memories.Add(speaker.Id, Time, MemoryType.Event, 5, $"{taxer.FullName} tried to tax me {demand.Percent}%, and I refused.", new[] { taxer.Id }, new[] { taxer.Id, "tax" });
-                        Memories.Add(taxer.Id, Time, MemoryType.Event, 5, $"I asked {speaker.FullName} for {demand.Percent}% tax, and they refused.", new[] { speaker.Id }, new[] { speaker.Id, "tax" });
+                        Memories.Add(speaker.Id, Time, MemoryType.Event, 5, $"{taxer.FullName} tried to tax me {demand.Percent}%, and I refused.", new[] { taxer.Id }, new[] { taxer.Id, "tax", TradeTag });
+                        Memories.Add(taxer.Id, Time, MemoryType.Event, 5, $"I asked {speaker.FullName} for {demand.Percent}% tax, and they refused.", new[] { speaker.Id }, new[] { speaker.Id, "tax", TradeTag });
                     }
                 }
             }
@@ -234,8 +294,8 @@ namespace TinyCity.Simulation
                     Economy.Ledger.Add(Time, other.Id, amount, TransactionKind.Gift, $"from {speaker.FullName}");
                     speaker.AddLog(Time, $"Gave {other.FullName} {Money.Format(amount)}");
                     other.AddLog(Time, $"Got {Money.Format(amount)} from {speaker.FullName}");
-                    Memories.Add(speaker.Id, Time, MemoryType.Event, 4, $"I gave {other.FullName} {Money.Format(amount)}.", new[] { other.Id }, new[] { other.Id, "money" });
-                    Memories.Add(other.Id, Time, MemoryType.Event, 4, $"{speaker.FullName} gave me {Money.Format(amount)}.", new[] { speaker.Id }, new[] { speaker.Id, "money" });
+                    Memories.Add(speaker.Id, Time, MemoryType.Event, 4, $"I gave {other.FullName} {Money.Format(amount)}.", new[] { other.Id }, new[] { other.Id, "money", TradeTag });
+                    Memories.Add(other.Id, Time, MemoryType.Event, 4, $"{speaker.FullName} gave me {Money.Format(amount)}.", new[] { speaker.Id }, new[] { speaker.Id, "money", TradeTag });
                 }
             }
 
@@ -303,7 +363,7 @@ namespace TinyCity.Simulation
                     ? $"I gave away {sold.portions} portion{(sold.portions == 1 ? string.Empty : "s")} of food at a market stall."
                     : $"I sold {sold.portions} portion{(sold.portions == 1 ? string.Empty : "s")} of food at a market stall for {Money.Format(sold.pence)}, asking {Money.Format(r.StallPricePence)} a portion.";
                 r.AddLog(Time, sold.portions == 0 ? "Packed up the stall: nobody bought anything" : $"Packed up the stall: sold {sold.portions} for {Money.Format(sold.pence)}");
-                Memories.Add(r.Id, Time, MemoryType.Event, 3, note, tags: new[] { "food", "stall", r.TargetObjectId });
+                Memories.Add(r.Id, Time, MemoryType.Event, 3, note, tags: new[] { "food", "stall", r.TargetObjectId, TradeTag });
                 return;
             }
 

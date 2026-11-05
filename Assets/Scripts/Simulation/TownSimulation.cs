@@ -62,6 +62,20 @@ namespace TinyCity.Simulation
         public const int PlanMinutes = 180;
 
         /// <summary>
+        /// Tiny City 2 (owner, 5 November: ask less, never pause): one answer plans this many activities, kept for
+        /// <see cref="PlanMinutesWhenAiRuns"/>, so each resident asks the AI less often.
+        /// </summary>
+        public const int MaxPlanStepsWhenAiRuns = 6;
+
+        public const int PlanMinutesWhenAiRuns = 360;
+
+        /// <summary>How many activities one answer may plan in this town.</summary>
+        public int PlanStepLimit => AiRunsEverything ? MaxPlanStepsWhenAiRuns : MaxPlanSteps;
+
+        /// <summary>Tiny City 2's chats are at most this many lines, since each line is one AI request.</summary>
+        public const int MaxLinesWhenAiRuns = 6;
+
+        /// <summary>
         /// A resident's day for reflection purposes runs from noon to noon, so going to bed after midnight, or still
         /// sleeping early the next morning, counts as the same day.
         /// </summary>
@@ -481,13 +495,13 @@ namespace TinyCity.Simulation
             if (option.Activity == ActivityCatalog.RunStall)
             {
                 // Tiny City 2: the stall-holder names their own price; with none given, they keep the last one.
-                r.StallPricePence = Math.Max(0, pricePence ?? r.StallPricePence);
+                r.StallPricePence = MoneyInUse ? Math.Max(0, pricePence ?? r.StallPricePence) : 0;
             }
 
             r.ResetActivity();
             StartOption(r, option, why, "(AI)");
             var actions = new HashSet<string>(options.Select(o => o.ActionId));
-            r.SetPlan((then ?? Array.Empty<PlanStep>()).Where(step => step != null && actions.Contains(step.ActionId)).Take(MaxPlanSteps - 1), Time.TotalMinutes + PlanMinutes);
+            r.SetPlan((then ?? Array.Empty<PlanStep>()).Where(step => step != null && actions.Contains(step.ActionId)).Take(PlanStepLimit - 1), Time.TotalMinutes + (AiRunsEverything ? PlanMinutesWhenAiRuns : PlanMinutes));
             Conversations.AddRemark(r.Id, Time, say, option.ActionId);
             return DecisionOutcome.Applied;
         }
@@ -763,7 +777,8 @@ namespace TinyCity.Simulation
 
         /// <summary>Applies an AI-written conversation line, after checking it is for the turn the conversation is waiting on.</summary>
         public DecisionOutcome ApplyConversationLine(string conversationId, long lineRequestId, string speakerId, string text, string tone, string topic, bool wantsToEnd,
-            int giveFood = 0, long pricePence = 0, bool acceptOffer = false, long giveMoneyPence = 0, int taxPercent = 0, bool payTax = false)
+            int giveFood = 0, long pricePence = 0, bool acceptOffer = false, long giveMoneyPence = 0, int taxPercent = 0, bool payTax = false,
+            string giveItem = null, int giveAmount = 0)
         {
             var session = GetConversation(conversationId);
             if (session == null || !session.AwaitingLine || session.LineRequestId != lineRequestId || lineRequestId <= 0 || session.SpeakerId != speakerId)
@@ -790,6 +805,7 @@ namespace TinyCity.Simulation
 
             ApplyFoodInChat(session, speaker, giveFood, pricePence, acceptOffer);
             ApplyMoneyAndTaxInChat(session, speaker, giveMoneyPence, taxPercent, payTax);
+            ApplyGoodsInChat(session, speaker, giveItem, giveAmount);
             AddLine(session, clean, parsedTone, fromAi: true, SocialRules.CleanTopic(topic), wantsToEnd);
             return DecisionOutcome.Applied;
         }
@@ -1022,7 +1038,7 @@ namespace TinyCity.Simulation
             var ba = Relationships.Get(partner.Id, initiator.Id);
             var map = World.GetMap(initiator.Location.MapId);
             var place = World.Objects.FirstOrDefault(o => Near(o.Location, initiator.Location, 1))?.Name ?? (map.IsExterior ? "city plaza" : map.Name);
-            var session = new ConversationSession(Conversations.ReserveId(), initiator.Id, partner.Id, Time, SocialRules.LinesFor(initiator, partner, ab, ba), place);
+            var session = new ConversationSession(Conversations.ReserveId(), initiator.Id, partner.Id, Time, AiRunsEverything ? Math.Min(MaxLinesWhenAiRuns, SocialRules.LinesFor(initiator, partner, ab, ba)) : SocialRules.LinesFor(initiator, partner, ab, ba), place);
             sessions.Add(session);
             foreach (var (me, other) in new[] { (initiator, partner), (partner, initiator) })
             {

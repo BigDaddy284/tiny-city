@@ -243,6 +243,44 @@ namespace TinyCity.Simulation.Economy
             _ => "crystal",
         };
 
+        /// <summary>Everything that can be handed over in a chat (Tiny City 2's barter): every material, then every tool.</summary>
+        public static IReadOnlyList<string> ItemNames =>
+            Enum.GetValues(typeof(MaterialKind)).Cast<MaterialKind>().Select(Name)
+                .Concat(Enum.GetValues(typeof(ToolKind)).Cast<ToolKind>().Select(t => Name(t))).ToList();
+
+        public static bool TryMaterial(string name, out MaterialKind kind)
+        {
+            var n = (name ?? string.Empty).Trim();
+            foreach (MaterialKind k in Enum.GetValues(typeof(MaterialKind)))
+            {
+                if (string.Equals(Name(k), n, StringComparison.OrdinalIgnoreCase) || string.Equals(k.ToString(), n, StringComparison.OrdinalIgnoreCase))
+                {
+                    kind = k;
+                    return true;
+                }
+            }
+
+            kind = default;
+            return false;
+        }
+
+        /// <summary>A tool by name; "wooden axe" or "iron pickaxe" find the axe or pickaxe whatever its tier.</summary>
+        public static bool TryTool(string name, out ToolKind tool)
+        {
+            var n = (name ?? string.Empty).Trim().ToLowerInvariant();
+            foreach (var t in new[] { ToolKind.Pickaxe, ToolKind.Axe, ToolKind.FishingRod, ToolKind.Hoe })
+            {
+                if (n.EndsWith(Name(t), StringComparison.Ordinal) || n == t.ToString().ToLowerInvariant() || (t == ToolKind.FishingRod && n.EndsWith("rod", StringComparison.Ordinal)))
+                {
+                    tool = t;
+                    return true;
+                }
+            }
+
+            tool = default;
+            return false;
+        }
+
         public static string Name(ToolKind tool) => tool switch
         {
             ToolKind.Axe => "axe",

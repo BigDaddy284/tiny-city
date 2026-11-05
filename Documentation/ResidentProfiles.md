@@ -24,6 +24,12 @@ person's food and materials. The other person's next line says whether they pay;
 kind (rounded down) is handed over. Nobody has to pay. Anyone can also hand money over in a chat (a gift, a wage
 for a security enforcer, a payment), and it moves at once if they have it.
 
+Barter: the shipped profiles start everyone with no money and the brief says there is none, so residents
+trade goods. In a chat anyone can hand over a material (wood, stone, hardwood, iron ore, heartwood, crystal) or
+a tool (axe, pickaxe, hoe, fishing rod; a tool only to someone without one of that kind), and food as before.
+While nobody alive has any money, the prompts leave money, prices and `give_money` out. Give someone `money`
+here and money comes back into play for everyone.
+
 Illness is switched off in Tiny City 2, so there is no doctor role.
 
 A file with neither gets the shipped brief and roles. A new world keeps the brief and roles it began with,
@@ -51,7 +57,7 @@ saved with it.
       "age": 46,
       "about": "I kept a shop for years and I can't stand waste or mess.",
       "personality": "You keep careful count of everything, and you never give away what you can trade.",
-      "money": 600
+      "money": 0
     }
   ]
 }

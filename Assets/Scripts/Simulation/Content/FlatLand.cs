@@ -129,7 +129,7 @@ namespace TinyCity.Simulation.Content
 
         /// <summary>
         /// The starter residents (or those <paramref name="profiles"/> list), standing at the camp: no home, bed,
-        /// job, rent, income or business, only their money and food.
+        /// job, rent, income, business or money (unless a profile gives some), only their food.
         /// </summary>
         public static IReadOnlyList<Resident> CreateResidents(TownWorld world, IReadOnlyList<ResidentProfile> profiles)
         {
@@ -146,6 +146,11 @@ namespace TinyCity.Simulation.Content
                 r.WeeklyIncomePence = 0;
                 r.IncomeLabel = string.Empty;
                 r.OwnsBusinessId = null;
+                if (profiles == null)
+                {
+                    // Tiny City 2 has no money to start with (owner, 5 November): they barter.
+                    r.MoneyPence = 0;
+                }
             }
 
             return residents.Take(spots.Count).ToList();
