@@ -44,12 +44,13 @@ namespace TinyCity.Simulation.Activities
         }
 
         /// <summary>Applies one minute of decay (faster for some needs while ill) plus the gains of <paramref name="activity"/> if one is being performed.</summary>
-        public static void ApplyMinute(Needs needs, Personality personality, ActivityDefinition activity, Health.Illness illness = null)
+        public static void ApplyMinute(Needs needs, Personality personality, ActivityDefinition activity, Health.Illness illness = null, double hungerThirstScale = 1.0)
         {
             for (var i = 0; i < Needs.Count; i++)
             {
                 var need = (NeedType)i;
-                var decay = DecayPerHour(need, personality) / 60.0 * (illness?.DecayMultiplier(need) ?? 1.0);
+                var decay = DecayPerHour(need, personality) / 60.0 * (illness?.DecayMultiplier(need) ?? 1.0)
+                    * (need == NeedType.Hunger || need == NeedType.Thirst ? hungerThirstScale : 1.0);
                 var gain = 0.0;
                 if (activity != null)
                 {

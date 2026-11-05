@@ -27,7 +27,7 @@ namespace TinyCity.Simulation
                 {
                     CelebrateBirthday(r);
                 }
-                else if (minute == HealthRules.OldAgeCheckMinute && HealthRules.DiesOfOldAge(r, Time.Day))
+                else if (minute == HealthRules.OldAgeCheckMinute && !AiRunsEverything && HealthRules.DiesOfOldAge(r, Time.Day))
                 {
                     Die(r, "old age");
                 }
@@ -78,7 +78,14 @@ namespace TinyCity.Simulation
         {
             var resting = r.State == ResidentState.Performing && (activity == ActivityCatalog.Sleep || activity == ActivityCatalog.Rest);
             var illness = IllnessCatalog.Get(r.IllnessId);
-            switch (HealthRules.ApplyMinute(r, resting))
+            var health = HealthRules.ApplyMinute(r, resting);
+            if (AiRunsEverything && r.Health < LowestHealthWhenAiRuns)
+            {
+                r.Health = LowestHealthWhenAiRuns;
+                health = HealthEvent.Died;
+            }
+
+            switch (health)
             {
                 case HealthEvent.Recovered:
                     r.AddLog(Time, $"Felt better: over {illness.Name}");
@@ -89,6 +96,16 @@ namespace TinyCity.Simulation
                     r.AddLog(Time, $"Got worse: {illness.Name} turned into {IllnessCatalog.Get(r.IllnessId).Name}");
                     Memories.Add(r.Id, Time, MemoryType.Event, 7, $"My {illness.Name} turned into {IllnessCatalog.Get(r.IllnessId).Name}; I need to see the doctor.", tags: new[] { "health", "ill", r.IllnessId });
                     History.Add(Time, TownEventKind.SeriousIllness, $"{r.FullName}'s {illness.Name} turned into {IllnessCatalog.Get(r.IllnessId).Name}.", new[] { r.Id });
+                    break;
+                case HealthEvent.Died when AiRunsEverything:
+                    // Tiny City 2: nobody dies. They are left as weak as can be, and know it.
+                    r.Health = LowestHealthWhenAiRuns;
+                    if (!r.Log.Any(e => e.Time.Day == Time.Day && e.Text.StartsWith("Collapsed")))
+                    {
+                        r.AddLog(Time, "Collapsed from neglect, too weak to go on like this");
+                        Memories.Add(r.Id, Time, MemoryType.Event, 8, "I collapsed, as weak as I have ever been. I must eat, drink and rest.", tags: new[] { "health" });
+                    }
+
                     break;
                 case HealthEvent.Died:
                     Die(r, illness != null ? IllnessCatalog.Get(r.IllnessId)?.Name ?? illness.Name : "neglect");
