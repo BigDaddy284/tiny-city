@@ -775,7 +775,7 @@ namespace TinyCity.Simulation.AI
                 text =>
                 {
                     if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
-                        || !DecisionPrompt.TryParse(content, options, out var reply, out error))
+                        || !DecisionPrompt.TryParse(content, options, out var reply, out error, sim.PlanStepLimit))
                     {
                         return AiReplyCheck.Invalid(error);
                     }

@@ -97,11 +97,12 @@ namespace TinyCity.Runtime
         public string Status { get; private set; } = string.Empty;
 
         /// <summary>
-        /// True while the clock is held for the AI: someone is waiting for a choice or a line, or Ollama isn't
-        /// connected. Tiny City 2 has no routine to fall back on, so time waits instead.
+        /// True while the clock is held because Ollama isn't connected: Tiny City 2 has no routine to fall back on.
+        /// While it is connected the clock keeps running (owner, 5 November): someone waiting for a choice or a line
+        /// just stands there thinking.
         /// </summary>
         public bool HoldingForAi => Simulation != null && Simulation.AiRunsEverything
-            && (Ai == null || Ai.Status != TinyCity.Simulation.AI.AiConnectionStatus.Connected || Simulation.WaitingForAi);
+            && (Ai == null || Ai.Status != TinyCity.Simulation.AI.AiConnectionStatus.Connected);
 
         /// <summary>Game minutes actually passing per real second, averaged over the last few seconds.</summary>
         public float ActualSpeed { get; private set; }
