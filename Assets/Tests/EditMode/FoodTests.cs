@@ -359,6 +359,63 @@ namespace TinyCity.Tests.EditMode
             Assert.That(first.Food.Count(FoodKind.Fish), Is.EqualTo(1), "a refused offer moves nothing");
         }
 
+        [Test]
+        public void MoneyHandedOverInAChat_Moves_AndATaxMan_CanAskForAShare_WhichTheOtherMayRefuse()
+        {
+            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            sim.AiDecisionsEnabled = true;
+            sim.FoodMustBeMade = true;
+            sim.Brief = WorldBrief.Default;
+            ConversationSessionFor(sim, out var session);
+            var taxer = sim.GetResident(session.SpeakerId);
+            var payer = sim.GetResident(session.ListenerId);
+            taxer.Role = "tax man";
+            payer.Food.Clear();
+            payer.Food.Add(FoodKind.Fish, 10, sim.Time.Day + 2);
+            payer.Belongings.Add(MaterialKind.Wood, 5);
+            taxer.MoneyPence = 2000;
+            var payerMoney = payer.MoneyPence;
+
+            Assert.That(DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]), Does.Contain("\"tax\"").And.Contain("give_money"));
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, taxer.Id, "Here's your wage, and I'll have my tax.", "neutral", "tax", false, giveMoneyPence: 500, taxPercent: 20);
+            Assert.That((taxer.MoneyPence, payer.MoneyPence), Is.EqualTo((1500L, payerMoney + 500)), "money moves at once");
+            Assert.That(sim.Economy.Ledger.All.Any(t => t.ResidentId == payer.Id && t.Kind == TransactionKind.Gift), Is.True);
+            Assert.That(payer.Food.Total, Is.EqualTo(10), "nothing is taxed until they pay");
+
+            WaitForLine(sim, session);
+            Assert.That(DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]), Does.Contain("asked you to hand over 20%").And.Contain("pay_tax"));
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, payer.Id, "Fair enough.", "neutral", "tax", false, payTax: true);
+            Assert.That((payer.Food.Total, taxer.Food.Count(FoodKind.Fish)), Is.EqualTo((8, 2)));
+            Assert.That((payer.Belongings.Count(MaterialKind.Wood), taxer.Belongings.Count(MaterialKind.Wood)), Is.EqualTo((4, 1)), "20% of 5, rounded down");
+            Assert.That(session.TaxDemand, Is.Null);
+
+            WaitForLine(sim, session);
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, taxer.Id, "Same again.", "neutral", "tax", false, taxPercent: 50);
+            WaitForLine(sim, session);
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, payer.Id, "No chance.", "disagree", "tax", false, payTax: false);
+            Assert.That(payer.Food.Total, Is.EqualTo(8), "refused");
+            Assert.That(sim.Memories.ForResident(taxer.Id).Any(m => m.Summary.Contains("they refused")), Is.True);
+
+            WaitForLine(sim, session);
+            payer.Role = "farmer";
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, payer.Id, "Now you pay me.", "playful", "tax", false, taxPercent: 50);
+            Assert.That(session.TaxDemand, Is.Null, "only a role that can tax may ask");
+        }
+
+        [Test]
+        public void NobodyFallsIll_InTinyCity2()
+        {
+            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            sim.AiRunsEverything = true;
+            foreach (var r in sim.Residents)
+            {
+                r.Health = 30;
+            }
+
+            sim.Advance(24 * 60);
+            Assert.That(sim.Residents.All(r => r.IllnessId == null), Is.True);
+        }
+
         [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":2,\"price\":1.5,\"accept_food\":true}", 2, 150, true)]
         [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":99,\"price\":-4}", 99, 0, false)]
         [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":40,\"price\":250}", 40, 25000, false)]

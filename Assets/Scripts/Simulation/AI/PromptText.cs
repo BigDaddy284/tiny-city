@@ -11,8 +11,20 @@ namespace TinyCity.Simulation.AI
     /// <summary>Shared pieces of prompt text describing a resident and their situation.</summary>
     internal static class PromptText
     {
-        public static string Persona(Resident r)
+        public static string Persona(Resident r, TownSimulation sim = null)
         {
+            if (sim != null && sim.FoodMustBeMade)
+            {
+                // Tiny City 2: no city and no jobs, only the open land, what the player told everyone, and the role they chose.
+                return $"You are {r.FullName}, aged {r.AgeYears}, one of the people living on the open land of {sim.World.TownName}. " +
+                    (sim.Brief.Text.Length == 0 ? string.Empty : $"What everyone here knows: {sim.Brief.Text} ") +
+                    (r.Role != null ? $"You have chosen to be the {r.Role}. {sim.Brief.Find(r.Role)?.About} " : sim.Brief.Roles.Count > 0 ? "You haven't taken up any role. " : string.Empty) +
+                    (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Who you are, in your own words: {r.About} ") +
+                    (r.Outlook.Length > 0 ? $"Your personality: {r.Outlook} " : $"Your personality: {r.Personality.Describe().ToLowerInvariant()}. ") +
+                    (r.Hobbies.Count > 0 ? $"Things you enjoy: {string.Join(", ", r.Hobbies)}. " : string.Empty) +
+                    "Stay in character. Never mention being an AI. Answer with JSON only.";
+            }
+
             var job = r.Job == null ? "a resident" : $"the {r.Job.Title.ToLowerInvariant()}";
             return $"You are {r.FullName}, aged {r.AgeYears}, {job} in Tiny City, a small, neon-lit city. " +
                 (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Your background, in your own words: {r.About} ") +
@@ -165,7 +177,8 @@ namespace TinyCity.Simulation.AI
         /// <summary>At most this many people the resident knows are described in a prompt.</summary>
         public const int MaxPeopleListed = 6;
 
-        private static string Work(Resident o) => o.Job == null ? string.Empty : $" ({o.Job.Title.ToLowerInvariant()})";
+        private static string Work(Resident o) =>
+            o.Job != null ? $" ({o.Job.Title.ToLowerInvariant()})" : o.Role != null ? $" (the {o.Role})" : string.Empty;
 
         /// <summary>Money and food at home, so the AI can weigh paid treats against what's in the cupboard.</summary>
         public static string Purse(Resident r, TownSimulation sim = null) =>

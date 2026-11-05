@@ -439,7 +439,7 @@ namespace TinyCity.Runtime
         {
             var profiles = ProfilesLoader.Load(out var problems);
             var lessons = LegacyStore.LatestLessons();
-            SetSimulation(FlatLand.CreateNewGame(profiles, lessons));
+            SetSimulation(FlatLand.CreateNewGame(profiles, lessons, ProfilesLoader.LoadBrief()));
             message = lessons.Count > 0 ? $"{message} They remember what the last world left behind.".Trim() : message;
             Status = problems.Count == 0 ? message : $"{message} residents.json: {problems.Count} problem(s), see Player.log.".Trim();
         }

@@ -185,6 +185,18 @@ namespace TinyCity.Simulation.Residents
         /// </summary>
         public long StallPricePence { get; internal set; }
 
+        /// <summary>
+        /// Tiny City 2: the role they have chosen to take up from the world's <see cref="WorldBrief.Roles"/>, or null
+        /// for none. Their own choice, made in their morning plan; it changes nothing they can do. Saved.
+        /// </summary>
+        public string Role { get; internal set; }
+
+        /// <summary>
+        /// Tiny City 2: the player's one-sentence personality for them from residents.json ("You live to help
+        /// others..."), given to the AI in place of the trait summary when set. Saved.
+        /// </summary>
+        public string Outlook { get; internal set; } = string.Empty;
+
         /// <summary>Minutes worked since wages were last paid; paid when the shift ends.</summary>
         public int UnpaidWorkMinutes { get; internal set; }
 

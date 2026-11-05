@@ -124,10 +124,13 @@ namespace TinyCity.Tests.EditMode
             var r = sim.Residents[0];
             var ids = new HashSet<string>(sim.Planner.FreeTimeOptions(r, everything: true).Select(o => o.ActionId));
             Assert.That(ids.Contains("gather-wood"), Is.False, "trees need an axe");
-            foreach (var id in new[] { "gather-sticks", "gather-loose-stones", "plant-crops", "catch-fish", "plan-building" })
+            foreach (var id in new[] { "gather-sticks", "gather-loose-stones", "plant-crops", "catch-fish", "plan-building", "drink-pond", "wash-pond", "toilet-outdoors", "sleep" })
             {
                 Assert.That(ids.Contains(id), Is.True, id + ": " + string.Join(",", ids));
             }
+
+            Assert.That(TestTown.WithResident(TestTown.WeekendAfternoon).Planner.FreeTimeOptions(sim.Residents[0], everything: true)
+                .Any(o => o.Activity != null && ActivityCatalog.IsInTheWild(o.Activity)), Is.False, "v1 towns have taps and toilets");
 
             sim.Advance(24 * 60);
             Assert.That(sim.Residents.All(o => o.IsAlive), Is.True);

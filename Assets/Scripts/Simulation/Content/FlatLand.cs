@@ -166,10 +166,10 @@ namespace TinyCity.Simulation.Content
         /// A new world on the open land. <paramref name="lessons"/> are what an earlier world that died out left behind
         /// (<see cref="History.Legacy.ReadLessons"/>): every resident starts with each as a memory.
         /// </summary>
-        public static TownSimulation CreateNewGame(IReadOnlyList<ResidentProfile> profiles = null, IReadOnlyList<string> lessons = null)
+        public static TownSimulation CreateNewGame(IReadOnlyList<ResidentProfile> profiles = null, IReadOnlyList<string> lessons = null, WorldBrief brief = null)
         {
             var world = CreateWorld();
-            var simulation = new TownSimulation(world, CreateResidents(world, profiles), StartTime);
+            var simulation = new TownSimulation(world, CreateResidents(world, profiles), StartTime) { Brief = brief ?? WorldBrief.Default };
             foreach (var r in simulation.Residents)
             {
                 simulation.Memories.Add(r.Id, simulation.Time, MemoryType.LifeHistory, 8,

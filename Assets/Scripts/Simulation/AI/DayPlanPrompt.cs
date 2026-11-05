@@ -25,7 +25,7 @@ namespace TinyCity.Simulation.AI
         public const double Temperature = 0.7;
 
         public static string BuildBody(string model, TownSimulation sim, Resident r, int day) =>
-            OllamaProtocol.BuildChatBody(model, PromptText.Persona(r), UserText(sim, r, day), Schema(), Temperature, MaxTokens);
+            OllamaProtocol.BuildChatBody(model, PromptText.Persona(r, sim), UserText(sim, r, day), Schema(sim), Temperature, MaxTokens);
 
         public static string UserText(TownSimulation sim, Resident r, int day)
         {
@@ -72,12 +72,25 @@ namespace TinyCity.Simulation.AI
             }
 
             sb.AppendLine("Nobody decides for you: if you don't eat, sleep, wash or go to work, nobody will do it for you.");
+            var roles = sim.Brief.Roles;
+            if (roles.Count > 0)
+            {
+                sb.AppendLine("Roles anyone here may take up, if they want to (a role is only what you choose to be; anyone can still do anything): "
+                    + string.Join("; ", roles.Select(o => o.About.Length > 0 ? $"{o.Name} ({o.About})" : o.Name)) + ".");
+                sb.AppendLine(r.Role == null ? "You haven't taken up a role." : $"You have chosen to be the {r.Role}.");
+            }
+
             sb.Append($"Plan the rest of your day, from now until you go to bed, in broad strokes: up to {AskedEntries} entries in \"plan\", ")
               .Append("each with \"hour\" (the hour it starts, 0 to 23 on a 24-hour clock) and \"plan\" (what you mean to do, under 12 words), in order.");
+            if (roles.Count > 0)
+            {
+                sb.Append($" Also give \"role\": the role you want from today (the same one to keep it, another to change, or \"{TownSimulation.RoleNone}\" for none).");
+            }
+
             return sb.ToString();
         }
 
-        public static Dictionary<string, object> Schema()
+        public static Dictionary<string, object> Schema(TownSimulation sim = null)
         {
             var entry = new Dictionary<string, object>
             {
@@ -95,20 +108,28 @@ namespace TinyCity.Simulation.AI
                 ["properties"] = new Dictionary<string, object>
                 {
                     ["plan"] = new Dictionary<string, object> { ["type"] = "array", ["items"] = entry, ["maxItems"] = AskedEntries },
+                    ["role"] = sim != null && sim.Brief.Roles.Count > 0
+                        ? new Dictionary<string, object> { ["type"] = "string", ["enum"] = sim.Brief.Roles.Select(o => (object)o.Name).Append(TownSimulation.RoleNone).ToList() }
+                        : new Dictionary<string, object> { ["type"] = "string" },
                 },
                 ["required"] = new List<object> { "plan" },
             };
         }
 
         /// <summary>Reads the entries; ones without a whole-number hour or any text are dropped. Fails if none are left.</summary>
-        public static bool TryParse(string content, out List<DayPlanEntry> entries, out string error)
+        public static bool TryParse(string content, out List<DayPlanEntry> entries, out string error) => TryParse(content, out entries, out _, out error);
+
+        /// <summary>Also reads the role they chose, or null when the answer gives none.</summary>
+        public static bool TryParse(string content, out List<DayPlanEntry> entries, out string role, out string error)
         {
             entries = new List<DayPlanEntry>();
+            role = null;
             if (!AiJson.TryParseObject(content, out var obj, out error))
             {
                 return false;
             }
 
+            role = AiJson.GetString(obj, "role");
             if (!(obj.TryGetValue("plan", out var value) && value is List<object> list))
             {
                 error = "the answer had no plan";

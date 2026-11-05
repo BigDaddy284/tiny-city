@@ -12,8 +12,12 @@ namespace TinyCity.Simulation.AI
     /// <summary>What the AI wrote for one line of a conversation, before the game checks it.</summary>
     public sealed class DialogueReply
     {
-        public DialogueReply(string say, string tone, string topic, bool end, int giveFood = 0, long pricePence = 0, bool acceptOffer = false)
+        public DialogueReply(string say, string tone, string topic, bool end, int giveFood = 0, long pricePence = 0, bool acceptOffer = false,
+            long giveMoneyPence = 0, int taxPercent = 0, bool payTax = false)
         {
+            GiveMoneyPence = giveMoneyPence;
+            TaxPercent = taxPercent;
+            PayTax = payTax;
             Say = say;
             Tone = tone;
             Topic = topic;
@@ -28,6 +32,15 @@ namespace TinyCity.Simulation.AI
 
         /// <summary>What the offer costs them, in pence; 0 is a gift.</summary>
         public long PricePence { get; }
+
+        /// <summary>Tiny City 2: money handed to the other person now, in pence.</summary>
+        public long GiveMoneyPence { get; }
+
+        /// <summary>Tiny City 2: the share of the other person's goods a tax man asks for (0 for none).</summary>
+        public int TaxPercent { get; }
+
+        /// <summary>Tiny City 2: whether they pay the tax they have just been asked for.</summary>
+        public bool PayTax { get; }
 
         /// <summary>Tiny City 2: whether they take the food the other person offered.</summary>
         public bool AcceptOffer { get; }
@@ -57,7 +70,7 @@ namespace TinyCity.Simulation.AI
         {
             var speaker = sim.GetResident(session.SpeakerId);
             var memories = sim.Memories.Recall(speaker.Id, sim.Time, new[] { session.ListenerId, "chat", "social" }, MemoryCount, sim.Memories.FocusOf(speaker.Id));
-            return OllamaProtocol.BuildChatBody(model, PromptText.Persona(speaker), UserText(sim, session, memories), Schema(), Temperature, MaxTokens);
+            return OllamaProtocol.BuildChatBody(model, PromptText.Persona(speaker, sim), UserText(sim, session, memories), Schema(), Temperature, MaxTokens);
         }
 
         public static string UserText(TownSimulation sim, ConversationSession session, IReadOnlyList<MemoryRecord> memories)
@@ -107,6 +120,12 @@ namespace TinyCity.Simulation.AI
                     sb.AppendLine($"{listener.FirstName} has just offered you {offer.Portions} portion{(offer.Portions == 1 ? string.Empty : "s")} of food " +
                         (offer.PricePence > 0 ? $"for {Economy.Money.Format(offer.PricePence)}." : "as a gift."));
                 }
+
+                var demand = session.TaxDemand;
+                if (demand != null && demand.ToId == speaker.Id)
+                {
+                    sb.AppendLine($"{listener.FirstName}, the {listener.Role ?? "tax man"}, has just asked you to hand over {demand.Percent}% of your food and materials as tax. You don't have to.");
+                }
             }
 
             sb.Append("Reply as JSON: \"say\" is your next line (one or two sentences, under 25 words, no narration), ")
@@ -116,7 +135,17 @@ namespace TinyCity.Simulation.AI
             if (food)
             {
                 sb.Append($" If you want to hand over some of your food, \"give_food\" is how many portions (any number up to what you have) and \"price\" what you ask for them in pounds (0 for a gift); otherwise give_food is 0.")
-                  .Append(" \"accept_food\" is true if you take food you have just been offered.");
+                  .Append(" \"accept_food\" is true if you take food you have just been offered.")
+                  .Append(" \"give_money\" is pounds you hand over to them now, as a gift, a wage or a payment (0 for none).");
+                if (sim.Brief.CanTax(speaker.Role))
+                {
+                    sb.Append($" As the {speaker.Role}, \"tax\" is the percentage of their food and materials you ask them to hand over (0 to ask for nothing); they decide whether to pay.");
+                }
+
+                if (session.TaxDemand != null && session.TaxDemand.ToId == speaker.Id)
+                {
+                    sb.Append(" \"pay_tax\" is true if you pay the tax you have just been asked for.");
+                }
             }
 
             return sb.ToString();
@@ -136,6 +165,9 @@ namespace TinyCity.Simulation.AI
                     ["give_food"] = new Dictionary<string, object> { ["type"] = "integer" },
                     ["price"] = new Dictionary<string, object> { ["type"] = "number" },
                     ["accept_food"] = new Dictionary<string, object> { ["type"] = "boolean" },
+                    ["give_money"] = new Dictionary<string, object> { ["type"] = "number" },
+                    ["tax"] = new Dictionary<string, object> { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 100 },
+                    ["pay_tax"] = new Dictionary<string, object> { ["type"] = "boolean" },
                 },
                 ["required"] = new List<object> { "say", "tone", "topic", "end" },
             };
@@ -160,7 +192,10 @@ namespace TinyCity.Simulation.AI
             var give = AiJson.TryGetNumber(obj, "give_food", out var g) && g >= 1 && g <= int.MaxValue ? (int)g : 0;
             var price = AiJson.TryGetNumber(obj, "price", out var p) ? FoodRules.PenceFromPounds(p) : 0;
             reply = new DialogueReply(say, AiJson.GetString(obj, "tone"), AiJson.GetString(obj, "topic"), AiJson.TryGetBool(obj, "end", out var end) && end,
-                give, price, AiJson.TryGetBool(obj, "accept_food", out var accept) && accept);
+                give, price, AiJson.TryGetBool(obj, "accept_food", out var accept) && accept,
+                AiJson.TryGetNumber(obj, "give_money", out var m) ? FoodRules.PenceFromPounds(m) : 0,
+                AiJson.TryGetInt(obj, "tax", out var tax) && tax > 0 && tax <= 100 ? tax : 0,
+                AiJson.TryGetBool(obj, "pay_tax", out var pay) && pay);
             return true;
         }
 

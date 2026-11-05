@@ -14,6 +14,9 @@ namespace TinyCity.Simulation.Economy
 
         /// <summary>Tiny City 2: money from another resident for food they bought.</summary>
         Sale,
+
+        /// <summary>Tiny City 2: money one resident handed another in a chat, as a gift or a payment.</summary>
+        Gift,
     }
 
     /// <summary>One change to a resident's money. Every change goes through the ledger, so balances can be explained.</summary>

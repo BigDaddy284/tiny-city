@@ -61,6 +61,22 @@ namespace TinyCity.Simulation.Activities
             "shower", "Shower", "showering", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.Shower }, 15,
             new Dictionary<NeedType, double> { [NeedType.Hygiene] = 6.5 });
 
+        /// <summary>Tiny City 2: the open land has no taps, toilets or showers, so people drink and wash at the pond and go among the trees.</summary>
+        public static readonly ActivityDefinition DrinkFromPond = new ActivityDefinition(
+            "drink-pond", "Drink from the pond", "drinking from the pond", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.FishingSpot }, 5,
+            new Dictionary<NeedType, double> { [NeedType.Thirst] = 14 });
+
+        public static readonly ActivityDefinition WashInPond = new ActivityDefinition(
+            "wash-pond", "Wash in the pond", "washing in the pond", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.FishingSpot }, 20,
+            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 5 });
+
+        public static readonly ActivityDefinition RelieveOutdoors = new ActivityDefinition(
+            "toilet-outdoors", "Go to the toilet among the trees", "going to the toilet among the trees", ActivityKind.Care, NeedType.Toilet, new[] { ObjectType.Woodland }, 5,
+            new Dictionary<NeedType, double> { [NeedType.Toilet] = 20 });
+
+        /// <summary>Drinking, washing and the toilet out in the open: Tiny City 2 only, where nothing is laid on.</summary>
+        public static bool IsInTheWild(ActivityDefinition a) => a == DrinkFromPond || a == WashInPond || a == RelieveOutdoors;
+
         public static readonly ActivityDefinition Work = new ActivityDefinition(
             "work", "Work", "working", ActivityKind.Work, null, new[] { ObjectType.GardenPlot, ObjectType.Workbench, ObjectType.Counter }, 8 * 60,
             new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.03 },
@@ -306,7 +322,7 @@ namespace TinyCity.Simulation.Activities
             PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw, RunStall, BuyFood,
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
             GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
-            PlanBuilding, Build, GatherSticks, GatherLooseStones,
+            PlanBuilding, Build, GatherSticks, GatherLooseStones, DrinkFromPond, WashInPond, RelieveOutdoors,
         };
 
         private static ActivityDefinition Gather(string id, string name, string verb, ObjectType where, double effort) => new ActivityDefinition(

@@ -31,7 +31,7 @@ namespace TinyCity.Simulation
                 {
                     Die(r, "old age");
                 }
-                else if (minute == HealthRules.IllnessCheckMinute)
+                else if (minute == HealthRules.IllnessCheckMinute && !AiRunsEverything)
                 {
                     var illness = HealthRules.CatchesIllness(r, Time.Day);
                     if (illness != null)
