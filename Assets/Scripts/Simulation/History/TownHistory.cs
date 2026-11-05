@@ -32,6 +32,9 @@ namespace TinyCity.Simulation.History
 
         // Added with jobs at the venues.
         NewJob,
+
+        // Tiny City 2's block building.
+        Built,
     }
 
     /// <summary>Something that happened in the village and belongs to its history, separate from any one resident's memories.</summary>

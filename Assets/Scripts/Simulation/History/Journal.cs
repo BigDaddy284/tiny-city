@@ -67,6 +67,7 @@ namespace TinyCity.Simulation.History
                 case TownEventKind.Born:
                 case TownEventKind.MovedOut:
                 case TownEventKind.NewJob:
+                case TownEventKind.Built:
                     return true;
                 default:
                     return false;

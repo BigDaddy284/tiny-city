@@ -269,6 +269,9 @@ namespace TinyCity.Simulation.Economy
         /// <summary>Who is selling food at this stall right now, or null. Set by the simulation.</summary>
         public Func<WorldObject, Resident> SellerAt { get; set; }
 
+        /// <summary>Tiny City 2: whether the building rules allow this plan-or-build activity at this plot. Set by the simulation.</summary>
+        public Func<Resident, ActivityDefinition, WorldObject, bool> BuildingAllows { get; set; }
+
         public IReadOnlyDictionary<string, Crop> Crops => crops;
 
         public Crop CropAt(string objectId) => objectId != null && crops.TryGetValue(objectId, out var c) ? c : null;
@@ -290,7 +293,12 @@ namespace TinyCity.Simulation.Economy
         {
             if (food == null || !food.MustBeMade)
             {
-                return !FoodRules.IsMadeFood(a) && !CraftingRules.IsCrafting(a);
+                return !FoodRules.IsMadeFood(a) && !CraftingRules.IsCrafting(a) && !Building.BuildingRules.IsBuilding(a);
+            }
+
+            if (Building.BuildingRules.IsBuilding(a))
+            {
+                return food.BuildingAllows != null && food.BuildingAllows(r, a, obj);
             }
 
             if (CraftingRules.IsCrafting(a))

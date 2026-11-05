@@ -101,6 +101,7 @@ namespace TinyCity.Simulation
         {
             FinishFood(r, activity);
             FinishCrafting(r, activity);
+            FinishBuilding(r, activity);
             if (activity == ActivityCatalog.SeeDoctor && HealthRules.NeedsDoctor(r))
             {
                 r.IllnessTreated = true;
@@ -153,6 +154,7 @@ namespace TinyCity.Simulation
             r.ResetActivity();
             r.ClearPlan();
             r.Reaction = null;
+            r.Sketch = null;
             r.IsAlive = false;
             r.DiedAt = Time;
             r.CauseOfDeath = cause;

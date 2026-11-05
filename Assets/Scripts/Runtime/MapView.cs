@@ -10,7 +10,9 @@ namespace TinyCity.Runtime
     {
         private readonly List<SpriteRenderer> lit = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> windows = new List<SpriteRenderer>();
+        private readonly List<SpriteRenderer> blocks = new List<SpriteRenderer>();
         private readonly SpriteFactory sprites = new SpriteFactory();
+        private readonly SpriteFactory blockSprites = new SpriteFactory();
 
         public TileMap Map { get; private set; }
 
@@ -47,6 +49,36 @@ namespace TinyCity.Runtime
             }
         }
 
+        /// <summary>Replaces the Tiny City 2 building blocks drawn on this map.</summary>
+        public void ShowBlocks(IReadOnlyList<ArtPiece> pieces)
+        {
+            ClearBlocks();
+            foreach (var piece in pieces)
+            {
+                var renderer = Spawn(piece.Name, blockSprites.Create(piece.Canvas, piece.Name), IsoGrid.TileToWorld(piece.TileX, piece.TileY), IsoGrid.SortingOrder(piece.SortX, piece.SortY, (int)piece.Layer));
+                if (CurrentLight.HasValue)
+                {
+                    renderer.color = ToColor(CurrentLight.Value.Tint);
+                }
+
+                blocks.Add(renderer);
+            }
+        }
+
+        private void ClearBlocks()
+        {
+            foreach (var r in blocks)
+            {
+                if (r != null)
+                {
+                    Destroy(r.gameObject);
+                }
+            }
+
+            blocks.Clear();
+            blockSprites.Release();
+        }
+
         /// <summary>Tints everything on the map with the light, and lights the windows after dark.</summary>
         public void ApplyLight(Daylight light)
         {
@@ -58,6 +90,11 @@ namespace TinyCity.Runtime
             CurrentLight = light;
             var tint = ToColor(light.Tint);
             foreach (var renderer in lit)
+            {
+                renderer.color = tint;
+            }
+
+            foreach (var renderer in blocks)
             {
                 renderer.color = tint;
             }
@@ -93,12 +130,17 @@ namespace TinyCity.Runtime
             lit.Clear();
             windows.Clear();
             sprites.Release();
+            ClearBlocks();
             CurrentLight = null;
             Map = null;
             Art = null;
         }
 
-        private void OnDestroy() => sprites.Release();
+        private void OnDestroy()
+        {
+            sprites.Release();
+            blockSprites.Release();
+        }
 
         private SpriteRenderer Spawn(string name, Sprite sprite, Vector3 position, int order)
         {

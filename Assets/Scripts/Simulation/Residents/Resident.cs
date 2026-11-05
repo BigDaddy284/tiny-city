@@ -272,6 +272,9 @@ namespace TinyCity.Simulation.Residents
         /// <summary>Tiny City 2: someone they noticed, while the AI is asked whether they go and talk (not saved).</summary>
         public Social.PendingReaction Reaction { get; internal set; }
 
+        /// <summary>Tiny City 2: the building plan they are waiting on the AI for, or null. Not saved.</summary>
+        public Building.PendingSketch Sketch { get; internal set; }
+
         /// <summary>Tiny City 2: today's plan, written by the AI when the resident starts their day (not saved).</summary>
         public DayPlan DayPlan { get; internal set; }
 

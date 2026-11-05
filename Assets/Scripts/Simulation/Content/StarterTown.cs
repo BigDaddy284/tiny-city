@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TinyCity.Simulation.Building;
 using TinyCity.Simulation.Community;
 using TinyCity.Simulation.Economy;
 using TinyCity.Simulation.Memory;
@@ -32,6 +33,15 @@ namespace TinyCity.Simulation.Content
 
         /// <summary>Tiny City 2: the workbench anyone can use to make tools.</summary>
         public const string CraftingBenchId = "obj-village-crafting-bench";
+
+        /// <summary>Tiny City 2: empty land through the gate at the bottom of the city, with plots to build on.</summary>
+        public const string OpenLandMapId = "map-open-land";
+
+        /// <summary>Where the gate to the open land is, on the city's bottom path.</summary>
+        public static readonly GridPos OpenLandGate = new GridPos(41, 38);
+
+        /// <summary>Plot ids are this plus a number from 1.</summary>
+        public const string PlotIdPrefix = "obj-open-land-plot-";
         public const string RosaId = "res-0004";
         public const string TomId = "res-0005";
         public const string PriyaId = "res-0006";
@@ -473,7 +483,41 @@ namespace TinyCity.Simulation.Content
                 objects.Add(new WorldObject($"obj-gym-machine-{i + 1}", "Exercise machine", ObjectType.GymMachine, Find(GymMapId, GymRows, 'm', i)));
             }
 
+            AddOpenLand(maps, objects, portals);
             return new TownWorld(TownId, "Tiny City", maps, objects, portals, CreateBusinesses(), new CommunityCalendar(CreateCommunityEvents()), VenueJobs);
+        }
+
+        /// <summary>
+        /// Tiny City 2's open land: an empty field behind a gate on the city's bottom path, with a path across it and
+        /// six plots (three either side) of <see cref="BuildingRules.PlotSize"/> tiles, each with its marker in front.
+        /// </summary>
+        private static void AddOpenLand(List<TileMap> maps, List<WorldObject> objects, List<Portal> portals)
+        {
+            const int width = 28, height = 26, pathRow = 11;
+            var rows = new List<string>();
+            for (var y = 0; y < height; y++)
+            {
+                var row = new char[width];
+                for (var x = 0; x < width; x++)
+                {
+                    row[x] = x == 0 || y == 0 || x == width - 1 || y == height - 1 ? 'T' : y == pathRow ? '=' : '.';
+                }
+
+                rows.Add(new string(row));
+            }
+
+            maps.Add(TileMap.FromRows(OpenLandMapId, "Open land", true, rows, VillageLegend));
+            var n = 0;
+            foreach (var markerY in new[] { pathRow - 2, height - 4 })
+            {
+                foreach (var cornerX in new[] { 3, 11, 19 })
+                {
+                    n++;
+                    objects.Add(new WorldObject($"{PlotIdPrefix}{n}", $"Plot {n}", ObjectType.BuildPlot, new Location(OpenLandMapId, cornerX + 2, markerY)));
+                }
+            }
+
+            AddDoor(portals, "open-land", new Location(VillageMapId, OpenLandGate.X, OpenLandGate.Y), new Location(OpenLandMapId, 1, pathRow));
         }
 
         /// <summary>The market square, the fountain and the benches the bigger city added outdoors.</summary>

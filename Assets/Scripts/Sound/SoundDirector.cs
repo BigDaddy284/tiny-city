@@ -152,6 +152,11 @@ namespace TinyCity.Sound
                 return SoundEffect.Digging;
             }
 
+            if (id == ActivityCatalog.Build.Id)
+            {
+                return SoundEffect.Digging;
+            }
+
             if (TinyCity.Simulation.Economy.CraftingRules.IsCrafting(id))
             {
                 return SoundEffect.Typing;

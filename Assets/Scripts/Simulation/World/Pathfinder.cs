@@ -25,15 +25,28 @@ namespace TinyCity.Simulation.World
         private readonly Dictionary<string, List<int>> portalsFrom = new Dictionary<string, List<int>>();
         private readonly Dictionary<string, List<int>> portalsInto = new Dictionary<string, List<int>>();
 
-        public Pathfinder(TownWorld world)
+        private readonly System.Func<Location, bool> alsoBlocked;
+
+        /// <param name="alsoBlocked">Tiles that can change, such as Tiny City 2's blocks; call <see cref="Forget"/> when they do.</param>
+        public Pathfinder(TownWorld world, System.Func<Location, bool> alsoBlocked = null)
         {
             this.world = world;
+            this.alsoBlocked = alsoBlocked;
             for (var i = 0; i < world.Portals.Count; i++)
             {
                 Add(portalsFrom, world.Portals[i].From.MapId, i);
                 Add(portalsInto, world.Portals[i].To.MapId, i);
             }
         }
+
+        /// <summary>Drops every cached distance, after something that blocks the way has changed.</summary>
+        public void Forget()
+        {
+            distanceFields.Clear();
+            doorCosts.Clear();
+        }
+
+        private bool Blocked(Location location) => world.IsBlocked(location) || (alsoBlocked != null && alsoBlocked(location));
 
         private static void Add(Dictionary<string, List<int>> byMap, string mapId, int portal)
         {
@@ -221,7 +234,7 @@ namespace TinyCity.Simulation.World
             return false;
         }
 
-        /// <summary>Breadth-first distances from every tile on the target's map to the target. Cached; maps never change.</summary>
+        /// <summary>Breadth-first distances from every tile on the target's map to the target. Cached until <see cref="Forget"/>.</summary>
         private int[] DistanceField(Location target)
         {
             if (distanceFields.TryGetValue(target, out var cached))
@@ -251,7 +264,7 @@ namespace TinyCity.Simulation.World
                         field[Index(map, n)] = d + 1;
 
                         // Furniture gets a distance, so a resident using it can step off, but no path runs through it.
-                        if (!world.IsBlocked(new Location(map.Id, n)))
+                        if (!Blocked(new Location(map.Id, n)))
                         {
                             queue.Enqueue(n);
                         }

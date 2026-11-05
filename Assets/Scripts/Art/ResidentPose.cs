@@ -361,7 +361,8 @@ namespace TinyCity.Art
                 || activityId == ActivityCatalog.BrowseMarket.Id || activityId == ActivityCatalog.PlantCrops.Id || activityId == ActivityCatalog.WaterCrops.Id
                 || activityId == ActivityCatalog.Harvest.Id || activityId == ActivityCatalog.CatchFish.Id || activityId == ActivityCatalog.Cook.Id
                 || activityId == ActivityCatalog.RunStall.Id || activityId == ActivityCatalog.BuyFood.Id
-                || TinyCity.Simulation.Economy.CraftingRules.IsCrafting(activityId))
+                || TinyCity.Simulation.Economy.CraftingRules.IsCrafting(activityId)
+                || activityId == ActivityCatalog.PlanBuilding.Id || activityId == ActivityCatalog.Build.Id)
             {
                 return ResidentAction.Work;
             }

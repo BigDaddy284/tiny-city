@@ -96,6 +96,29 @@ namespace TinyCity.Runtime
             }
         }
 
+        private TinyCity.Simulation.Building.Construction shownConstruction;
+        private int shownBlocksVersion = -1;
+        private Season shownBlocksSeason;
+
+        /// <summary>Draws Tiny City 2's building blocks again whenever one is laid, the town changes or the season turns.</summary>
+        public void ShowBlocks(TinyCity.Simulation.Building.Construction construction)
+        {
+            if (World == null || construction == null
+                || (construction == shownConstruction && construction.Version == shownBlocksVersion && Season == shownBlocksSeason))
+            {
+                return;
+            }
+
+            shownConstruction = construction;
+            shownBlocksVersion = construction.Version;
+            shownBlocksSeason = Season;
+            var palette = Palette.For(Season);
+            foreach (var view in maps.Values)
+            {
+                view.ShowBlocks(BlockArt.Pieces(World, construction, view.Map, palette));
+            }
+        }
+
         /// <summary>The colour sprites on a map are tinted with at the moment.</summary>
         public Color TintOf(string mapId)
         {
@@ -123,6 +146,8 @@ namespace TinyCity.Runtime
             }
 
             ForgetResidents();
+            shownConstruction = null;
+            shownBlocksVersion = -1;
             maps.Clear();
             origins.Clear();
             World = null;

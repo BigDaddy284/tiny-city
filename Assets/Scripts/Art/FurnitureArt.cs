@@ -344,6 +344,16 @@ namespace TinyCity.Art
                     p.Box(0.3, 0.44, 23, 0.1, 0.03, 0.5, Palette.StoneDark);
                     SnowOn(p, palette, outdoors, 0.24, 0.36, 23, 0.26, 0.3);
                     break;
+                case ObjectType.BuildPlot:
+                    // Tiny City 2's plot marker: a post with a sign board and a neon strip, and two corner stakes.
+                    p.Post(0.5, 0.3, 0, 0.04, 22, Palette.WoodDark);
+                    p.Box(0.3, 0.26, 18, 0.4, 0.06, 12, Palette.Slate);
+                    p.Box(0.34, 0.25, 23, 0.32, 0.02, 1.5, Palette.NeonMint);
+                    p.Post(0.1, 0.1, 0, 0.03, 8, Palette.Wood);
+                    p.Post(0.9, 0.1, 0, 0.03, 8, Palette.Wood);
+                    p.Box(0.1, 0.09, 6, 0.8, 0.02, 0.8, Palette.NeonMint);
+                    SnowOn(p, palette, outdoors, 0.3, 0.26, 30, 0.4, 0.06);
+                    break;
                 default:
                     p.Box(0.3, 0.3, 0, 0.4, 0.4, 12, Palette.Stone);
                     break;

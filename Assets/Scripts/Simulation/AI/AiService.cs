@@ -74,6 +74,9 @@ namespace TinyCity.Simulation.AI
 
         /// <summary>Tiny City 2: the reaction question last sent for each resident.</summary>
         private readonly Dictionary<string, long> requestedReactions = new Dictionary<string, long>();
+
+        /// <summary>Tiny City 2: the building plan question last sent for each resident.</summary>
+        private readonly Dictionary<string, long> requestedSketches = new Dictionary<string, long>();
         private readonly Dictionary<string, (long lineId, double askedAt)> requestedLines = new Dictionary<string, (long, double)>();
         private readonly List<string> events = new List<string>();
         private IAiCall checkCall;
@@ -144,6 +147,7 @@ namespace TinyCity.Simulation.AI
             requestedPlans.Clear();
             skippedPlans.Clear();
             requestedReactions.Clear();
+            requestedSketches.Clear();
             insightAskedAt.Clear();
             lastInsightCheckMinute = -1;
             requestedLines.Clear();
@@ -223,6 +227,7 @@ namespace TinyCity.Simulation.AI
             requestedPlans.Clear();
             skippedPlans.Clear();
             requestedReactions.Clear();
+            requestedSketches.Clear();
             insightAskedAt.Clear();
             lastInsightCheckMinute = -1;
             requestedLines.Clear();
@@ -502,6 +507,12 @@ namespace TinyCity.Simulation.AI
                 {
                     requestedReactions[r.Id] = r.Reaction.Id;
                     Queue.Enqueue(ReactionRequest(sim, r, r.Reaction), now);
+                }
+
+                if (r.Sketch != null && (!requestedSketches.TryGetValue(r.Id, out var askedSketch) || askedSketch != r.Sketch.Id))
+                {
+                    requestedSketches[r.Id] = r.Sketch.Id;
+                    Queue.Enqueue(SketchRequest(sim, r, r.Sketch), now);
                 }
 
                 if (WaitingForDayPlan(sim, r, now))
@@ -844,6 +855,40 @@ namespace TinyCity.Simulation.AI
                     insightAskedAt[r.Id] = lastNow;
                     AddEvent($"{r.FirstName}'s insights were skipped for now: {reason}");
                 });
+        }
+
+        private AiRequest SketchRequest(TownSimulation sim, Resident r, Building.PendingSketch sketch)
+        {
+            return new AiRequest(
+                $"sketch:{r.Id}",
+                r.Id,
+                AiPriority.Decision,
+                $"{r.FirstName}'s building plan",
+                SketchPrompt.BuildBody(Model, sim, r, sketch),
+                text =>
+                {
+                    if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
+                        || !SketchPrompt.TryParse(content, out var reply, out error))
+                    {
+                        return AiReplyCheck.Invalid(error);
+                    }
+
+                    var outcome = sim.ApplySketch(r.Id, sketch.Id, reply.Name, reply.Height, reply.Rows, out var planError);
+                    if (outcome == DecisionOutcome.InvalidText)
+                    {
+                        return AiReplyCheck.Invalid(planError);
+                    }
+
+                    if (outcome != DecisionOutcome.Applied)
+                    {
+                        return AiReplyCheck.Stale(outcome.ToString());
+                    }
+
+                    AddEvent($"{r.FirstName} planned a {sim.Construction.Of(r.Id)?.Plan.Name}");
+                    return AiReplyCheck.Accepted();
+                },
+                () => Simulation == sim && r.IsAlive && r.Sketch == sketch,
+                reason => sim.DropSketch(r.Id, sketch.Id));
         }
 
         private AiRequest ReactionRequest(TownSimulation sim, Resident r, PendingReaction reaction)
