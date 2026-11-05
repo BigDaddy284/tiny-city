@@ -29,7 +29,7 @@ namespace TinyCity.Tests.EditMode
             var fromProfiles = FlatLand.CreateNewGame(profiles);
             var designed = FlatLand.CreateNewGame();
             Assert.That(SaveSerializer.Save(fromProfiles), Is.EqualTo(SaveSerializer.Save(designed)));
-            Assert.That(designed.Residents.All(r => r.About.Length > 0), Is.True);
+            Assert.That(designed.Residents.All(r => r.About.Length == 0 && r.Outlook.Length > 0), Is.True, "no backstories, only what type of person they are");
             Assert.That(designed.Residents.All(r => r.OwnsBusinessId == null), Is.True);
         }
 

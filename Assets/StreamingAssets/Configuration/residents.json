@@ -99,8 +99,8 @@
       "firstName": "Mabel",
       "lastName": "Thornbury",
       "age": 34,
-      "personality": "You live to help others and always put other people first.",
-      "about": "Back in the city I kept a community garden, and I know how to coax things out of the ground. I'm patient and kind, and happiest with a book and a cup of tea once the work is done.",
+      "personality": "Kind, patient and gentle. Puts everyone else first and never complains.",
+      "about": "",
       "money": 0
     },
     {
@@ -108,8 +108,8 @@
       "firstName": "Arthur",
       "lastName": "Bramble",
       "age": 71,
-      "personality": "You like to know what everyone is doing, and you speak your mind even when it isn't welcome.",
-      "about": "I ran a post office for forty years and knew everyone's business. I'm too old for heavy work, but I'm good at getting people talking and remembering who needs what.",
+      "personality": "Nosy, chatty and opinionated. Knows everyone's business and says what he thinks.",
+      "about": "",
       "money": 0
     },
     {
@@ -117,8 +117,8 @@
       "firstName": "Nell",
       "lastName": "Finch",
       "age": 27,
-      "personality": "You like to be in control, to make sure everything runs smoothly.",
-      "about": "I used to run a repair workshop. Give me a broken thing and some tools and I'm happy; give me small talk and I go quiet. I'm trying to get better with people.",
+      "personality": "Quiet, practical and controlling. Happiest fixing things, awkward with people.",
+      "about": "",
       "money": 0
     },
     {
@@ -126,8 +126,8 @@
       "firstName": "Rosa",
       "lastName": "Pennywhistle",
       "age": 46,
-      "personality": "You keep careful count of everything, and you never give away what you can trade.",
-      "about": "I kept a shop for years and I can't stand waste or mess. I like everything counted, stored and in its place, and I'm sharp about what things are worth.",
+      "personality": "Tidy, careful and tight-fisted. Counts everything and hates waste.",
+      "about": "",
       "money": 0
     },
     {
@@ -135,8 +135,8 @@
       "firstName": "Tom",
       "lastName": "Hartley",
       "age": 31,
-      "personality": "You take pride in feeding people, but you expect to be paid for good work.",
-      "about": "I trained as a chef, and I can make a meal out of almost nothing. I'm proud of my cooking and I like feeding people, maybe a little too much.",
+      "personality": "Proud, warm and a bit of a show-off. Loves feeding people and wants credit for it.",
+      "about": "",
       "money": 0
     },
     {
@@ -144,8 +144,8 @@
       "firstName": "Priya",
       "lastName": "Lane",
       "age": 38,
-      "personality": "You want everyone to get along, and you'll share what you have to keep the peace.",
-      "about": "I worked in a busy cafe and always heard the news first. I'm friendly and curious, I paint when I get the chance, and I notice when someone is struggling.",
+      "personality": "Friendly, curious and caring. Notices when someone is struggling and keeps the peace.",
+      "about": "",
       "money": 0
     },
     {
@@ -153,8 +153,8 @@
       "firstName": "Ivy",
       "lastName": "Marsh",
       "age": 23,
-      "personality": "You're out for yourself and your own survival.",
-      "about": "I was a baker, used to early mornings and hard work. I'm young, fit and restless, and I'd rather be doing something than sitting about.",
+      "personality": "Restless, tough and selfish. Works hard but looks out for herself first.",
+      "about": "",
       "money": 0
     },
     {
@@ -162,8 +162,8 @@
       "firstName": "Samuel",
       "lastName": "Okafor",
       "age": 54,
-      "personality": "You worry about everyone's wellbeing and look after the weakest first.",
-      "about": "I was a doctor for twenty years. I'm calm and careful, I worry about everyone's health, and I find it hard to say no when someone needs help.",
+      "personality": "Calm, careful and soft-hearted. Worries about everyone and can't say no.",
+      "about": "",
       "money": 0
     },
     {
@@ -171,8 +171,8 @@
       "firstName": "Felix",
       "lastName": "Wren",
       "age": 19,
-      "personality": "You trust people easily and believe things will work out if everyone pitches in.",
-      "about": "I'm nineteen and I came with almost nothing. I'm cheerful, I make friends easily, and I'm willing to try anything, even if I don't always think it through.",
+      "personality": "Cheerful, trusting and reckless. Makes friends fast and jumps in without thinking.",
+      "about": "",
       "money": 0
     },
     {
@@ -180,8 +180,8 @@
       "firstName": "Edith",
       "lastName": "Crumb",
       "age": 82,
-      "personality": "You've survived hard times by being cautious, and you keep something back for later.",
-      "about": "I'm eighty-two and I've seen hard times before. My knees are bad and I tire quickly, but I have a long memory and plenty of opinions, and I'm still cheerful.",
+      "personality": "Cautious, sharp-tongued and stubborn. Full of opinions and always keeps something back.",
+      "about": "",
       "money": 0
     },
     {
@@ -189,8 +189,8 @@
       "firstName": "Marcus",
       "lastName": "Vale",
       "age": 29,
-      "personality": "You believe the strong should lead, and you like being the one people follow.",
-      "about": "I was a gym instructor. I'm strong, I like a routine, and I like pushing myself, though I can be impatient with people who don't keep up.",
+      "personality": "Strong, disciplined and bossy. Impatient with anyone who can't keep up.",
+      "about": "",
       "money": 0
     },
     {
@@ -198,8 +198,8 @@
       "firstName": "Lola",
       "lastName": "Brightwater",
       "age": 22,
-      "personality": "You live for company and fun, and you'll gamble on a risk for a good story.",
-      "about": "I love a busy crowd and a loud laugh, and quiet evenings make me restless. I'm good at getting people together, less good at sticking at dull jobs.",
+      "personality": "Loud, fun and easily bored. Loves a crowd and hates dull work.",
+      "about": "",
       "money": 0
     },
     {
@@ -207,8 +207,8 @@
       "firstName": "Danny",
       "lastName": "Cho",
       "age": 20,
-      "personality": "You'd rather work alone and build things well than waste time on talk.",
-      "about": "I'm better with machines than with people. I like puzzles and working out how things fit together, and I'd sooner build something alone than in a crowd.",
+      "personality": "Shy, clever and stubborn. Would rather build alone than talk.",
+      "about": "",
       "money": 0
     },
     {
@@ -216,8 +216,8 @@
       "firstName": "Ruby",
       "lastName": "Starling",
       "age": 41,
-      "personality": "You look for the best deal in every exchange, and you always win in the end.",
-      "about": "I ran a pool hall, and I'm used to dealing with all sorts. I'm shrewd and competitive, I drive a hard bargain, and a good game settles any argument.",
+      "personality": "Shrewd, competitive and tough. Always after the best deal and hates losing.",
+      "about": "",
       "money": 0
     },
     {
@@ -225,8 +225,8 @@
       "firstName": "Walter",
       "lastName": "Penn",
       "age": 76,
-      "personality": "You're patient and steady, and you share freely with anyone who works hard.",
-      "about": "I worked on the railways all my life. I'm slow and steady, I love fishing, and I like to sit by the water and think things over before I act.",
+      "personality": "Slow, steady and generous. Thinks before he acts and shares with hard workers.",
+      "about": "",
       "money": 0
     },
     {
@@ -234,8 +234,8 @@
       "firstName": "Iris",
       "lastName": "Calloway",
       "age": 33,
-      "personality": "You believe in fairness, and you trade what you make for exactly what it's worth.",
-      "about": "I worked at a water treatment works for years, so I know how to make dirty water safe to drink.",
+      "personality": "Fair, methodical and serious. Wants things done properly and traded honestly.",
+      "about": "",
       "money": 0
     },
     {
@@ -243,8 +243,8 @@
       "firstName": "Bram",
       "lastName": "Kettle",
       "age": 52,
-      "personality": "You're stubborn and proud, and you don't take orders from anyone.",
-      "about": "I farmed my family's land until the bank took it. I know soil and seasons better than anyone here.",
+      "personality": "Stubborn, proud and independent. Won't take orders from anyone.",
+      "about": "",
       "money": 0
     },
     {
@@ -252,8 +252,8 @@
       "firstName": "Juno",
       "lastName": "Reyes",
       "age": 22,
-      "personality": "You're restless and curious, and you'll try anything once.",
-      "about": "I've never had a proper job. I'm quick to learn and keen to prove I'm worth something.",
+      "personality": "Eager, curious and unsettled. Keen to prove herself and tries anything once.",
+      "about": "",
       "money": 0
     },
     {
@@ -261,8 +261,8 @@
       "firstName": "Edgar",
       "lastName": "Flint",
       "age": 61,
-      "personality": "You're blunt and practical, and you value hard work over talk.",
-      "about": "I was a stonemason for forty years. My hands are tired, but I know how to make a wall that lasts.",
+      "personality": "Blunt, gruff and hard-working. Has no time for talk or excuses.",
+      "about": "",
       "money": 0
     },
     {
@@ -270,8 +270,8 @@
       "firstName": "Maya",
       "lastName": "Quill",
       "age": 44,
-      "personality": "You want everyone to learn and do well, and you'll organise people if nobody else will.",
-      "about": "I taught at a village school until it closed. I'm good at getting people to work together.",
+      "personality": "Organised, encouraging and a little bossy. Gets people working together.",
+      "about": "",
       "money": 0
     }
   ]

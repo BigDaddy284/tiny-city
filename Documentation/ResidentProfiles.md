@@ -67,8 +67,8 @@ saved with it.
       "firstName": "Rosa",
       "lastName": "Pennywhistle",
       "age": 46,
-      "about": "I kept a shop for years and I can't stand waste or mess.",
-      "personality": "You keep careful count of everything, and you never give away what you can trade.",
+      "about": "",
+      "personality": "Tidy, careful and tight-fisted. Counts everything and hates waste.",
       "money": 0
     }
   ]
@@ -80,8 +80,8 @@ saved with it.
 | `id` | One of the twenty starting residents, `res-0001` to `res-0020` (the first fifteen also live in v1's city; the last five only on the open land, with looks made from their id). The id fixes their look and hobbies. Twenty is also the most there can be. |
 | `firstName`, `lastName` | Up to 24 letters each. A first name is required. |
 | `age` | A whole number from 18 to 100. |
-| `about` | Up to 300 letters of personality and background, given to the AI as the resident's own words. |
-| `personality` | Optional. One sentence, up to 200 letters, on how they treat others and the world, such as "You live to help others and always put other people first." In Tiny City 2 it replaces the personality traits in every prompt. |
+| `about` | Optional, up to 300 letters of background, given to the AI as the resident's own words. The shipped file leaves it empty for everyone (owner, 5 November: no backstories), and on the open land a resident with no profile has none either. |
+| `personality` | Optional, up to 200 letters: bluntly, what type of person they are, such as "Kind, patient and gentle. Puts everyone else first and never complains." In Tiny City 2 it replaces the personality traits in every prompt. |
 | `money` | Pounds they start with, from 0 to 1,000,000. |
 | `owns` | Optional. The business they start as boss of: `biz-store`, `biz-cafe`, `biz-bakery`, `biz-clinic`, `biz-bar`, `biz-cue-club`, `biz-bowling`, `biz-arcade` or `biz-gym`. Each business has at most one owner. With none, a business has no boss until someone chooses to take it on. |
 
