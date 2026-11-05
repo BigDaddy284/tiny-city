@@ -116,8 +116,7 @@ namespace TinyCity.Tests.EditMode
             var bench = sim.World.ObjectsOfType(ObjectType.Bench).First();
             foreach (var (x, y, why) in new[] { (22, 31, "isn't open ground"), (0, 5, "isn't open ground"), (-3, 5, "off the land"), (bench.Location.Position.X, bench.Location.Position.Y, "already there") })
             {
-                Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plan-building", "ground", "Home", "Here", null, x, y), Is.EqualTo(DecisionOutcome.InvalidTarget), $"({x}, {y})");
-                Assert.That(r.Log.Last().Text, Does.Contain(why));
+                Assert.That(sim.GroundProblem(r, new TinyCity.Simulation.World.Location(r.Location.MapId, x, y)), Does.Contain(why), $"({x}, {y})");
             }
 
             Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plan-building", "ground", "Home", "Here", null, SpotX, SpotY), Is.EqualTo(DecisionOutcome.Applied));

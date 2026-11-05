@@ -118,11 +118,9 @@ namespace TinyCity.Tests.EditMode
             Assert.That(ground.IsGround, Is.True);
             Assert.That(ground.TargetId, Is.EqualTo(FreeTimeOption.GroundTargetId));
 
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null), Is.EqualTo(DecisionOutcome.InvalidTarget), "a spot is needed");
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 22, 31, "rice"), Is.EqualTo(DecisionOutcome.InvalidTarget), "not in the pond");
-            Assert.That(r.Log.Last().Text, Does.Contain("isn't open ground"));
+            Assert.That(sim.GroundProblem(r, new TinyCity.Simulation.World.Location(r.Location.MapId, 22, 31)), Does.Contain("isn't open ground"), "not in the pond");
             var bench = sim.World.Objects.First(o => o.Type == TinyCity.Simulation.World.ObjectType.Bench);
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, bench.Location.Position.X, bench.Location.Position.Y, "rice"), Is.EqualTo(DecisionOutcome.InvalidTarget), "not on a bench");
+            Assert.That(sim.GroundProblem(r, bench.Location), Is.Not.Null, "not on a bench");
 
             Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 40, 10, "Purple Potatoes"), Is.EqualTo(DecisionOutcome.Applied), "anywhere on open ground, not just the soil");
             var patch = sim.Food.Patches.Single();
@@ -357,6 +355,32 @@ namespace TinyCity.Tests.EditMode
             WaitForLine(sim, session);
             sim.ApplyConversationLine(session.Id, session.LineRequestId, second.Id, "No thanks.", "neutral", "fish", false, acceptOffer: false);
             Assert.That(first.Food.Count(FoodKind.Fish), Is.EqualTo(1), "a refused offer moves nothing");
+        }
+
+        [Test]
+        public void ASmallModelsSlips_AreMended_InsteadOfAskingAgain()
+        {
+            var sim = FlatLand.CreateNewGame();
+            sim.AiRunsEverything = true;
+            sim.FoodMustBeMade = true;
+            sim.AiDecisionsEnabled = true;
+            var r = sim.Residents[0];
+            sim.Tick();
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 22, 31, "rice"), Is.EqualTo(DecisionOutcome.Applied), "in the pond");
+            var patch = sim.Food.Patches.Single();
+            Assert.That(sim.Pathfinder.Distance(r.Location, patch.Location) <= TinyCity.Simulation.AI.PromptText.FreeSpotSearch * 2, Is.True, "planted on free ground nearby instead");
+            Assert.That(r.Log.Any(e => e.Text.Contains("so chose")), Is.True);
+
+            var other = sim.Residents[1];
+            Assert.That(sim.ApplyDecision(other.Id, other.PendingDecisionId, "plant-crops", "ground", "Food", "Here"), Is.EqualTo(DecisionOutcome.Applied), "no spot given");
+
+            var third = sim.Residents[2];
+            Assert.That(sim.ApplyDecision(third.Id, third.PendingDecisionId, "sleep", "obj-nowhere", "Tired", "Yawn"), Is.EqualTo(DecisionOutcome.Applied), "the wrong target: the nearest place to sleep");
+
+            var fourth = sim.Residents[3];
+            var only = sim.FreeTimeOptionsFor(fourth).GroupBy(o => o.TargetId).First(g => g.Count() == 1).Single();
+            Assert.That(sim.ApplyDecision(fourth.Id, fourth.PendingDecisionId, "do-the-thing", only.TargetId, "Why not", "Hm"), Is.EqualTo(DecisionOutcome.Applied), "the wrong action for a target only one option uses");
+            Assert.That(fourth.ActivityId, Is.EqualTo(only.ActionId));
         }
 
         [Test]

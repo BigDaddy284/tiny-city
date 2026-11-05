@@ -93,7 +93,9 @@ namespace TinyCity.Simulation.AI
             }
 
             sb.AppendLine(sim.AiRunsEverything
-                ? "Nobody decides for you. If you don't eat, drink, sleep, wash or go to work, nobody will do it for you, and hunger, tiredness and lost wages hurt. Choose one option to do now:"
+                ? (sim.FoodMustBeMade
+                    ? "Nobody decides for you. If you don't eat, drink, sleep, wash or use the toilet, nobody will do it for you, and your health suffers. Choose one option to do now:"
+                    : "Nobody decides for you. If you don't eat, drink, sleep, wash or go to work, nobody will do it for you, and hunger, tiredness and lost wages hurt. Choose one option to do now:")
                 : "You have some free time. Choose one option to do now:");
             foreach (var o in options)
             {
@@ -179,13 +181,8 @@ namespace TinyCity.Simulation.AI
             if (string.IsNullOrEmpty(target))
             {
                 var candidates = options.Where(o => o.ActionId == action).ToList();
-                if (candidates.Count != 1)
-                {
-                    error = $"the answer had no target_id for '{action}'";
-                    return false;
-                }
-
-                target = candidates[0].TargetId;
+                // With several possible targets the game picks the nearest (Tiny City 2) or rejects it (Tiny City).
+                target = candidates.Count == 1 ? candidates[0].TargetId : string.Empty;
             }
 
             int? x = AiJson.TryGetInt(obj, "x", out var gx) ? gx : (int?)null;

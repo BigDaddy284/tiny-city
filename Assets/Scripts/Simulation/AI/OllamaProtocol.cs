@@ -14,6 +14,13 @@ namespace TinyCity.Simulation.AI
         /// <summary>How long Ollama keeps the model in memory after a request, so the next one starts quickly.</summary>
         public const string KeepAlive = "30m";
 
+        /// <summary>
+        /// Tokens of context asked of Ollama for every chat. Tiny City 2's prompts run to about 2,500 tokens, more than
+        /// Ollama's older default of 2,048, which silently cuts the start of a prompt (the resident's character) and
+        /// leaves small models answering nonsense. Loading the model with the same number avoids a reload per request.
+        /// </summary>
+        public const int ContextLength = 8192;
+
         public static string ChatUrl(string endpoint) => Trim(endpoint) + "/api/chat";
 
         public static string TagsUrl(string endpoint) => Trim(endpoint) + "/api/tags";
@@ -89,6 +96,7 @@ namespace TinyCity.Simulation.AI
                 {
                     ["temperature"] = temperature,
                     ["num_predict"] = maxTokens,
+                    ["num_ctx"] = ContextLength,
                 },
                 ["messages"] = new List<object>
                 {
@@ -111,6 +119,7 @@ namespace TinyCity.Simulation.AI
             ["model"] = model,
             ["stream"] = false,
             ["keep_alive"] = KeepAlive,
+            ["options"] = new Dictionary<string, object> { ["num_ctx"] = ContextLength },
             ["messages"] = new List<object>(),
         });
 

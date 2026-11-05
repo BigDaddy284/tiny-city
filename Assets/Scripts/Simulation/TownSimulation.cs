@@ -407,29 +407,47 @@ namespace TinyCity.Simulation
             var sameAction = options.Where(o => o.ActionId == actionId).ToList();
             if (sameAction.Count == 0)
             {
-                return DecisionOutcome.InvalidAction;
+                // Tiny City 2: small models often get the action's name wrong but the target right. If only one option
+                // uses that target, that is what they meant; otherwise asking again would only hold the clock.
+                var byTarget = AiRunsEverything ? options.Where(o => o.TargetId == targetId).ToList() : null;
+                if (byTarget == null || byTarget.Count != 1)
+                {
+                    return DecisionOutcome.InvalidAction;
+                }
+
+                sameAction = byTarget;
+                actionId = byTarget[0].ActionId;
             }
 
             var option = sameAction.FirstOrDefault(o => o.TargetId == targetId);
             if (option == null)
             {
-                return DecisionOutcome.InvalidTarget;
+                if (!AiRunsEverything)
+                {
+                    return DecisionOutcome.InvalidTarget;
+                }
+
+                // Tiny City 2: a target that doesn't go with the action means they want to do it but named the wrong
+                // place, so they go to the nearest place it can be done.
+                option = sameAction.OrderBy(o => o.Distance).First();
             }
 
             if (option.IsGround)
             {
                 // Tiny City 2: planting or building wherever they choose. The game only checks the spot is free ground they can reach.
-                if (x == null || y == null)
-                {
-                    return DecisionOutcome.InvalidTarget;
-                }
-
-                var spot = new Location(r.Location.MapId, x.Value, y.Value);
-                var problem = GroundProblem(r, spot);
+                var spot = x != null && y != null ? new Location(r.Location.MapId, x.Value, y.Value) : r.Location;
+                var problem = x == null || y == null ? "no spot was given" : GroundProblem(r, spot);
                 if (problem != null)
                 {
-                    r.AddLog(Time, $"Couldn't go {option.Activity.Verb} at ({x}, {y}): {problem}");
-                    return DecisionOutcome.InvalidTarget;
+                    var near = AiRunsEverything ? FreeGroundNear(r, 1, AI.PromptText.FreeSpotSearch) : new List<Location>();
+                    if (near.Count == 0)
+                    {
+                        r.AddLog(Time, $"Couldn't go {option.Activity.Verb} at ({x}, {y}): {problem}");
+                        return DecisionOutcome.InvalidTarget;
+                    }
+
+                    spot = near[0];
+                    r.AddLog(Time, $"Couldn't go {option.Activity.Verb} at ({x}, {y}) ({problem}), so chose ({spot.Position.X}, {spot.Position.Y}) nearby");
                 }
 
                 if (option.Activity == ActivityCatalog.PlanBuilding)
@@ -543,6 +561,37 @@ namespace TinyCity.Simulation
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Tiny City 2: free open ground near a resident (not on a path), nearest first, where they could plant,
+        /// build or lie down. Used for the prompt's suggestions and when an answer gives no usable spot.
+        /// </summary>
+        public List<Location> FreeGroundNear(Resident r, int count, int search)
+        {
+            var free = new List<Location>();
+            if (!World.TryGetMap(r.Location.MapId, out var map) || !map.IsExterior)
+            {
+                return free;
+            }
+
+            var here = r.Location.Position;
+            for (var d = 1; d <= search && free.Count < count; d++)
+            {
+                for (var dy = -d; dy <= d && free.Count < count; dy++)
+                {
+                    foreach (var dx in new[] { -(d - Math.Abs(dy)), d - Math.Abs(dy) }.Distinct())
+                    {
+                        var spot = new Location(map.Id, here.X + dx, here.Y + dy);
+                        if (free.Count < count && !(map.InBounds(spot.Position) && map.GetTile(spot.Position) == TileType.Path) && GroundProblem(r, spot) == null)
+                        {
+                            free.Add(spot);
+                        }
+                    }
+                }
+            }
+
+            return free;
         }
 
         /// <summary>Gives up on an AI suggestion, for example after failed retries, and lets the routine decide now.</summary>
