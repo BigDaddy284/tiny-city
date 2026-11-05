@@ -109,6 +109,12 @@ namespace TinyCity.Runtime
         /// <summary>The resident shown in the inspector.</summary>
         public Resident SelectedResident => Simulation.GetResident(selectedId) ?? Simulation.Residents[0];
 
+        /// <summary>
+        /// Plays <paramref name="simulation"/> instead of the current town, unsaved. Used by Play Mode tests that need
+        /// the city's indoor maps and lit windows, which Tiny City 2's flat map doesn't have.
+        /// </summary>
+        public void ShowTown(TownSimulation simulation) => SetSimulation(simulation);
+
         /// <summary>Advances the town immediately, as if that many minutes had passed. Used by tests.</summary>
         public void AdvanceMinutes(int minutes)
         {
@@ -326,7 +332,7 @@ namespace TinyCity.Runtime
             panelTestSpeed = SpeedIndex;
             panelTestOwnTown = Simulation;
             PanelTest = new PanelTest();
-            SetSimulation(StarterTown.CreateCrowdedTown(PanelTest.Largest));
+            SetSimulation(FlatLand.CreateCrowdedTown(PanelTest.Largest));
             SetSpeed(1);
             Panels.Limit = PanelTest.Largest;
             Panels.SetCount(PanelTest.PanelCount, view, Simulation);
@@ -406,7 +412,7 @@ namespace TinyCity.Runtime
         public void StartNewTown(string message)
         {
             var profiles = ProfilesLoader.Load(out var problems);
-            SetSimulation(StarterTown.CreateNewGame(profiles));
+            SetSimulation(FlatLand.CreateNewGame(profiles));
             Status = problems.Count == 0 ? message : $"{message} residents.json: {problems.Count} problem(s), see Player.log.".Trim();
         }
 
@@ -421,7 +427,8 @@ namespace TinyCity.Runtime
             simulation.FoodMustBeMade = true;
             Ai?.Attach(simulation);
             RestartCameraCycle();
-            if (view.World == null)
+            // A town with another layout (the city in Play Mode tests) needs its maps drawn afresh.
+            if (view.World == null || view.World.TownId != simulation.World.TownId)
             {
                 view.Build(simulation.World, TinyCity.Simulation.Time.Seasons.Of(simulation.Time));
             }
@@ -486,7 +493,7 @@ namespace TinyCity.Runtime
                 return false;
             }
 
-            var world = StarterTown.CreateWorld();
+            var world = FlatLand.CreateWorld();
             var problems = new List<string>();
             foreach (var useBackup in new[] { false, true })
             {

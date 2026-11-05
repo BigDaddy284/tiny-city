@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using NUnit.Framework;
 using TinyCity.Runtime;
+using TinyCity.Simulation.Content;
 using TinyCity.Simulation.Time;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -20,6 +21,23 @@ namespace TinyCity.Tests.PlayMode
             yield return null;
             game = Object.FindAnyObjectByType<GameController>();
             Assert.That(game, Is.Not.Null, "GameController was not created.");
+
+            // These tests need the city's indoor maps and lit windows; Tiny City 2 starts on the flat map.
+            if (game.Simulation.World.TownId != StarterTown.TownId)
+            {
+                game.ShowTown(StarterTown.CreateNewGame());
+                yield return null;
+            }
+        }
+
+        [TearDown]
+        public void BackToTheGamesOwnLand()
+        {
+            // Leave the game on Tiny City 2's own land, so later tests (and its saves) see the real game.
+            if (game != null && game.Simulation.World.TownId != FlatLand.TownId)
+            {
+                game.ShowTown(FlatLand.CreateNewGame());
+            }
         }
 
         [Test]
@@ -39,7 +57,7 @@ namespace TinyCity.Tests.PlayMode
         [UnityTest]
         public IEnumerator Night_DarkensTheVillage_AndLightsTheWindows()
         {
-            var village = game.View.MapViews.Values.First(m => m.Map.IsExterior);
+            var village = game.View.MapViews[StarterTown.VillageMapId];
             var day = GameTime.FromDayAndTime(game.Simulation.Time.Day, 12, 0);
             // The game re-applies its own clock every frame, so each check follows its ApplyTime directly.
             game.View.ApplyTime(day);
