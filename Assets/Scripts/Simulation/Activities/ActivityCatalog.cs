@@ -188,7 +188,7 @@ namespace TinyCity.Simulation.Activities
 
         // Tiny City 2's food (see Economy.FoodRules): nothing here exists in v1, and v1's free food doesn't exist here.
 
-        /// <summary>Sowing a crop on an empty garden plot. It still has to be watered before it can be picked.</summary>
+        /// <summary>Sowing a crop on an empty garden plot, or on open ground the resident chooses. It still has to be watered before it can be picked.</summary>
         public static readonly ActivityDefinition PlantCrops = new ActivityDefinition(
             "plant-crops", "Plant crops", "planting crops", ActivityKind.Errand, null, new[] { ObjectType.GardenPlot }, 45,
             new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.5 },
@@ -237,7 +237,13 @@ namespace TinyCity.Simulation.Activities
 
         // Tiny City 2's gathering and crafting (see Economy.CraftingRules).
 
-        /// <summary>Gathering wood: a little by hand, much more with an axe.</summary>
+        /// <summary>Picking up fallen branches by hand: a little wood, no tool needed.</summary>
+        public static readonly ActivityDefinition GatherSticks = Gather("gather-sticks", "Pick up fallen branches", "picking up fallen branches", ObjectType.StickPile, 1.2);
+
+        /// <summary>Picking up loose stones by hand: a little stone, no tool needed.</summary>
+        public static readonly ActivityDefinition GatherLooseStones = Gather("gather-loose-stones", "Pick up loose stones", "picking up loose stones", ObjectType.LooseStones, 1.3);
+
+        /// <summary>Chopping wood from the trees, which needs an axe.</summary>
         public static readonly ActivityDefinition GatherWood = new ActivityDefinition(
             "gather-wood", "Gather wood", "gathering wood", ActivityKind.Errand, null, new[] { ObjectType.Woodland }, 60,
             new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.8 },
@@ -277,16 +283,19 @@ namespace TinyCity.Simulation.Activities
 
         public static readonly ActivityDefinition CraftRod = Craft("craft-rod", "Make a fishing rod", "making a fishing rod");
 
-        /// <summary>Tiny City 2: sketching a building for an empty plot; the plan itself comes from the AI.</summary>
+        /// <summary>Tiny City 2: sketching a building on open ground the resident chooses; the plan itself comes from the AI.</summary>
         public static readonly ActivityDefinition PlanBuilding = new ActivityDefinition(
             "plan-building", "Plan a building", "planning a building", ActivityKind.Errand, null, new[] { ObjectType.BuildPlot }, 30,
             new Dictionary<NeedType, double> { [NeedType.Fun] = 0.5 });
 
-        /// <summary>Tiny City 2: laying the next blocks of their own building.</summary>
+        /// <summary>Tiny City 2: laying the next blocks of their own building, at its site.</summary>
         public static readonly ActivityDefinition Build = new ActivityDefinition(
             "build", "Build", "building", ActivityKind.Errand, null, new[] { ObjectType.BuildPlot }, 60,
             new Dictionary<NeedType, double> { [NeedType.Fun] = 0.3, [NeedType.Exercise] = 0.6 },
             new Dictionary<NeedType, double> { [NeedType.Energy] = 1.5, [NeedType.Hygiene] = 1.8, [NeedType.Thirst] = 1.4 });
+
+        /// <summary>Tiny City 2: activities done on open ground wherever the resident chooses, rather than at a thing.</summary>
+        public static bool IsDoneOnGround(ActivityDefinition a) => a == PlantCrops || a == PlanBuilding;
 
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
@@ -297,7 +306,7 @@ namespace TinyCity.Simulation.Activities
             PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw, RunStall, BuyFood,
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
             GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
-            PlanBuilding, Build,
+            PlanBuilding, Build, GatherSticks, GatherLooseStones,
         };
 
         private static ActivityDefinition Gather(string id, string name, string verb, ObjectType where, double effort) => new ActivityDefinition(

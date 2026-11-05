@@ -14,7 +14,7 @@ namespace TinyCity.Simulation.World
         private readonly List<WorldObject> objects;
         private readonly List<Portal> portals;
         private readonly HashSet<Location> blocked;
-        private readonly List<WorldObject> builtObjects = new List<WorldObject>();
+        private readonly SortedDictionary<string, List<WorldObject>> placedObjects = new SortedDictionary<string, List<WorldObject>>(StringComparer.Ordinal);
 
         public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals, IEnumerable<Business> businesses = null, Community.CommunityCalendar calendar = null, IEnumerable<Job> jobOpenings = null)
         {
@@ -157,27 +157,44 @@ namespace TinyCity.Simulation.World
         public bool IsWalkable(Location location) => TryGetMap(location.MapId, out var map) && map.IsWalkable(location.Position);
 
         /// <summary>
-        /// Replaces the furniture Tiny City 2's buildings put in the world (a finished home's bed): the town's
-        /// <c>Construction</c> calls this whenever its buildings change, and a new town clears it.
+        /// Changes whenever <see cref="SetPlaced"/> changes what residents have put in the world, so the view can draw it again.
         /// </summary>
-        internal void SetBuilt(IEnumerable<WorldObject> built)
+        public int PlacedVersion { get; private set; }
+
+        /// <summary>Everything residents have put in the world (crop patches, building sites, a finished home's bed), in a fixed order.</summary>
+        public IEnumerable<WorldObject> Placed => placedObjects.Values.SelectMany(list => list);
+
+        /// <summary>True for something a resident put in the world, which is drawn with the blocks rather than with the map.</summary>
+        public bool IsPlaced(WorldObject obj) => obj != null && placedObjects.Values.Any(list => list.Contains(obj));
+
+        /// <summary>
+        /// Replaces what one part of Tiny City 2 has put in the world: <paramref name="source"/> names the part (the
+        /// town's buildings, its crops), which calls this whenever its things change; a new town clears them.
+        /// </summary>
+        internal void SetPlaced(string source, IEnumerable<WorldObject> placed)
         {
-            foreach (var old in builtObjects)
+            if (placedObjects.TryGetValue(source, out var old))
             {
-                objects.Remove(old);
-                objectsById.Remove(old.Id);
-                blocked.Remove(old.Location);
+                foreach (var obj in old)
+                {
+                    objects.Remove(obj);
+                    objectsById.Remove(obj.Id);
+                    if (obj.BlocksPassing && !objects.Any(o => o.BlocksPassing && o.Location == obj.Location))
+                    {
+                        blocked.Remove(obj.Location);
+                    }
+                }
             }
 
-            builtObjects.Clear();
-            foreach (var obj in built)
+            var list = new List<WorldObject>();
+            foreach (var obj in placed)
             {
                 if (objectsById.ContainsKey(obj.Id) || !IsWalkable(obj.Location))
                 {
                     continue;
                 }
 
-                builtObjects.Add(obj);
+                list.Add(obj);
                 objects.Add(obj);
                 objectsById.Add(obj.Id, obj);
                 if (obj.BlocksPassing)
@@ -185,6 +202,9 @@ namespace TinyCity.Simulation.World
                     blocked.Add(obj.Location);
                 }
             }
+
+            placedObjects[source] = list;
+            PlacedVersion++;
         }
 
         public IEnumerable<WorldObject> ObjectsOfType(ObjectType type) => objects.Where(o => o.Type == type);

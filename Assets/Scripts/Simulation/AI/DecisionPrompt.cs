@@ -10,14 +10,25 @@ namespace TinyCity.Simulation.AI
     /// <summary>What the AI answered for a free-time decision, before the game validates it.</summary>
     public sealed class DecisionReply
     {
-        public DecisionReply(string action, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null)
+        public DecisionReply(string action, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null, int? x = null, int? y = null, string what = null)
         {
             Action = action;
             TargetId = targetId;
             Reason = reason;
             Say = say;
             Then = then ?? new List<PlanStep>();
+            X = x;
+            Y = y;
+            What = what;
         }
+
+        /// <summary>The spot on open ground, for something done wherever they choose (Tiny City 2), or null.</summary>
+        public int? X { get; }
+
+        public int? Y { get; }
+
+        /// <summary>What they plant, when planting on open ground, or null.</summary>
+        public string What { get; }
 
         public string Action { get; }
 
@@ -81,9 +92,20 @@ namespace TinyCity.Simulation.AI
                 sb.AppendLine($"- action {PromptText.Quote(o.ActionId)}, target_id {PromptText.Quote(o.TargetId)}: {Describe(o)}");
             }
 
+            var ground = options.Any(o => o.IsGround);
+            if (ground)
+            {
+                PromptText.AppendLand(sb, sim, r);
+            }
+
             sb.Append("Reply as JSON with \"action\" and \"target_id\" copied from one option, \"reason\" (why, in your own words, under 15 words), ")
               .Append("\"say\" (something you say or think out loud, under 15 words) ")
               .Append($"and \"then\": up to {TownSimulation.MaxPlanSteps - 1} more options from the list to do afterwards, in order, each with \"action\" and \"target_id\".");
+            if (ground)
+            {
+                sb.Append($" For target_id {PromptText.Quote(FreeTimeOption.GroundTargetId)}, also give \"x\" and \"y\": the spot you choose, and when planting, \"what\" you plant.");
+            }
+
             return sb.ToString();
         }
 
@@ -112,6 +134,9 @@ namespace TinyCity.Simulation.AI
                     ["reason"] = new Dictionary<string, object> { ["type"] = "string" },
                     ["say"] = new Dictionary<string, object> { ["type"] = "string" },
                     ["then"] = new Dictionary<string, object> { ["type"] = "array", ["items"] = step, ["maxItems"] = TownSimulation.MaxPlanSteps - 1 },
+                    ["x"] = new Dictionary<string, object> { ["type"] = "integer" },
+                    ["y"] = new Dictionary<string, object> { ["type"] = "integer" },
+                    ["what"] = new Dictionary<string, object> { ["type"] = "string" },
                 },
                 ["required"] = new List<object> { "action", "target_id", "reason", "say", "then" },
             };
@@ -149,7 +174,9 @@ namespace TinyCity.Simulation.AI
                 target = candidates[0].TargetId;
             }
 
-            reply = new DecisionReply(action, target, AiJson.GetString(obj, "reason"), AiJson.GetString(obj, "say"), ReadSteps(obj));
+            int? x = AiJson.TryGetInt(obj, "x", out var gx) ? gx : (int?)null;
+            int? y = AiJson.TryGetInt(obj, "y", out var gy) ? gy : (int?)null;
+            reply = new DecisionReply(action, target, AiJson.GetString(obj, "reason"), AiJson.GetString(obj, "say"), ReadSteps(obj), x, y, AiJson.GetString(obj, "what"));
             return true;
         }
 
@@ -225,6 +252,13 @@ namespace TinyCity.Simulation.AI
             if (o.Partner != null)
             {
                 return $"go and chat with {o.Partner.FullName} ({walk})";
+            }
+
+            if (o.IsGround)
+            {
+                return o.Activity == ActivityCatalog.PlantCrops
+                    ? $"plant whatever you like, anywhere you like on open ground (about {o.Activity.DurationMinutes} minutes there)"
+                    : $"choose a spot anywhere on open ground and plan a building there; it is its back corner, and it reaches towards bigger x and y (about {o.Activity.DurationMinutes} minutes)";
             }
 
             var cost = o.PricePence > 0 ? $", costs {Economy.Money.Format(o.PricePence)}" : string.Empty;

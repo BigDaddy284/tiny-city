@@ -67,8 +67,14 @@ namespace TinyCity.Simulation.World
         /// <summary>Tiny City 2: a pile of rocks where stone can be broken off with a pickaxe, two at a time.</summary>
         RockPile,
 
-        /// <summary>Tiny City 2: the marker in front of an empty plot where a resident can plan and build with blocks.</summary>
+        /// <summary>Tiny City 2: a building site a resident chose, where they plan and build with blocks (where the builder stands).</summary>
         BuildPlot,
+
+        /// <summary>Tiny City 2: fallen branches under the trees, picked up by hand for a little wood, two at a time.</summary>
+        StickPile,
+
+        /// <summary>Tiny City 2: loose stones by the rocks, picked up by hand for a little stone, two at a time.</summary>
+        LooseStones,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -116,6 +122,8 @@ namespace TinyCity.Simulation.World
                 case ObjectType.Woodland:
                 case ObjectType.RockPile:
                 case ObjectType.BuildPlot:
+                case ObjectType.StickPile:
+                case ObjectType.LooseStones:
                     return false;
                 default:
                     return true;
@@ -140,6 +148,8 @@ namespace TinyCity.Simulation.World
                 case ObjectType.MarketStall:
                 case ObjectType.Woodland:
                 case ObjectType.RockPile:
+                case ObjectType.StickPile:
+                case ObjectType.LooseStones:
                     return 2;
                 case ObjectType.Fountain:
                     return 4;

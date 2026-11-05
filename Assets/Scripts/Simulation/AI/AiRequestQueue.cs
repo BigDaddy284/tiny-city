@@ -59,7 +59,12 @@ namespace TinyCity.Simulation.AI
     /// </summary>
     public sealed class AiRequestQueue
     {
-        public const int DefaultMaxPending = 32;
+        /// <summary>
+        /// Room for a few requests per person at the most people who can be alive: in Tiny City 2 each resident can
+        /// wait on a choice, a day plan, a line and a reaction at once, and anything dropped is only asked again, so a
+        /// smaller queue just churns (32 gave up thousands of requests a game day at 50 people).
+        /// </summary>
+        public const int DefaultMaxPending = 4 * Residents.PopulationRules.MaxLiving;
 
         /// <summary>Every this many seconds of waiting counts as one priority class better, so low priorities still get served.</summary>
         public const double AgingSecondsPerClass = 20;

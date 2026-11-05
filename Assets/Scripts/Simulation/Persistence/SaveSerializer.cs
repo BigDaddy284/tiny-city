@@ -91,15 +91,39 @@ namespace TinyCity.Simulation.Persistence
                     ["wateredDays"] = c.Value.WateredDays,
                     ["lastWateredDay"] = c.Value.LastWateredDay,
                 }).ToList(),
-                ["projects"] = simulation.Construction.Projects.Values.OrderBy(p => p.PlotId, StringComparer.Ordinal).Select(p => (object)new Dictionary<string, object>
+                ["nextPatchNumber"] = simulation.Food.NextPatchNumber,
+                ["patches"] = simulation.Food.Patches.Select(p => (object)new Dictionary<string, object>
                 {
-                    ["plotId"] = p.PlotId,
-                    ["ownerId"] = p.OwnerId,
-                    ["name"] = p.Plan.Name,
-                    ["height"] = p.Plan.Height,
-                    ["rows"] = p.Plan.Rows.Select(row => (object)row).ToList(),
-                    ["placed"] = p.Placed,
-                    ["startedDay"] = p.StartedDay,
+                    ["id"] = p.Id,
+                    ["mapId"] = p.Location.MapId,
+                    ["x"] = p.Location.Position.X,
+                    ["y"] = p.Location.Position.Y,
+                    ["what"] = p.What,
+                    ["planterId"] = p.PlanterId,
+                }).ToList(),
+                ["nextSiteNumber"] = simulation.Construction.NextSiteNumber,
+                ["sites"] = simulation.Construction.Sites.Select(site =>
+                {
+                    var item = new Dictionary<string, object>
+                    {
+                        ["id"] = site.Id,
+                        ["ownerId"] = site.OwnerId,
+                        ["mapId"] = site.Corner.MapId,
+                        ["x"] = site.Corner.Position.X,
+                        ["y"] = site.Corner.Position.Y,
+                        ["standX"] = site.StandAt.Position.X,
+                        ["standY"] = site.StandAt.Position.Y,
+                    };
+                    if (simulation.Construction.At(site.Id) is Building.Project p)
+                    {
+                        item["name"] = p.Plan.Name;
+                        item["height"] = p.Plan.Height;
+                        item["rows"] = p.Plan.Rows.Select(row => (object)row).ToList();
+                        item["placed"] = p.Placed;
+                        item["startedDay"] = p.StartedDay;
+                    }
+
+                    return (object)item;
                 }).ToList(),
                 ["partnerships"] = simulation.Relationships.Partnerships.Select(p => (object)new Dictionary<string, object>
                 {
@@ -188,27 +212,63 @@ namespace TinyCity.Simulation.Persistence
                 return Fail("The save file has no residents.");
             }
 
-            // Buildings first, so a finished home's bed is in the world while the residents who sleep in it are read.
-            var projects = new List<(string plotId, string ownerId, Building.BuildPlan plan, int placed, int startedDay)>();
+            // Buildings and crop patches first, so a finished home's bed and every site and patch are in the world while the residents who use them are read.
+            var sites = new List<(Building.Site site, Building.BuildPlan plan, int placed, int startedDay)>();
             var early = new Building.Construction(world);
-            foreach (var item in GetList(root, "projects").OfType<Dictionary<string, object>>())
+            foreach (var item in GetList(root, "sites").OfType<Dictionary<string, object>>())
             {
-                var plotId = GetString(item, "plotId");
-                var rows = GetList(item, "rows").OfType<string>().ToList();
-                if (plotId == null || !world.TryGetObject(plotId, out var plot) || plot.Type != ObjectType.BuildPlot || early.At(plotId) != null)
+                var id = GetString(item, "id");
+                var mapId = GetString(item, "mapId");
+                if (id == null || !id.StartsWith(Building.BuildingRules.SitePrefix, StringComparison.Ordinal) || early.SiteOf(id) != null || mapId == null || !world.TryGetMap(mapId, out var siteMap) || !siteMap.IsExterior)
                 {
-                    warnings.Add($"A building on \"{plotId}\", which isn't a free plot, was dropped.");
+                    warnings.Add($"A building site \"{id}\" that isn't on open land was dropped.");
+                    continue;
                 }
-                else if (!Building.BuildPlan.TryParse(GetString(item, "name"), GetInt(item, "height", 1), rows, out var plan, out var planError))
+
+                var corner = new Location(mapId, GetInt(item, "x", -1), GetInt(item, "y", -1));
+                var stand = new Location(mapId, GetInt(item, "standX", corner.Position.X), GetInt(item, "standY", corner.Position.Y));
+                if (!world.IsWalkable(stand))
                 {
-                    warnings.Add($"The building on \"{plotId}\" was dropped: {planError}.");
+                    warnings.Add($"The building site \"{id}\" isn't on open ground, so it was dropped.");
+                    continue;
                 }
-                else
+
+                var site = new Building.Site(id, GetString(item, "ownerId"), corner, stand);
+                Building.BuildPlan plan = null;
+                if (item.ContainsKey("rows") && !Building.BuildPlan.TryParse(GetString(item, "name"), GetInt(item, "height", 1), GetList(item, "rows").OfType<string>().ToList(), out plan, out var planError))
                 {
-                    var entry = (plotId, GetString(item, "ownerId"), plan, GetInt(item, "placed", 0), GetInt(item, "startedDay", 0));
-                    projects.Add(entry);
-                    early.Add(new Building.Project(entry.plotId, entry.Item2, plan, entry.Item4, entry.Item5));
+                    warnings.Add($"The building on \"{id}\" was dropped: {planError}.");
+                    continue;
                 }
+
+                var entry = (site, plan, GetInt(item, "placed", 0), GetInt(item, "startedDay", 0));
+                sites.Add(entry);
+                early.Restore(site, plan == null ? null : new Building.Project(id, site.OwnerId, corner, plan, entry.Item3, entry.Item4));
+            }
+
+            if (GetList(root, "projects").Count > 0)
+            {
+                warnings.Add("Buildings on the old fixed plots were dropped: residents now build wherever they choose.");
+            }
+
+            var patches = new List<CropPatch>();
+            var earlyFood = new FoodSupply();
+            earlyFood.Attach(world);
+            foreach (var item in GetList(root, "patches").OfType<Dictionary<string, object>>())
+            {
+                var id = GetString(item, "id");
+                var mapId = GetString(item, "mapId");
+                var at = mapId == null ? default : new Location(mapId, GetInt(item, "x", -1), GetInt(item, "y", -1));
+                var what = GetString(item, "what");
+                if (id == null || !id.StartsWith(CropPatch.IdPrefix, StringComparison.Ordinal) || earlyFood.PatchOf(id) != null || mapId == null || !world.IsWalkable(at) || string.IsNullOrWhiteSpace(what))
+                {
+                    warnings.Add($"A crop patch \"{id}\" that isn't on open ground was dropped.");
+                    continue;
+                }
+
+                var patch = new CropPatch(id, at, TextRules.Clean(what, FoodSupply.MaxCropNameLength).ToLowerInvariant(), GetString(item, "planterId"));
+                patches.Add(patch);
+                earlyFood.RestorePatch(patch);
             }
 
             var residents = new List<Resident>();
@@ -246,29 +306,36 @@ namespace TinyCity.Simulation.Persistence
             ReadRelationships(GetList(root, "relationships"), simulation, warnings);
             ReadSessions(GetList(root, "activeConversations"), simulation, warnings);
             ReadEconomy(GetObject(root, "economy"), simulation, warnings);
-            foreach (var (plotId, ownerId, plan, placed, startedDay) in projects)
+            foreach (var (site, plan, placed, startedDay) in sites)
             {
-                if (simulation.Construction.At(plotId) != null || simulation.GetResident(ownerId) == null)
+                if (simulation.GetResident(site.OwnerId) == null)
                 {
-                    warnings.Add($"A building on \"{plotId}\", which isn't a free plot with a known owner, was dropped.");
+                    warnings.Add($"The building site \"{site.Id}\", whose owner isn't known, was dropped.");
                 }
                 else
                 {
-                    simulation.Construction.Add(new Building.Project(plotId, ownerId, plan, placed, startedDay));
+                    simulation.Construction.Restore(site, plan == null ? null : new Building.Project(site.Id, site.OwnerId, site.Corner, plan, placed, startedDay));
                 }
             }
 
+            simulation.Construction.NextSiteNumber = Math.Max(GetInt(root, "nextSiteNumber", 1), simulation.Construction.Sites.Select(o => NumberAfter(o.Id, Building.BuildingRules.SitePrefix)).DefaultIfEmpty(1).Max());
+            foreach (var patch in patches)
+            {
+                simulation.Food.RestorePatch(patch);
+            }
+
+            simulation.Food.NextPatchNumber = Math.Max(GetInt(root, "nextPatchNumber", 1), simulation.Food.Patches.Select(o => NumberAfter(o.Id, CropPatch.IdPrefix)).DefaultIfEmpty(1).Max());
             simulation.Pathfinder.Forget();
             foreach (var crop in GetList(root, "crops").OfType<Dictionary<string, object>>())
             {
                 var objectId = GetString(crop, "objectId");
-                if (objectId != null && world.TryGetObject(objectId, out var plot) && plot.Type == ObjectType.GardenPlot)
+                if (objectId != null && world.TryGetObject(objectId, out var plot) && plot.Type == ObjectType.GardenPlot && simulation.Food.CropAt(objectId) == null)
                 {
                     simulation.Food.SetCrop(objectId, new Crop(GetInt(crop, "plantedDay", 0), Math.Max(0, GetInt(crop, "wateredDays", 0)), GetInt(crop, "lastWateredDay", 0)));
                 }
                 else
                 {
-                    warnings.Add($"A crop on \"{objectId}\", which isn't a garden plot, was dropped.");
+                    warnings.Add($"A crop on \"{objectId}\", which isn't a garden plot or crop patch, was dropped.");
                 }
             }
 
@@ -1156,6 +1223,10 @@ namespace TinyCity.Simulation.Persistence
 
         private static Dictionary<string, object> GetObject(Dictionary<string, object> obj, string key) =>
             obj.TryGetValue(key, out var v) ? v as Dictionary<string, object> : null;
+
+        /// <summary>One more than the number at the end of an id such as "obj-site-12", so a new id never repeats one.</summary>
+        private static int NumberAfter(string id, string prefix) =>
+            int.TryParse(id.Substring(prefix.Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n) ? n + 1 : 1;
 
         private static List<object> GetList(Dictionary<string, object> obj, string key) =>
             obj.TryGetValue(key, out var v) && v is List<object> list ? list : new List<object>();

@@ -21,18 +21,22 @@ namespace TinyCity.Tools.StressTest
 
         private static readonly string[] Kinds = { "decision", "day plan", "line", "react", "insight", "reflection", "rating" };
 
+        /// <summary>How many people live on the open land in each run: the starter residents, a full camp, and the most who can ever be alive.</summary>
+        private static readonly int[] PeopleCounts = { 15, FlatLand.CampBeds, PopulationRules.MaxLiving };
+
         private static bool AiRunsEverything(int section, AiProfile profile, double days)
         {
-            Line($"## {section}. Tiny City 2 with {profile.Name}");
+            Line($"## {section}. Tiny City 2 on the open land with {profile.Name}");
             Line();
-            Line($"The AI makes every choice and the clock waits for it, as in the v2 game. The stand-in Ollama takes {profile.Description} and works on {ParallelRequests} request{(ParallelRequests == 1 ? string.Empty : "s")} at a time; one reply in 30 is not JSON and one in 50 never arrives. It picks options in turn rather than sensibly, so needs and deaths here say nothing about how a real model plays. {days:0.#} game day{(days == 1 ? string.Empty : "s")} at each speed.");
+            Line($"The AI makes every choice and the clock waits for it, as in the v2 game, on the flat map with {string.Join(", ", PeopleCounts)} people (the starter residents, then newcomers until the camp is full, then the most who can ever be alive; past the camp's beds they sleep on benches). The stand-in Ollama takes {profile.Description} and works on {ParallelRequests} request{(ParallelRequests == 1 ? string.Empty : "s")} at a time; one reply in 30 is not JSON and one in 50 never arrives. It picks options in turn rather than sensibly, so needs and deaths here say nothing about how a real model plays. {days:0.#} game day{(days == 1 ? string.Empty : "s")} at each speed.");
             Line();
-            Line("| Speed | Real time | Actually ran at | Clock held | Requests per game day | " + string.Join(" | ", Kinds.Select(k => k + "s")) + " | Avg wait for a choice (s) | Longest (s) | Avg reply (s) | Gave up | Deaths |");
-            Line("|---|---|---|---|---|" + string.Concat(Kinds.Select(_ => "---|")) + "---|---|---|---|---|");
+            Line("| People | Speed | Real time | Actually ran at | Clock held | Requests per game day | " + string.Join(" | ", Kinds.Select(k => k + "s")) + " | Avg wait for a choice (s) | Longest (s) | Avg reply (s) | Gave up | Deaths |");
+            Line("|---|---|---|---|---|---|" + string.Concat(Kinds.Select(_ => "---|")) + "---|---|---|---|---|");
             var ok = true;
+            foreach (var people in PeopleCounts)
             foreach (var speed in new[] { 1, 2, 4 })
             {
-                var sim = StarterTown.CreateNewGame();
+                var sim = FlatLand.CreateCrowdedTown(people);
                 sim.AiRunsEverything = true;
                 sim.FoodMustBeMade = true;
                 var ollama = new SlowOllama(profile, ParallelRequests);
@@ -99,10 +103,10 @@ namespace TinyCity.Tools.StressTest
                 var kindCells = string.Join(" | ", Kinds.Select(k => (ollama.CallsByKind.TryGetValue(k, out var n) ? n / Math.Max(gameDays, 1e-9) : 0).ToString("0")));
                 var deaths = sim.Residents.Count(r => !r.IsAlive);
                 var stats = ai.Queue.Stats;
-                Line($"| {speed}x | {Hours(now)} | {ran:0.00}x | {100 * held / Math.Max(now, 1e-9):0}% | {perDay:0} | {kindCells} | {(waits.Count == 0 ? 0 : waits.Average()):0.0} | {(waits.Count == 0 ? 0 : waits.Max()):0} | {stats.AverageLatencySeconds:0.0} | {stats.GaveUp} | {deaths} |");
+                Line($"| {sim.LivingCount} | {speed}x | {Hours(now)} | {ran:0.00}x | {100 * held / Math.Max(now, 1e-9):0}% | {perDay:0} | {kindCells} | {(waits.Count == 0 ? 0 : waits.Average()):0.0} | {(waits.Count == 0 ? 0 : waits.Max()):0} | {stats.AverageLatencySeconds:0.0} | {stats.GaveUp} | {deaths} |");
                 if (gameDays < days * 0.99)
                 {
-                    Line($"**At {speed}x the city only got through {gameDays:0.00} of {days:0.#} game days in a simulated week of real time.**");
+                    Line($"**With {people} people at {speed}x the land only got through {gameDays:0.00} of {days:0.#} game days in a simulated week of real time.**");
                     ok = false;
                 }
             }

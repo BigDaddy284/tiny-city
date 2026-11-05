@@ -4,14 +4,13 @@ using NUnit.Framework;
 using TinyCity.Art;
 using TinyCity.Simulation;
 using TinyCity.Simulation.Activities;
-using TinyCity.Simulation.Building;
 using TinyCity.Simulation.Content;
 using TinyCity.Simulation.Persistence;
 using TinyCity.Simulation.World;
 
 namespace TinyCity.Tests.EditMode
 {
-    /// <summary>Tiny City 2's world: one flat stretch of open land with a starter camp, food, resources and building plots, and no city.</summary>
+    /// <summary>Tiny City 2's world: one flat stretch of open land laid out as the owner drew it, with a starter camp, food and resources, and no city or plots.</summary>
     public class FlatLandTests
     {
         private static TownSimulation NewGame()
@@ -31,12 +30,12 @@ namespace TinyCity.Tests.EditMode
             Assert.That(world.Maps.Count(), Is.EqualTo(1));
             Assert.That(world.Businesses, Is.Empty, "no shops: someone has to open a stall");
             Assert.That(world.JobOpenings, Is.Empty);
-            foreach (var type in new[] { ObjectType.Bed, ObjectType.Kitchen, ObjectType.Bench, ObjectType.MarketStall, ObjectType.GardenPlot, ObjectType.FishingSpot, ObjectType.Woodland, ObjectType.RockPile, ObjectType.Workbench, ObjectType.BuildPlot })
+            foreach (var type in new[] { ObjectType.Bed, ObjectType.Kitchen, ObjectType.Bench, ObjectType.MarketStall, ObjectType.FishingSpot, ObjectType.Woodland, ObjectType.StickPile, ObjectType.RockPile, ObjectType.LooseStones, ObjectType.Workbench })
             {
                 Assert.That(world.ObjectsOfType(type).Any(), Is.True, type.ToString());
             }
 
-            Assert.That(world.ObjectsOfType(ObjectType.BuildPlot).Count(), Is.EqualTo(12));
+            Assert.That(world.ObjectsOfType(ObjectType.BuildPlot).Any() || world.ObjectsOfType(ObjectType.GardenPlot).Any(), Is.False, "no plots: they build and plant where they choose");
             Assert.That(world.ObjectsOfType(ObjectType.Bed).Count(), Is.EqualTo(FlatLand.CampBeds));
             var start = sim.Residents[0].Location;
             foreach (var o in world.Objects)
@@ -44,18 +43,23 @@ namespace TinyCity.Tests.EditMode
                 Assert.That(sim.Pathfinder.Distance(start, o.Location), Is.Not.EqualTo(Pathfinder.Unreachable), o.Id);
             }
 
-            var footprints = new HashSet<Location>();
-            foreach (var plot in world.ObjectsOfType(ObjectType.BuildPlot))
+            // As the owner drew it: the camp in the bottom quarter, trees, rocks, soil and the pond in the left one, and the top and right quarters open.
+            bool Bottom(Location l) => l.Position.X > FlatLand.PathColumn && l.Position.Y > FlatLand.PathRow;
+            bool Left(Location l) => l.Position.X < FlatLand.PathColumn && l.Position.Y > FlatLand.PathRow;
+            foreach (var type in new[] { ObjectType.Bed, ObjectType.Kitchen, ObjectType.Bench, ObjectType.MarketStall, ObjectType.Workbench })
             {
-                foreach (var tile in BuildingRules.Footprint(plot))
-                {
-                    Assert.That(world.GetMap(tile.MapId).GetTile(tile.Position), Is.EqualTo(TileType.Grass), $"{plot.Id} {tile}");
-                    Assert.That(world.Objects.Any(o => o.Location == tile), Is.False, $"{plot.Id} {tile} is clear");
-                    Assert.That(footprints.Add(tile), Is.True, "plots don't overlap");
-                }
+                Assert.That(world.ObjectsOfType(type).All(o => Bottom(o.Location)), Is.True, type.ToString());
             }
 
-            Assert.That(footprints.Overlaps(world.Objects.Select(o => o.Location)), Is.False);
+            foreach (var type in new[] { ObjectType.Woodland, ObjectType.StickPile, ObjectType.RockPile, ObjectType.LooseStones, ObjectType.FishingSpot })
+            {
+                Assert.That(world.ObjectsOfType(type).All(o => Left(o.Location)), Is.True, type.ToString());
+            }
+
+            Assert.That(world.Objects.Any(o => o.Location.Position.Y < FlatLand.PathRow), Is.False, "the top and right quarters are left open");
+            var map = world.GetMap(FlatLand.MapId);
+            Assert.That(map.GetTile(new GridPos(20, 24)), Is.EqualTo(TileType.Garden), "the crop field by the cross path");
+            Assert.That(map.GetTile(new GridPos(22, 31)), Is.EqualTo(TileType.Water), "the pond");
         }
 
         [Test]
@@ -83,7 +87,8 @@ namespace TinyCity.Tests.EditMode
             var sim = NewGame();
             var r = sim.Residents[0];
             var ids = new HashSet<string>(sim.Planner.FreeTimeOptions(r, everything: true).Select(o => o.ActionId));
-            foreach (var id in new[] { "gather-wood", "plant-crops", "catch-fish", "plan-building" })
+            Assert.That(ids.Contains("gather-wood"), Is.False, "trees need an axe");
+            foreach (var id in new[] { "gather-sticks", "gather-loose-stones", "plant-crops", "catch-fish", "plan-building" })
             {
                 Assert.That(ids.Contains(id), Is.True, id + ": " + string.Join(",", ids));
             }

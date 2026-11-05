@@ -28,7 +28,7 @@ namespace TinyCity.Simulation
                 }
 
                 var kept = r.Belongings.Add(gathering.Material, amount);
-                r.AddLog(Time, $"Gathered {kept} {material}" + (tier > 0 ? FoodRules.WearNote(r, gathering.Tool) : " by hand"));
+                r.AddLog(Time, $"Gathered {kept} {material}" + (gathering.MinTier > 0 ? FoodRules.WearNote(r, gathering.Tool) : " by hand"));
                 if (CraftingRules.TierOf(gathering.Material) == CraftingRules.MaxTier && kept > 0)
                 {
                     Memories.Add(r.Id, Time, MemoryType.Event, 4, $"I gathered {kept} {material}, the rarest kind.", tags: new[] { "crafting", gathering.Material.ToString() });

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using TinyCity.Art;
 using TinyCity.Simulation.Content;
+using TinyCity.Simulation.Economy;
 using TinyCity.Simulation.Residents;
 using TinyCity.Simulation.Time;
 
@@ -81,27 +82,38 @@ namespace TinyCity.Tools.ArtPreview
             }
         }
 
-        /// <summary>Draws the open land with a finished building of every material on its plots, by day and by night.</summary>
-        /// <summary>Tiny City 2's open land by day and by night, with two homes built on its plots.</summary>
+        /// <summary>Puts a finished building on the land with its back-left corner at (x, y), as if a resident had built it there.</summary>
+        private static void PlaceBuilding(TinyCity.Simulation.TownSimulation sim, string ownerId, string mapId, int x, int y, string name, int height, string[] rows, bool finished = true)
+        {
+            if (!TinyCity.Simulation.Building.BuildPlan.TryParse(name, height, rows, out var plan, out var error))
+            {
+                throw new InvalidOperationException($"{name}: {error}");
+            }
+
+            var site = sim.Construction.AddSite(ownerId, new TinyCity.Simulation.World.Location(mapId, x, y));
+            var from = sim.GetResident(ownerId).Location.MapId == mapId ? sim.GetResident(ownerId).Location : new TinyCity.Simulation.World.Location(mapId, x - 1, y - 1);
+            error = sim.Construction.CheckPlacement(site.Corner, plan, site.Id, _ => false, from, out var stand);
+            if (error != null)
+            {
+                throw new InvalidOperationException($"{name} at ({x}, {y}): {error}");
+            }
+
+            sim.Construction.Add(new TinyCity.Simulation.Building.Project(site.Id, ownerId, site.Corner, plan, finished ? plan.Cells.Count : plan.Cells.Count / 3, 0), stand);
+        }
+
+        /// <summary>Tiny City 2's open land by day and by night, with two homes, one half built, a new building site and some crops, all where residents chose.</summary>
         private static void WriteFlat(string path)
         {
             var sim = FlatLand.CreateNewGame();
             var world = sim.World;
-            var plots = world.ObjectsOfType(TinyCity.Simulation.World.ObjectType.BuildPlot).ToList();
-            var homes = new[]
+            PlaceBuilding(sim, sim.Residents[0].Id, FlatLand.MapId, 6, 4, "wooden cabin", 4, new[] { "WWWWWWWWWW", "W........W", "W.B......W", "W........W", "W........W", "W........W", "W........W", "WWWWDWWWWW" });
+            PlaceBuilding(sim, sim.Residents[1].Id, FlatLand.MapId, 36, 6, "stone cottage", 5, new[] { "SSSSSSSSSSSS", "S..........S", "C..........C", "S.....B....S", "S..........S", "C..........C", "S..........S", "SSSSDSSSSSSS" });
+            PlaceBuilding(sim, sim.Residents[2].Id, FlatLand.MapId, 12, 12, "sawmill", 4, new[] { "HHHHHHHHHHHH", "H..........H", "H..........H", "H..........H", "HHHHHDDHHHHH" }, finished: false);
+            sim.Construction.AddSite(sim.Residents[3].Id, new TinyCity.Simulation.World.Location(FlatLand.MapId, 44, 12));
+            foreach (var (x, y, what, i) in new[] { (19, 23, "potatoes", 4), (21, 23, "carrots", 5), (23, 24, "beans", 6), (34, 16, "tomatoes", 7) })
             {
-                ("wooden cabin", 4, new[] { "", "..WWWWWWWWWW", "..W........W", "..W.B......W", "..W........W", "..W........W", "..W........W", "..WWWWDWWWWW" }),
-                ("stone cottage", 5, new[] { "", "SSSSSSSSSSSS", "S..........S", "C..........C", "S.....B....S", "S..........S", "C..........C", "S..........S", "SSSSDSSSSSSS" }),
-            };
-            for (var i = 0; i < homes.Length; i++)
-            {
-                var (name, height, rows) = homes[i];
-                if (!TinyCity.Simulation.Building.BuildPlan.TryParse(name, height, rows, out var plan, out var error))
-                {
-                    throw new InvalidOperationException($"{name}: {error}");
-                }
-
-                sim.Construction.Add(new TinyCity.Simulation.Building.Project(plots[i * 4].Id, sim.Residents[i].Id, plan, plan.Cells.Count, 0));
+                var patch = sim.Food.AddPatch(new TinyCity.Simulation.World.Location(FlatLand.MapId, x, y), what, sim.Residents[i].Id);
+                sim.Food.SetCrop(patch.Id, new Crop(1, 1, 1));
             }
 
             var map = world.GetMap(FlatLand.MapId);
@@ -115,6 +127,7 @@ namespace TinyCity.Tools.ArtPreview
             }
         }
 
+        /// <summary>Draws the open land with a finished building of every material, by day, by night and in winter.</summary>
         private static void WriteBlocks(string path)
         {
             var world = StarterTown.CreateWorld();
@@ -129,16 +142,11 @@ namespace TinyCity.Tools.ArtPreview
                 ("heartwood hall", 5, new[] { "TTTTCTTTTTTCTTTT", "T..............T", "C..............C", "T......B.......T", "T..............T", "C..............C", "T..............T", "TTTTTTDTTTTTTTTT" }),
                 ("crystal tower", 6, new[] { "..CCCC..", ".C....C.", "C......C", "C..B...C", "C......C", "C......C", ".C....C.", "..CDDC.." }),
             };
-            var plots = world.ObjectsOfType(TinyCity.Simulation.World.ObjectType.BuildPlot).ToList();
-            for (var i = 0; i < plots.Count && i < plans.Length; i++)
+            var corners = new[] { (2, 2), (11, 2), (20, 2), (2, 13), (11, 13), (20, 13) };
+            for (var i = 0; i < plans.Length; i++)
             {
                 var (name, height, rows) = plans[i];
-                if (!TinyCity.Simulation.Building.BuildPlan.TryParse(name, height, rows, out var plan, out var error))
-                {
-                    throw new InvalidOperationException($"{name}: {error}");
-                }
-
-                sim.Construction.Add(new TinyCity.Simulation.Building.Project(plots[i].Id, residents[i].Id, plan, plan.Cells.Count, 0));
+                PlaceBuilding(sim, residents[i].Id, StarterTown.OpenLandMapId, corners[i].Item1, corners[i].Item2, name, height, rows);
             }
 
             var map = world.GetMap(StarterTown.OpenLandMapId);
