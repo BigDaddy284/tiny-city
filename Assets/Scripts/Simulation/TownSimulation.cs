@@ -137,6 +137,15 @@ namespace TinyCity.Simulation
         /// True while a living resident is waiting for an AI choice or a conversation for an AI line. In Tiny City 2
         /// the game holds its clock while this is true, so nobody acts on stale thinking.
         /// </summary>
+        /// <summary>
+        /// Tiny City 2 (owner, 5 November): hunger and thirst fall at this share of the usual rate, so food and drink
+        /// matter as things to trade without everyone starving within days.
+        /// </summary>
+        public const double HungerThirstRateWhenAiRuns = 0.5;
+
+        /// <summary>Tiny City 2 (owner, 5 November): nobody dies; neglect wears health down to this and no further.</summary>
+        public const double LowestHealthWhenAiRuns = 1;
+
         public bool WaitingForAi =>
             Residents.Any(r => r.IsAlive && r.State == ResidentState.Deciding) || ActiveConversations.Any(c => c.AwaitingLine);
 
@@ -276,7 +285,8 @@ namespace TinyCity.Simulation
                 }
             }
 
-            NeedRules.ApplyMinute(r.Needs, r.Personality, r.State == ResidentState.Performing || r.State == ResidentState.Talking ? activity : null, IllnessCatalog.Get(r.IllnessId));
+            NeedRules.ApplyMinute(r.Needs, r.Personality, r.State == ResidentState.Performing || r.State == ResidentState.Talking ? activity : null, IllnessCatalog.Get(r.IllnessId),
+                AiRunsEverything ? HungerThirstRateWhenAiRuns : 1.0);
             StepHealth(r, activity);
             if (!r.IsAlive)
             {

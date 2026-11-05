@@ -118,6 +118,32 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void NobodyDies_AndHungerAndThirstFallAtHalfSpeed_InTinyCity2()
+        {
+            var sim = FlatLand.CreateNewGame();
+            sim.AiRunsEverything = true;
+            sim.FoodMustBeMade = true;
+            var r = sim.Residents[0];
+            var old = sim.Residents[1];
+            old.AgeYears = 99;
+            foreach (NeedType need in System.Enum.GetValues(typeof(NeedType)))
+            {
+                r.Needs[need] = 0;
+            }
+
+            r.Health = 2;
+            sim.Advance(3 * 24 * 60);
+            Assert.That(sim.Residents.All(o => o.IsAlive), Is.True, "nobody dies of neglect or old age");
+            Assert.That(r.Health, Is.GreaterThanOrEqualTo(TownSimulation.LowestHealthWhenAiRuns));
+            Assert.That(sim.Memories.ForResident(r.Id).Any(m => m.Summary.StartsWith("I collapsed")), Is.True);
+
+            var needs = new Needs();
+            var before = needs[NeedType.Hunger];
+            NeedRules.ApplyMinute(needs, new Personality(0.5, 0.5, 0.5, 0.5), null, null, TownSimulation.HungerThirstRateWhenAiRuns);
+            Assert.That(before - needs[NeedType.Hunger], Is.EqualTo(NeedRules.DecayPerHour(NeedType.Hunger, new Personality(0.5, 0.5, 0.5, 0.5)) / 120.0).Within(1e-9));
+        }
+
+        [Test]
         public void EverythingTheyNeed_IsAnOption()
         {
             var sim = NewGame();
