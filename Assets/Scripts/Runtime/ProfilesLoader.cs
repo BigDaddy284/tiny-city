@@ -55,7 +55,7 @@ namespace TinyCity.Runtime
                 }
 
                 var businesses = StarterTown.CreateWorld().Businesses.Select(b => b.Id);
-                var profiles = ResidentProfiles.Parse(File.ReadAllText(ProfilesPath), StarterTown.StarterResidentIds, businesses, out var parseProblems);
+                var profiles = ResidentProfiles.Parse(File.ReadAllText(ProfilesPath), StarterTown.OpenLandResidentIds, businesses, out var parseProblems);
                 found.AddRange(parseProblems);
                 if (profiles.Count == 0)
                 {

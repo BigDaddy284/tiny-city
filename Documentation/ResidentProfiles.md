@@ -65,7 +65,7 @@ saved with it.
 
 | Field | Meaning |
 | --- | --- |
-| `id` | One of the city's residents, `res-0001` to `res-0015`. The id fixes their look, home, job and hobbies. |
+| `id` | One of the twenty starting residents, `res-0001` to `res-0020` (the first fifteen also live in v1's city; the last five only on the open land, with looks made from their id). The id fixes their look and hobbies. Twenty is also the most there can be. |
 | `firstName`, `lastName` | Up to 24 letters each. A first name is required. |
 | `age` | A whole number from 18 to 100. |
 | `about` | Up to 300 letters of personality and background, given to the AI as the resident's own words. |
@@ -73,4 +73,4 @@ saved with it.
 | `money` | Pounds they start with, from 0 to 1,000,000. |
 | `owns` | Optional. The business they start as boss of: `biz-store`, `biz-cafe`, `biz-bakery`, `biz-clinic`, `biz-bar`, `biz-cue-club`, `biz-bowling`, `biz-arcade` or `biz-gym`. Each business has at most one owner. With none, a business has no boss until someone chooses to take it on. |
 
-Only the residents listed start, in the order listed. A profile with a problem is left out or repaired, and the reason is written to `Player.log`; if no profile can be used, or the file is missing, the city starts with all fifteen residents as designed.
+Only the residents listed start, in the order listed. A profile with a problem is left out or repaired, and the reason is written to `Player.log`; if no profile can be used, or the file is missing, everyone starts as designed: all twenty on the open land (fifteen in v1's city).

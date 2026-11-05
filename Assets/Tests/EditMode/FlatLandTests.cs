@@ -68,7 +68,7 @@ namespace TinyCity.Tests.EditMode
         public void EveryResident_StartsAtTheCamp_WithNoBedJobOrRent()
         {
             var sim = NewGame();
-            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.StarterResidentIds.Count));
+            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.OpenLandResidentIds.Count));
             Assert.That(sim.Residents.Select(r => r.Location).Distinct().Count(), Is.EqualTo(sim.Residents.Count));
             foreach (var r in sim.Residents)
             {
@@ -114,7 +114,7 @@ namespace TinyCity.Tests.EditMode
             var sim = NewGame();
             Assert.That((sim.NewcomersEnabled, sim.BabiesEnabled), Is.EqualTo((false, false)));
             sim.Advance(3 * 24 * 60);
-            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.StarterResidentIds.Count));
+            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.OpenLandResidentIds.Count));
         }
 
         [Test]

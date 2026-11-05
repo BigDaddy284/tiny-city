@@ -106,9 +106,10 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(dir, Is.Not.Null, "residents.json not found above the test folder");
             var json = System.IO.File.ReadAllText(System.IO.Path.Combine(dir.FullName, "Assets", "StreamingAssets", "Configuration", "residents.json"));
-            var profiles = ResidentProfiles.Parse(json, StarterTown.StarterResidentIds, new string[0], out var problems);
+            var profiles = ResidentProfiles.Parse(json, StarterTown.OpenLandResidentIds, new string[0], out var problems);
             Assert.That(problems, Is.Empty);
             Assert.That(profiles.All(p => p.Personality.Length > 10), Is.True);
+            Assert.That(profiles.Count, Is.EqualTo(20), "twenty residents to start (owner, 5 November)");
         }
 
         [Test]

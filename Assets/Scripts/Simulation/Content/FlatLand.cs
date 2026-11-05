@@ -133,7 +133,7 @@ namespace TinyCity.Simulation.Content
         /// </summary>
         public static IReadOnlyList<Resident> CreateResidents(TownWorld world, IReadOnlyList<ResidentProfile> profiles)
         {
-            var residents = StarterTown.CreateResidents(StarterTown.CreateWorld(), profiles);
+            var residents = StarterTown.CreateResidents(StarterTown.CreateWorld(), profiles, openLand: true);
             var spots = StartingSpots().ToList();
             for (var i = 0; i < residents.Count && i < spots.Count; i++)
             {
