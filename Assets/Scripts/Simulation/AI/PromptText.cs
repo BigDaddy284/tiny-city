@@ -213,7 +213,8 @@ namespace TinyCity.Simulation.AI
             }
 
             sb.AppendLine();
-            sb.AppendLine($"Your things: {r.Belongings.Describe()}. {Economy.CraftingRules.RecipesText()}");
+            sb.AppendLine($"Your things: {r.Belongings.Describe()}; clean water: {(r.CleanWater == 0 ? "none" : r.CleanWater + " portion" + (r.CleanWater == 1 ? string.Empty : "s"))}. {Economy.CraftingRules.RecipesText()}");
+            AppendRoleAndMeeting(sb, sim, r);
             var mine = sim.Construction.OwnedBy(r.Id).ToList();
             if (mine.Count == 0)
             {
@@ -244,6 +245,56 @@ namespace TinyCity.Simulation.AI
                 sb.AppendLine($"{owner?.FullName ?? "Someone"}'s {project.Plan.Name} at ({project.Corner.Position.X}, {project.Corner.Position.Y}): {project.Placed} of {project.Plan.Cells.Count} blocks laid, still needs {needs}; you could help build it.");
             }
         }
+
+        /// <summary>
+        /// Tiny City 2: what their role lets them do, who does each kind of work, and the weekly meeting where role
+        /// changes are voted on, so they work out together how to live.
+        /// </summary>
+        public static void AppendRoleAndMeeting(StringBuilder sb, TownSimulation sim, Resident r)
+        {
+            if (!sim.RolesLimitSkills)
+            {
+                return;
+            }
+
+            var role = sim.Brief.Find(r.Role);
+            var mine = role == null ? new List<string>() : role.Skills.Select(Name).ToList();
+            sb.Append(role == null
+                ? "You have no role, so you can only drink and wash in the dirty pond, eat raw food, catch a fish by hand and pick up fallen branches and loose stones."
+                : mine.Count == 0
+                    ? $"As the {role.Name} you do no special work with your hands: anyone can drink and wash in the dirty pond, eat raw food, catch a fish by hand and pick up branches and stones."
+                    : $"As the {role.Name} you can {string.Join(", ", mine)}; other work belongs to other roles.");
+            sb.Append(" Dirty pond water and raw food fill you less and make you a little ill; clean water and cooked meals don't.");
+            var holders = sim.Residents.Where(o => o.IsAlive && o.Role != null && o.Id != r.Id).GroupBy(o => o.Role)
+                .OrderBy(g => g.Key, System.StringComparer.Ordinal).Select(g => $"{g.Key}: {string.Join(", ", g.Select(o => o.FirstName))}").ToList();
+            var unfilled = sim.Brief.Roles.Where(o => o.Skills.Count > 0 && !sim.Residents.Any(p => p.IsAlive && p.Role == o.Name)).Select(o => o.Name).ToList();
+            if (holders.Count > 0)
+            {
+                sb.Append(" Roles taken: ").Append(string.Join("; ", holders)).Append('.');
+            }
+
+            if (unfilled.Count > 0)
+            {
+                sb.Append(" Nobody yet is the ").Append(string.Join(", ", unfilled)).Append('.');
+            }
+
+            sb.AppendLine();
+            var next = sim.NextMeetingDay(sim.Time.Day);
+            if (next > 0)
+            {
+                var when = next == sim.Time.Day ? "today at 10:00" : next == sim.Time.Day + 1 ? "tomorrow at 10:00" : $"on {GameTime.FromDayAndTime(next, 0, 0).Weekday} (day {next}) at 10:00";
+                sb.Append($"The town meeting is held at the meeting circle {when}: everyone raises the land's problems there, and a role can only be changed if more than half of those there vote for it.");
+                if (sim.RoleRequests.TryGetValue(r.Id, out var wanted))
+                {
+                    sb.Append(wanted == TownSimulation.RoleNone ? " You have asked to give up your role at it." : $" You have asked to become the {wanted} at it; be there to have it voted on.");
+                }
+
+                sb.AppendLine();
+            }
+        }
+
+        private static string Name(string activityId) =>
+            ActivityCatalog.TryGet(activityId, out var a) ? a.Name.ToLowerInvariant() : activityId;
 
         /// <summary>The most unfinished buildings of other people a prompt lists.</summary>
         public const int MaxOtherBuildingsListed = 4;

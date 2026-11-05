@@ -1,38 +1,83 @@
 {
   "format": "tiny-city-2-profiles",
-  "brief": "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Look after yourself first: hunger, thirst, tiredness and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
+  "brief": "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Each of you can only do the work of the role you take up; without one you can only drink and wash in the dirty pond, eat raw fish and pick up fallen branches and loose stones, so you need each other. A role can only be changed by a majority vote at the weekly meeting. Look after yourself first: hunger, thirst, tiredness and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
   "roles": [
     {
       "name": "farmer",
-      "about": "You grow the food everyone depends on. You choose where to dig a patch, plant it, water it on different days until it is ready and pick it, and you plan ahead so there is always something growing. A hoe makes each harvest bigger."
+      "about": "You grow the food everyone depends on, and only a farmer can. You choose where to dig a patch, plant it, water it on different days until it is ready and pick it, and you plan ahead so there is always something growing. A hoe makes each harvest bigger.",
+      "can": [
+        "plant-crops",
+        "water-crops",
+        "harvest"
+      ]
     },
     {
       "name": "fisher",
-      "about": "You bring in fish from the pond. Fish keep only a couple of days, so you catch what is needed, share or trade the rest, and a rod means a bigger catch."
+      "about": "You bring in fish from the pond. Anyone can catch the odd fish by hand, but you catch far more, and a rod means more still. Fish keep only a couple of days, so you catch what is needed and share or trade the rest.",
+      "can": [
+        "catch-fish"
+      ]
     },
     {
       "name": "lumberjack",
-      "about": "You cut wood from the trees and pick up fallen branches. Better axes let you cut hardwood and then heartwood, and everyone building or making tools needs what you bring in."
+      "about": "Only you can cut wood from the trees; everyone else can only pick up fallen branches. Better axes let you cut hardwood and then heartwood, and everyone building or making tools needs what you bring in.",
+      "can": [
+        "gather-wood",
+        "gather-hardwood",
+        "gather-heartwood"
+      ]
     },
     {
       "name": "miner",
-      "about": "You break stone from the rocks and gather loose stones. Better pickaxes let you dig iron ore and then crystal, the strongest materials there are."
+      "about": "Only you can break stone from the rocks; everyone else can only pick up loose stones. Better pickaxes let you dig iron ore and then crystal, the strongest materials there are.",
+      "can": [
+        "gather-stone",
+        "gather-iron",
+        "gather-crystal"
+      ]
     },
     {
       "name": "toolmaker",
-      "about": "You make the axes, pickaxes, hoes and rods at the crafting bench that let everyone else work faster, and you replace them as they wear out and break. You may make them for others or trade them."
+      "about": "Only you can make tools: the axes, pickaxes, hoes and rods at the crafting bench that let everyone else work, and you replace them as they wear out and break. You may make them for others or trade them.",
+      "can": [
+        "craft-axe",
+        "craft-pickaxe",
+        "craft-stone-axe",
+        "craft-stone-pickaxe",
+        "craft-iron-axe",
+        "craft-iron-pickaxe",
+        "craft-hoe",
+        "craft-rod"
+      ]
     },
     {
       "name": "cook",
-      "about": "You turn raw vegetables and fish into proper meals at a stove, which fill people up far better than raw food. You keep an eye on what is running low and make sure nobody goes hungry."
+      "about": "Only you can cook. You turn raw vegetables and fish into proper meals at a stove, which fill people up far better than raw food and don't make them ill. You keep an eye on what is running low and make sure nobody goes hungry.",
+      "can": [
+        "cook"
+      ]
     },
     {
-      "name": "infrastructure specialist",
-      "about": "You plan and build what the group needs: shelters with beds, stoves, stalls, benches and crafting benches. You can ask others to help build and bring materials, and you think about where things should go."
+      "name": "builder",
+      "about": "Only you know masonry and building. You plan and build what the group needs: shelters with beds, stoves, stalls, benches and crafting benches. You can ask others to bring materials, and you think about where things should go.",
+      "can": [
+        "plan-building",
+        "build"
+      ]
+    },
+    {
+      "name": "water purifier",
+      "about": "Only you can clean water. Pond water is dirty and makes people unwell; you turn it into clean water at the pond, which quenches thirst properly, and you can share it or trade it.",
+      "can": [
+        "purify-water"
+      ]
     },
     {
       "name": "merchant",
-      "about": "You run a stall and trade food and goods with the others, deciding what you want in return. You can build up plenty for yourself or help everyone get what they need; how fair you are is up to you."
+      "about": "Only you can run a stall. You trade food and goods with the others, deciding what you want in return. You can build up plenty for yourself or help everyone get what they need; how fair you are is up to you.",
+      "can": [
+        "run-stall"
+      ]
     },
     {
       "name": "tax man",
@@ -45,7 +90,7 @@
     },
     {
       "name": "mayor",
-      "about": "You lead the group and help everyone decide what to do: who grows, who builds, what is shared. You have no power except what people give you by listening, so you have to earn their trust."
+      "about": "You lead the group and run the weekly meeting, helping everyone decide what to do: who grows, who builds, what is shared. You have no power except what people give you by listening, so you have to earn their trust."
     }
   ],
   "residents": [
@@ -54,8 +99,8 @@
       "firstName": "Mabel",
       "lastName": "Thornbury",
       "age": 34,
-      "about": "Back in the city I kept a community garden, and I know how to coax things out of the ground. I'm patient and kind, and happiest with a book and a cup of tea once the work is done.",
       "personality": "You live to help others and always put other people first.",
+      "about": "Back in the city I kept a community garden, and I know how to coax things out of the ground. I'm patient and kind, and happiest with a book and a cup of tea once the work is done.",
       "money": 0
     },
     {
@@ -63,8 +108,8 @@
       "firstName": "Arthur",
       "lastName": "Bramble",
       "age": 71,
-      "about": "I ran a post office for forty years and knew everyone's business. I'm too old for heavy work, but I'm good at getting people talking and remembering who needs what.",
       "personality": "You like to know what everyone is doing, and you speak your mind even when it isn't welcome.",
+      "about": "I ran a post office for forty years and knew everyone's business. I'm too old for heavy work, but I'm good at getting people talking and remembering who needs what.",
       "money": 0
     },
     {
@@ -72,8 +117,8 @@
       "firstName": "Nell",
       "lastName": "Finch",
       "age": 27,
-      "about": "I used to run a repair workshop. Give me a broken thing and some tools and I'm happy; give me small talk and I go quiet. I'm trying to get better with people.",
       "personality": "You like to be in control, to make sure everything runs smoothly.",
+      "about": "I used to run a repair workshop. Give me a broken thing and some tools and I'm happy; give me small talk and I go quiet. I'm trying to get better with people.",
       "money": 0
     },
     {
@@ -81,8 +126,8 @@
       "firstName": "Rosa",
       "lastName": "Pennywhistle",
       "age": 46,
-      "about": "I kept a shop for years and I can't stand waste or mess. I like everything counted, stored and in its place, and I'm sharp about what things are worth.",
       "personality": "You keep careful count of everything, and you never give away what you can trade.",
+      "about": "I kept a shop for years and I can't stand waste or mess. I like everything counted, stored and in its place, and I'm sharp about what things are worth.",
       "money": 0
     },
     {
@@ -90,8 +135,8 @@
       "firstName": "Tom",
       "lastName": "Hartley",
       "age": 31,
-      "about": "I trained as a chef, and I can make a meal out of almost nothing. I'm proud of my cooking and I like feeding people, maybe a little too much.",
       "personality": "You take pride in feeding people, but you expect to be paid for good work.",
+      "about": "I trained as a chef, and I can make a meal out of almost nothing. I'm proud of my cooking and I like feeding people, maybe a little too much.",
       "money": 0
     },
     {
@@ -99,8 +144,8 @@
       "firstName": "Priya",
       "lastName": "Lane",
       "age": 38,
-      "about": "I worked in a busy cafe and always heard the news first. I'm friendly and curious, I paint when I get the chance, and I notice when someone is struggling.",
       "personality": "You want everyone to get along, and you'll share what you have to keep the peace.",
+      "about": "I worked in a busy cafe and always heard the news first. I'm friendly and curious, I paint when I get the chance, and I notice when someone is struggling.",
       "money": 0
     },
     {
@@ -108,8 +153,8 @@
       "firstName": "Ivy",
       "lastName": "Marsh",
       "age": 23,
-      "about": "I was a baker, used to early mornings and hard work. I'm young, fit and restless, and I'd rather be doing something than sitting about.",
       "personality": "You're out for yourself and your own survival.",
+      "about": "I was a baker, used to early mornings and hard work. I'm young, fit and restless, and I'd rather be doing something than sitting about.",
       "money": 0
     },
     {
@@ -117,8 +162,8 @@
       "firstName": "Samuel",
       "lastName": "Okafor",
       "age": 54,
-      "about": "I was a doctor for twenty years. I'm calm and careful, I worry about everyone's health, and I find it hard to say no when someone needs help.",
       "personality": "You worry about everyone's wellbeing and look after the weakest first.",
+      "about": "I was a doctor for twenty years. I'm calm and careful, I worry about everyone's health, and I find it hard to say no when someone needs help.",
       "money": 0
     },
     {
@@ -126,8 +171,8 @@
       "firstName": "Felix",
       "lastName": "Wren",
       "age": 19,
-      "about": "I'm nineteen and I came with almost nothing. I'm cheerful, I make friends easily, and I'm willing to try anything, even if I don't always think it through.",
       "personality": "You trust people easily and believe things will work out if everyone pitches in.",
+      "about": "I'm nineteen and I came with almost nothing. I'm cheerful, I make friends easily, and I'm willing to try anything, even if I don't always think it through.",
       "money": 0
     },
     {
@@ -135,8 +180,8 @@
       "firstName": "Edith",
       "lastName": "Crumb",
       "age": 82,
-      "about": "I'm eighty-two and I've seen hard times before. My knees are bad and I tire quickly, but I have a long memory and plenty of opinions, and I'm still cheerful.",
       "personality": "You've survived hard times by being cautious, and you keep something back for later.",
+      "about": "I'm eighty-two and I've seen hard times before. My knees are bad and I tire quickly, but I have a long memory and plenty of opinions, and I'm still cheerful.",
       "money": 0
     },
     {
@@ -144,8 +189,8 @@
       "firstName": "Marcus",
       "lastName": "Vale",
       "age": 29,
-      "about": "I was a gym instructor. I'm strong, I like a routine, and I like pushing myself, though I can be impatient with people who don't keep up.",
       "personality": "You believe the strong should lead, and you like being the one people follow.",
+      "about": "I was a gym instructor. I'm strong, I like a routine, and I like pushing myself, though I can be impatient with people who don't keep up.",
       "money": 0
     },
     {
@@ -153,8 +198,8 @@
       "firstName": "Lola",
       "lastName": "Brightwater",
       "age": 22,
-      "about": "I love a busy crowd and a loud laugh, and quiet evenings make me restless. I'm good at getting people together, less good at sticking at dull jobs.",
       "personality": "You live for company and fun, and you'll gamble on a risk for a good story.",
+      "about": "I love a busy crowd and a loud laugh, and quiet evenings make me restless. I'm good at getting people together, less good at sticking at dull jobs.",
       "money": 0
     },
     {
@@ -162,8 +207,8 @@
       "firstName": "Danny",
       "lastName": "Cho",
       "age": 20,
-      "about": "I'm better with machines than with people. I like puzzles and working out how things fit together, and I'd sooner build something alone than in a crowd.",
       "personality": "You'd rather work alone and build things well than waste time on talk.",
+      "about": "I'm better with machines than with people. I like puzzles and working out how things fit together, and I'd sooner build something alone than in a crowd.",
       "money": 0
     },
     {
@@ -171,8 +216,8 @@
       "firstName": "Ruby",
       "lastName": "Starling",
       "age": 41,
-      "about": "I ran a pool hall, and I'm used to dealing with all sorts. I'm shrewd and competitive, I drive a hard bargain, and a good game settles any argument.",
       "personality": "You look for the best deal in every exchange, and you always win in the end.",
+      "about": "I ran a pool hall, and I'm used to dealing with all sorts. I'm shrewd and competitive, I drive a hard bargain, and a good game settles any argument.",
       "money": 0
     },
     {
@@ -180,8 +225,8 @@
       "firstName": "Walter",
       "lastName": "Penn",
       "age": 76,
-      "about": "I worked on the railways all my life. I'm slow and steady, I love fishing, and I like to sit by the water and think things over before I act.",
       "personality": "You're patient and steady, and you share freely with anyone who works hard.",
+      "about": "I worked on the railways all my life. I'm slow and steady, I love fishing, and I like to sit by the water and think things over before I act.",
       "money": 0
     },
     {
@@ -189,8 +234,8 @@
       "firstName": "Iris",
       "lastName": "Calloway",
       "age": 33,
-      "about": "I worked at a water treatment works for years, so I know how to make dirty water safe to drink.",
       "personality": "You believe in fairness, and you trade what you make for exactly what it's worth.",
+      "about": "I worked at a water treatment works for years, so I know how to make dirty water safe to drink.",
       "money": 0
     },
     {
@@ -198,8 +243,8 @@
       "firstName": "Bram",
       "lastName": "Kettle",
       "age": 52,
-      "about": "I farmed my family's land until the bank took it. I know soil and seasons better than anyone here.",
       "personality": "You're stubborn and proud, and you don't take orders from anyone.",
+      "about": "I farmed my family's land until the bank took it. I know soil and seasons better than anyone here.",
       "money": 0
     },
     {
@@ -207,8 +252,8 @@
       "firstName": "Juno",
       "lastName": "Reyes",
       "age": 22,
-      "about": "I've never had a proper job. I'm quick to learn and keen to prove I'm worth something.",
       "personality": "You're restless and curious, and you'll try anything once.",
+      "about": "I've never had a proper job. I'm quick to learn and keen to prove I'm worth something.",
       "money": 0
     },
     {
@@ -216,8 +261,8 @@
       "firstName": "Edgar",
       "lastName": "Flint",
       "age": 61,
-      "about": "I was a stonemason for forty years. My hands are tired, but I know how to make a wall that lasts.",
       "personality": "You're blunt and practical, and you value hard work over talk.",
+      "about": "I was a stonemason for forty years. My hands are tired, but I know how to make a wall that lasts.",
       "money": 0
     },
     {
@@ -225,8 +270,8 @@
       "firstName": "Maya",
       "lastName": "Quill",
       "age": 44,
-      "about": "I taught at a village school until it closed. I'm good at getting people to work together.",
       "personality": "You want everyone to learn and do well, and you'll organise people if nobody else will.",
+      "about": "I taught at a village school until it closed. I'm good at getting people to work together.",
       "money": 0
     }
   ]

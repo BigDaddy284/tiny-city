@@ -102,6 +102,8 @@ namespace TinyCity.Simulation.Persistence
                     ["planterId"] = p.PlanterId,
                 }).ToList(),
                 ["brief"] = simulation.Brief.ToJson(),
+                ["firstMeetingDay"] = simulation.FirstMeetingDay,
+                ["roleRequests"] = simulation.RoleRequests.OrderBy(p => p.Key, StringComparer.Ordinal).ToDictionary(p => p.Key, p => (object)p.Value),
                 ["nextSleepSpotNumber"] = simulation.Sleeping.NextSpotNumber,
                 ["sleepSpots"] = simulation.Sleeping.Spots.Select(o => (object)new Dictionary<string, object>
                 {
@@ -356,6 +358,24 @@ namespace TinyCity.Simulation.Persistence
             // Older saves have no brief: their world carries on with none.
             simulation.Brief = GetObject(root, "brief") is Dictionary<string, object> brief ? WorldBrief.Parse(brief, warnings) : WorldBrief.Empty;
 
+            // Older v2 saves have no meetings: their first one is a week from where they are.
+            simulation.FirstMeetingDay = Math.Max(0, GetInt(root, "firstMeetingDay", 0));
+            if (GetObject(root, "roleRequests") is Dictionary<string, object> requests)
+            {
+                foreach (var pair in requests.OrderBy(p => p.Key, StringComparer.Ordinal))
+                {
+                    var wanted = pair.Value as string;
+                    if (simulation.GetResident(pair.Key) == null || wanted == null
+                        || (wanted != TownSimulation.RoleNone && simulation.Brief.Find(wanted) == null))
+                    {
+                        warnings.Add($"A role change asked for by {pair.Key} was dropped: it no longer makes sense.");
+                        continue;
+                    }
+
+                    simulation.SetRoleRequest(pair.Key, wanted == TownSimulation.RoleNone ? wanted : simulation.Brief.Find(wanted).Name);
+                }
+            }
+
             simulation.Sleeping.NextSpotNumber = Math.Max(GetInt(root, "nextSleepSpotNumber", 1), simulation.Sleeping.Spots.Select(o => NumberAfter(o.Id, SleepingSpot.IdPrefix)).DefaultIfEmpty(1).Max());
 
             simulation.Construction.NextSiteNumber = Math.Max(GetInt(root, "nextSiteNumber", 1), simulation.Construction.Sites.Select(o => NumberAfter(o.Id, Building.BuildingRules.SitePrefix)).DefaultIfEmpty(1).Max());
@@ -452,6 +472,7 @@ namespace TinyCity.Simulation.Persistence
                 ["ownsBusinessId"] = r.OwnsBusinessId,
                 ["stallPrice"] = r.StallPricePence,
                 ["role"] = r.Role,
+                ["cleanWater"] = r.CleanWater,
                 ["outlook"] = r.Outlook,
                 ["unpaidWorkMinutes"] = r.UnpaidWorkMinutes,
                 ["health"] = r.Health,
@@ -632,6 +653,7 @@ namespace TinyCity.Simulation.Persistence
             resident.StallPricePence = Math.Max(0, GetLong(data, "stallPrice", 0));
             var role = TextRules.Clean(GetString(data, "role"), WorldBrief.MaxRoleNameLength);
             resident.Role = role.Length == 0 ? null : role;
+            resident.CleanWater = Math.Min(FoodRules.MaxCleanWater, Math.Max(0, GetInt(data, "cleanWater", 0)));
             resident.Outlook = TextRules.Clean(GetString(data, "outlook"), ResidentProfile.MaxPersonalityLength);
             var owns = GetString(data, "ownsBusinessId");
             if (!string.IsNullOrEmpty(owns))

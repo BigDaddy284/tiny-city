@@ -462,6 +462,7 @@ namespace TinyCity.Runtime
             legacyWritten = false;
             simulation.AiRunsEverything = true;
             simulation.FoodMustBeMade = true;
+            simulation.RolesLimitSkills = true;
             Ai?.Attach(simulation);
             RestartCameraCycle();
             // A town with another layout (the city in Play Mode tests) needs its maps drawn afresh.

@@ -583,6 +583,10 @@ namespace TinyCity.Runtime
         {
             var day = Simulation.Time.Day;
             GUILayout.Label(string.IsNullOrEmpty(r.Role) ? "No role chosen" : $"Role: {r.Role}", styles.Text);
+            if (Simulation.RoleRequests.TryGetValue(r.Id, out var wanted))
+            {
+                GUILayout.Label(wanted == TownSimulation.RoleNone ? "Asked to give up their role at the next meeting" : $"Asked to become the {wanted} at the next meeting", styles.Small);
+            }
             GUILayout.Label($"Money: {Money.Format(r.MoneyPence)}", styles.Text);
             GUILayout.Space(4f);
             GUILayout.Label("CARRYING", styles.Section);
@@ -613,6 +617,8 @@ namespace TinyCity.Runtime
             {
                 GUILayout.Label("Materials: none", styles.Small);
             }
+
+            GUILayout.Label($"Clean water: {(r.CleanWater == 0 ? "none" : r.CleanWater.ToString())}", styles.Small);
 
             var anyTool = false;
             foreach (var (tool, tier, usesLeft) in r.Belongings.Tools)

@@ -281,6 +281,22 @@ namespace TinyCity.Simulation.Economy
             || a == ActivityCatalog.Cook || a == ActivityCatalog.EatMeal || a == ActivityCatalog.EatRaw
             || a == ActivityCatalog.RunStall || a == ActivityCatalog.BuyFood;
 
+        /// <summary>Clean water a resident can carry, and how many portions one go of cleaning makes.</summary>
+        public const int MaxCleanWater = 20;
+
+        public const int PurifyPortions = 4;
+
+        /// <summary>
+        /// Tiny City 2 (owner, 5 November: push them to want the clean, better things): health lost to a drink of
+        /// pond water or a raw meal. Clean water and cooked meals cost nothing.
+        /// </summary>
+        public const double DirtyWaterHealthCost = 2;
+
+        public const double RawFoodHealthCost = 2;
+
+        /// <summary>Fish someone without the fishing role catches by hand in one go.</summary>
+        public const int ByHandCatch = 1;
+
         /// <summary>Activities that use up a portion as they start.</summary>
         public static bool EatsFood(ActivityDefinition a) => a == ActivityCatalog.EatMeal || a == ActivityCatalog.EatRaw;
     }
@@ -344,6 +360,15 @@ namespace TinyCity.Simulation.Economy
         /// <summary>Tiny City 2: whether the building rules allow this plan-or-build activity at this plot. Set by the simulation.</summary>
         public Func<Resident, ActivityDefinition, WorldObject, bool> BuildingAllows { get; set; }
 
+        /// <summary>Tiny City 2: whether this resident's role lets them do this activity. Set by the simulation.</summary>
+        public Func<Resident, ActivityDefinition, bool> RoleAllows { get; set; }
+
+        /// <summary>Tiny City 2: whether this activity is their role's own work (a fisher fishing). Set by the simulation.</summary>
+        public Func<Resident, ActivityDefinition, bool> Skilled { get; set; }
+
+        /// <summary>Tiny City 2: whether the town meeting is on at this spot for them to join. Set by the simulation.</summary>
+        public Func<Resident, WorldObject, bool> MeetingAllows { get; set; }
+
         public IReadOnlyDictionary<string, Crop> Crops => crops;
 
         public Crop CropAt(string objectId) => objectId != null && crops.TryGetValue(objectId, out var c) ? c : null;
@@ -365,7 +390,27 @@ namespace TinyCity.Simulation.Economy
         {
             if (food == null || !food.MustBeMade)
             {
-                return !FoodRules.IsMadeFood(a) && !CraftingRules.IsCrafting(a) && !Building.BuildingRules.IsBuilding(a) && !ActivityCatalog.IsInTheWild(a);
+                return !FoodRules.IsMadeFood(a) && !CraftingRules.IsCrafting(a) && !Building.BuildingRules.IsBuilding(a) && !ActivityCatalog.IsOpenLandOnly(a);
+            }
+
+            if (food.RoleAllows != null && !food.RoleAllows(r, a))
+            {
+                return false;
+            }
+
+            if (a == ActivityCatalog.PurifyWater)
+            {
+                return r.CleanWater < FoodRules.MaxCleanWater;
+            }
+
+            if (a == ActivityCatalog.DrinkCleanWater)
+            {
+                return r.CleanWater > 0;
+            }
+
+            if (a == ActivityCatalog.AttendMeeting)
+            {
+                return food.MeetingAllows != null && food.MeetingAllows(r, obj);
             }
 
             if (Building.BuildingRules.IsBuilding(a))
@@ -482,6 +527,12 @@ namespace TinyCity.Simulation.Economy
                 var hoe = r.Belongings.Has(ToolKind.Hoe);
                 var kept = r.Food.Add(FoodKind.Vegetables, FoodRules.HarvestPortions + (hoe ? CraftingRules.HoeExtraPortions : 0), today + FoodRules.VegetableDays);
                 return $"Picked {FoodRules.Portions(FoodKind.Vegetables, kept)} ({what}) at the {obj.Name.ToLowerInvariant()}" + (hoe ? FoodRules.WearNote(r, ToolKind.Hoe) : string.Empty);
+            }
+
+            if (a == ActivityCatalog.CatchFish && Skilled != null && !Skilled(r, a))
+            {
+                var caught = r.Food.Add(FoodKind.Fish, FoodRules.ByHandCatch, today + FoodRules.FishDays);
+                return $"Caught {FoodRules.Portions(FoodKind.Fish, caught)} by hand";
             }
 
             if (a == ActivityCatalog.CatchFish)

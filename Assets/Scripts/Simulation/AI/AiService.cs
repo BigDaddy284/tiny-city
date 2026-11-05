@@ -74,6 +74,7 @@ namespace TinyCity.Simulation.AI
 
         /// <summary>Tiny City 2: the reaction question last sent for each resident.</summary>
         private readonly Dictionary<string, long> requestedReactions = new Dictionary<string, long>();
+        private readonly Dictionary<string, long> requestedMeetingTurns = new Dictionary<string, long>();
 
         /// <summary>Tiny City 2: the building plan question last sent for each resident.</summary>
         private readonly Dictionary<string, long> requestedSketches = new Dictionary<string, long>();
@@ -147,6 +148,7 @@ namespace TinyCity.Simulation.AI
             requestedPlans.Clear();
             skippedPlans.Clear();
             requestedReactions.Clear();
+            requestedMeetingTurns.Clear();
             requestedSketches.Clear();
             insightAskedAt.Clear();
             lastInsightCheckMinute = -1;
@@ -227,6 +229,7 @@ namespace TinyCity.Simulation.AI
             requestedPlans.Clear();
             skippedPlans.Clear();
             requestedReactions.Clear();
+            requestedMeetingTurns.Clear();
             requestedSketches.Clear();
             insightAskedAt.Clear();
             lastInsightCheckMinute = -1;
@@ -514,6 +517,14 @@ namespace TinyCity.Simulation.AI
                 {
                     requestedReactions[r.Id] = r.Reaction.Id;
                     Queue.Enqueue(ReactionRequest(sim, r, r.Reaction), now);
+                }
+
+                var turn = sim.MeetingTurnOf(r.Id);
+                if (turn != null && sim.Time.MinuteOfDay >= TownSimulation.MeetingTurnsFromMinute
+                    && (!requestedMeetingTurns.TryGetValue(r.Id, out var askedTurn) || askedTurn != turn.Id))
+                {
+                    requestedMeetingTurns[r.Id] = turn.Id;
+                    Queue.Enqueue(MeetingRequest(sim, r, turn), now);
                 }
 
                 if (r.Sketch != null && (!requestedSketches.TryGetValue(r.Id, out var askedSketch) || askedSketch != r.Sketch.Id))
@@ -896,6 +907,35 @@ namespace TinyCity.Simulation.AI
                 },
                 () => Simulation == sim && r.IsAlive && r.Sketch == sketch,
                 reason => sim.DropSketch(r.Id, sketch.Id));
+        }
+
+        private AiRequest MeetingRequest(TownSimulation sim, Resident r, PendingMeetingTurn turn)
+        {
+            return new AiRequest(
+                $"meeting:{r.Id}",
+                r.Id,
+                AiPriority.Dialogue,
+                $"{r.FirstName}'s turn at the town meeting",
+                MeetingPrompt.BuildBody(Model, sim, r),
+                text =>
+                {
+                    if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
+                        || !MeetingPrompt.TryParse(content, sim, out var reply, out error))
+                    {
+                        return AiReplyCheck.Invalid(error);
+                    }
+
+                    var outcome = sim.ApplyMeetingTurn(r.Id, turn.Id, reply.Say, reply.Votes);
+                    if (outcome != DecisionOutcome.Applied)
+                    {
+                        return AiReplyCheck.Stale(outcome.ToString());
+                    }
+
+                    AddEvent($"{r.FirstName} spoke at the town meeting");
+                    return AiReplyCheck.Accepted();
+                },
+                () => Simulation == sim && r.IsAlive && sim.MeetingTurnOf(r.Id) == turn,
+                reason => sim.DropMeetingTurn(r.Id, turn.Id));
         }
 
         private AiRequest ReactionRequest(TownSimulation sim, Resident r, PendingReaction reaction)

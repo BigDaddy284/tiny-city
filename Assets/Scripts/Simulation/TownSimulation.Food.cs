@@ -210,7 +210,17 @@ namespace TinyCity.Simulation
             }
 
             string what = null;
-            if (CraftingRules.TryMaterial(item, out var material))
+            if (string.Equals(item.Trim(), CraftingRules.CleanWaterName, StringComparison.OrdinalIgnoreCase) || string.Equals(item.Trim(), "water", StringComparison.OrdinalIgnoreCase))
+            {
+                var n = Math.Min(Math.Min(Math.Max(1, amount), speaker.CleanWater), FoodRules.MaxCleanWater - other.CleanWater);
+                if (n > 0)
+                {
+                    speaker.CleanWater -= n;
+                    other.CleanWater += n;
+                    what = $"{n} portion{(n == 1 ? string.Empty : "s")} of clean water";
+                }
+            }
+            else if (CraftingRules.TryMaterial(item, out var material))
             {
                 var n = Math.Min(Math.Max(1, amount), speaker.Belongings.Count(material));
                 n = Math.Min(n, CraftingRules.MaxMaterials - other.Belongings.Count(material));

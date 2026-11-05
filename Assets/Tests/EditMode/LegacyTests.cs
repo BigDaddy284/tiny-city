@@ -41,7 +41,7 @@ namespace TinyCity.Tests.EditMode
             var lessons = Legacy.ReadLessons(log);
             Assert.That(lessons.Count, Is.GreaterThanOrEqualTo(4));
             Assert.That(lessons[0], Does.Contain($"{sim.Residents.Count} people lived on this land for 1 day,"));
-            Assert.That(lessons[1], Does.StartWith("What they died of: hunger (14), old age (1)."));
+            Assert.That(lessons[1], Does.StartWith($"What they died of: hunger ({sim.Residents.Count - 1}), old age (1)."));
             Assert.That(lessons.Any(l => l.EndsWith("came to believe: Food has to come first, before any building.")), Is.True);
 
             var next = FlatLand.CreateNewGame(lessons: lessons);

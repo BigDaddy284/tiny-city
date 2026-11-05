@@ -119,6 +119,7 @@ namespace TinyCity.Simulation
             FinishFood(r, activity);
             FinishCrafting(r, activity);
             FinishBuilding(r, activity);
+            FinishOpenLand(r, activity);
             if (activity == ActivityCatalog.SeeDoctor && HealthRules.NeedsDoctor(r))
             {
                 r.IllnessTreated = true;

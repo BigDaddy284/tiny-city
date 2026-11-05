@@ -105,6 +105,9 @@ namespace TinyCity.Simulation
             Planner = new ActivityPlanner(world, Pathfinder, this.residents, Economy, () => Time) { Food = Food };
             Food.SellerAt = SellerAt;
             Food.BuildingAllows = BuildingAllows;
+            Food.RoleAllows = (r, a) => !RolesLimitSkills || Brief.MayDo(r.Role, a.Id);
+            Food.Skilled = (r, a) => !RolesLimitSkills || Brief.IsSkilledAt(r.Role, a.Id);
+            Food.MeetingAllows = MeetingAllows;
         }
 
         public TownWorld World { get; }
@@ -252,6 +255,7 @@ namespace TinyCity.Simulation
             StepFood();
             StepSketches();
             StepSleepingGround();
+            StepMeeting();
             foreach (var resident in residents)
             {
                 if (!resident.IsAlive)
@@ -706,6 +710,11 @@ namespace TinyCity.Simulation
             var none = string.Equals(choice.Trim(), RoleNone, StringComparison.OrdinalIgnoreCase);
             var role = none ? null : Brief.Find(choice);
             if ((!none && role == null) || string.Equals(role?.Name, r.Role, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (RequestRoleChange(r, role, none))
             {
                 return;
             }
@@ -1285,6 +1294,18 @@ namespace TinyCity.Simulation
                 r.AddLog(Time, $"Couldn't {activity.Name.ToLowerInvariant()}: {noFood}");
                 r.ResetActivity();
                 return;
+            }
+
+            if (activity == ActivityCatalog.DrinkCleanWater)
+            {
+                if (r.CleanWater <= 0)
+                {
+                    r.AddLog(Time, "Couldn't drink clean water: they had none left");
+                    r.ResetActivity();
+                    return;
+                }
+
+                r.CleanWater--;
             }
 
             if (activity.ItemId != null || activity.UsesGroceries || activity.NeedsOpenBusiness)

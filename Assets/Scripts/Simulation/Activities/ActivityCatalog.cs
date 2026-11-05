@@ -64,7 +64,7 @@ namespace TinyCity.Simulation.Activities
         /// <summary>Tiny City 2: the open land has no taps, toilets or showers, so people drink and wash at the pond and go among the trees.</summary>
         public static readonly ActivityDefinition DrinkFromPond = new ActivityDefinition(
             "drink-pond", "Drink from the pond", "drinking from the pond", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.FishingSpot }, 5,
-            new Dictionary<NeedType, double> { [NeedType.Thirst] = 14 });
+            new Dictionary<NeedType, double> { [NeedType.Thirst] = 10 });
 
         public static readonly ActivityDefinition WashInPond = new ActivityDefinition(
             "wash-pond", "Wash in the pond", "washing in the pond", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.FishingSpot }, 20,
@@ -73,6 +73,24 @@ namespace TinyCity.Simulation.Activities
         public static readonly ActivityDefinition RelieveOutdoors = new ActivityDefinition(
             "toilet-outdoors", "Go to the toilet among the trees", "going to the toilet among the trees", ActivityKind.Care, NeedType.Toilet, new[] { ObjectType.Woodland }, 5,
             new Dictionary<NeedType, double> { [NeedType.Toilet] = 20 });
+
+        /// <summary>Tiny City 2: cleaning pond water to drink, which only the water purifier can do.</summary>
+        public static readonly ActivityDefinition PurifyWater = new ActivityDefinition(
+            "purify-water", "Clean pond water", "cleaning water", ActivityKind.Errand, null, new[] { ObjectType.FishingSpot }, 45,
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.2 });
+
+        /// <summary>Tiny City 2: drinking a portion of clean water, which quenches thirst properly and does no harm.</summary>
+        public static readonly ActivityDefinition DrinkCleanWater = new ActivityDefinition(
+            "drink-clean", "Drink clean water", "drinking clean water", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.Kitchen, ObjectType.Bench, ObjectType.FishingSpot }, 5,
+            new Dictionary<NeedType, double> { [NeedType.Thirst] = 14 });
+
+        /// <summary>Tiny City 2: the weekly town meeting, where issues are raised and role changes are voted on.</summary>
+        public static readonly ActivityDefinition AttendMeeting = new ActivityDefinition(
+            "attend-meeting", "Go to the town meeting", "at the town meeting", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.GatheringSpot }, 90,
+            new Dictionary<NeedType, double> { [NeedType.Social] = 1.0 });
+
+        /// <summary>Activities that exist only on Tiny City 2's open land (never in v1).</summary>
+        public static bool IsOpenLandOnly(ActivityDefinition a) => IsInTheWild(a) || a == PurifyWater || a == DrinkCleanWater || a == AttendMeeting;
 
         /// <summary>Drinking, washing and the toilet out in the open: Tiny City 2 only, where nothing is laid on.</summary>
         public static bool IsInTheWild(ActivityDefinition a) => a == DrinkFromPond || a == WashInPond || a == RelieveOutdoors;
@@ -323,6 +341,7 @@ namespace TinyCity.Simulation.Activities
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
             GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
             PlanBuilding, Build, GatherSticks, GatherLooseStones, DrinkFromPond, WashInPond, RelieveOutdoors,
+            PurifyWater, DrinkCleanWater, AttendMeeting,
         };
 
         private static ActivityDefinition Gather(string id, string name, string verb, ObjectType where, double effort) => new ActivityDefinition(

@@ -125,7 +125,11 @@ namespace TinyCity.Simulation.AI
                 sb.AppendLine(money
                     ? $"Your food: {speaker.Food.Describe(sim.Time.Day)}. Your money: {Economy.Money.Format(speaker.MoneyPence)}."
                     : $"Your food: {speaker.Food.Describe(sim.Time.Day)}.");
-                sb.AppendLine($"Your things: {speaker.Belongings.Describe()}. {listener.FirstName}'s things: {listener.Food.Describe(sim.Time.Day)}; {listener.Belongings.Describe()}.");
+                sb.AppendLine($"Your things: {speaker.Belongings.Describe()}; clean water: {speaker.CleanWater}. {listener.FirstName}'s things: {listener.Food.Describe(sim.Time.Day)}; {listener.Belongings.Describe()}; clean water: {listener.CleanWater}.");
+                if (sim.RolesLimitSkills)
+                {
+                    sb.AppendLine($"You are {(speaker.Role == null ? "without a role" : "the " + speaker.Role)}; {listener.FirstName} is {(listener.Role == null ? "without a role" : "the " + listener.Role)}. Each role does its own work, so you need what others make.");
+                }
                 var offer = session.FoodOffer;
                 if (offer != null && offer.ToId == speaker.Id)
                 {
@@ -150,7 +154,7 @@ namespace TinyCity.Simulation.AI
                         ? " If you want to hand over some of your food, \"give_food\" is how many portions (any number up to what you have) and \"price\" what you ask for them in pounds (0 for a gift); otherwise give_food is 0."
                         : " If you want to hand over some of your food, \"give_food\" is how many portions (any number up to what you have); otherwise give_food is 0.")
                   .Append(" \"accept_food\" is true if you take food you have just been offered.")
-                  .Append($" To hand over a material or tool now, \"give_item\" is one of {string.Join(", ", Economy.CraftingRules.ItemNames)} and \"give_amount\" how many (for materials); otherwise leave give_item out.");
+                  .Append($" To hand over a material or tool now, \"give_item\" is one of {string.Join(", ", Economy.CraftingRules.ItemNames)} and \"give_amount\" how many (for materials and clean water); otherwise leave give_item out.");
                 if (money)
                 {
                     sb.Append(" \"give_money\" is pounds you hand over to them now, as a gift, a wage or a payment (0 for none).");
