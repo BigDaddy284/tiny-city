@@ -354,6 +354,25 @@ namespace TinyCity.Art
                     p.Box(0.3, 0.44, 23, 0.1, 0.03, 0.5, Palette.StoneDark);
                     SnowOn(p, palette, outdoors, 0.24, 0.36, 23, 0.26, 0.3);
                     break;
+                case ObjectType.StickPile:
+                    // Tiny City 2's fallen branches: a loose heap of thin sticks lying every which way.
+                    foreach (var (bu, bv, du, dv, bz) in new[] { (0.2, 0.42, 0.6, 0.07, 0.0), (0.42, 0.2, 0.07, 0.6, 0.0), (0.26, 0.6, 0.5, 0.06, 0.0), (0.3, 0.34, 0.45, 0.06, 3.0), (0.56, 0.3, 0.06, 0.42, 3.0), (0.36, 0.48, 0.38, 0.05, 6.0) })
+                    {
+                        p.Box(bu, bv, bz, du, dv, 3, Palette.WoodLight, Palette.Wood, Palette.WoodDark);
+                    }
+
+                    p.Post(0.66, 0.66, 0, 0.05, 4, Palette.LeafGreen);
+                    SnowOn(p, palette, outdoors, 0.36, 0.48, 9, 0.38, 0.05);
+                    break;
+                case ObjectType.LooseStones:
+                    // Tiny City 2's loose stones: a scatter of small stones on the ground, small enough to carry.
+                    foreach (var (su, sv, sd, sz) in new[] { (0.2, 0.3, 0.16, 5.0), (0.46, 0.22, 0.12, 4.0), (0.62, 0.46, 0.18, 6.0), (0.3, 0.6, 0.14, 4.0), (0.5, 0.66, 0.1, 3.0) })
+                    {
+                        p.Box(su, sv, 0, sd, sd, sz, Palette.Metal, Palette.Stone, Palette.StoneDark);
+                    }
+
+                    SnowOn(p, palette, outdoors, 0.62, 0.46, 6, 0.18, 0.18);
+                    break;
                 case ObjectType.BuildPlot:
                     // Tiny City 2's plot marker: a post with a sign board and a neon strip, and two corner stakes.
                     p.Post(0.5, 0.3, 0, 0.04, 22, Palette.WoodDark);

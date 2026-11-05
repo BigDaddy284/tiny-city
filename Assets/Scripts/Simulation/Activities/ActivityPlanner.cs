@@ -59,6 +59,9 @@ namespace TinyCity.Simulation.Activities
         public const string RelaxActionId = "relax";
         public const string NoTargetId = "none";
 
+        /// <summary>The target of something done on open ground wherever the resident chooses (Tiny City 2): the AI names the spot.</summary>
+        public const string GroundTargetId = "ground";
+
         public FreeTimeOption(ActivityDefinition activity, WorldObject target, int distance)
         {
             Activity = activity;
@@ -72,6 +75,12 @@ namespace TinyCity.Simulation.Activities
         {
             Partner = partner;
         }
+
+        /// <summary>Planting or building on open ground at a spot the AI names (Tiny City 2).</summary>
+        public static FreeTimeOption OnGround(ActivityDefinition activity) => new FreeTimeOption(activity, null, 0) { IsGround = true };
+
+        /// <summary>True when the target is a spot on open ground that the answer names, not an object.</summary>
+        public bool IsGround { get; private set; }
 
         /// <summary>Null for relaxing.</summary>
         public ActivityDefinition Activity { get; }
@@ -87,7 +96,7 @@ namespace TinyCity.Simulation.Activities
 
         public string ActionId => Activity?.Id ?? RelaxActionId;
 
-        public string TargetId => Target?.Id ?? Partner?.Id ?? NoTargetId;
+        public string TargetId => IsGround ? GroundTargetId : Target?.Id ?? Partner?.Id ?? NoTargetId;
 
         /// <summary>What it costs, in pence; 0 if free.</summary>
         public long PricePence { get; internal set; }
@@ -572,6 +581,11 @@ namespace TinyCity.Simulation.Activities
                     .ThenBy(o => o.option.Target.Id, StringComparer.Ordinal)
                     .Take(MaxTargetsPerActivity)
                     .Select(o => o.option));
+                if (ActivityCatalog.IsDoneOnGround(activity) && world.TryGetMap(resident.Location.MapId, out var here) && here.IsExterior
+                    && FoodSupply.Allows(Food, resident, activity, null, time.Day))
+                {
+                    options.Add(FreeTimeOption.OnGround(activity));
+                }
             }
 
             options.Add(new FreeTimeOption(null, null, 0));

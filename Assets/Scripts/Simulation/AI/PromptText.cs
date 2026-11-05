@@ -189,30 +189,118 @@ namespace TinyCity.Simulation.AI
             var plots = sim.World.Objects.Where(o => o.Type == World.ObjectType.GardenPlot).ToList();
             if (plots.Count > 0)
             {
-                sb.Append(" Garden: ").Append(string.Join("; ", plots.Select(o =>
+                sb.Append(" Crops: ").Append(string.Join("; ", plots.Take(MaxCropsListed).Select(o =>
                 {
                     var crop = sim.Food.CropAt(o.Id);
-                    return $"{o.Name} is {(crop == null ? "empty, ready for planting" : crop.Describe(sim.Time.Day))}";
+                    var patch = sim.Food.PatchOf(o.Id);
+                    var whose = patch == null ? string.Empty : patch.PlanterId == r.Id ? ", yours" : sim.GetResident(patch.PlanterId) is Resident planter ? $", {planter.FirstName}'s" : string.Empty;
+                    var at = $" at ({o.Location.Position.X}, {o.Location.Position.Y})";
+                    return $"{o.Name}{at}{whose}: {(crop == null ? "dug, nothing planted yet" : crop.Describe(sim.Time.Day))}";
                 }))).Append('.');
             }
 
             sb.AppendLine();
             sb.AppendLine($"Your things: {r.Belongings.Describe()}. {Economy.CraftingRules.RecipesText()}");
-            var project = sim.Construction.Of(r.Id);
-            if (project == null)
+            var mine = sim.Construction.OwnedBy(r.Id).ToList();
+            if (mine.Count == 0)
             {
-                var free = sim.World.Objects.Count(o => o.Type == World.ObjectType.BuildPlot && sim.Construction.At(o.Id) == null);
-                sb.AppendLine($"Building: the open land, through the gate at the bottom of the city, has {free} empty plot{(free == 1 ? string.Empty : "s")} where anyone can plan a building of their own and build it from blocks of the materials they gather; one with a bed becomes their home once it is finished.");
+                sb.AppendLine("Building: anyone can choose a spot on open ground and build whatever they like there from blocks of the materials they gather; one with a bed becomes their home once it is finished.");
             }
-            else if (project.IsFinished)
+
+            foreach (var project in mine)
             {
-                sb.AppendLine($"Your building: you built a {project.Plan.Name} on the open land{(project.Plan.IsHome ? (r.BedObjectId == Building.Construction.BedIdOf(project.PlotId) ? ", and you live in it" : string.Empty) : string.Empty)}.");
+                var at = $"at ({project.Corner.Position.X}, {project.Corner.Position.Y})";
+                if (project.IsFinished)
+                {
+                    sb.AppendLine($"Your building: you built a {project.Plan.Name} {at}{(project.Plan.IsHome && r.BedObjectId == Building.Construction.BedIdOf(project.SiteId) ? ", and you live in it" : string.Empty)}.");
+                }
+                else
+                {
+                    var needs = string.Join(", ", project.StillNeeded().Select(n => $"{n.count} {Economy.CraftingRules.Name(n.material)}"));
+                    var home = project.Plan.IsHome ? " It has a bed, so it will be your home once finished." : string.Empty;
+                    sb.AppendLine($"Your building: a {project.Plan.Name} {at}, {project.Placed} of {project.Plan.Cells.Count} blocks laid; it still needs {(needs.Length > 0 ? needs : "no more materials")}.{home}");
+                }
             }
-            else
+        }
+
+        /// <summary>The most crops listed in a prompt.</summary>
+        public const int MaxCropsListed = 12;
+
+        /// <summary>How many free spots near them a prompt suggests, and how far it looks for them.</summary>
+        public const int FreeSpotsListed = 4;
+
+        public const int FreeSpotSearch = 12;
+
+        /// <summary>
+        /// Tiny City 2: the land around them in squares, for choosing a spot to plant or build: where they are, where
+        /// things are, and some free ground nearby. It only describes; any free spot they can reach will do.
+        /// </summary>
+        public static void AppendLand(StringBuilder sb, TownSimulation sim, Resident r)
+        {
+            var map = sim.World.GetMap(r.Location.MapId);
+            var here = r.Location.Position;
+            sb.AppendLine($"The {map.Name.ToLowerInvariant()} is a grid of squares from (0, 0) to ({map.Width - 1}, {map.Height - 1}); you are at ({here.X}, {here.Y}).");
+            var places = new List<string>();
+            string Span(IEnumerable<World.GridPos> tiles)
             {
-                var needs = string.Join(", ", project.StillNeeded().Select(n => $"{n.count} {Economy.CraftingRules.Name(n.material)}"));
-                var home = project.Plan.IsHome ? " It has a bed, so it will be your home once finished." : string.Empty;
-                sb.AppendLine($"Your building: a {project.Plan.Name} on the open land, {project.Placed} of {project.Plan.Cells.Count} blocks laid; it still needs {(needs.Length > 0 ? needs : "no more materials")}.{home}");
+                var list = tiles.ToList();
+                int x0 = list.Min(t => t.X), x1 = list.Max(t => t.X), y0 = list.Min(t => t.Y), y1 = list.Max(t => t.Y);
+                return x0 == x1 && y0 == y1 ? $"({x0}, {y0})" : $"x {x0}-{x1}, y {y0}-{y1}";
+            }
+
+            foreach (var (type, word) in new[] { (World.TileType.Garden, "soil for crops"), (World.TileType.Water, "water") })
+            {
+                var tiles = new List<World.GridPos>();
+                for (var y = 0; y < map.Height; y++)
+                {
+                    for (var x = 0; x < map.Width; x++)
+                    {
+                        if (map.GetTile(new World.GridPos(x, y)) == type)
+                        {
+                            tiles.Add(new World.GridPos(x, y));
+                        }
+                    }
+                }
+
+                if (tiles.Count > 0)
+                {
+                    places.Add($"{word} at {Span(tiles)}");
+                }
+            }
+
+            foreach (var group in sim.World.Objects.Where(o => o.Location.MapId == map.Id && o.Type != World.ObjectType.GardenPlot && o.Type != World.ObjectType.BuildPlot && !Building.BuildingRules.IsBuilt(o))
+                .GroupBy(o => o.Name).OrderBy(g => g.Min(o => o.Id), System.StringComparer.Ordinal))
+            {
+                var name = group.Key.ToLowerInvariant();
+                places.Add($"{(group.Count() == 1 ? name : name.EndsWith("ch") || name.EndsWith("s") ? name + "es" : name + "s")} at {Span(group.Select(o => o.Location.Position))}");
+            }
+
+            foreach (var p in sim.Construction.Projects.Values.Where(p => p.Corner.MapId == map.Id).OrderBy(p => p.SiteId, System.StringComparer.Ordinal))
+            {
+                var owner = p.OwnerId == r.Id ? "your" : sim.GetResident(p.OwnerId) is Resident o ? $"{o.FirstName}'s" : "a";
+                places.Add($"{owner} {p.Plan.Name} at {Span(p.Footprint.Select(t => t.Position))}");
+            }
+
+            sb.AppendLine($"Where things are: {string.Join("; ", places)}.");
+            var free = new List<string>();
+            for (var d = 1; d <= FreeSpotSearch && free.Count < FreeSpotsListed; d++)
+            {
+                for (var dy = -d; dy <= d && free.Count < FreeSpotsListed; dy++)
+                {
+                    foreach (var dx in new[] { -(d - System.Math.Abs(dy)), d - System.Math.Abs(dy) }.Distinct())
+                    {
+                        var spot = new World.Location(map.Id, here.X + dx, here.Y + dy);
+                        if (free.Count < FreeSpotsListed && !(map.InBounds(spot.Position) && map.GetTile(spot.Position) == World.TileType.Path) && sim.GroundProblem(r, spot) == null)
+                        {
+                            free.Add($"({spot.Position.X}, {spot.Position.Y})");
+                        }
+                    }
+                }
+            }
+
+            if (free.Count > 0)
+            {
+                sb.AppendLine($"Some free ground near you: {string.Join(", ", free)}; anywhere else that is free will do too.");
             }
         }
 

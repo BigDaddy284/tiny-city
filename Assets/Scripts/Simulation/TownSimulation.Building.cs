@@ -10,25 +10,21 @@ using TinyCity.Simulation.World;
 
 namespace TinyCity.Simulation
 {
-    /// <summary>Tiny City 2's block building: a resident plans a building for an empty plot (the AI sketches it, the game checks it), then lays it block by block.</summary>
+    /// <summary>Tiny City 2's block building: a resident picks a spot and plans a building there (the AI sketches it, the game checks it fits), then lays it block by block.</summary>
     public sealed partial class TownSimulation
     {
         private long nextSketchId = 1;
 
-        private bool BuildingAllows(Resident r, ActivityDefinition a, WorldObject plot)
+        private bool BuildingAllows(Resident r, ActivityDefinition a, WorldObject obj)
         {
-            if (plot == null || plot.Type != ObjectType.BuildPlot)
-            {
-                return false;
-            }
-
-            var project = Construction.At(plot.Id);
             if (a == ActivityCatalog.PlanBuilding)
             {
-                return project == null && Construction.Of(r.Id) == null && r.Sketch == null
-                    && !residents.Any(o => o.IsAlive && o.Sketch != null && o.Sketch.PlotId == plot.Id);
+                // Anywhere they choose (no object; a site they chose before and never planned is let go), or back at that site.
+                return r.Sketch == null && (obj == null
+                    || (Construction.SiteOf(obj.Id) is Site site && site.OwnerId == r.Id && Construction.At(site.Id) == null));
             }
 
+            var project = Construction.At(obj?.Id);
             return project != null && project.OwnerId == r.Id && project.Next is BlockCell next && (!project.NextTakesMaterial || r.Belongings.Count(next.Material) > 0);
         }
 
@@ -49,14 +45,26 @@ namespace TinyCity.Simulation
                 if (r.Sketch != null && Time.TotalMinutes - r.Sketch.AskedMinute >= BuildingRules.SketchWaitMinutes)
                 {
                     r.AddLog(Time, "Gave up on planning a building for now");
+                    DropUnplannedSite(r);
                     r.Sketch = null;
                 }
             }
         }
 
+        /// <summary>A site chosen but never planned is let go, so the ground is free again.</summary>
+        private void DropUnplannedSite(Resident r)
+        {
+            var site = Construction.UnplannedOf(r.Id);
+            if (site != null && !(r.TargetObjectId == site.Id && (r.State == ResidentState.Travelling || r.State == ResidentState.Performing)))
+            {
+                Construction.RemoveSite(site.Id);
+            }
+        }
+
         /// <summary>
-        /// The AI's plan for the plot a resident is planning: accepted only if it passes <see cref="BuildPlan.TryParse"/>
-        /// and the plot is still free; <paramref name="error"/> says what was wrong so the question can be asked again.
+        /// The AI's plan for the site a resident is planning: accepted only if it passes <see cref="BuildPlan.TryParse"/>
+        /// and fits on the ground there (<see cref="Construction.CheckPlacement"/>); <paramref name="error"/> says what was
+        /// wrong so the question can be asked again.
         /// </summary>
         public DecisionOutcome ApplySketch(string residentId, long sketchId, string name, int height, IReadOnlyList<string> rows, out string error)
         {
@@ -77,8 +85,8 @@ namespace TinyCity.Simulation
                 return DecisionOutcome.Stale;
             }
 
-            var plotId = r.Sketch.PlotId;
-            if (!World.TryGetObject(plotId, out var plot) || Construction.At(plotId) != null || Construction.Of(r.Id) != null)
+            var site = Construction.SiteOf(r.Sketch.SiteId);
+            if (site == null || site.OwnerId != r.Id || Construction.At(site.Id) != null)
             {
                 r.Sketch = null;
                 return DecisionOutcome.Stale;
@@ -89,11 +97,18 @@ namespace TinyCity.Simulation
                 return DecisionOutcome.InvalidText;
             }
 
+            error = Construction.CheckPlacement(site.Corner, plan, site.Id, _ => false, r.Location, out var standAt);
+            if (error != null)
+            {
+                return DecisionOutcome.InvalidText;
+            }
+
             r.Sketch = null;
-            Construction.Add(new Project(plotId, r.Id, plan, 0, Time.Day));
+            Construction.Add(new Project(site.Id, r.Id, site.Corner, plan, 0, Time.Day), standAt);
             var needs = string.Join(", ", plan.Needs().Select(n => $"{n.count} {CraftingRules.Name(n.material)}"));
-            r.AddLog(Time, $"Planned a {plan.Name} on the {plot.Name.ToLowerInvariant()}: {plan.Cells.Count} blocks ({needs})");
-            Memories.Add(r.Id, Time, MemoryType.Event, 5, $"I planned a {plan.Name} on the {plot.Name.ToLowerInvariant()}. It will take {needs}.", tags: new[] { "building", plotId });
+            var where = $"({site.Corner.Position.X}, {site.Corner.Position.Y})";
+            r.AddLog(Time, $"Planned a {plan.Name} at {where}: {plan.Cells.Count} blocks ({needs})");
+            Memories.Add(r.Id, Time, MemoryType.Event, 5, $"I planned a {plan.Name} at {where} on the {World.GetMap(site.Corner.MapId).Name.ToLowerInvariant()}. It will take {needs}.", tags: new[] { "building", site.Id });
             return DecisionOutcome.Applied;
         }
 
@@ -105,6 +120,7 @@ namespace TinyCity.Simulation
                 return false;
             }
 
+            DropUnplannedSite(r);
             r.Sketch = null;
             return true;
         }
@@ -132,10 +148,9 @@ namespace TinyCity.Simulation
             r.AddLog(Time, stoppedBy != null && !project.IsFinished ? $"{what}: {stoppedBy}" : what);
             if (project.IsFinished)
             {
-                World.TryGetObject(project.PlotId, out var plot);
-                Memories.Add(r.Id, Time, MemoryType.Event, 7, $"I finished building my {project.Plan.Name}, all {project.Plan.Cells.Count} blocks of it.", tags: new[] { "building", "built", project.PlotId });
+                Memories.Add(r.Id, Time, MemoryType.Event, 7, $"I finished building my {project.Plan.Name}, all {project.Plan.Cells.Count} blocks of it.", tags: new[] { "building", "built", project.SiteId });
                 var movedIn = MoveIntoBuilding(r, project);
-                History.Add(Time, TownEventKind.Built, $"{r.FullName} finished building a {project.Plan.Name} on the {plot?.Name.ToLowerInvariant() ?? "plot"}{(movedIn ? " and moved in" : string.Empty)}.", new[] { r.Id });
+                History.Add(Time, TownEventKind.Built, $"{r.FullName} finished building a {project.Plan.Name} on the {World.GetMap(project.Corner.MapId).Name.ToLowerInvariant()}{(movedIn ? " and moved in" : string.Empty)}.", new[] { r.Id });
             }
         }
 
@@ -145,7 +160,7 @@ namespace TinyCity.Simulation
         /// </summary>
         private bool MoveIntoBuilding(Resident r, Project project)
         {
-            var bedId = Construction.BedIdOf(project.PlotId);
+            var bedId = Construction.BedIdOf(project.SiteId);
             if (!project.Plan.IsHome || !World.TryGetObject(bedId, out var bed) || r.BedObjectId == bedId)
             {
                 return false;
@@ -161,7 +176,7 @@ namespace TinyCity.Simulation
             }
 
             r.AddLog(Time, $"Moved into the {project.Plan.Name}");
-            Memories.Add(r.Id, Time, MemoryType.Event, 8, $"I moved into the {project.Plan.Name} I built myself{(oldHome == null ? ", after having nowhere to live" : string.Empty)}. It's my home now.", tags: new[] { "home", "building", project.PlotId });
+            Memories.Add(r.Id, Time, MemoryType.Event, 8, $"I moved into the {project.Plan.Name} I built myself{(oldHome == null ? ", after having nowhere to live" : string.Empty)}. It's my home now.", tags: new[] { "home", "building", project.SiteId });
             return true;
         }
     }

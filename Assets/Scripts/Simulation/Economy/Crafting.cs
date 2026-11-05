@@ -53,9 +53,10 @@ namespace TinyCity.Simulation.Economy
                 return 0;
             }
 
-            if (toolTier == 0)
+            if (MinTier == 0)
             {
-                return CraftingRules.WoodByHand;
+                // Picked up by hand: a tool doesn't help.
+                return BaseYield;
             }
 
             return BaseYield + toolTier - Math.Max(MinTier, 1);
@@ -183,8 +184,8 @@ namespace TinyCity.Simulation.Economy
         /// <summary>Tools come in wooden (1), stone (2) and iron (3).</summary>
         public const int MaxTier = 3;
 
-        /// <summary>Wood from one go at the woodland by hand.</summary>
-        public const int WoodByHand = 1;
+        /// <summary>Wood or stone from one go of picking it up by hand.</summary>
+        public const int ByHand = 1;
 
         /// <summary>Extra vegetables picked with a hoe, and extra fish caught with a rod.</summary>
         public const int HoeExtraPortions = 6;
@@ -197,7 +198,9 @@ namespace TinyCity.Simulation.Economy
         /// <summary>Each material, the tool and tier it needs, and the yield: higher tiers need better tools and give less.</summary>
         public static readonly IReadOnlyDictionary<ActivityDefinition, Gathering> Gatherings = new Dictionary<ActivityDefinition, Gathering>
         {
-            [ActivityCatalog.GatherWood] = new Gathering(MaterialKind.Wood, ToolKind.Axe, 0, 4),
+            [ActivityCatalog.GatherSticks] = new Gathering(MaterialKind.Wood, ToolKind.Axe, 0, ByHand),
+            [ActivityCatalog.GatherLooseStones] = new Gathering(MaterialKind.Stone, ToolKind.Pickaxe, 0, ByHand),
+            [ActivityCatalog.GatherWood] = new Gathering(MaterialKind.Wood, ToolKind.Axe, 1, 4),
             [ActivityCatalog.GatherHardwood] = new Gathering(MaterialKind.Hardwood, ToolKind.Axe, 2, 2),
             [ActivityCatalog.GatherHeartwood] = new Gathering(MaterialKind.Heartwood, ToolKind.Axe, 3, 1),
             [ActivityCatalog.GatherStone] = new Gathering(MaterialKind.Stone, ToolKind.Pickaxe, 1, 3),
@@ -285,9 +288,9 @@ namespace TinyCity.Simulation.Economy
         public static string RecipesText()
         {
             var gather = string.Join("; ", Gatherings.Values.Select(g =>
-                $"{Name(g.Material)} ({(g.MinTier == 0 ? $"{WoodByHand} by hand, {g.BaseYield} with a wooden axe" : $"needs a {TierWord(g.MinTier)} {Name(g.Tool)} or better, {g.BaseYield} a go")})"));
+                $"{Name(g.Material)} ({(g.MinTier == 0 ? $"{g.BaseYield} a go picked up by hand" : $"needs a {TierWord(g.MinTier)} {Name(g.Tool)} or better, {g.BaseYield} a go")})"));
             var make = string.Join("; ", Recipes.Values.Select(r => $"{Name(r.Tool, r.Tier)}: {r.Describe()}"));
-            return $"Higher-tier materials need better tools and come in smaller amounts, and each better tool gathers one more of the lower tiers. Gather at the woodland and rocks: {gather}. "
+            return $"Higher-tier materials need better tools and come in smaller amounts, and each better tool gathers one more of the lower tiers. Fallen branches and loose stones are picked up by hand; trees are chopped and rocks broken with tools: {gather}. "
                 + $"At a workbench: {make}; a better tool replaces a worse one. Wooden tools last {UsesFor(1)} uses, stone {UsesFor(2)}, iron {UsesFor(3)}. "
                 + $"A hoe gives {HoeExtraPortions} more vegetables when picking crops and a rod {RodExtraPortions} more fish. Heartwood, crystal and stone are kept for building.";
         }

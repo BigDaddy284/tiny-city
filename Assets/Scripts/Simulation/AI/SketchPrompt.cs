@@ -37,10 +37,12 @@ namespace TinyCity.Simulation.AI
         public static string UserText(TownSimulation sim, Resident r, PendingSketch sketch)
         {
             var size = BuildingRules.GridSize;
-            var tiles = BuildingRules.PlotSize;
             var sb = new StringBuilder();
-            sim.World.TryGetObject(sketch.PlotId, out var plot);
-            sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are at {plot?.Name.ToLowerInvariant() ?? "an empty plot"} on the open land, an empty square of ground {tiles} by {tiles} paces, planning something to build on it with blocks.");
+            var site = sim.Construction.SiteOf(sketch.SiteId);
+            var corner = site?.Corner ?? r.Location;
+            var room = Room(sim, corner, sketch.SiteId);
+            sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are at ({corner.Position.X}, {corner.Position.Y}) on the {sim.World.GetMap(corner.MapId).Name.ToLowerInvariant()}, the spot you chose to build on, planning what to build there with blocks. "
+                + $"Your plan's back-left corner goes on this spot and it reaches towards bigger x and y; the clear ground here is about {room} by {room} paces (at most {BuildingRules.MaxSize} by {BuildingRules.MaxSize}). Make it whatever size and shape you like within that.");
             sb.AppendLine($"Your things: {r.Belongings.Describe()}.");
             PromptText.AppendMemories(sb, sim.Memories.Recall(r.Id, sim.Time, new[] { "building", "crafting" }, MemoryCount, sim.Memories.FocusOf(r.Id)));
             sb.Append($"Draw it from above as up to {size} rows of up to {size} letters, the back row first. Each letter is a small square of ground, half a pace each way, and a block letter is a column of blocks there: ")
@@ -51,6 +53,29 @@ namespace TinyCity.Simulation.AI
               .Append($"Each {CraftingRules.Name(MaterialKind.Wood)} or other material you gather makes {BuildingRules.BlocksPerMaterial} blocks, so plan for what you have or can get. ")
               .Append("For example a small wooden home 4 high: \"WWWWWWWWWW\", \"W........W\", \"W.B......W\", \"W........W\", \"W........W\", \"W........W\", \"W........W\", \"WWWWDWWWWW\". Give it a short \"name\", like \"wooden cabin\" or \"stone tower\".");
             return sb.ToString();
+        }
+
+        /// <summary>How many paces each way the open ground runs from the corner (a square), up to <see cref="BuildingRules.MaxSize"/>.</summary>
+        public static int Room(TownSimulation sim, World.Location corner, string siteId)
+        {
+            if (!sim.World.TryGetMap(corner.MapId, out var map))
+            {
+                return 0;
+            }
+
+            bool Free(int x, int y)
+            {
+                var l = new World.Location(corner.MapId, corner.Position.X + x, corner.Position.Y + y);
+                return map.IsWalkable(l.Position) && !sim.Construction.IsClaimed(l) && !sim.World.Objects.Any(o => o.Location == l && o.Id != siteId);
+            }
+
+            var k = 0;
+            while (k < BuildingRules.MaxSize && Enumerable.Range(0, k + 1).All(i => Free(k, i) && Free(i, k)))
+            {
+                k++;
+            }
+
+            return k;
         }
 
         public static Dictionary<string, object> Schema() => new Dictionary<string, object>

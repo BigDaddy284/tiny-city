@@ -86,7 +86,7 @@ namespace TinyCity.Tests.EditMode
             Do(sim, ActivityCatalog.PlantCrops);
             var plot = StarterTown.GardenPlotId;
             Assert.That(sim.Food.CropAt(plot), Is.Not.Null);
-            Assert.That(Option(sim, ActivityCatalog.PlantCrops), Is.Null, "the plot is taken");
+            Assert.That(sim.Planner.FreeTimeOptions(r, everything: true).Any(o => o.Activity == ActivityCatalog.PlantCrops && o.TargetId == plot), Is.False, "the plot is taken");
             Assert.That(Option(sim, ActivityCatalog.Harvest), Is.Null, "not ready yet");
 
             Do(sim, ActivityCatalog.WaterCrops);
@@ -102,6 +102,78 @@ namespace TinyCity.Tests.EditMode
             Assert.That(r.Food.Count(FoodKind.Vegetables), Is.EqualTo(before + FoodRules.HarvestPortions));
             Assert.That(sim.Food.CropAt(plot), Is.Null);
             Assert.That(sim.Memories.ForResident(r.Id).Any(m => m.Summary.StartsWith("I picked")), Is.True);
+        }
+
+        [Test]
+        public void Crops_ArePlanted_WhereverTheyChoose_AsWhateverTheyLike()
+        {
+            var sim = FlatLand.CreateNewGame();
+            sim.AiRunsEverything = true;
+            sim.FoodMustBeMade = true;
+            sim.AiDecisionsEnabled = true;
+            var r = sim.Residents[0];
+            sim.Tick();
+            Assert.That(sim.World.ObjectsOfType(TinyCity.Simulation.World.ObjectType.GardenPlot).Any(), Is.False, "no garden plots: they plant where they like");
+            var ground = sim.FreeTimeOptionsFor(r).Single(o => o.Activity == ActivityCatalog.PlantCrops);
+            Assert.That(ground.IsGround, Is.True);
+            Assert.That(ground.TargetId, Is.EqualTo(FreeTimeOption.GroundTargetId));
+
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null), Is.EqualTo(DecisionOutcome.InvalidTarget), "a spot is needed");
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 22, 31, "rice"), Is.EqualTo(DecisionOutcome.InvalidTarget), "not in the pond");
+            Assert.That(r.Log.Last().Text, Does.Contain("isn't open ground"));
+            var bed = sim.World.Objects.First(o => o.Type == TinyCity.Simulation.World.ObjectType.Bed);
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, bed.Location.Position.X, bed.Location.Position.Y, "rice"), Is.EqualTo(DecisionOutcome.InvalidTarget), "not on a bed");
+
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 40, 10, "Purple Potatoes"), Is.EqualTo(DecisionOutcome.Applied), "anywhere on open ground, not just the soil");
+            var patch = sim.Food.Patches.Single();
+            Assert.That((patch.What, patch.PlanterId, patch.Location.Position.X, patch.Location.Position.Y), Is.EqualTo(("purple potatoes", r.Id, 40, 10)));
+            Assert.That(r.TargetObjectId, Is.EqualTo(patch.Id));
+            for (var i = 0; i < 300 && r.State != ResidentState.Deciding; i++)
+            {
+                sim.Tick();
+            }
+
+            Assert.That(sim.Food.CropAt(patch.Id), Is.Not.Null, "planted");
+            Assert.That(r.Log.Any(e => e.Text.Contains("Planted purple potatoes")), Is.True);
+            Assert.That(sim.GroundProblem(r, patch.Location), Is.Not.Null, "nobody plants on top of it");
+
+            var crop = sim.Food.CropAt(patch.Id);
+            crop.WateredDays = FoodRules.WateredDaysToGrow;
+            var option = sim.FreeTimeOptionsFor(r).Single(o => o.Activity == ActivityCatalog.Harvest);
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Food", "Ready"), Is.EqualTo(DecisionOutcome.Applied));
+            for (var i = 0; i < 300 && r.State != ResidentState.Deciding; i++)
+            {
+                sim.Tick();
+            }
+
+            Assert.That(r.Food.Count(FoodKind.Vegetables), Is.EqualTo(FoodRules.HarvestPortions));
+            Assert.That(sim.Food.Patches, Is.Empty, "the patch is gone once picked");
+            Assert.That(sim.World.TryGetObject(patch.Id, out _), Is.False);
+            Assert.That(sim.GroundProblem(r, patch.Location), Is.Null, "and the ground is free again");
+        }
+
+        [Test]
+        public void CropPatches_SurviveASave()
+        {
+            var sim = FlatLand.CreateNewGame();
+            sim.AiRunsEverything = true;
+            sim.FoodMustBeMade = true;
+            sim.AiDecisionsEnabled = true;
+            var r = sim.Residents[0];
+            sim.Tick();
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 20, 23, "beans"), Is.EqualTo(DecisionOutcome.Applied));
+            sim.Advance(120);
+            Assert.That(sim.Food.Patches.Count(), Is.EqualTo(1));
+
+            var result = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld());
+            Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
+            Assert.That(result.Warnings, Is.Empty);
+            var loaded = result.Simulation;
+            var patch = loaded.Food.Patches.Single();
+            Assert.That((patch.Id, patch.What, patch.PlanterId), Is.EqualTo((sim.Food.Patches.Single().Id, "beans", r.Id)));
+            Assert.That(loaded.Food.CropAt(patch.Id), Is.Not.Null);
+            Assert.That(loaded.World.TryGetObject(patch.Id, out var obj) && obj.Location == patch.Location, Is.True);
+            Assert.That(loaded.Food.NextPatchNumber, Is.EqualTo(sim.Food.NextPatchNumber));
         }
 
         [Test]
@@ -174,7 +246,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That((crop.PlantedDay, crop.WateredDays, crop.LastWateredDay), Is.EqualTo((sim.Food.CropAt(StarterTown.GardenPlotId).PlantedDay, 1, sim.Time.Day)));
 
             var prompt = DecisionPrompt.UserText(loaded, lr, loaded.Planner.FreeTimeOptions(lr, everything: true), new TinyCity.Simulation.Memory.MemoryRecord[0]);
-            Assert.That(prompt, Does.Contain("Your food:").And.Contain("2 fish").And.Contain("Garden:").And.Contain("watered today"));
+            Assert.That(prompt, Does.Contain("Your food:").And.Contain("2 fish").And.Contain("Crops:").And.Contain("watered today"));
             Assert.That(prompt, Does.Not.Contain("food at home for"));
         }
     

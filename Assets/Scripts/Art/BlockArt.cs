@@ -18,7 +18,7 @@ namespace TinyCity.Art
         public const int CanvasWidth = 72;
         public const int CanvasHeight = 40 + (BlockHeight * BuildingRules.MaxHeight);
 
-        /// <summary>The blocks standing on a map, one picture per tile, and the beds of finished homes.</summary>
+        /// <summary>The blocks standing on a map, one picture per tile, and what residents have put there: beds of finished homes, crop patches and building sites (until the first block is down).</summary>
         public static List<ArtPiece> Pieces(TownWorld world, Construction construction, TileMap map, Palette palette)
         {
             var pieces = new List<ArtPiece>();
@@ -28,24 +28,24 @@ namespace TinyCity.Art
             }
 
             var per = BuildingRules.CellsPerTile;
-            foreach (var project in construction.Projects.Values.OrderBy(p => p.PlotId, System.StringComparer.Ordinal))
+            foreach (var project in construction.Projects.Values.Where(p => p.Corner.MapId == map.Id).OrderBy(p => p.SiteId, System.StringComparer.Ordinal))
             {
-                if (!world.TryGetObject(project.PlotId, out var plot) || plot.Location.MapId != map.Id)
-                {
-                    continue;
-                }
-
                 foreach (var tileCells in project.PlacedCells.GroupBy(c => (x: c.X / per, y: c.Y / per)).OrderBy(g => g.Key.y).ThenBy(g => g.Key.x))
                 {
-                    var tile = BuildingRules.TileOf(plot, tileCells.First());
+                    var tile = BuildingRules.TileOf(project.Corner, tileCells.First());
                     var canvas = Tile(tileCells.ToList(), palette);
                     pieces.Add(new ArtPiece($"Blocks {tile.Position.X},{tile.Position.Y}", canvas, tile.Position.X, tile.Position.Y, tile.Position.X, tile.Position.Y, ArtLayer.Solid));
                 }
+            }
 
-                if (world.TryGetObject(Construction.BedIdOf(project.PlotId), out var bed) && bed.Location.MapId == map.Id)
+            // What residents put in the world: a finished home's bed (indoors, in its building), crop patches and building sites.
+            foreach (var obj in world.Placed.Where(o => o.Location.MapId == map.Id))
+            {
+                var p = obj.Location.Position;
+                var started = obj.Type == ObjectType.BuildPlot && construction.At(obj.Id) is Project project && project.Placed > 0;
+                if (!started)
                 {
-                    var p = bed.Location.Position;
-                    pieces.Add(new ArtPiece(bed.Name, FurnitureArt.Render(ObjectType.Bed, Noise.Of(bed.Id), palette, false), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));
+                    pieces.Add(new ArtPiece(obj.Name, FurnitureArt.Render(obj.Type, Noise.Of(obj.Id), palette, obj.Type != ObjectType.Bed), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));
                 }
             }
 

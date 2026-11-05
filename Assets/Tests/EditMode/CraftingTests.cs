@@ -11,12 +11,12 @@ using TinyCity.Simulation.Residents;
 
 namespace TinyCity.Tests.EditMode
 {
-    /// <summary>Tiny City 2's gathering and crafting: wood by hand or with an axe, stone with a pickaxe, tools that wear out.</summary>
+    /// <summary>Tiny City 2's gathering and crafting: branches and stones by hand, trees with an axe, rocks with a pickaxe, tools that wear out.</summary>
     public class CraftingTests
     {
         private static TownSimulation Town()
         {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon);
+            var sim = TinyCity.Simulation.Content.FlatLand.CreateNewGame();
             sim.AiRunsEverything = true;
             sim.FoodMustBeMade = true;
             sim.AiDecisionsEnabled = true;
@@ -36,7 +36,8 @@ namespace TinyCity.Tests.EditMode
 
             var option = Option(sim, activity);
             Assert.That(option, Is.Not.Null, $"{activity.Id} should be an option");
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Crafting", "Right then"), Is.EqualTo(DecisionOutcome.Applied));
+            // Planting is done on open ground: the crop field by the cross path.
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Crafting", "Right then", null, 20, 23), Is.EqualTo(DecisionOutcome.Applied));
             for (var i = 0; i < 600 && r.State != ResidentState.Deciding; i++)
             {
                 sim.Tick();
@@ -62,13 +63,16 @@ namespace TinyCity.Tests.EditMode
             Assert.That(Option(sim, ActivityCatalog.CraftAxe), Is.Null, "no wood yet");
             Assert.That(Option(sim, ActivityCatalog.GatherStone), Is.Null, "stone needs a pickaxe");
             Assert.That(Option(sim, ActivityCatalog.GatherHardwood), Is.Null, "hardwood needs a stone axe");
+            Assert.That(Option(sim, ActivityCatalog.GatherWood), Is.Null, "chopping trees needs an axe");
+            Assert.That(Option(sim, ActivityCatalog.GatherLooseStones), Is.Not.Null, "loose stones are picked up by hand");
 
             for (var i = 0; i < 3; i++)
             {
-                Do(sim, ActivityCatalog.GatherWood);
+                Do(sim, ActivityCatalog.GatherSticks);
             }
 
-            Assert.That(r.Belongings.Count(MaterialKind.Wood), Is.EqualTo(3 * CraftingRules.WoodByHand));
+            Assert.That(r.Belongings.Count(MaterialKind.Wood), Is.EqualTo(3 * CraftingRules.ByHand));
+            Assert.That(r.Log.Any(e => e.Text.EndsWith("by hand")), Is.True);
             Do(sim, ActivityCatalog.CraftAxe);
             Assert.That(r.Belongings.Count(MaterialKind.Wood), Is.EqualTo(0));
             Assert.That(r.Belongings.TierOf(ToolKind.Axe), Is.EqualTo(1));
@@ -94,7 +98,9 @@ namespace TinyCity.Tests.EditMode
             var iron = CraftingRules.GatheringFor(ActivityCatalog.GatherIron);
             var crystal = CraftingRules.GatheringFor(ActivityCatalog.GatherCrystal);
 
-            Assert.That(new[] { 0, 1, 2, 3 }.Select(wood.YieldWith).ToList(), Is.EqualTo(new List<int> { 1, 4, 5, 6 }));
+            Assert.That(new[] { 0, 1, 2, 3 }.Select(CraftingRules.GatheringFor(ActivityCatalog.GatherSticks).YieldWith).ToList(), Is.EqualTo(new List<int> { 1, 1, 1, 1 }), "by hand, whatever they hold");
+            Assert.That(new[] { 0, 1, 2, 3 }.Select(CraftingRules.GatheringFor(ActivityCatalog.GatherLooseStones).YieldWith).ToList(), Is.EqualTo(new List<int> { 1, 1, 1, 1 }));
+            Assert.That(new[] { 0, 1, 2, 3 }.Select(wood.YieldWith).ToList(), Is.EqualTo(new List<int> { 0, 4, 5, 6 }));
             Assert.That(new[] { 0, 1, 2, 3 }.Select(hardwood.YieldWith).ToList(), Is.EqualTo(new List<int> { 0, 0, 2, 3 }));
             Assert.That(new[] { 0, 1, 2, 3 }.Select(heartwood.YieldWith).ToList(), Is.EqualTo(new List<int> { 0, 0, 0, 1 }));
             Assert.That(new[] { 0, 1, 2, 3 }.Select(stone.YieldWith).ToList(), Is.EqualTo(new List<int> { 0, 3, 4, 5 }));

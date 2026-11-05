@@ -99,18 +99,23 @@ namespace TinyCity.Runtime
         private TinyCity.Simulation.Building.Construction shownConstruction;
         private int shownBlocksVersion = -1;
         private Season shownBlocksSeason;
+        private int shownPlacedVersion = -1;
 
-        /// <summary>Draws Tiny City 2's building blocks again whenever one is laid, the town changes or the season turns.</summary>
+        /// <summary>
+        /// Draws Tiny City 2's building blocks, crop patches and building sites again whenever one changes, the town
+        /// changes or the season turns.
+        /// </summary>
         public void ShowBlocks(TinyCity.Simulation.Building.Construction construction)
         {
             if (World == null || construction == null
-                || (construction == shownConstruction && construction.Version == shownBlocksVersion && Season == shownBlocksSeason))
+                || (construction == shownConstruction && construction.Version == shownBlocksVersion && construction.World.PlacedVersion == shownPlacedVersion && Season == shownBlocksSeason))
             {
                 return;
             }
 
             shownConstruction = construction;
             shownBlocksVersion = construction.Version;
+            shownPlacedVersion = construction.World.PlacedVersion;
             shownBlocksSeason = Season;
             var palette = Palette.For(Season);
             foreach (var view in maps.Values)

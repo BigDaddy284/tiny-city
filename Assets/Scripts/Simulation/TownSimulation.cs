@@ -84,6 +84,7 @@ namespace TinyCity.Simulation
 
             Time = time;
             Construction = new Building.Construction(world);
+            Food.Attach(world);
             Pathfinder = new Pathfinder(world, Construction.IsBlocked);
             Economy = new TownEconomy(world, this.residents);
             Planner = new ActivityPlanner(world, Pathfinder, this.residents, Economy, () => Time) { Food = Food };
@@ -381,7 +382,8 @@ namespace TinyCity.Simulation
         /// the answer must be for the decision the resident is waiting on, and the action and target must be one of
         /// <see cref="ActivityPlanner.FreeTimeOptions"/> right now. Reason and speech are cleaned and shortened.
         /// </summary>
-        public DecisionOutcome ApplyDecision(string residentId, long decisionId, string actionId, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null)
+        public DecisionOutcome ApplyDecision(string residentId, long decisionId, string actionId, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null,
+            int? x = null, int? y = null, string what = null)
         {
             var r = GetResident(residentId);
             if (r == null)
@@ -410,6 +412,32 @@ namespace TinyCity.Simulation
             if (option == null)
             {
                 return DecisionOutcome.InvalidTarget;
+            }
+
+            if (option.IsGround)
+            {
+                // Tiny City 2: planting or building wherever they choose. The game only checks the spot is free ground they can reach.
+                if (x == null || y == null)
+                {
+                    return DecisionOutcome.InvalidTarget;
+                }
+
+                var spot = new Location(r.Location.MapId, x.Value, y.Value);
+                var problem = GroundProblem(r, spot);
+                if (problem != null)
+                {
+                    r.AddLog(Time, $"Couldn't go {option.Activity.Verb} at ({x}, {y}): {problem}");
+                    return DecisionOutcome.InvalidTarget;
+                }
+
+                if (option.Activity == ActivityCatalog.PlanBuilding)
+                {
+                    DropUnplannedSite(r);
+                }
+
+                var placedId = option.Activity == ActivityCatalog.PlantCrops ? Food.AddPatch(spot, what, r.Id).Id : Construction.AddSite(r.Id, spot).Id;
+                World.TryGetObject(placedId, out var placed);
+                option = new FreeTimeOption(option.Activity, placed, Pathfinder.Distance(r.Location, spot));
             }
 
             var why = TextRules.Clean(reason, MaxReasonLength);
@@ -461,8 +489,9 @@ namespace TinyCity.Simulation
             {
                 var step = r.TakePlannedStep();
                 var options = FreeTimeOptionsFor(r);
-                var option = options.FirstOrDefault(o => o.ActionId == step.ActionId && o.TargetId == step.TargetId)
-                    ?? (step.ActionId == ActivityCatalog.Chat.Id ? null : options.FirstOrDefault(o => o.ActionId == step.ActionId));
+                // A spot on open ground isn't part of a planned step, so those aren't followed.
+                var option = options.FirstOrDefault(o => o.ActionId == step.ActionId && o.TargetId == step.TargetId && !o.IsGround)
+                    ?? (step.ActionId == ActivityCatalog.Chat.Id ? null : options.FirstOrDefault(o => o.ActionId == step.ActionId && !o.IsGround));
                 if (option == null)
                 {
                     continue;
@@ -475,6 +504,35 @@ namespace TinyCity.Simulation
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Tiny City 2: why a resident can't plant or start building at this spot, or null if they can: it must be
+        /// open ground on an outdoor map that they can reach, with nothing on it and no building planned over it.
+        /// </summary>
+        public string GroundProblem(Resident r, Location spot)
+        {
+            if (!World.TryGetMap(spot.MapId, out var map) || !map.IsExterior)
+            {
+                return "that's not outdoors";
+            }
+
+            if (!map.IsWalkable(spot.Position))
+            {
+                return map.InBounds(spot.Position) ? "that isn't open ground" : "that's off the land";
+            }
+
+            if (World.Objects.Any(o => o.Location == spot) || Construction.IsClaimed(spot) || Construction.IsBlocked(spot))
+            {
+                return "something is already there";
+            }
+
+            if (Pathfinder.Distance(r.Location, spot) == Pathfinder.Unreachable)
+            {
+                return "they can't get there";
+            }
+
+            return null;
         }
 
         /// <summary>Gives up on an AI suggestion, for example after failed retries, and lets the routine decide now.</summary>

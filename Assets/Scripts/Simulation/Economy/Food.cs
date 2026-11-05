@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.Memory;
 using TinyCity.Simulation.Residents;
 using TinyCity.Simulation.World;
 
@@ -163,6 +164,34 @@ namespace TinyCity.Simulation.Economy
         }
     }
 
+    /// <summary>
+    /// Ground a resident dug where they chose, to plant something of their choosing (Tiny City 2). It stays in the
+    /// world as a garden plot until its crop is picked.
+    /// </summary>
+    public sealed class CropPatch
+    {
+        public const string IdPrefix = "obj-patch-";
+
+        public CropPatch(string id, Location location, string what, string planterId)
+        {
+            Id = id;
+            Location = location;
+            What = what;
+            PlanterId = planterId;
+        }
+
+        public string Id { get; }
+
+        public Location Location { get; }
+
+        /// <summary>What the planter said they are growing, such as "potatoes"; it grows into vegetables.</summary>
+        public string What { get; }
+
+        public string PlanterId { get; }
+
+        public string Name => $"{char.ToUpperInvariant(What[0])}{What.Substring(1)} patch";
+    }
+
     /// <summary>A crop on a garden plot (Tiny City 2): planted, then watered on different days until it can be picked.</summary>
     public sealed class Crop
     {
@@ -262,7 +291,50 @@ namespace TinyCity.Simulation.Economy
     /// </summary>
     public sealed class FoodSupply
     {
+        public const string PlacedSource = "crops";
+
+        /// <summary>The longest name a planter can give what they grow.</summary>
+        public const int MaxCropNameLength = 24;
+
         private readonly Dictionary<string, Crop> crops = new Dictionary<string, Crop>(StringComparer.Ordinal);
+        private readonly SortedDictionary<string, CropPatch> patches = new SortedDictionary<string, CropPatch>(StringComparer.Ordinal);
+        private TownWorld world;
+
+        /// <summary>Puts the patches in this world (and none from an earlier town). Called by the simulation.</summary>
+        internal void Attach(TownWorld townWorld)
+        {
+            world = townWorld;
+            patches.Clear();
+            crops.Clear();
+            Rebuild();
+        }
+
+        /// <summary>The number the next patch's id gets. Saved, so ids are never reused.</summary>
+        public int NextPatchNumber { get; internal set; } = 1;
+
+        public IEnumerable<CropPatch> Patches => patches.Values;
+
+        public CropPatch PatchOf(string objectId) => objectId != null && patches.TryGetValue(objectId, out var p) ? p : null;
+
+        internal CropPatch AddPatch(Location location, string what, string planterId)
+        {
+            var clean = TextRules.Clean(what, MaxCropNameLength).ToLowerInvariant();
+            var patch = new CropPatch($"{CropPatch.IdPrefix}{NextPatchNumber++}", location, clean.Length > 0 ? clean : "vegetables", planterId);
+            patches[patch.Id] = patch;
+            Rebuild();
+            return patch;
+        }
+
+        internal void RestorePatch(CropPatch patch)
+        {
+            patches[patch.Id] = patch;
+            Rebuild();
+        }
+
+        private void Rebuild() => world?.SetPlaced(PlacedSource, patches.Values.Select(p => new WorldObject(p.Id, p.Name, ObjectType.GardenPlot, p.Location)));
+
+        /// <summary>What grows on this plot or patch, for logs and prompts.</summary>
+        public string WhatGrowsAt(string objectId) => PatchOf(objectId)?.What ?? "crops";
 
         public bool MustBeMade { get; set; }
 
@@ -314,6 +386,7 @@ namespace TinyCity.Simulation.Economy
             var crop = food.CropAt(obj?.Id);
             if (a == ActivityCatalog.PlantCrops)
             {
+                // With no object, it is anywhere on open ground the resident chooses; the game checks the spot then.
                 return crop == null;
             }
 
@@ -380,7 +453,7 @@ namespace TinyCity.Simulation.Economy
                 }
 
                 SetCrop(obj.Id, new Crop(today, 0, 0));
-                return $"Planted crops at the {obj.Name.ToLowerInvariant()}";
+                return $"Planted {WhatGrowsAt(obj.Id)} at the {obj.Name.ToLowerInvariant()}";
             }
 
             if (a == ActivityCatalog.WaterCrops)
@@ -402,10 +475,16 @@ namespace TinyCity.Simulation.Economy
                     return null;
                 }
 
+                var what = WhatGrowsAt(obj.Id);
                 SetCrop(obj.Id, null);
+                if (patches.Remove(obj.Id))
+                {
+                    Rebuild();
+                }
+
                 var hoe = r.Belongings.Has(ToolKind.Hoe);
                 var kept = r.Food.Add(FoodKind.Vegetables, FoodRules.HarvestPortions + (hoe ? CraftingRules.HoeExtraPortions : 0), today + FoodRules.VegetableDays);
-                return $"Picked {FoodRules.Portions(FoodKind.Vegetables, kept)} at the {obj.Name.ToLowerInvariant()}" + (hoe ? FoodRules.WearNote(r, ToolKind.Hoe) : string.Empty);
+                return $"Picked {FoodRules.Portions(FoodKind.Vegetables, kept)} ({what}) at the {obj.Name.ToLowerInvariant()}" + (hoe ? FoodRules.WearNote(r, ToolKind.Hoe) : string.Empty);
             }
 
             if (a == ActivityCatalog.CatchFish)
