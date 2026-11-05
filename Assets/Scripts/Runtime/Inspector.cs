@@ -209,9 +209,16 @@ namespace TinyCity.Runtime
 
         private void DrawTownControls(Resident r)
         {
+            // The title, then the journal, settings and hide buttons (owner, 5 November: no Town View button; a
+            // middle click lets go of whoever the camera follows).
             GUILayout.BeginHorizontal();
             GUILayout.Label("Tiny City 2", styles.Title);
             GUILayout.FlexibleSpace();
+            if (GUILayout.Toggle(game.JournalOpen, "Journal", GUI.skin.button, FitWidth("Journal"), GUILayout.Height(28f)) != game.JournalOpen)
+            {
+                game.ToggleJournal();
+            }
+
             if (GUILayout.Toggle(game.SettingsOpen, "Settings", GUI.skin.button, FitWidth("Settings"), GUILayout.Height(28f)) != game.SettingsOpen)
             {
                 game.ToggleSettings();
@@ -223,57 +230,36 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label($"Town: {game.CurrentTownName}", styles.Small);
+            GUILayout.Label($"Town: {game.CurrentTownName} · {Simulation.LivingCount} people", styles.Small);
             GUILayout.Label($"{Simulation.Time.Weekday}, Day {Simulation.Time.Day}   {Simulation.Time.ClockText}", styles.Text);
             GUILayout.Label(Simulation.RolesLimitSkills ? DescribeMeeting() : DescribeCalendar(), styles.Small);
 
+            // The speeds, then the People and Roles drop-downs, all the same width on one line.
+            var hasRoles = Simulation.Brief.Roles.Count > 0;
+            var count = GameController.Speeds.Length + (hasRoles ? 2 : 1);
+            var gap = GUI.skin.button.margin.horizontal;
+            var each = GUILayout.Width(Mathf.Max(20f, ((Width - 28f) / count) - gap));
             GUILayout.BeginHorizontal();
             for (var i = 0; i < GameController.Speeds.Length; i++)
             {
                 var label = GameController.Speeds[i] == 0 ? "Pause" : $"{GameController.Speeds[i]}x";
-                if (GUILayout.Toggle(game.SpeedIndex == i, label, GUI.skin.button) && game.SpeedIndex != i)
+                if (GUILayout.Toggle(game.SpeedIndex == i, label, GUI.skin.button, each) && game.SpeedIndex != i)
                 {
                     game.SetSpeed(i);
                 }
             }
 
-            GUILayout.EndHorizontal();
-            if (game.Speed > 0)
-            {
-                var thinking = Simulation.AiRunsEverything ? Simulation.Residents.Count(x => x.IsAlive && x.State == ResidentState.Deciding) : 0;
-                var waiting = game.HoldingForAi
-                    ? "  Paused: waiting for Ollama."
-                    : thinking > 0 ? $"  {thinking} thinking." : string.Empty;
-                GUILayout.Label($"Running at {game.ActualSpeed:0.0}x of {game.Speed}x.{waiting}", styles.Small);
-            }
-
-            // The journal, Town View, then the camera panels: fewer or more, and everyone in view.
-            // Each button is as wide as its words, so the five fit the side panel's width.
-            var panels = game.Panels;
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(game.JournalOpen, "Town Journal", GUI.skin.button, FitWidth("Town Journal")) != game.JournalOpen)
-            {
-                game.ToggleJournal();
-            }
-
-            if (GUILayout.Toggle(panels.InTownView, "Town View", GUI.skin.button, FitWidth("Town View")) != panels.InTownView)
-            {
-                game.ToggleTownView();
-            }
-
             // The people list and the roles list drop down under this row, one at a time.
-            var people = $"People ({Simulation.LivingCount}) {(peopleOpen ? "▲" : "▼")}";
-            var openPeople = GUILayout.Toggle(peopleOpen, people, GUI.skin.button, FitWidth(people));
+            var openPeople = GUILayout.Toggle(peopleOpen, peopleOpen ? "People ▲" : "People ▼", GUI.skin.button, each);
             if (openPeople != peopleOpen)
             {
                 peopleOpen = openPeople;
                 rolesOpen = rolesOpen && !peopleOpen;
             }
 
-            if (Simulation.Brief.Roles.Count > 0)
+            if (hasRoles)
             {
-                var roles = rolesOpen ? "Roles ▲" : "Roles ▼";
-                var openRoles = GUILayout.Toggle(rolesOpen, roles, GUI.skin.button, FitWidth(roles));
+                var openRoles = GUILayout.Toggle(rolesOpen, rolesOpen ? "Roles ▲" : "Roles ▼", GUI.skin.button, each);
                 if (openRoles != rolesOpen)
                 {
                     rolesOpen = openRoles;
@@ -286,6 +272,14 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
+            if (game.Speed > 0)
+            {
+                var thinking = Simulation.AiRunsEverything ? Simulation.Residents.Count(x => x.IsAlive && x.State == ResidentState.Deciding) : 0;
+                var waiting = game.HoldingForAi
+                    ? "  Paused: waiting for Ollama."
+                    : thinking > 0 ? $"  {thinking} thinking." : string.Empty;
+                GUILayout.Label($"Running at {game.ActualSpeed:0.0}x of {game.Speed}x.{waiting}", styles.Small);
+            }
 
             DrawPeopleFinder(r);
             if (rolesOpen)
@@ -946,7 +940,7 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label("Click someone to follow them and see who they are · Town View: the whole land · N/B: next/previous resident · drag and wheel: pan and zoom · J: journal · S: saved towns · H: hide this panel · Settings: top right", styles.Small);
+            GUILayout.Label("Click someone to follow them and see who they are · middle click: stop following · N/B: next/previous resident · drag and wheel: pan and zoom · J: journal · S: saved towns · H: hide this panel · Settings: top right", styles.Small);
             GUILayout.Label(game.Ai.Summary(), styles.Small);
             var lastEvent = game.Ai.RecentEvents.LastOrDefault();
             if (lastEvent != null)
