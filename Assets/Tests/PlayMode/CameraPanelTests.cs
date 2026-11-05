@@ -8,7 +8,10 @@ using UnityEngine.TestTools;
 
 namespace TinyCity.Tests.PlayMode
 {
-    /// <summary>The Phase 5 observer view: one to sixteen camera panels watching the same town.</summary>
+    /// <summary>
+    /// The Phase 5 observer view. Tiny City 2 shows one camera only (owner, 5 November), but the panel code is kept,
+    /// so the tests of several panels lift the limit while they run.
+    /// </summary>
     public class CameraPanelTests
     {
         private GameController game;
@@ -34,6 +37,10 @@ namespace TinyCity.Tests.PlayMode
         public void BackToOnePanel()
         {
             game?.SetPanelCount(1);
+            if (game?.Panels != null)
+            {
+                game.Panels.Limit = 1;
+            }
 
             // Leave the game on Tiny City 2's own land, so later tests (and its saves) see the real game.
             if (game != null && game.Simulation.World.TownId != FlatLand.TownId)
@@ -96,8 +103,21 @@ namespace TinyCity.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TinyCity2_ShowsOneCameraOnly()
+        {
+            Assert.That(game.Panels.Limit, Is.EqualTo(1));
+            game.SetPanelCount(5);
+            yield return null;
+            Assert.That(game.Panels.Count, Is.EqualTo(1));
+            game.WatchEveryone();
+            yield return null;
+            Assert.That(game.Panels.Count, Is.EqualTo(1));
+        }
+
+        [UnityTest]
         public IEnumerator Panels_GoUpToTheLimit_AndDownToOne_EachWithItsOwnCamera()
         {
+            game.Panels.Limit = CameraPanels.MaxPanels;
             game.SetPanelCount(CameraPanels.MaxPanels + 3);
             yield return null;
             Assert.That(game.Panels.Count, Is.EqualTo(CameraPanels.MaxPanels));
@@ -120,6 +140,7 @@ namespace TinyCity.Tests.PlayMode
         [UnityTest]
         public IEnumerator WatchEveryone_GivesEachLivingResidentAPanel()
         {
+            game.Panels.Limit = CameraPanels.MaxPanels;
             game.WatchEveryone();
             yield return null;
 
@@ -165,6 +186,7 @@ namespace TinyCity.Tests.PlayMode
         [UnityTest]
         public IEnumerator FreePanel_StaysOnItsMap_WhileTheTownMovesOn()
         {
+            game.Panels.Limit = CameraPanels.MaxPanels;
             game.SetPanelCount(2);
             yield return null;
             var interior = game.Simulation.World.Maps.First(m => !m.IsExterior);

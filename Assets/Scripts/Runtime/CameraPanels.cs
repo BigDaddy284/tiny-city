@@ -429,7 +429,7 @@ namespace TinyCity.Runtime
 
         private void ApplyLayout(string saved, TownView view, TownSimulation simulation)
         {
-            var entries = saved.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries).Take(MaxPanels).ToList();
+            var entries = saved.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries).Take(Limit).ToList();
             if (entries.Count == 0)
             {
                 return;

@@ -130,7 +130,8 @@ namespace TinyCity.Runtime
         {
             view = new GameObject("Town").AddComponent<TownView>();
             Sound = gameObject.AddComponent<SoundPlayer>();
-            Panels = new CameraPanels(Camera.main) { ResidentClicked = id => Select(Simulation.GetResident(id), followInActivePanel: false) };
+            // Tiny City 2 (owner, 5 November): one camera only. Town View shows the whole land, and clicking someone follows them.
+            Panels = new CameraPanels(Camera.main) { Limit = 1, ResidentClicked = id => Select(Simulation.GetResident(id), followInActivePanel: true) };
             inspector = new Inspector(this);
             journal = new JournalWindow(this);
             saves = new SavesWindow(this);
@@ -166,6 +167,11 @@ namespace TinyCity.Runtime
             }
 
             Panels.LoadLayout(view, Simulation);
+            if (!Panels.InTownView)
+            {
+                ToggleTownView();
+            }
+
             ApplyThemeToCameras();
             UpdateView(1f);
         }
@@ -234,7 +240,6 @@ namespace TinyCity.Runtime
             Sound?.Steer(Simulation, Panels.Active, view, Preferences);
             settingsWindow?.Update();
             StepPanelTest();
-            StepCameraCycle();
         }
 
         /// <summary>A line for the Cameras window: whether the cycle is running and when it next turns.</summary>
@@ -1092,15 +1097,6 @@ namespace TinyCity.Runtime
                     break;
                 case KeyCode.B:
                     Step(active, -1);
-                    break;
-                case KeyCode.Equals:
-                case KeyCode.Plus:
-                case KeyCode.KeypadPlus:
-                    SetPanelCount(Panels.Count + 1);
-                    break;
-                case KeyCode.Minus:
-                case KeyCode.KeypadMinus:
-                    SetPanelCount(Panels.Count - 1);
                     break;
                 case KeyCode.H:
                     ToggleSidebar();
