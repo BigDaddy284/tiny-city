@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using NUnit.Framework;
 using TinyCity.Runtime;
+using TinyCity.Simulation.Content;
 using UnityEngine;
 using UnityEngine.TestTools;
 
@@ -19,6 +20,13 @@ namespace TinyCity.Tests.PlayMode
             yield return null;
             game = Object.FindAnyObjectByType<GameController>();
             Assert.That(game, Is.Not.Null, "GameController was not created.");
+
+            // These tests need the city's indoor maps and lit windows; Tiny City 2 starts on the flat map.
+            if (game.Simulation.World.TownId != StarterTown.TownId)
+            {
+                game.ShowTown(StarterTown.CreateNewGame());
+                yield return null;
+            }
             Assert.That(game.Panels, Is.Not.Null);
         }
 

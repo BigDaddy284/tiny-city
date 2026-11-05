@@ -115,7 +115,7 @@ namespace TinyCity.Runtime
             var palette = Palette.For(Season);
             foreach (var view in maps.Values)
             {
-                view.ShowBlocks(BlockArt.Pieces(World, construction, view.Map, palette));
+                view.ShowBlocks(BlockArt.Pieces(construction.World, construction, view.Map, palette));
             }
         }
 

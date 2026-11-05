@@ -398,6 +398,9 @@ namespace TinyCity.Simulation.Building
 
         public int Version { get; private set; }
 
+        /// <summary>The world the buildings stand in, which holds a finished home's bed.</summary>
+        public TownWorld World => world;
+
         public IReadOnlyDictionary<string, Project> Projects => projects;
 
         public Project At(string plotId) => plotId != null && projects.TryGetValue(plotId, out var p) ? p : null;

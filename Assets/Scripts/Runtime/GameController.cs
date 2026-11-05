@@ -109,6 +109,12 @@ namespace TinyCity.Runtime
         /// <summary>The resident shown in the inspector.</summary>
         public Resident SelectedResident => Simulation.GetResident(selectedId) ?? Simulation.Residents[0];
 
+        /// <summary>
+        /// Plays <paramref name="simulation"/> instead of the current town, unsaved. Used by Play Mode tests that need
+        /// the city's indoor maps and lit windows, which Tiny City 2's flat map doesn't have.
+        /// </summary>
+        public void ShowTown(TownSimulation simulation) => SetSimulation(simulation);
+
         /// <summary>Advances the town immediately, as if that many minutes had passed. Used by tests.</summary>
         public void AdvanceMinutes(int minutes)
         {
@@ -421,7 +427,8 @@ namespace TinyCity.Runtime
             simulation.FoodMustBeMade = true;
             Ai?.Attach(simulation);
             RestartCameraCycle();
-            if (view.World == null)
+            // A town with another layout (the city in Play Mode tests) needs its maps drawn afresh.
+            if (view.World == null || view.World.TownId != simulation.World.TownId)
             {
                 view.Build(simulation.World, TinyCity.Simulation.Time.Seasons.Of(simulation.Time));
             }
