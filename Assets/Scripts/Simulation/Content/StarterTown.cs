@@ -630,7 +630,7 @@ namespace TinyCity.Simulation.Content
                 r.SetHobbies(HobbiesOf(d.id));
                 r.OpenToRomance = d.openToRomance;
                 r.About = profile?.About ?? DefaultAbout(d.id);
-                r.Outlook = profile?.Personality ?? string.Empty;
+                r.Outlook = profile?.Personality ?? (DefaultPersonalities.TryGetValue(d.id, out var personality) ? personality : string.Empty);
                 if (profile != null)
                 {
                     r.MoneyPence = profile.MoneyPence;
@@ -651,7 +651,28 @@ namespace TinyCity.Simulation.Content
         /// in their own words and no business owned (someone has to choose to take one on).
         /// </summary>
         public static IReadOnlyList<ResidentProfile> DefaultProfiles() =>
-            Designs.Select(d => new ResidentProfile(d.id, d.first, d.last, d.age, DefaultAbout(d.id), d.money)).ToList();
+            Designs.Select(d => new ResidentProfile(d.id, d.first, d.last, d.age, DefaultAbout(d.id), d.money, null,
+                DefaultPersonalities.TryGetValue(d.id, out var p) ? p : null)).ToList();
+
+        /// <summary>The one-sentence personalities the shipped residents.json gives (Tiny City 2).</summary>
+        private static readonly Dictionary<string, string> DefaultPersonalities = new Dictionary<string, string>
+        {
+            ["res-0001"] = "You live to help others and always put other people first.",
+            ["res-0002"] = "You like to know what everyone is doing, and you speak your mind even when it isn't welcome.",
+            ["res-0003"] = "You like to be in control, to make sure everything runs smoothly.",
+            ["res-0004"] = "You keep careful count of everything, and you never give away what you can trade.",
+            ["res-0005"] = "You take pride in feeding people, but you expect to be paid for good work.",
+            ["res-0006"] = "You want everyone to get along, and you'll share what you have to keep the peace.",
+            ["res-0007"] = "You're out for yourself and your own survival.",
+            ["res-0008"] = "You worry about everyone's wellbeing and look after the weakest first.",
+            ["res-0009"] = "You trust people easily and believe things will work out if everyone pitches in.",
+            ["res-0010"] = "You've survived hard times by being cautious, and you keep something back for later.",
+            ["res-0011"] = "You believe the strong should lead, and you like being the one people follow.",
+            ["res-0012"] = "You live for company and fun, and you'll gamble on a risk for a good story.",
+            ["res-0013"] = "You'd rather work alone and build things well than waste time on talk.",
+            ["res-0014"] = "You look for the best deal in every exchange, and you always win in the end.",
+            ["res-0015"] = "You're patient and steady, and you share freely with anyone who works hard.",
+        };
 
         private static string DefaultAbout(string residentId) =>
             TextRules.Clean(string.Join(" ", LifeHistory(residentId).Select(h => h.summary)), ResidentProfile.MaxAboutLength);

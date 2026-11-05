@@ -297,7 +297,7 @@ namespace TinyCity.Simulation.AI
                 .GroupBy(o => o.Name).OrderBy(g => g.Min(o => o.Id), System.StringComparer.Ordinal))
             {
                 var name = group.Key.ToLowerInvariant();
-                places.Add($"{(group.Count() == 1 ? name : name.EndsWith("ch") || name.EndsWith("s") ? name + "es" : name + "s")} at {Span(group.Select(o => o.Location.Position))}");
+                places.Add($"{(group.Count() == 1 ? name : name.EndsWith("s") ? name : name.EndsWith("ch") ? name + "es" : name + "s")} at {Span(group.Select(o => o.Location.Position))}");
             }
 
             foreach (var p in sim.Construction.Projects.Values.Where(p => p.Corner.MapId == map.Id).OrderBy(p => p.SiteId, System.StringComparer.Ordinal))
@@ -307,21 +307,7 @@ namespace TinyCity.Simulation.AI
             }
 
             sb.AppendLine($"Where things are: {string.Join("; ", places)}.");
-            var free = new List<string>();
-            for (var d = 1; d <= FreeSpotSearch && free.Count < FreeSpotsListed; d++)
-            {
-                for (var dy = -d; dy <= d && free.Count < FreeSpotsListed; dy++)
-                {
-                    foreach (var dx in new[] { -(d - System.Math.Abs(dy)), d - System.Math.Abs(dy) }.Distinct())
-                    {
-                        var spot = new World.Location(map.Id, here.X + dx, here.Y + dy);
-                        if (free.Count < FreeSpotsListed && !(map.InBounds(spot.Position) && map.GetTile(spot.Position) == World.TileType.Path) && sim.GroundProblem(r, spot) == null)
-                        {
-                            free.Add($"({spot.Position.X}, {spot.Position.Y})");
-                        }
-                    }
-                }
-            }
+            var free = sim.FreeGroundNear(r, FreeSpotsListed, FreeSpotSearch).Select(s => $"({s.Position.X}, {s.Position.Y})").ToList();
 
             if (free.Count > 0)
             {

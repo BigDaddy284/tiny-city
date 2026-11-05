@@ -266,6 +266,13 @@ namespace TinyCity.Simulation.AI
             {
                 case AiConnectionStatus.Connected:
                     var latency = s.LastLatencySeconds > 0 ? $", last answer {s.LastLatencySeconds:0.0}s (avg {s.AverageLatencySeconds:0.0}s)" : string.Empty;
+                    if (Simulation?.AiRunsEverything == true)
+                    {
+                        // Tiny City 2 has nothing to fall back on: an unusable answer is asked again, so say what went wrong.
+                        var problem = string.IsNullOrEmpty(s.LastError) ? string.Empty : $" Last unusable answer: {s.LastError}";
+                        return $"AI: connected to {Model}. Queue {Queue.PendingCount + Queue.ActiveCount}{latency}. Used {s.Accepted}, unusable {s.InvalidReplies}, given up and asked again {s.GaveUp}.{problem}";
+                    }
+
                     return $"AI: connected to {Model}. Queue {Queue.PendingCount + Queue.ActiveCount}{latency}. Used {s.Accepted}, fell back {s.GaveUp}.";
                 case AiConnectionStatus.Disabled:
                     return Simulation?.AiRunsEverything == true
