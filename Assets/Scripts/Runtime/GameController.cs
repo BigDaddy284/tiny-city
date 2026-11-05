@@ -326,7 +326,7 @@ namespace TinyCity.Runtime
             panelTestSpeed = SpeedIndex;
             panelTestOwnTown = Simulation;
             PanelTest = new PanelTest();
-            SetSimulation(StarterTown.CreateCrowdedTown(PanelTest.Largest));
+            SetSimulation(FlatLand.CreateCrowdedTown(PanelTest.Largest));
             SetSpeed(1);
             Panels.Limit = PanelTest.Largest;
             Panels.SetCount(PanelTest.PanelCount, view, Simulation);
@@ -406,7 +406,7 @@ namespace TinyCity.Runtime
         public void StartNewTown(string message)
         {
             var profiles = ProfilesLoader.Load(out var problems);
-            SetSimulation(StarterTown.CreateNewGame(profiles));
+            SetSimulation(FlatLand.CreateNewGame(profiles));
             Status = problems.Count == 0 ? message : $"{message} residents.json: {problems.Count} problem(s), see Player.log.".Trim();
         }
 
@@ -486,7 +486,7 @@ namespace TinyCity.Runtime
                 return false;
             }
 
-            var world = StarterTown.CreateWorld();
+            var world = FlatLand.CreateWorld();
             var problems = new List<string>();
             foreach (var useBackup in new[] { false, true })
             {

@@ -19,6 +19,12 @@ namespace TinyCity.Tools.ArtPreview
                 return;
             }
 
+            if (args.Length > 0 && args[0] == "--flat")
+            {
+                WriteFlat(args.Length > 1 ? args[1] : "flat.png");
+                return;
+            }
+
             if (args.Length > 0 && args[0] == "--blocks")
             {
                 WriteBlocks(args.Length > 1 ? args[1] : "blocks.png");
@@ -76,6 +82,39 @@ namespace TinyCity.Tools.ArtPreview
         }
 
         /// <summary>Draws the open land with a finished building of every material on its plots, by day and by night.</summary>
+        /// <summary>Tiny City 2's open land by day and by night, with two homes built on its plots.</summary>
+        private static void WriteFlat(string path)
+        {
+            var sim = FlatLand.CreateNewGame();
+            var world = sim.World;
+            var plots = world.ObjectsOfType(TinyCity.Simulation.World.ObjectType.BuildPlot).ToList();
+            var homes = new[]
+            {
+                ("wooden cabin", 4, new[] { "", "..WWWWWWWWWW", "..W........W", "..W.B......W", "..W........W", "..W........W", "..W........W", "..WWWWDWWWWW" }),
+                ("stone cottage", 5, new[] { "", "SSSSSSSSSSSS", "S..........S", "C..........C", "S.....B....S", "S..........S", "C..........C", "S..........S", "SSSSDSSSSSSS" }),
+            };
+            for (var i = 0; i < homes.Length; i++)
+            {
+                var (name, height, rows) = homes[i];
+                if (!TinyCity.Simulation.Building.BuildPlan.TryParse(name, height, rows, out var plan, out var error))
+                {
+                    throw new InvalidOperationException($"{name}: {error}");
+                }
+
+                sim.Construction.Add(new TinyCity.Simulation.Building.Project(plots[i * 4].Id, sim.Residents[i].Id, plan, plan.Cells.Count, 0));
+            }
+
+            var map = world.GetMap(FlatLand.MapId);
+            foreach (var (season, minute, suffix) in new[] { (Season.Summer, 12 * 60, ""), (Season.Summer, 23 * 60, "-night") })
+            {
+                var palette = Palette.For(season);
+                var art = MapArt.Build(world, map, palette);
+                var extra = BlockArt.Pieces(world, sim.Construction, map, palette)
+                    .Select(b => (b.SortX, b.SortY, (int)b.Layer, b.Canvas, 0.0, 0.0)).ToList();
+                Png.Write(path.Replace(".png", suffix + ".png"), Compose(art, Lighting.At(minute, season, true), extra));
+            }
+        }
+
         private static void WriteBlocks(string path)
         {
             var world = StarterTown.CreateWorld();

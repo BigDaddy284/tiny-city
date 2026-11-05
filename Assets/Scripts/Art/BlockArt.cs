@@ -45,7 +45,7 @@ namespace TinyCity.Art
                 if (world.TryGetObject(Construction.BedIdOf(project.PlotId), out var bed) && bed.Location.MapId == map.Id)
                 {
                     var p = bed.Location.Position;
-                    pieces.Add(new ArtPiece(bed.Name, FurnitureArt.Render(ObjectType.Bed, Noise.Of(bed.Id), palette, true), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));
+                    pieces.Add(new ArtPiece(bed.Name, FurnitureArt.Render(ObjectType.Bed, Noise.Of(bed.Id), palette, false), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));
                 }
             }
 
