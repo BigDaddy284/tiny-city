@@ -32,7 +32,7 @@ namespace TinyCity.Simulation.AI
         public const double Temperature = 0.8;
 
         public static string BuildBody(string model, TownSimulation sim, Resident r, PendingSketch sketch) =>
-            OllamaProtocol.BuildChatBody(model, PromptText.Persona(r), UserText(sim, r, sketch), Schema(), Temperature, MaxTokens);
+            OllamaProtocol.BuildChatBody(model, PromptText.Persona(r, sim), UserText(sim, r, sketch), Schema(), Temperature, MaxTokens);
 
         public static string UserText(TownSimulation sim, Resident r, PendingSketch sketch)
         {

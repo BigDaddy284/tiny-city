@@ -583,7 +583,7 @@ namespace TinyCity.Simulation
         /// Stores an AI-written plan for today, after checking it is for today and still wanted. The plan only
         /// guides later choices, so it changes nothing else.
         /// </summary>
-        public DecisionOutcome ApplyDayPlan(string residentId, int day, IEnumerable<DayPlanEntry> entries)
+        public DecisionOutcome ApplyDayPlan(string residentId, int day, IEnumerable<DayPlanEntry> entries, string role = null)
         {
             var r = GetResident(residentId);
             if (r == null)
@@ -609,8 +609,44 @@ namespace TinyCity.Simulation
 
             r.DayPlan = plan;
             r.AddLog(Time, "Planned the day");
+            ChooseRole(r, role);
             return DecisionOutcome.Applied;
         }
+
+        /// <summary>
+        /// The world's brief and the roles on offer to everyone (Tiny City 2), from residents.json when the world was
+        /// made. Saved.
+        /// </summary>
+        public WorldBrief Brief { get; set; } = WorldBrief.Empty;
+
+        /// <summary>
+        /// A resident's own choice of role in their morning plan: one from <see cref="Brief"/>, "none" to give it up,
+        /// or nothing to keep what they have. Unknown names are ignored.
+        /// </summary>
+        private void ChooseRole(Resident r, string choice)
+        {
+            if (string.IsNullOrWhiteSpace(choice) || Brief.Roles.Count == 0)
+            {
+                return;
+            }
+
+            var none = string.Equals(choice.Trim(), RoleNone, StringComparison.OrdinalIgnoreCase);
+            var role = none ? null : Brief.Find(choice);
+            if ((!none && role == null) || string.Equals(role?.Name, r.Role, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var old = r.Role;
+            r.Role = role?.Name;
+            r.AddLog(Time, role == null ? $"Gave up being the {old}" : old == null ? $"Took up being the {role.Name}" : $"Stopped being the {old} and took up being the {role.Name}");
+            Memories.Add(r.Id, Time, MemoryType.Event, 5,
+                role == null ? $"I decided to stop being the {old}." : old == null ? $"I decided to take up being the {role.Name}." : $"I decided to stop being the {old} and be the {role.Name} instead.",
+                tags: new[] { "role" });
+        }
+
+        /// <summary>What a day plan answers to have no role.</summary>
+        public const string RoleNone = "none";
 
         /// <summary>A resident is ready to reflect once they have gone to bed for the night and haven't reflected on today yet.</summary>
         public bool IsReflectionDue(Resident r) =>
@@ -668,7 +704,7 @@ namespace TinyCity.Simulation
 
         /// <summary>Applies an AI-written conversation line, after checking it is for the turn the conversation is waiting on.</summary>
         public DecisionOutcome ApplyConversationLine(string conversationId, long lineRequestId, string speakerId, string text, string tone, string topic, bool wantsToEnd,
-            int giveFood = 0, long pricePence = 0, bool acceptOffer = false)
+            int giveFood = 0, long pricePence = 0, bool acceptOffer = false, long giveMoneyPence = 0, int taxPercent = 0, bool payTax = false)
         {
             var session = GetConversation(conversationId);
             if (session == null || !session.AwaitingLine || session.LineRequestId != lineRequestId || lineRequestId <= 0 || session.SpeakerId != speakerId)
@@ -694,6 +730,7 @@ namespace TinyCity.Simulation
             }
 
             ApplyFoodInChat(session, speaker, giveFood, pricePence, acceptOffer);
+            ApplyMoneyAndTaxInChat(session, speaker, giveMoneyPence, taxPercent, payTax);
             AddLine(session, clean, parsedTone, fromAi: true, SocialRules.CleanTopic(topic), wantsToEnd);
             return DecisionOutcome.Applied;
         }

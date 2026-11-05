@@ -17,6 +17,31 @@ namespace TinyCity.Runtime
         public static string ProfilesPath =>
             Path.Combine(Application.streamingAssetsPath, "Configuration", "residents.json");
 
+        /// <summary>The shared brief and the roles on offer from residents.json, or the shipped ones when it has none.</summary>
+        public static WorldBrief LoadBrief()
+        {
+            try
+            {
+                if (!File.Exists(ProfilesPath))
+                {
+                    return WorldBrief.Default;
+                }
+
+                var brief = ResidentProfiles.ParseBrief(File.ReadAllText(ProfilesPath), out var problems);
+                foreach (var problem in problems)
+                {
+                    Debug.LogWarning($"[TinyCity] residents.json: {problem}");
+                }
+
+                return brief;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[TinyCity] residents.json's brief could not be read: {e.Message}");
+                return WorldBrief.Default;
+            }
+        }
+
         public static IReadOnlyList<ResidentProfile> Load(out IReadOnlyList<string> problems)
         {
             var found = new List<string>();

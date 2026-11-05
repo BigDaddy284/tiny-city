@@ -14,12 +14,14 @@ namespace TinyCity.Simulation.Residents
     {
         public const int MaxNameLength = 24;
         public const int MaxAboutLength = 300;
+        public const int MaxPersonalityLength = 200;
         public const int MinAge = 18;
         public const int MaxAge = 100;
         public static readonly long MaxMoneyPence = 100_000_000;
 
-        public ResidentProfile(string id, string firstName, string lastName, int age, string about, long moneyPence, string ownsBusinessId = null)
+        public ResidentProfile(string id, string firstName, string lastName, int age, string about, long moneyPence, string ownsBusinessId = null, string personality = null)
         {
+            Personality = personality ?? string.Empty;
             Id = id;
             FirstName = firstName;
             LastName = lastName;
@@ -37,6 +39,9 @@ namespace TinyCity.Simulation.Residents
         public string LastName { get; }
 
         public int Age { get; }
+
+        /// <summary>One sentence of who they are at heart, in "you" form, given to the AI as their personality (Tiny City 2).</summary>
+        public string Personality { get; }
 
         /// <summary>A few lines of personality and background, given to the AI.</summary>
         public string About { get; }
@@ -146,15 +151,31 @@ namespace TinyCity.Simulation.Residents
                     }
                 }
 
-                profiles.Add(new ResidentProfile(id, first, last, (int)age, about, (long)Math.Round(pounds * 100), owns));
+                profiles.Add(new ResidentProfile(id, first, last, (int)age, about, (long)Math.Round(pounds * 100), owns, TextRules.Clean(Text(p, "personality"), ResidentProfile.MaxPersonalityLength)));
             }
 
             return profiles;
         }
 
-        public static string Write(IEnumerable<ResidentProfile> profiles) => Json.Write(new Dictionary<string, object>
+        /// <summary>The brief and roles in residents.json (Tiny City 2), or <see cref="WorldBrief.Default"/> when it has none or can't be read.</summary>
+        public static WorldBrief ParseBrief(string json, out List<string> problems)
+        {
+            problems = new List<string>();
+            try
+            {
+                return WorldBrief.Parse(Json.Parse(json ?? string.Empty) as Dictionary<string, object>, problems);
+            }
+            catch (FormatException)
+            {
+                return WorldBrief.Default;
+            }
+        }
+
+        public static string Write(IEnumerable<ResidentProfile> profiles, WorldBrief brief = null) => Json.Write(new Dictionary<string, object>
         {
             ["format"] = Format,
+            ["brief"] = (brief ?? WorldBrief.Default).Text,
+            ["roles"] = (brief ?? WorldBrief.Default).ToJson()["roles"],
             ["residents"] = (profiles ?? Enumerable.Empty<ResidentProfile>()).Select(p =>
             {
                 var entry = new Dictionary<string, object>
@@ -163,6 +184,7 @@ namespace TinyCity.Simulation.Residents
                     ["firstName"] = p.FirstName,
                     ["lastName"] = p.LastName,
                     ["age"] = p.Age,
+                    ["personality"] = p.Personality,
                     ["about"] = p.About,
                     ["money"] = p.MoneyPence / 100.0,
                 };

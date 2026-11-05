@@ -101,6 +101,7 @@ namespace TinyCity.Simulation.Persistence
                     ["what"] = p.What,
                     ["planterId"] = p.PlanterId,
                 }).ToList(),
+                ["brief"] = simulation.Brief.ToJson(),
                 ["nextSleepSpotNumber"] = simulation.Sleeping.NextSpotNumber,
                 ["sleepSpots"] = simulation.Sleeping.Spots.Select(o => (object)new Dictionary<string, object>
                 {
@@ -352,6 +353,9 @@ namespace TinyCity.Simulation.Persistence
                 simulation.Sleeping.Restore(spot);
             }
 
+            // Older saves have no brief: their world carries on with none.
+            simulation.Brief = GetObject(root, "brief") is Dictionary<string, object> brief ? WorldBrief.Parse(brief, warnings) : WorldBrief.Empty;
+
             simulation.Sleeping.NextSpotNumber = Math.Max(GetInt(root, "nextSleepSpotNumber", 1), simulation.Sleeping.Spots.Select(o => NumberAfter(o.Id, SleepingSpot.IdPrefix)).DefaultIfEmpty(1).Max());
 
             simulation.Construction.NextSiteNumber = Math.Max(GetInt(root, "nextSiteNumber", 1), simulation.Construction.Sites.Select(o => NumberAfter(o.Id, Building.BuildingRules.SitePrefix)).DefaultIfEmpty(1).Max());
@@ -447,6 +451,8 @@ namespace TinyCity.Simulation.Persistence
                 ["about"] = r.About,
                 ["ownsBusinessId"] = r.OwnsBusinessId,
                 ["stallPrice"] = r.StallPricePence,
+                ["role"] = r.Role,
+                ["outlook"] = r.Outlook,
                 ["unpaidWorkMinutes"] = r.UnpaidWorkMinutes,
                 ["health"] = r.Health,
                 ["illness"] = r.IllnessId == null ? null : new Dictionary<string, object>
@@ -624,6 +630,9 @@ namespace TinyCity.Simulation.Persistence
             resident.IncomeLabel = TextRules.Clean(GetString(data, "incomeLabel"), 40);
             resident.About = TextRules.Clean(GetString(data, "about"), ResidentProfile.MaxAboutLength);
             resident.StallPricePence = Math.Max(0, GetLong(data, "stallPrice", 0));
+            var role = TextRules.Clean(GetString(data, "role"), WorldBrief.MaxRoleNameLength);
+            resident.Role = role.Length == 0 ? null : role;
+            resident.Outlook = TextRules.Clean(GetString(data, "outlook"), ResidentProfile.MaxPersonalityLength);
             var owns = GetString(data, "ownsBusinessId");
             if (!string.IsNullOrEmpty(owns))
             {

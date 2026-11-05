@@ -365,7 +365,7 @@ namespace TinyCity.Simulation.Economy
         {
             if (food == null || !food.MustBeMade)
             {
-                return !FoodRules.IsMadeFood(a) && !CraftingRules.IsCrafting(a) && !Building.BuildingRules.IsBuilding(a);
+                return !FoodRules.IsMadeFood(a) && !CraftingRules.IsCrafting(a) && !Building.BuildingRules.IsBuilding(a) && !ActivityCatalog.IsInTheWild(a);
             }
 
             if (Building.BuildingRules.IsBuilding(a))

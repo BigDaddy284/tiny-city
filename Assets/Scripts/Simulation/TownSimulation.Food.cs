@@ -181,6 +181,102 @@ namespace TinyCity.Simulation
             }
         }
 
+        /// <summary>
+        /// Tiny City 2: money handed over in a chat (a gift, a wage, a payment: whatever they say it is), and a tax
+        /// man's demand for a share of the other person's food and materials, which that person's next line pays or
+        /// refuses. Only someone whose role <see cref="WorldBrief.CanTax"/> can ask; whether anyone pays is up to them.
+        /// </summary>
+        private void ApplyMoneyAndTaxInChat(ConversationSession session, Resident speaker, long giveMoneyPence, int taxPercent, bool payTax)
+        {
+            if (!FoodMustBeMade)
+            {
+                return;
+            }
+
+            var other = GetResident(session.ParticipantIds.FirstOrDefault(id => id != speaker.Id));
+            var demand = session.TaxDemand;
+            if (demand != null && demand.ToId == speaker.Id)
+            {
+                session.TaxDemand = null;
+                var taxer = GetResident(demand.FromId);
+                if (taxer != null && taxer.IsAlive)
+                {
+                    if (payTax)
+                    {
+                        var paid = PayTax(speaker, taxer, demand.Percent);
+                        speaker.AddLog(Time, $"Paid {taxer.FullName} {demand.Percent}% tax: {paid}");
+                        taxer.AddLog(Time, $"Collected {demand.Percent}% tax from {speaker.FullName}: {paid}");
+                        Memories.Add(speaker.Id, Time, MemoryType.Event, 5, $"{taxer.FullName} taxed me {demand.Percent}% and I paid: {paid}.", new[] { taxer.Id }, new[] { taxer.Id, "tax" });
+                        Memories.Add(taxer.Id, Time, MemoryType.Event, 5, $"I taxed {speaker.FullName} {demand.Percent}% and they paid: {paid}.", new[] { speaker.Id }, new[] { speaker.Id, "tax" });
+                    }
+                    else
+                    {
+                        speaker.AddLog(Time, $"Refused to pay {taxer.FullName}'s tax");
+                        Memories.Add(speaker.Id, Time, MemoryType.Event, 5, $"{taxer.FullName} tried to tax me {demand.Percent}%, and I refused.", new[] { taxer.Id }, new[] { taxer.Id, "tax" });
+                        Memories.Add(taxer.Id, Time, MemoryType.Event, 5, $"I asked {speaker.FullName} for {demand.Percent}% tax, and they refused.", new[] { speaker.Id }, new[] { speaker.Id, "tax" });
+                    }
+                }
+            }
+
+            if (other == null)
+            {
+                return;
+            }
+
+            if (giveMoneyPence > 0)
+            {
+                var amount = Math.Min(giveMoneyPence, Math.Max(0, speaker.MoneyPence));
+                if (amount > 0)
+                {
+                    speaker.MoneyPence -= amount;
+                    other.MoneyPence += amount;
+                    Economy.Ledger.Add(Time, speaker.Id, -amount, TransactionKind.Gift, $"handed to {other.FullName}");
+                    Economy.Ledger.Add(Time, other.Id, amount, TransactionKind.Gift, $"from {speaker.FullName}");
+                    speaker.AddLog(Time, $"Gave {other.FullName} {Money.Format(amount)}");
+                    other.AddLog(Time, $"Got {Money.Format(amount)} from {speaker.FullName}");
+                    Memories.Add(speaker.Id, Time, MemoryType.Event, 4, $"I gave {other.FullName} {Money.Format(amount)}.", new[] { other.Id }, new[] { other.Id, "money" });
+                    Memories.Add(other.Id, Time, MemoryType.Event, 4, $"{speaker.FullName} gave me {Money.Format(amount)}.", new[] { speaker.Id }, new[] { speaker.Id, "money" });
+                }
+            }
+
+            if (taxPercent > 0 && Brief.CanTax(speaker.Role))
+            {
+                session.TaxDemand = new TaxDemand(speaker.Id, other.Id, Math.Min(taxPercent, 100));
+            }
+        }
+
+        /// <summary>Hands the given share of each kind of food and material from one resident to another (rounded down). Says what moved.</summary>
+        private string PayTax(Resident payer, Resident taxer, int percent)
+        {
+            var parts = new List<string>();
+            var food = payer.Food.Total * percent / 100;
+            var moved = food > 0 ? payer.Food.MoveTo(taxer.Food, food) : 0;
+            if (moved > 0)
+            {
+                parts.Add($"{moved} portion{(moved == 1 ? string.Empty : "s")} of food");
+            }
+
+            foreach (MaterialKind m in Enum.GetValues(typeof(MaterialKind)))
+            {
+                var n = payer.Belongings.Count(m) * percent / 100;
+                if (n > 0 && payer.Belongings.Take(m, n))
+                {
+                    var kept = taxer.Belongings.Add(m, n);
+                    if (kept < n)
+                    {
+                        payer.Belongings.Add(m, n - kept);
+                    }
+
+                    if (kept > 0)
+                    {
+                        parts.Add($"{kept} {CraftingRules.Name(m)}");
+                    }
+                }
+            }
+
+            return parts.Count == 0 ? "nothing, as they had too little" : string.Join(", ", parts);
+        }
+
         /// <summary>Money between residents for food, through the ledger.</summary>
         private void Pay(Resident buyer, Resident seller, long pence, string what)
         {

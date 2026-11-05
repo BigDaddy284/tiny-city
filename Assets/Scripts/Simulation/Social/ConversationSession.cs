@@ -29,6 +29,26 @@ namespace TinyCity.Simulation.Social
         public long PricePence { get; }
     }
 
+    /// <summary>
+    /// Tiny City 2: a tax man has asked the other person in a chat to hand over a share of their food and
+    /// materials; the other's next line pays it or not. Not saved.
+    /// </summary>
+    public sealed class TaxDemand
+    {
+        public TaxDemand(string fromId, string toId, int percent)
+        {
+            FromId = fromId;
+            ToId = toId;
+            Percent = percent;
+        }
+
+        public string FromId { get; }
+
+        public string ToId { get; }
+
+        public int Percent { get; }
+    }
+
     public sealed class ConversationSession
     {
         internal ConversationSession(string id, string initiatorId, string partnerId, GameTime started, int maxLines, string place)
@@ -60,6 +80,9 @@ namespace TinyCity.Simulation.Social
 
         /// <summary>Tiny City 2: food offered and not yet answered (not saved, so a loaded chat has none).</summary>
         public FoodOffer FoodOffer { get; internal set; }
+
+        /// <summary>A tax man's demand waiting for the other person's answer, or null (Tiny City 2, not saved).</summary>
+        public TaxDemand TaxDemand { get; internal set; }
 
         /// <summary>Game minute when the next line should be said.</summary>
         public long NextLineAt { get; internal set; }

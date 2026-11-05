@@ -734,7 +734,7 @@ namespace TinyCity.Simulation.AI
                         return AiReplyCheck.Invalid(error);
                     }
 
-                    var outcome = sim.ApplyConversationLine(session.Id, lineId, speakerId, reply.Say, reply.Tone, reply.Topic, reply.End, reply.GiveFood, reply.PricePence, reply.AcceptOffer);
+                    var outcome = sim.ApplyConversationLine(session.Id, lineId, speakerId, reply.Say, reply.Tone, reply.Topic, reply.End, reply.GiveFood, reply.PricePence, reply.AcceptOffer, reply.GiveMoneyPence, reply.TaxPercent, reply.PayTax);
                     switch (outcome)
                     {
                         case DecisionOutcome.Applied:
@@ -936,12 +936,12 @@ namespace TinyCity.Simulation.AI
                 text =>
                 {
                     if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
-                        || !DayPlanPrompt.TryParse(content, out var entries, out error))
+                        || !DayPlanPrompt.TryParse(content, out var entries, out var role, out error))
                     {
                         return AiReplyCheck.Invalid(error);
                     }
 
-                    var outcome = sim.ApplyDayPlan(r.Id, day, entries);
+                    var outcome = sim.ApplyDayPlan(r.Id, day, entries, role);
                     switch (outcome)
                     {
                         case DecisionOutcome.Applied:

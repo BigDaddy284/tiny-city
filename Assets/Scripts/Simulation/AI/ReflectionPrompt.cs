@@ -70,7 +70,7 @@ namespace TinyCity.Simulation.AI
                 ["required"] = new List<object> { "summary", "importance" },
             };
 
-            return OllamaProtocol.BuildChatBody(model, PromptText.Persona(r), sb.ToString(), schema, Temperature, MaxTokens);
+            return OllamaProtocol.BuildChatBody(model, PromptText.Persona(r, sim), sb.ToString(), schema, Temperature, MaxTokens);
         }
 
         public static bool TryParse(string content, out ReflectionReply reply, out string error)

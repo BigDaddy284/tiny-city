@@ -630,6 +630,7 @@ namespace TinyCity.Simulation.Content
                 r.SetHobbies(HobbiesOf(d.id));
                 r.OpenToRomance = d.openToRomance;
                 r.About = profile?.About ?? DefaultAbout(d.id);
+                r.Outlook = profile?.Personality ?? string.Empty;
                 if (profile != null)
                 {
                     r.MoneyPence = profile.MoneyPence;
