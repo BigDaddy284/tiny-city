@@ -130,11 +130,6 @@ namespace TinyCity.Runtime
             GUILayout.BeginHorizontal();
             GUILayout.Label("Tiny City 2", styles.Title);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Toggle(game.CamerasOpen, "Cameras", GUI.skin.button, FitWidth("Cameras"), GUILayout.Height(28f)) != game.CamerasOpen)
-            {
-                game.ToggleCameras();
-            }
-
             if (GUILayout.Toggle(game.SettingsOpen, "Settings", GUI.skin.button, FitWidth("Settings"), GUILayout.Height(28f)) != game.SettingsOpen)
             {
                 game.ToggleSettings();
@@ -181,21 +176,6 @@ namespace TinyCity.Runtime
             if (GUILayout.Toggle(panels.InTownView, "Town View", GUI.skin.button, FitWidth("Town View")) != panels.InTownView)
             {
                 game.ToggleTownView();
-            }
-
-            if (GUILayout.Button("−", GUILayout.Width(28f)))
-            {
-                game.SetPanelCount(panels.Count - 1);
-            }
-
-            if (GUILayout.Button("+", GUILayout.Width(28f)))
-            {
-                game.SetPanelCount(panels.Count + 1);
-            }
-
-            if (GUILayout.Button("Watch Everyone", FitWidth("Watch Everyone")))
-            {
-                game.WatchEveryone();
             }
 
             GUILayout.EndHorizontal();
@@ -604,7 +584,7 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label("Click a panel to make it active. N/B: next/previous resident in it · Tab: free camera, other map · F: follow · drag and wheel: pan and zoom · +/−: panels · J: journal · S: saved towns · H: hide this panel · Settings: top right", styles.Small);
+            GUILayout.Label("Click someone to follow them and see who they are · Town View: the whole land · N/B: next/previous resident · drag and wheel: pan and zoom · J: journal · S: saved towns · H: hide this panel · Settings: top right", styles.Small);
             GUILayout.Label(game.Ai.Summary(), styles.Small);
             var lastEvent = game.Ai.RecentEvents.LastOrDefault();
             if (lastEvent != null)

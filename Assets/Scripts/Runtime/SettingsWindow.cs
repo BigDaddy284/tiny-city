@@ -109,7 +109,6 @@ namespace TinyCity.Runtime
             DrawAi(styles);
             DrawSound(styles);
             DrawScreen(styles);
-            DrawPanelTest(styles);
             DrawTheme(styles);
             GUILayout.EndScrollView();
             if (SaveError != null)
