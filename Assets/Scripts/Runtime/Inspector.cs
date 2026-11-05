@@ -47,6 +47,8 @@ namespace TinyCity.Runtime
         private int tab;
         private Vector2 scroll;
         private bool peopleOpen;
+        private bool rolesOpen;
+        private Vector2 rolesScroll;
         private bool expanded;
         private Vector2 gridScroll;
         private PeopleFilter peopleFilter;
@@ -148,7 +150,7 @@ namespace TinyCity.Runtime
                 GUILayout.Label(carer == null ? "A baby, looked after at home" : $"A baby, carried about by {carer.FirstName}", styles.Text);
             }
 
-            if (r.IsHomeless && r.IsAlive)
+            if (r.IsHomeless && r.IsAlive && !Simulation.FoodMustBeMade)
             {
                 GUILayout.Label("Nowhere to live: sleeps on a park bench until a home comes free", styles.Text);
             }
@@ -195,7 +197,7 @@ namespace TinyCity.Runtime
             GUILayout.EndHorizontal();
             GUILayout.Label($"Town: {game.CurrentTownName}", styles.Small);
             GUILayout.Label($"{Simulation.Time.Weekday}, Day {Simulation.Time.Day}   {Simulation.Time.ClockText}", styles.Text);
-            GUILayout.Label(DescribeCalendar(), styles.Small);
+            GUILayout.Label(Simulation.RolesLimitSkills ? DescribeMeeting() : DescribeCalendar(), styles.Small);
 
             GUILayout.BeginHorizontal();
             for (var i = 0; i < GameController.Speeds.Length; i++)
@@ -231,9 +233,91 @@ namespace TinyCity.Runtime
                 game.ToggleTownView();
             }
 
+            // The people list and the roles list drop down under this row, one at a time.
+            var people = $"People ({Simulation.LivingCount}) {(peopleOpen ? "▲" : "▼")}";
+            var openPeople = GUILayout.Toggle(peopleOpen, people, GUI.skin.button, FitWidth(people));
+            if (openPeople != peopleOpen)
+            {
+                peopleOpen = openPeople;
+                rolesOpen = rolesOpen && !peopleOpen;
+            }
+
+            if (Simulation.Brief.Roles.Count > 0)
+            {
+                var roles = rolesOpen ? "Roles ▲" : "Roles ▼";
+                var openRoles = GUILayout.Toggle(rolesOpen, roles, GUI.skin.button, FitWidth(roles));
+                if (openRoles != rolesOpen)
+                {
+                    rolesOpen = openRoles;
+                    peopleOpen = peopleOpen && !rolesOpen;
+                }
+            }
+            else
+            {
+                rolesOpen = false;
+            }
+
             GUILayout.EndHorizontal();
 
             DrawPeopleFinder(r);
+            if (rolesOpen)
+            {
+                DrawRoles(r);
+            }
+        }
+
+        /// <summary>
+        /// Tiny City 2: every role on offer with who has taken it up (or nobody), and the role changes waiting for
+        /// the next town meeting. Picking a name shows that person.
+        /// </summary>
+        private void DrawRoles(Resident r)
+        {
+            rolesScroll = BeginVerticalScroll(rolesScroll, GUILayout.Height(PeopleListHeight));
+            foreach (var role in Simulation.Brief.Roles)
+            {
+                var holders = Simulation.Residents.Where(o => o.IsAlive && o.Role == role.Name).OrderBy(o => o.FirstName, StringComparer.Ordinal).ToList();
+                GUILayout.Label($"{Capital(role.Name)}{(holders.Count == 0 ? ": nobody yet" : string.Empty)}", styles.Text);
+                foreach (var holder in holders)
+                {
+                    if (GUILayout.Toggle(holder == r, "   " + holder.FullName, GUI.skin.button) && holder != r)
+                    {
+                        Pick(holder);
+                    }
+                }
+            }
+
+            var without = Simulation.Residents.Count(o => o.IsAlive && o.Role == null);
+            GUILayout.Label($"No role: {without}", styles.Small);
+            if (Simulation.RoleRequests.Count > 0)
+            {
+                GUILayout.Label("Asked to change at the next meeting:", styles.Small);
+                foreach (var request in Simulation.RoleRequests.OrderBy(o => o.Key, StringComparer.Ordinal))
+                {
+                    var who = Simulation.GetResident(request.Key);
+                    if (who != null)
+                    {
+                        GUILayout.Label(request.Value == TownSimulation.RoleNone ? $"   {who.FullName}: give up being the {who.Role}" : $"   {who.FullName}: {who.Role ?? "no role"} to {request.Value}", styles.Small);
+                    }
+                }
+            }
+
+            EndVerticalScroll();
+        }
+
+        private string DescribeMeeting()
+        {
+            if (Simulation.Meeting != null && Simulation.Meeting.Day == Simulation.Time.Day)
+            {
+                return $"Town meeting on now at the meeting circle: {Simulation.Meeting.Attendees.Count} there";
+            }
+
+            var day = Simulation.NextMeetingDay(Simulation.Time.Day);
+            if (day == Simulation.Time.Day && Simulation.Time.MinuteOfDay >= TownSimulation.MeetingCloseMinute)
+            {
+                day = Simulation.NextMeetingDay(day + 1);
+            }
+
+            return day <= 0 ? "No town meetings" : $"Next town meeting: {TinyCity.Simulation.Time.GameTime.FromDayAndTime(day, 0, 0).Weekday} (day {day}) at 10:00";
         }
 
         /// <summary>
@@ -243,9 +327,14 @@ namespace TinyCity.Runtime
         /// </summary>
         private void DrawPeopleFinder(Resident r)
         {
+            if (!peopleOpen)
+            {
+                expanded = false;
+                search = string.Empty;
+                return;
+            }
+
             GUILayout.BeginHorizontal();
-            GUILayout.Box(Simulation.LivingCount.ToString(), CountStyle(), GUILayout.Width(28f));
-            peopleOpen = GUILayout.Toggle(peopleOpen, peopleOpen ? "People ▲" : "People ▼", GUI.skin.button, GUILayout.Width(110f));
             GUI.SetNextControlName(SearchControl);
             search = GUILayout.TextField(search ?? string.Empty, 40);
             if (string.IsNullOrEmpty(search) && GUI.GetNameOfFocusedControl() != SearchControl)
@@ -383,7 +472,7 @@ namespace TinyCity.Runtime
 
         private void DrawNow(Resident r)
         {
-            GUILayout.Label($"{DescribeLivelihood(r)} · {r.Personality.Describe()}", styles.Small);
+            GUILayout.Label(Simulation.FoodMustBeMade ? r.Personality.Describe() : $"{DescribeLivelihood(r)} · {r.Personality.Describe()}", styles.Small);
             if (!r.IsAlive)
             {
                 GUILayout.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}. Remembered by the town.", styles.Text);
@@ -418,7 +507,7 @@ namespace TinyCity.Runtime
                 {
                     GUILayout.Label($"Planned next (checked again when it's time): {string.Join(", then ", r.PlannedSteps.Select(DescribePlanStep))}", styles.Small);
                 }
-                else
+                else if (r.GoalSource != DecisionSource.Ai)
                 {
                     GUILayout.Label($"Why (game routine): {r.Goal}", styles.Small);
                 }

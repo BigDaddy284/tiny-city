@@ -510,7 +510,7 @@ namespace TinyCity.Runtime
                     continue;
                 }
 
-                Label(panel, origin, position + new Vector3(0f, 0.86f, 0f), r.FirstName, styles.Name, GuiStyles.PersonGlow);
+                Label(panel, origin, position + new Vector3(0f, 0.86f, 0f), string.IsNullOrEmpty(r.Role) ? r.FirstName : $"{r.FirstName} ({r.Role})", styles.Name, GuiStyles.PersonGlow);
 
                 // A bubble appears for each new line a resident says, and fades after a few seconds.
                 if (speech.TryGetValue(r.Id, out var bubble) && Time.unscaledTime < bubble.until && panel.TryScreenPoint(position + new Vector3(0f, 1.05f, 0f), out var above))

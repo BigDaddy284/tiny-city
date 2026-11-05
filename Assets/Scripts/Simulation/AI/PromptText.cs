@@ -16,7 +16,8 @@ namespace TinyCity.Simulation.AI
             if (sim != null && sim.FoodMustBeMade)
             {
                 // Tiny City 2: no city and no jobs, only the open land, what the player told everyone, and the role they chose.
-                return $"You are {r.FullName}, aged {r.AgeYears}, one of the people living on the open land of {sim.World.TownName}. " +
+                // Nobody ages or dies there (owner, 5 November), so their age is left out.
+                return $"You are {r.FullName}, one of the people living on the open land of {sim.World.TownName}. " +
                     (sim.Brief.Text.Length == 0 ? string.Empty : $"What everyone here knows: {sim.Brief.Text} ") +
                     (r.Role != null ? $"You have chosen to be the {r.Role}. {sim.Brief.Find(r.Role)?.About} " : sim.Brief.Roles.Count > 0 ? "You haven't taken up any role. " : string.Empty) +
                     (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Who you are, in your own words: {r.About} ") +
@@ -165,7 +166,7 @@ namespace TinyCity.Simulation.AI
             sb.AppendLine("People in the city:");
             foreach (var o in known.Take(MaxPeopleListed))
             {
-                sb.Append("- ").Append(o.FullName).Append(", ").Append(o.AgeYears).Append(Work(o)).Append(": ").AppendLine(Relationship(sim, r, o));
+                sb.Append("- ").Append(o.FullName).Append(sim.FoodMustBeMade ? string.Empty : ", " + o.AgeYears).Append(Work(o)).Append(": ").AppendLine(Relationship(sim, r, o));
             }
 
             if (strangers.Count > 0)
