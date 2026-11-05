@@ -21,7 +21,7 @@ namespace TinyCity.Runtime
     {
         public const float DefaultWidth = 380f;
         public const float MinWidth = 320f;
-        private const float GripWidth = 6f;
+        private const float GripWidth = 10f;
         private const string WidthPrefsKey = "TinyCity.SidebarWidth";
 
         /// <summary>The side panel's width: drag its left edge to change it (owner, 5 November); kept in PlayerPrefs.</summary>
@@ -30,7 +30,18 @@ namespace TinyCity.Runtime
         private static bool widthLoaded;
         private bool resizing;
         private const int SearchMatchesShown = 6;
-        private const float PeopleListHeight = 180f;
+        private const float DefaultListHeight = 180f;
+        private const float DefaultFooterHeight = 150f;
+        private const float MinSectionHeight = 60f;
+        private const float SplitterHeight = 12f;
+        private const string ListHeightPrefsKey = "TinyCity.ListHeight";
+        private const string FooterHeightPrefsKey = "TinyCity.FooterHeight";
+
+        /// <summary>How tall the People and Roles lists and the bottom section are: drag the bars between them (owner, 5 November); kept in PlayerPrefs.</summary>
+        private static float listHeight = DefaultListHeight;
+        private static float footerHeight = DefaultFooterHeight;
+        private static bool heightsLoaded;
+        private Vector2 footerScroll;
         private const int GridColumns = 2;
         private const string SearchControl = "inspector-people-search";
         private const int TimelineShown = 40;
@@ -79,6 +90,13 @@ namespace TinyCity.Runtime
                 Width = PlayerPrefs.GetFloat(WidthPrefsKey, DefaultWidth);
             }
 
+            if (!heightsLoaded)
+            {
+                heightsLoaded = true;
+                listHeight = PlayerPrefs.GetFloat(ListHeightPrefsKey, DefaultListHeight);
+                footerHeight = PlayerPrefs.GetFloat(FooterHeightPrefsKey, DefaultFooterHeight);
+            }
+
             Width = Mathf.Clamp(Width, MinWidth, MaxWidth);
             var grip = new Rect(Screen.width - Width - (GripWidth / 2f), 0f, GripWidth, Screen.height);
             var e = Event.current;
@@ -98,13 +116,22 @@ namespace TinyCity.Runtime
                     PlayerPrefs.Save();
                     e.Use();
                     break;
-                case EventType.Repaint:
-                    // A thin bar shows where to grab, brighter while dragging.
-                    GUI.color = UiTheme.ToColor(UiTheme.Palette.BarBorder);
-                    GUI.DrawTexture(new Rect(grip.x + 1f, 0f, resizing ? 4f : 2f, Screen.height), Texture2D.whiteTexture);
-                    GUI.color = Color.white;
-                    break;
             }
+        }
+
+        /// <summary>A thin bar down the left edge, with a handle halfway down to show where to grab, brighter while dragging.</summary>
+        private void DrawGrip()
+        {
+            if (Event.current.type != EventType.Repaint)
+            {
+                return;
+            }
+
+            var x = Screen.width - Width;
+            var hover = new Rect(x - (GripWidth / 2f), 0f, GripWidth, Screen.height).Contains(Event.current.mousePosition);
+            GUI.color = UiTheme.ToColor(UiTheme.Palette.BarBorder);
+            GUI.DrawTexture(new Rect(x - 1f, 0f, resizing ? 4f : 2f, Screen.height), Texture2D.whiteTexture);
+            DrawHandle(new Rect(x - 4f, (Screen.height / 2f) - 30f, 8f, 60f), vertical: true, active: resizing || hover);
         }
 
         public void Draw(GuiStyles guiStyles)
@@ -118,6 +145,7 @@ namespace TinyCity.Runtime
             GUI.color = UiTheme.ToColor(UiTheme.Palette.BarBorder);
             GUI.DrawTexture(new Rect(area.x, 0f, 1f, area.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
+            DrawGrip();
 
             GUILayout.BeginArea(new Rect(area.x + 14f, 10f, Width - 28f, Screen.height - 20f));
             DrawTownControls(r);
@@ -272,7 +300,7 @@ namespace TinyCity.Runtime
         /// </summary>
         private void DrawRoles(Resident r)
         {
-            rolesScroll = BeginVerticalScroll(rolesScroll, GUILayout.Height(PeopleListHeight));
+            rolesScroll = BeginVerticalScroll(rolesScroll, GUILayout.Height(listHeight));
             foreach (var role in Simulation.Brief.Roles)
             {
                 var holders = Simulation.Residents.Where(o => o.IsAlive && o.Role == role.Name).OrderBy(o => o.FirstName, StringComparer.Ordinal).ToList();
@@ -302,6 +330,7 @@ namespace TinyCity.Runtime
             }
 
             EndVerticalScroll();
+            ListSplitter();
         }
 
         private string DescribeMeeting()
@@ -376,7 +405,7 @@ namespace TinyCity.Runtime
                 return;
             }
 
-            peopleScroll = BeginVerticalScroll(peopleScroll, GUILayout.Height(PeopleListHeight));
+            peopleScroll = BeginVerticalScroll(peopleScroll, GUILayout.Height(listHeight));
             var shown = PeopleList.Of(Simulation.Residents, peopleFilter, peopleOrder);
             if (shown.Count == 0)
             {
@@ -392,6 +421,7 @@ namespace TinyCity.Runtime
             }
 
             EndVerticalScroll();
+            ListSplitter();
         }
 
         /// <summary>
@@ -427,6 +457,68 @@ namespace TinyCity.Runtime
             var bar = GUI.skin.verticalScrollbar;
             var barWidth = (bar.fixedWidth > 0f ? bar.fixedWidth : 12f) + bar.margin.horizontal;
             return Width - 28f - barWidth - 4f;
+        }
+
+        /// <summary>The bar under the People or Roles list: drag it to make the list taller or shorter.</summary>
+        private static void ListSplitter()
+        {
+            if (Splitter(ref listHeight, MinSectionHeight, Mathf.Max(MinSectionHeight, Screen.height * 0.7f), upward: false))
+            {
+                PlayerPrefs.SetFloat(ListHeightPrefsKey, listHeight);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>
+        /// A bar across the panel with a handle in the middle: press on it and drag up or down to change
+        /// <paramref name="height"/> (the section above it, or with <paramref name="upward"/> the one below). True when let go.
+        /// </summary>
+        private static bool Splitter(ref float height, float min, float max, bool upward)
+        {
+            var rect = GUILayoutUtility.GetRect(1f, SplitterHeight, GUILayout.ExpandWidth(true));
+            var id = GUIUtility.GetControlID(FocusType.Passive);
+            var e = Event.current;
+            switch (e.GetTypeForControl(id))
+            {
+                case EventType.MouseDown when e.button == 0 && rect.Contains(e.mousePosition):
+                    GUIUtility.hotControl = id;
+                    e.Use();
+                    break;
+                case EventType.MouseDrag when GUIUtility.hotControl == id:
+                    height = Mathf.Clamp(height + (upward ? -e.delta.y : e.delta.y), min, max);
+                    e.Use();
+                    break;
+                case EventType.MouseUp when GUIUtility.hotControl == id:
+                    GUIUtility.hotControl = 0;
+                    e.Use();
+                    return true;
+                case EventType.Repaint:
+                    var active = GUIUtility.hotControl == id;
+                    GUI.color = UiTheme.ToColor(UiTheme.Palette.BarBorder);
+                    GUI.DrawTexture(new Rect(rect.x, rect.center.y - 0.5f, rect.width, 1f), Texture2D.whiteTexture);
+                    DrawHandle(new Rect(rect.center.x - 30f, rect.y + 2f, 60f, rect.height - 4f), vertical: false, active: active || rect.Contains(e.mousePosition));
+                    break;
+            }
+
+            height = Mathf.Clamp(height, min, max);
+            return false;
+        }
+
+        /// <summary>A rounded-looking grab handle: a filled bar with three grip lines across it.</summary>
+        private static void DrawHandle(Rect rect, bool vertical, bool active)
+        {
+            GUI.color = UiTheme.ToColor(active ? UiTheme.Palette.AccentB : UiTheme.Palette.Muted);
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = UiTheme.ToColor(UiTheme.Palette.Panel);
+            for (var i = -1; i <= 1; i++)
+            {
+                var line = vertical
+                    ? new Rect(rect.x + 2f, rect.center.y + (i * 5f) - 0.5f, rect.width - 4f, 1f)
+                    : new Rect(rect.center.x + (i * 5f) - 0.5f, rect.y + 2f, 1f, rect.height - 4f);
+                GUI.DrawTexture(line, Texture2D.whiteTexture);
+            }
+
+            GUI.color = Color.white;
         }
 
         /// <summary>A scroll view that only scrolls up and down: its content is kept to <see cref="ScrollContentWidth"/>.</summary>
@@ -823,6 +915,19 @@ namespace TinyCity.Runtime
         }
 
         private void DrawFooter()
+        {
+            if (Splitter(ref footerHeight, MinSectionHeight, Mathf.Max(MinSectionHeight, Screen.height * 0.6f), upward: true))
+            {
+                PlayerPrefs.SetFloat(FooterHeightPrefsKey, footerHeight);
+                PlayerPrefs.Save();
+            }
+
+            footerScroll = BeginVerticalScroll(footerScroll, GUILayout.Height(footerHeight));
+            DrawFooterContents();
+            EndVerticalScroll();
+        }
+
+        private void DrawFooterContents()
         {
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Save (F5)"))
