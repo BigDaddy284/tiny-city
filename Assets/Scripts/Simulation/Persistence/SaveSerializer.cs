@@ -101,6 +101,15 @@ namespace TinyCity.Simulation.Persistence
                     ["what"] = p.What,
                     ["planterId"] = p.PlanterId,
                 }).ToList(),
+                ["nextSleepSpotNumber"] = simulation.Sleeping.NextSpotNumber,
+                ["sleepSpots"] = simulation.Sleeping.Spots.Select(o => (object)new Dictionary<string, object>
+                {
+                    ["id"] = o.Id,
+                    ["mapId"] = o.Location.MapId,
+                    ["x"] = o.Location.Position.X,
+                    ["y"] = o.Location.Position.Y,
+                    ["sleeperId"] = o.SleeperId,
+                }).ToList(),
                 ["nextSiteNumber"] = simulation.Construction.NextSiteNumber,
                 ["sites"] = simulation.Construction.Sites.Select(site =>
                 {
@@ -121,6 +130,7 @@ namespace TinyCity.Simulation.Persistence
                         item["rows"] = p.Plan.Rows.Select(row => (object)row).ToList();
                         item["placed"] = p.Placed;
                         item["startedDay"] = p.StartedDay;
+                        item["builders"] = p.Builders.Select(b => (object)b).ToList();
                     }
 
                     return (object)item;
@@ -213,7 +223,7 @@ namespace TinyCity.Simulation.Persistence
             }
 
             // Buildings and crop patches first, so a finished home's bed and every site and patch are in the world while the residents who use them are read.
-            var sites = new List<(Building.Site site, Building.BuildPlan plan, int placed, int startedDay)>();
+            var sites = new List<(Building.Site site, Building.BuildPlan plan, int placed, int startedDay, List<string> builders)>();
             var early = new Building.Construction(world);
             foreach (var item in GetList(root, "sites").OfType<Dictionary<string, object>>())
             {
@@ -241,9 +251,9 @@ namespace TinyCity.Simulation.Persistence
                     continue;
                 }
 
-                var entry = (site, plan, GetInt(item, "placed", 0), GetInt(item, "startedDay", 0));
+                var entry = (site, plan, GetInt(item, "placed", 0), GetInt(item, "startedDay", 0), GetList(item, "builders").OfType<string>().ToList());
                 sites.Add(entry);
-                early.Restore(site, plan == null ? null : new Building.Project(id, site.OwnerId, corner, plan, entry.Item3, entry.Item4));
+                early.Restore(site, plan == null ? null : new Building.Project(id, site.OwnerId, corner, plan, entry.Item3, entry.Item4, entry.Item5));
             }
 
             if (GetList(root, "projects").Count > 0)
@@ -269,6 +279,25 @@ namespace TinyCity.Simulation.Persistence
                 var patch = new CropPatch(id, at, TextRules.Clean(what, FoodSupply.MaxCropNameLength).ToLowerInvariant(), GetString(item, "planterId"));
                 patches.Add(patch);
                 earlyFood.RestorePatch(patch);
+            }
+
+            var sleepSpots = new List<SleepingSpot>();
+            var earlySleeping = new SleepingGround();
+            earlySleeping.Attach(world);
+            foreach (var item in GetList(root, "sleepSpots").OfType<Dictionary<string, object>>())
+            {
+                var id = GetString(item, "id");
+                var mapId = GetString(item, "mapId");
+                var at = mapId == null ? default : new Location(mapId, GetInt(item, "x", -1), GetInt(item, "y", -1));
+                if (id == null || !id.StartsWith(SleepingSpot.IdPrefix, StringComparison.Ordinal) || sleepSpots.Any(o => o.Id == id) || mapId == null || !world.IsWalkable(at))
+                {
+                    warnings.Add($"A sleeping spot \"{id}\" that isn't on open ground was dropped.");
+                    continue;
+                }
+
+                var spot = new SleepingSpot(id, at, GetString(item, "sleeperId"));
+                sleepSpots.Add(spot);
+                earlySleeping.Restore(spot);
             }
 
             var residents = new List<Resident>();
@@ -306,7 +335,7 @@ namespace TinyCity.Simulation.Persistence
             ReadRelationships(GetList(root, "relationships"), simulation, warnings);
             ReadSessions(GetList(root, "activeConversations"), simulation, warnings);
             ReadEconomy(GetObject(root, "economy"), simulation, warnings);
-            foreach (var (site, plan, placed, startedDay) in sites)
+            foreach (var (site, plan, placed, startedDay, builders) in sites)
             {
                 if (simulation.GetResident(site.OwnerId) == null)
                 {
@@ -314,9 +343,16 @@ namespace TinyCity.Simulation.Persistence
                 }
                 else
                 {
-                    simulation.Construction.Restore(site, plan == null ? null : new Building.Project(site.Id, site.OwnerId, site.Corner, plan, placed, startedDay));
+                    simulation.Construction.Restore(site, plan == null ? null : new Building.Project(site.Id, site.OwnerId, site.Corner, plan, placed, startedDay, builders.Where(b => simulation.GetResident(b) != null)));
                 }
             }
+
+            foreach (var spot in sleepSpots)
+            {
+                simulation.Sleeping.Restore(spot);
+            }
+
+            simulation.Sleeping.NextSpotNumber = Math.Max(GetInt(root, "nextSleepSpotNumber", 1), simulation.Sleeping.Spots.Select(o => NumberAfter(o.Id, SleepingSpot.IdPrefix)).DefaultIfEmpty(1).Max());
 
             simulation.Construction.NextSiteNumber = Math.Max(GetInt(root, "nextSiteNumber", 1), simulation.Construction.Sites.Select(o => NumberAfter(o.Id, Building.BuildingRules.SitePrefix)).DefaultIfEmpty(1).Max());
             foreach (var patch in patches)
@@ -410,6 +446,7 @@ namespace TinyCity.Simulation.Persistence
                 ["incomeLabel"] = r.IncomeLabel,
                 ["about"] = r.About,
                 ["ownsBusinessId"] = r.OwnsBusinessId,
+                ["stallPrice"] = r.StallPricePence,
                 ["unpaidWorkMinutes"] = r.UnpaidWorkMinutes,
                 ["health"] = r.Health,
                 ["illness"] = r.IllnessId == null ? null : new Dictionary<string, object>
@@ -586,6 +623,7 @@ namespace TinyCity.Simulation.Persistence
             resident.WeeklyIncomePence = Math.Max(0, GetLong(data, "weeklyIncome", 0));
             resident.IncomeLabel = TextRules.Clean(GetString(data, "incomeLabel"), 40);
             resident.About = TextRules.Clean(GetString(data, "about"), ResidentProfile.MaxAboutLength);
+            resident.StallPricePence = Math.Max(0, GetLong(data, "stallPrice", 0));
             var owns = GetString(data, "ownsBusinessId");
             if (!string.IsNullOrEmpty(owns))
             {

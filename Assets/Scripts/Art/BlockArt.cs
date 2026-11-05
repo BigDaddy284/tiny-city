@@ -42,7 +42,7 @@ namespace TinyCity.Art
             foreach (var obj in world.Placed.Where(o => o.Location.MapId == map.Id))
             {
                 var p = obj.Location.Position;
-                var started = obj.Type == ObjectType.BuildPlot && construction.At(obj.Id) is Project project && project.Placed > 0;
+                var started = obj.Type == ObjectType.BuildPlot && construction.At(obj.Id) is Project project && (project.Placed > 0 || project.IsFinished);
                 if (!started)
                 {
                     pieces.Add(new ArtPiece(obj.Name, FurnitureArt.Render(obj.Type, Noise.Of(obj.Id), palette, obj.Type != ObjectType.Bed), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));

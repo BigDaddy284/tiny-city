@@ -179,6 +179,12 @@ namespace TinyCity.Simulation.Residents
         /// <summary>The business they own and run as its boss, or null. Comes from the profile, or the AI choosing to take one on.</summary>
         public string OwnsBusinessId { get; internal set; }
 
+        /// <summary>
+        /// Tiny City 2: what they ask for each portion when they run a stall, in pence, chosen by them each time they
+        /// set one up (0 gives it away). Saved.
+        /// </summary>
+        public long StallPricePence { get; internal set; }
+
         /// <summary>Minutes worked since wages were last paid; paid when the shift ends.</summary>
         public int UnpaidWorkMinutes { get; internal set; }
 

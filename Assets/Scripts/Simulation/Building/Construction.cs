@@ -28,6 +28,27 @@ namespace TinyCity.Simulation.Building
         public MaterialKind Material { get; }
     }
 
+    /// <summary>A piece of furniture in a plan: the tile it stands on (from the back-left corner), what it is, and its letter.</summary>
+    public readonly struct PlanFurniture
+    {
+        public PlanFurniture(int x, int y, char letter)
+        {
+            X = x;
+            Y = y;
+            Letter = letter;
+        }
+
+        public int X { get; }
+
+        public int Y { get; }
+
+        public char Letter { get; }
+
+        public ObjectType Type => BuildingRules.Furniture[Letter].type;
+
+        public string Name => BuildingRules.Furniture[Letter].name;
+    }
+
     /// <summary>A plan question waiting for the AI: which building site it is for. Not saved; after loading they plan again.</summary>
     public sealed class PendingSketch
     {
@@ -76,11 +97,27 @@ namespace TinyCity.Simulation.Building
         /// <summary>How long a plan question waits for an answer before it is dropped.</summary>
         public const int SketchWaitMinutes = 240;
 
-        /// <summary>The letter for a bed, which makes a finished building its owner's home.</summary>
+        /// <summary>The letter for a bed.</summary>
         public const char BedLetter = 'B';
 
-        /// <summary>Ids of the furniture a building adds to the world: the site's id plus this.</summary>
-        public const string BedSuffix = "-built-bed";
+        /// <summary>Ids of the furniture a finished building adds to the world: the site's id plus this, then the first bed's <see cref="BedSuffix"/> or a number.</summary>
+        public const string BuiltInfix = "-built-";
+
+        /// <summary>The first bed of a finished building: the site's id plus this.</summary>
+        public const string BedSuffix = BuiltInfix + "bed";
+
+        /// <summary>
+        /// Furniture a plan can put in (Tiny City 2): each takes the whole tile its letter falls in, and appears once the
+        /// building is finished. Anyone can use it; nothing in the world belongs to anyone.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<char, (ObjectType type, string name)> Furniture = new Dictionary<char, (ObjectType, string)>
+        {
+            [BedLetter] = (ObjectType.Bed, "bed"),
+            ['K'] = (ObjectType.Kitchen, "stove"),
+            ['M'] = (ObjectType.MarketStall, "stall"),
+            ['X'] = (ObjectType.Workbench, "crafting bench"),
+            ['N'] = (ObjectType.Bench, "bench"),
+        };
 
         /// <summary>Ids of building sites: this plus a number.</summary>
         public const string SitePrefix = "obj-site-";
@@ -100,7 +137,7 @@ namespace TinyCity.Simulation.Building
         public static bool IsBuilding(ActivityDefinition a) => a == ActivityCatalog.PlanBuilding || a == ActivityCatalog.Build;
 
         /// <summary>True for furniture a building put in the world (drawn with the blocks, not with the map).</summary>
-        public static bool IsBuilt(WorldObject o) => o != null && o.Id.EndsWith(BedSuffix, StringComparison.Ordinal);
+        public static bool IsBuilt(WorldObject o) => o != null && o.Id.StartsWith(SitePrefix, StringComparison.Ordinal) && o.Id.Contains(BuiltInfix);
 
         public static char LetterOf(MaterialKind m) => Letters.First(p => p.Value == m).Key;
 
@@ -134,8 +171,11 @@ namespace TinyCity.Simulation.Building
     /// </summary>
     public sealed class BuildPlan
     {
-        private BuildPlan(string name, int height, IReadOnlyList<string> rows, List<BlockCell> cells, (int x, int y)? bedTile, (int x, int y)? doorTile, int width, int depth)
+        private BuildPlan(string name, int height, IReadOnlyList<string> rows, List<BlockCell> cells, List<PlanFurniture> furniture, (int x, int y)? doorTile, int width, int depth)
         {
+            Furniture = furniture;
+            var bed = furniture.FirstOrDefault(f => f.Letter == BuildingRules.BedLetter);
+            var bedTile = furniture.Any(f => f.Letter == BuildingRules.BedLetter) ? (bed.X, bed.Y) : ((int, int)?)null;
             Name = name;
             Height = height;
             Rows = rows;
@@ -164,7 +204,10 @@ namespace TinyCity.Simulation.Building
         /// <summary>Every block in building order: the whole bottom layer first, then each layer above.</summary>
         public IReadOnlyList<BlockCell> Cells { get; }
 
-        /// <summary>The tile (not letter), from the back-left corner, the bed stands on, or null for a building nobody can live in.</summary>
+        /// <summary>Every piece of furniture, in plan order (back row first); each has a tile of its own.</summary>
+        public IReadOnlyList<PlanFurniture> Furniture { get; }
+
+        /// <summary>The tile (not letter), from the back-left corner, the first bed stands on, or null for a building with no bed.</summary>
         public (int x, int y)? BedTile { get; }
 
         public bool IsHome => BedTile.HasValue;
@@ -210,7 +253,7 @@ namespace TinyCity.Simulation.Building
                         c = '.';
                     }
 
-                    if (c != '.' && c != 'D' && c != BuildingRules.BedLetter && !BuildingRules.Letters.ContainsKey(c))
+                    if (c != '.' && c != 'D' && !BuildingRules.Furniture.ContainsKey(c) && !BuildingRules.Letters.ContainsKey(c))
                     {
                         error = $"'{c}' is not a block letter";
                         return false;
@@ -220,9 +263,11 @@ namespace TinyCity.Simulation.Building
                 }
             }
 
-            // Doorways and the bed take whole tiles: a doorway clears its tile up to door height, the (first) bed its whole tile.
+            // Doorways and furniture take whole tiles: a doorway clears its tile up to door height, furniture its whole tile
+            // (the first furniture letter in a tile is what stands there).
             var doorTiles = new bool[tiles, tiles];
-            (int x, int y)? bed = null;
+            var furnitureAt = new char[tiles, tiles];
+            var furniture = new List<PlanFurniture>();
             (int x, int y)? door = null;
             int width = 0, depth = 0;
             for (var y = 0; y < size; y++)
@@ -240,15 +285,17 @@ namespace TinyCity.Simulation.Building
                         doorTiles[x / per, y / per] = true;
                         door = door ?? (x / per, y / per);
                     }
-                    else if (grid[x, y] == BuildingRules.BedLetter && bed == null)
+                    else if (BuildingRules.Furniture.ContainsKey(grid[x, y]) && furnitureAt[x / per, y / per] == '\0')
                     {
-                        bed = (x / per, y / per);
+                        furnitureAt[x / per, y / per] = grid[x, y];
+                        furniture.Add(new PlanFurniture(x / per, y / per, grid[x, y]));
                     }
                 }
             }
 
+            bool IsFurniture(int tx, int ty) => furnitureAt[tx, ty] != '\0';
             int ClearUpTo(int x, int y) =>
-                bed is (int bx, int by) && bx == x / per && by == y / per ? height
+                IsFurniture(x / per, y / per) ? height
                 : doorTiles[x / per, y / per] ? Math.Min(height, BuildingRules.DoorHeight)
                 : 0;
 
@@ -270,9 +317,9 @@ namespace TinyCity.Simulation.Building
                 cells.AddRange(walls.Where(w => level >= ClearUpTo(w.x, w.y)).Select(w => new BlockCell(w.x, w.y, level, w.m)));
             }
 
-            if (cells.Count < BuildingRules.MinBlocks)
+            if (cells.Count < BuildingRules.MinBlocks && furniture.Count == 0)
             {
-                error = $"a building needs at least {BuildingRules.MinBlocks} blocks";
+                error = $"a building needs at least {BuildingRules.MinBlocks} blocks, or some furniture";
                 return false;
             }
 
@@ -291,12 +338,12 @@ namespace TinyCity.Simulation.Building
                 open[c.X / per, c.Y / per] = false;
             }
 
-            // Every open tile must be reachable from outside the plan, so nobody is ever shut in. The bed is a destination, not a way through.
+            // Every open tile must be reachable from outside the plan, so nobody is ever shut in. Furniture is a destination, not a way through.
             var reached = new bool[tiles + 2, tiles + 2];
             var queue = new Queue<(int x, int y)>();
             reached[0, 0] = true;
             queue.Enqueue((0, 0));
-            var bedReached = false;
+            var furnitureReached = new bool[tiles, tiles];
             while (queue.Count > 0)
             {
                 var (px, py) = queue.Dequeue();
@@ -309,9 +356,9 @@ namespace TinyCity.Simulation.Building
                     }
 
                     var inside = nx >= 1 && ny >= 1 && nx <= tiles && ny <= tiles;
-                    if (inside && bed is (int bx, int by) && bx == nx - 1 && by == ny - 1)
+                    if (inside && IsFurniture(nx - 1, ny - 1))
                     {
-                        bedReached = true;
+                        furnitureReached[nx - 1, ny - 1] = true;
                         continue;
                     }
 
@@ -329,8 +376,7 @@ namespace TinyCity.Simulation.Building
             {
                 for (var x = 0; x < tiles; x++)
                 {
-                    var isBed = bed is (int bx, int by) && bx == x && by == y;
-                    if (open[x, y] && !isBed && !reached[x + 1, y + 1])
+                    if (open[x, y] && !IsFurniture(x, y) && !reached[x + 1, y + 1])
                     {
                         error = "part of it is closed in with no doorway";
                         return false;
@@ -338,15 +384,15 @@ namespace TinyCity.Simulation.Building
                 }
             }
 
-            if (bed != null && !bedReached)
+            foreach (var f in furniture.Where(f => !furnitureReached[f.X, f.Y]))
             {
-                error = "nobody could get to the bed";
+                error = $"nobody could get to the {f.Name}";
                 return false;
             }
 
             var cleanRows = Enumerable.Range(0, size).Select(y => new string(Enumerable.Range(0, size).Select(x => grid[x, y]).ToArray())).ToList();
             var cleanName = TextRules.Clean(name, BuildingRules.MaxNameLength);
-            plan = new BuildPlan(cleanName.Length > 0 ? cleanName : "building", height, cleanRows, cells, bed, door, width, depth);
+            plan = new BuildPlan(cleanName.Length > 0 ? cleanName : "building", height, cleanRows, cells, furniture, door, width, depth);
             error = null;
             return true;
         }
@@ -378,8 +424,9 @@ namespace TinyCity.Simulation.Building
     /// <summary>A building someone has planned on their site, and how many of its blocks are down.</summary>
     public sealed class Project
     {
-        public Project(string siteId, string ownerId, Location corner, BuildPlan plan, int placed, int startedDay)
+        public Project(string siteId, string ownerId, Location corner, BuildPlan plan, int placed, int startedDay, IEnumerable<string> builders = null)
         {
+            Builders = new SortedSet<string>(builders ?? Array.Empty<string>(), StringComparer.Ordinal);
             SiteId = siteId;
             OwnerId = ownerId;
             Corner = corner;
@@ -400,6 +447,9 @@ namespace TinyCity.Simulation.Building
         public int Placed { get; internal set; }
 
         public int StartedDay { get; }
+
+        /// <summary>Everyone who has laid a block of it: anyone may help, with their own materials. Saved.</summary>
+        public SortedSet<string> Builders { get; }
 
         public bool IsFinished => Placed >= Plan.Cells.Count;
 
@@ -543,6 +593,12 @@ namespace TinyCity.Simulation.Building
             }
 
             var walls = new HashSet<Location>(plan.Cells.Where(c => c.Level == 0).Select(c => BuildingRules.TileOf(corner, c)));
+            var furnitureTiles = plan.Furniture.Select(f => BuildingRules.TileOf(corner, f.X * BuildingRules.CellsPerTile, f.Y * BuildingRules.CellsPerTile)).ToList();
+            foreach (var tile in furnitureTiles.Where((t, i) => WorldObject.BlocksPassingType(plan.Furniture[i].Type)))
+            {
+                walls.Add(tile);
+            }
+
             var planned = new HashSet<Location>(projects.Values.SelectMany(p => p.Plan.Cells.Where(c => c.Level == 0).Select(c => BuildingRules.TileOf(p.Corner, c))));
             bool Open(Location l, bool withNew) => map.IsWalkable(l.Position) && !world.IsBlocked(l) && !planned.Contains(l) && !(withNew && walls.Contains(l));
 
@@ -571,9 +627,12 @@ namespace TinyCity.Simulation.Building
                 }
             }
 
-            if (plan.BedTile is (int bx, int by) && !CanGetTo(BuildingRules.TileOf(corner, bx * BuildingRules.CellsPerTile, by * BuildingRules.CellsPerTile), after))
+            for (var i = 0; i < furnitureTiles.Count; i++)
             {
-                return "nobody could get to the bed";
+                if (!CanGetTo(furnitureTiles[i], after))
+                {
+                    return $"nobody could get to the {plan.Furniture[i].Name}";
+                }
             }
 
             if (plan.DoorTile is (int dx, int dy))
@@ -630,7 +689,7 @@ namespace TinyCity.Simulation.Building
         }
 
         /// <summary>Lays the project's next blocks, up to <paramref name="max"/>, while the builder has the materials and nobody stands in the way.</summary>
-        internal List<BlockCell> LayBlocks(Project project, Belongings belongings, int max, Func<Location, bool> occupied, out string stoppedBy)
+        internal List<BlockCell> LayBlocks(Project project, string builderId, Belongings belongings, int max, Func<Location, bool> occupied, out string stoppedBy)
         {
             var laid = new List<BlockCell>();
             stoppedBy = null;
@@ -655,6 +714,7 @@ namespace TinyCity.Simulation.Building
 
             if (laid.Count > 0)
             {
+                project.Builders.Add(builderId);
                 Rebuild();
             }
 
@@ -663,6 +723,25 @@ namespace TinyCity.Simulation.Building
 
         /// <summary>The bed of a finished home on this site: in the world while the building stands finished.</summary>
         public static string BedIdOf(string siteId) => siteId + BuildingRules.BedSuffix;
+
+        /// <summary>The id of a finished building's furniture: the first bed keeps <see cref="BedIdOf"/>, the rest are numbered in plan order.</summary>
+        public static string FurnitureIdOf(string siteId, BuildPlan plan, int index)
+        {
+            var firstBed = -1;
+            for (var i = 0; i < plan.Furniture.Count && firstBed < 0; i++)
+            {
+                firstBed = plan.Furniture[i].Letter == BuildingRules.BedLetter ? i : -1;
+            }
+
+            return index == firstBed ? BedIdOf(siteId) : $"{siteId}{BuildingRules.BuiltInfix}{index + 1}";
+        }
+
+        /// <summary>What a finished building's furniture is called: "Stove in the cabin", or the plan's own name for furniture standing alone.</summary>
+        public static string FurnitureNameOf(BuildPlan plan, PlanFurniture f)
+        {
+            var name = plan.Cells.Count > 0 ? $"{f.Name} in the {plan.Name}" : plan.Furniture.Count == 1 ? plan.Name : $"{f.Name} at the {plan.Name}";
+            return char.ToUpperInvariant(name[0]) + name.Substring(1);
+        }
 
         private void Rebuild()
         {
@@ -682,10 +761,14 @@ namespace TinyCity.Simulation.Building
                     blocked.Add(BuildingRules.TileOf(p.Corner, cell));
                 }
 
-                if (p.IsFinished && p.Plan.BedTile is (int bx, int by))
+                if (p.IsFinished)
                 {
-                    var tile = BuildingRules.TileOf(p.Corner, bx * BuildingRules.CellsPerTile, by * BuildingRules.CellsPerTile);
-                    placed.Add(new WorldObject(BedIdOf(p.SiteId), $"Bed in the {p.Plan.Name}", ObjectType.Bed, tile));
+                    for (var i = 0; i < p.Plan.Furniture.Count; i++)
+                    {
+                        var f = p.Plan.Furniture[i];
+                        var tile = BuildingRules.TileOf(p.Corner, f.X * BuildingRules.CellsPerTile, f.Y * BuildingRules.CellsPerTile);
+                        placed.Add(new WorldObject(FurnitureIdOf(p.SiteId, p.Plan, i), FurnitureNameOf(p.Plan, f), f.Type, tile));
+                    }
                 }
             }
 

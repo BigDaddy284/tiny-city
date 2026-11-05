@@ -773,7 +773,7 @@ namespace TinyCity.Simulation.AI
                         return AiReplyCheck.Invalid(error);
                     }
 
-                    var outcome = sim.ApplyDecision(r.Id, decisionId, reply.Action, reply.TargetId, reply.Reason, reply.Say, reply.Then, reply.X, reply.Y, reply.What);
+                    var outcome = sim.ApplyDecision(r.Id, decisionId, reply.Action, reply.TargetId, reply.Reason, reply.Say, reply.Then, reply.X, reply.Y, reply.What, reply.PricePence);
                     switch (outcome)
                     {
                         case DecisionOutcome.Applied:

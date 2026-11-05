@@ -6,6 +6,7 @@ using TinyCity.Simulation;
 using TinyCity.Simulation.Activities;
 using TinyCity.Simulation.Content;
 using TinyCity.Simulation.Persistence;
+using TinyCity.Simulation.Residents;
 using TinyCity.Simulation.World;
 
 namespace TinyCity.Tests.EditMode
@@ -30,13 +31,14 @@ namespace TinyCity.Tests.EditMode
             Assert.That(world.Maps.Count(), Is.EqualTo(1));
             Assert.That(world.Businesses, Is.Empty, "no shops: someone has to open a stall");
             Assert.That(world.JobOpenings, Is.Empty);
-            foreach (var type in new[] { ObjectType.Bed, ObjectType.Kitchen, ObjectType.Bench, ObjectType.MarketStall, ObjectType.FishingSpot, ObjectType.Woodland, ObjectType.StickPile, ObjectType.RockPile, ObjectType.LooseStones, ObjectType.Workbench })
+            foreach (var type in new[] { ObjectType.Kitchen, ObjectType.Bench, ObjectType.FishingSpot, ObjectType.Woodland, ObjectType.StickPile, ObjectType.RockPile, ObjectType.LooseStones, ObjectType.Workbench })
             {
                 Assert.That(world.ObjectsOfType(type).Any(), Is.True, type.ToString());
             }
 
             Assert.That(world.ObjectsOfType(ObjectType.BuildPlot).Any() || world.ObjectsOfType(ObjectType.GardenPlot).Any(), Is.False, "no plots: they build and plant where they choose");
-            Assert.That(world.ObjectsOfType(ObjectType.Bed).Count(), Is.EqualTo(FlatLand.CampBeds));
+            Assert.That(world.ObjectsOfType(ObjectType.Bed).Any() || world.ObjectsOfType(ObjectType.MarketStall).Any(), Is.False, "no beds and no stalls, unless someone builds them");
+            Assert.That(world.ObjectsOfType(ObjectType.Kitchen).Count(), Is.EqualTo(1), "one camp stove");
             var start = sim.Residents[0].Location;
             foreach (var o in world.Objects)
             {
@@ -46,7 +48,7 @@ namespace TinyCity.Tests.EditMode
             // As the owner drew it: the camp in the bottom quarter, trees, rocks, soil and the pond in the left one, and the top and right quarters open.
             bool Bottom(Location l) => l.Position.X > FlatLand.PathColumn && l.Position.Y > FlatLand.PathRow;
             bool Left(Location l) => l.Position.X < FlatLand.PathColumn && l.Position.Y > FlatLand.PathRow;
-            foreach (var type in new[] { ObjectType.Bed, ObjectType.Kitchen, ObjectType.Bench, ObjectType.MarketStall, ObjectType.Workbench })
+            foreach (var type in new[] { ObjectType.Kitchen, ObjectType.Bench, ObjectType.Workbench })
             {
                 Assert.That(world.ObjectsOfType(type).All(o => Bottom(o.Location)), Is.True, type.ToString());
             }
@@ -63,22 +65,56 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void EveryResident_StartsInACampBedOfTheirOwn_WithNoJobOrRent()
+        public void EveryResident_StartsAtTheCamp_WithNoBedJobOrRent()
         {
             var sim = NewGame();
             Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.StarterResidentIds.Count));
-            Assert.That(sim.Residents.Select(r => r.BedObjectId).Distinct().Count(), Is.EqualTo(sim.Residents.Count));
+            Assert.That(sim.Residents.Select(r => r.Location).Distinct().Count(), Is.EqualTo(sim.Residents.Count));
             foreach (var r in sim.Residents)
             {
-                Assert.That(sim.World.TryGetObject(r.BedObjectId, out var bed), Is.True, r.Id);
-                Assert.That(r.Location, Is.EqualTo(bed.Location));
-                Assert.That(r.HomeMapId, Is.EqualTo(FlatLand.MapId));
+                Assert.That((r.HomeMapId, r.BedObjectId), Is.EqualTo(((string)null, (string)null)), r.Id);
+                Assert.That(r.Location.MapId, Is.EqualTo(FlatLand.MapId));
                 Assert.That(r.Job, Is.Null, r.Id);
                 Assert.That((r.WeeklyRentPence, r.WeeklyIncomePence, r.OwnsBusinessId), Is.EqualTo((0L, 0L, (string)null)), r.Id);
-                Assert.That(sim.Planner.IsAvailableTo(r, bed), Is.True);
-                Assert.That(sim.Residents.Where(o => o != r).All(o => !sim.Planner.IsAvailableTo(o, bed)), Is.True, "nobody else sleeps in it");
                 Assert.That(sim.Memories.ForResident(r.Id).Any(m => m.Summary.Contains("open land")), Is.True);
             }
+        }
+
+        [Test]
+        public void Anyone_CanSleepOnTheGround_OrOnABench_AndTheSpotGoesWhenTheyGetUp()
+        {
+            var sim = NewGame();
+            var r = sim.Residents[0];
+            var options = sim.Planner.FreeTimeOptions(r, everything: true);
+            Assert.That(options.Any(o => o.ActionId == "sleep" && o.IsGround), Is.True, "sleep on the bare ground");
+            Assert.That(options.Any(o => o.ActionId == "sleep" && o.Target?.Type == ObjectType.Bench), Is.True, "or on a bench, home or not");
+
+            r.State = ResidentState.Deciding;
+            r.PendingDecisionId = 77;
+            var spot = new Location(FlatLand.MapId, r.Location.Position.X, r.Location.Position.Y + 1);
+            Assert.That(sim.ApplyDecision(r.Id, 77, "sleep", FreeTimeOption.GroundTargetId, "tired", "", x: spot.Position.X, y: spot.Position.Y), Is.EqualTo(DecisionOutcome.Applied));
+            var bed = sim.World.Objects.Single(o => o.Type == ObjectType.SleepingSpot);
+            Assert.That(bed.Location, Is.EqualTo(spot));
+            Assert.That(sim.Residents.Where(o => o != r).All(o => !sim.Planner.IsAvailableTo(o, bed)), Is.True, "one sleeper a spot");
+
+            var json = SaveSerializer.Save(sim);
+            var loaded = SaveSerializer.Load(json, FlatLand.CreateWorld());
+            Assert.That(loaded.Success, Is.True, string.Join("; ", loaded.Errors));
+            Assert.That(loaded.Simulation.World.Objects.Count(o => o.Type == ObjectType.SleepingSpot), Is.EqualTo(1), "saved while they sleep");
+
+            sim.Advance(13 * 60);
+            Assert.That(r.ActivityId == "sleep", Is.False, "they woke up");
+            Assert.That(sim.World.Objects.Any(o => o.Type == ObjectType.SleepingSpot), Is.False, "the spot went when they got up");
+        }
+
+        [Test]
+        public void NobodyMovesIn_AndNoBabiesAreBorn_InTiny_City_2()
+        {
+            // The game turns both off for the open land; the simulation's own defaults are off too.
+            var sim = NewGame();
+            Assert.That((sim.NewcomersEnabled, sim.BabiesEnabled), Is.EqualTo((false, false)));
+            sim.Advance(3 * 24 * 60);
+            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.StarterResidentIds.Count));
         }
 
         [Test]
@@ -98,17 +134,6 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void ANewcomer_TakesAFreeCampBed()
-        {
-            var sim = NewGame();
-            var newcomer = sim.MoveInNewcomer();
-            Assert.That(newcomer, Is.Not.Null);
-            Assert.That(newcomer.IsHomeless, Is.False);
-            Assert.That(sim.World.TryGetObject(newcomer.BedObjectId, out var bed) && bed.Type == ObjectType.Bed, Is.True);
-            Assert.That(sim.Residents.Count(o => o.BedObjectId == newcomer.BedObjectId), Is.EqualTo(1));
-        }
-
-        [Test]
         public void TheLand_SurvivesASave_AndCityAndOldSavesAreRefused()
         {
             var sim = NewGame();
@@ -123,11 +148,11 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void TheLand_IsDrawn_WithCampBedsAndEveryObject()
+        public void TheLand_IsDrawn_WithTheCampStove()
         {
             var world = FlatLand.CreateWorld();
             var art = MapArt.Build(world, world.GetMap(FlatLand.MapId), Palette.For(TinyCity.Simulation.Time.Season.Summer));
-            Assert.That(art.Pieces.Count(p => p.Name == "Camp bed"), Is.EqualTo(FlatLand.CampBeds));
+            Assert.That(art.Pieces.Count(p => p.Name == "Camp stove"), Is.EqualTo(1));
         }
     }
 }

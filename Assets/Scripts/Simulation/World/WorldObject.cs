@@ -75,6 +75,9 @@ namespace TinyCity.Simulation.World
 
         /// <summary>Tiny City 2: loose stones by the rocks, picked up by hand for a little stone, two at a time.</summary>
         LooseStones,
+
+        /// <summary>Tiny City 2: bare ground someone lay down on to sleep, there only while they sleep. One at a time.</summary>
+        SleepingSpot,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -124,6 +127,7 @@ namespace TinyCity.Simulation.World
                 case ObjectType.BuildPlot:
                 case ObjectType.StickPile:
                 case ObjectType.LooseStones:
+                case ObjectType.SleepingSpot:
                     return false;
                 default:
                     return true;

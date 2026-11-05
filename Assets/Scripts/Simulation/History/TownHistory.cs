@@ -35,6 +35,9 @@ namespace TinyCity.Simulation.History
 
         // Tiny City 2's block building.
         Built,
+
+        // Tiny City 2: the last resident died, and the world's legacy log was written for the next one.
+        WorldEnded,
     }
 
     /// <summary>Something that happened in the village and belongs to its history, separate from any one resident's memories.</summary>

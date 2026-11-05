@@ -121,8 +121,8 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null), Is.EqualTo(DecisionOutcome.InvalidTarget), "a spot is needed");
             Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 22, 31, "rice"), Is.EqualTo(DecisionOutcome.InvalidTarget), "not in the pond");
             Assert.That(r.Log.Last().Text, Does.Contain("isn't open ground"));
-            var bed = sim.World.Objects.First(o => o.Type == TinyCity.Simulation.World.ObjectType.Bed);
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, bed.Location.Position.X, bed.Location.Position.Y, "rice"), Is.EqualTo(DecisionOutcome.InvalidTarget), "not on a bed");
+            var bench = sim.World.Objects.First(o => o.Type == TinyCity.Simulation.World.ObjectType.Bench);
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, bench.Location.Position.X, bench.Location.Position.Y, "rice"), Is.EqualTo(DecisionOutcome.InvalidTarget), "not on a bench");
 
             Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 40, 10, "Purple Potatoes"), Is.EqualTo(DecisionOutcome.Applied), "anywhere on open ground, not just the soil");
             var patch = sim.Food.Patches.Single();
@@ -251,6 +251,33 @@ namespace TinyCity.Tests.EditMode
         }
     
         [Test]
+        public void AStallHolder_NamesTheirOwnPrice_WhenTheyChooseToRunAStall()
+        {
+            var sim = TestTown.WithResidents(TestTown.WeekendAfternoon);
+            sim.FoodMustBeMade = true;
+            sim.AiRunsEverything = true;
+            sim.AiDecisionsEnabled = true;
+            sim.Tick();
+            var r = sim.Residents[0];
+            r.Food.Add(FoodKind.Fish, 5, sim.Time.Day + 2);
+            r.ResetActivity();
+            r.State = ResidentState.Deciding;
+            r.PendingDecisionId = 41;
+            var option = sim.Planner.FreeTimeOptions(r, everything: true).First(o => o.ActionId == ActivityCatalog.RunStall.Id);
+            var prompt = DecisionPrompt.UserText(sim, r, sim.Planner.FreeTimeOptions(r, everything: true), new TinyCity.Simulation.Memory.MemoryRecord[0]);
+            Assert.That(prompt, Does.Contain("\"price\""));
+            Assert.That(sim.ApplyDecision(r.Id, 41, option.ActionId, option.TargetId, "sell", "", pricePence: 12345), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(r.StallPricePence, Is.EqualTo(12345), "no fixed prices: whatever they ask");
+
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), sim.World).Simulation;
+            Assert.That(loaded.GetResident(r.Id).StallPricePence, Is.EqualTo(12345));
+            var options = loaded.Planner.FreeTimeOptions(loaded.GetResident(sim.Residents[1].Id), everything: true);
+            var stallOption = options.First(o => o.ActionId == ActivityCatalog.RunStall.Id || o.Activity != null);
+            Assert.That(DecisionPrompt.TryParse($"{{\"action\":\"{stallOption.ActionId}\",\"target_id\":\"{stallOption.TargetId}\",\"price\":2.5}}", options, out var reply, out var parseError), Is.True, parseError);
+            Assert.That(reply.PricePence, Is.EqualTo(250));
+        }
+
+        [Test]
         public void ASeller_AtAStall_SellsAPortionToABuyer_AndRemembersTheDay()
         {
             var sim = TestTown.WithResidents(TestTown.WeekendAfternoon);
@@ -266,6 +293,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.RunStall, stall, sim.Time), Is.EqualTo(buyer.Food.Total > 0));
 
             seller.ResetActivity();
+            seller.StallPricePence = 750;
             seller.TargetObjectId = stall.Id;
             seller.ActivityId = ActivityCatalog.RunStall.Id;
             seller.State = ResidentState.Performing;
@@ -285,8 +313,8 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(buyer.Food.Count(FoodKind.Meal), Is.EqualTo(meals + 1));
             Assert.That(seller.Food.Count(FoodKind.Meal), Is.EqualTo(1));
-            Assert.That(buyer.MoneyPence, Is.EqualTo(money.Item2 - FoodRules.MealPricePence));
-            Assert.That(seller.MoneyPence, Is.EqualTo(money.Item1 + FoodRules.MealPricePence));
+            Assert.That(buyer.MoneyPence, Is.EqualTo(money.Item2 - 750), "the seller's own price");
+            Assert.That(seller.MoneyPence, Is.EqualTo(money.Item1 + 750));
             Assert.That(sim.Economy.Ledger.All.Any(t => t.ResidentId == seller.Id && t.Kind == TransactionKind.Sale), Is.True);
 
             for (var i = 0; i < 40 && seller.ActivityId == ActivityCatalog.RunStall.Id; i++)
@@ -332,7 +360,8 @@ namespace TinyCity.Tests.EditMode
         }
 
         [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":2,\"price\":1.5,\"accept_food\":true}", 2, 150, true)]
-        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":99,\"price\":-4}", 0, 0, false)]
+        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":99,\"price\":-4}", 99, 0, false)]
+        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":40,\"price\":250}", 40, 25000, false)]
         [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false}", 0, 0, false)]
         public void DialogueReplies_ReadFoodOffersWithinLimits(string content, int give, long price, bool accept)
         {

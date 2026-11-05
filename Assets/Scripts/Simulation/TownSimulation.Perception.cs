@@ -18,9 +18,6 @@ namespace TinyCity.Simulation
         /// <summary>When each (noticer, noticed) pair was last offered a reaction; not saved, so after loading people are noticed afresh.</summary>
         private readonly Dictionary<string, long> lastNoticed = new Dictionary<string, long>(StringComparer.Ordinal);
 
-        /// <summary>When each resident was last offered a reaction (not saved).</summary>
-        private readonly Dictionary<string, long> lastReacted = new Dictionary<string, long>(StringComparer.Ordinal);
-
         private long nextReactionId = 1;
 
         /// <summary>Someone who can be walked up to and talked to: alive, not a baby, not already chatting, asleep or at work.</summary>
@@ -66,8 +63,7 @@ namespace TinyCity.Simulation
                     r.Reaction = null;
                 }
 
-                if (!CanReact(r)
-                    || (lastReacted.TryGetValue(r.Id, out var reacted) && Time.TotalMinutes - reacted < PerceptionRules.ReactEveryMinutes))
+                if (!CanReact(r))
                 {
                     continue;
                 }
@@ -95,7 +91,6 @@ namespace TinyCity.Simulation
                         Memories.RateImportance(memory.Id, PerceptionRules.ObservationImportance);
                     }
 
-                    lastReacted[r.Id] = Time.TotalMinutes;
                     r.Reaction = new PendingReaction(nextReactionId++, other.Id, Time.TotalMinutes, seen);
                     break;
                 }

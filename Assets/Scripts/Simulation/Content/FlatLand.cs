@@ -10,8 +10,8 @@ namespace TinyCity.Simulation.Content
 {
     /// <summary>
     /// Tiny City 2's world (owner, 5 November): no city, one flat stretch of open land, laid out as the owner drew it.
-    /// Seen from above, the cross of paths splits it into four. The bottom quarter is the starter camp (camp beds,
-    /// stoves, benches, trading stalls and crafting benches). The left quarter has trees with fallen branches under
+    /// Seen from above, the cross of paths splits it into four. The bottom quarter is the starter camp (owner, 5 November:
+    /// no beds and no trading stalls, one stove, four benches and two crafting benches; anything more, residents build). The left quarter has trees with fallen branches under
     /// them along its far edge, rocks with loose stones in its corner, a patch of good soil for crops by the cross
     /// path and a pond for fishing; the ground between them is left open where a sawmill or a stone mason's could go,
     /// if anyone builds one. The top and right quarters are open land. Residents plant and build wherever they
@@ -22,7 +22,6 @@ namespace TinyCity.Simulation.Content
     {
         public const string TownId = "town-tiny-city-2";
         public const string MapId = "map-flat-land";
-        public const string CampBedPrefix = "obj-flat-camp-bed-";
 
         public const int Width = 56;
         public const int Height = 44;
@@ -31,8 +30,17 @@ namespace TinyCity.Simulation.Content
         public const int PathRow = 21;
         public const int PathColumn = 27;
 
-        /// <summary>Camp beds: one for each starter resident and each newcomer who could ever arrive, and a few more.</summary>
-        public const int CampBeds = 27;
+        /// <summary>Where the residents are standing when the world begins: the camp, a few paces apart.</summary>
+        public static IEnumerable<Location> StartingSpots()
+        {
+            foreach (var y in new[] { 25, 29, 33 })
+            {
+                for (var x = 30; x <= 54; x += 3)
+                {
+                    yield return new Location(MapId, x, y);
+                }
+            }
+        }
 
         private static readonly Dictionary<char, TileType> Legend = new Dictionary<char, TileType>
         {
@@ -78,24 +86,8 @@ namespace TinyCity.Simulation.Content
             var objects = new List<WorldObject>();
             Location At(int x, int y) => new Location(MapId, x, y);
 
-            // The camp, in the bottom quarter: three rows of camp beds.
-            var n = 0;
-            foreach (var y in new[] { 25, 29, 33 })
-            {
-                for (var x = 30; x <= 54 && n < CampBeds; x += 3)
-                {
-                    n++;
-                    objects.Add(new WorldObject($"{CampBedPrefix}{n}", "Camp bed", ObjectType.Bed, At(x, y)));
-                }
-            }
-
-            // Below the beds: stoves and trading stalls, then benches to eat at and crafting benches.
-            for (var i = 0; i < 3; i++)
-            {
-                objects.Add(new WorldObject($"obj-flat-stove-{i + 1}", "Camp stove", ObjectType.Kitchen, At(30 + (i * 4), 37)));
-                objects.Add(new WorldObject($"obj-flat-stall-{i + 1}", "Trading stall", ObjectType.MarketStall, At(44 + (i * 4), 37)));
-            }
-
+            // The camp, in the bottom quarter: one stove, benches to eat at and crafting benches.
+            objects.Add(new WorldObject("obj-flat-stove-1", "Camp stove", ObjectType.Kitchen, At(30, 37)));
             for (var i = 0; i < 4; i++)
             {
                 objects.Add(new WorldObject($"obj-flat-bench-{i + 1}", "Camp bench", ObjectType.Bench, At(30 + (i * 4), 40)));
@@ -136,19 +128,19 @@ namespace TinyCity.Simulation.Content
         }
 
         /// <summary>
-        /// The starter residents (or those <paramref name="profiles"/> list), each in a camp bed of their own: no home,
+        /// The starter residents (or those <paramref name="profiles"/> list), standing at the camp: no home, bed,
         /// job, rent, income or business, only their money and food.
         /// </summary>
         public static IReadOnlyList<Resident> CreateResidents(TownWorld world, IReadOnlyList<ResidentProfile> profiles)
         {
             var residents = StarterTown.CreateResidents(StarterTown.CreateWorld(), profiles);
-            var beds = world.ObjectsOfType(ObjectType.Bed).OrderBy(o => o.Id, StringComparer.Ordinal).ToList();
-            for (var i = 0; i < residents.Count && i < beds.Count; i++)
+            var spots = StartingSpots().ToList();
+            for (var i = 0; i < residents.Count && i < spots.Count; i++)
             {
                 var r = residents[i];
-                r.HomeMapId = MapId;
-                r.BedObjectId = beds[i].Id;
-                r.Location = beds[i].Location;
+                r.HomeMapId = null;
+                r.BedObjectId = null;
+                r.Location = spots[i];
                 r.Job = null;
                 r.WeeklyRentPence = 0;
                 r.WeeklyIncomePence = 0;
@@ -156,7 +148,7 @@ namespace TinyCity.Simulation.Content
                 r.OwnsBusinessId = null;
             }
 
-            return residents.Take(beds.Count).ToList();
+            return residents.Take(spots.Count).ToList();
         }
 
         /// <summary>The open land filled to <paramref name="people"/> living residents, for the camera panel test only (never saved).</summary>
@@ -170,18 +162,27 @@ namespace TinyCity.Simulation.Content
             return simulation;
         }
 
-        public static TownSimulation CreateNewGame(IReadOnlyList<ResidentProfile> profiles = null)
+        /// <summary>
+        /// A new world on the open land. <paramref name="lessons"/> are what an earlier world that died out left behind
+        /// (<see cref="History.Legacy.ReadLessons"/>): every resident starts with each as a memory.
+        /// </summary>
+        public static TownSimulation CreateNewGame(IReadOnlyList<ResidentProfile> profiles = null, IReadOnlyList<string> lessons = null)
         {
             var world = CreateWorld();
             var simulation = new TownSimulation(world, CreateResidents(world, profiles), StartTime);
             foreach (var r in simulation.Residents)
             {
                 simulation.Memories.Add(r.Id, simulation.Time, MemoryType.LifeHistory, 8,
-                    $"I came to this open land with the others to start over. There are no houses or shops here: we sleep in camp beds, and grow, catch and cook our own food, gather wood and stone, make tools and build whatever we like, wherever we like.",
+                    $"I came to this open land with the others to start over. There are no houses, beds or shops here, only a camp stove, a few benches and two crafting benches. We sleep wherever we can, grow, catch and cook our own food, gather wood and stone, make tools and build whatever we like, wherever we like.",
                     tags: new[] { "home", "camp", "building" });
                 if (!string.IsNullOrWhiteSpace(r.About))
                 {
                     simulation.Memories.Add(r.Id, simulation.Time, MemoryType.LifeHistory, 6, $"Before I came here: {r.About}", tags: new[] { "past" });
+                }
+
+                foreach (var lesson in lessons ?? Array.Empty<string>())
+                {
+                    simulation.Memories.Add(r.Id, simulation.Time, MemoryType.LifeHistory, 7, $"Left by those who lived here before us: {lesson}", tags: new[] { "legacy", "past" });
                 }
             }
 

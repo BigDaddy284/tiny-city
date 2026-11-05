@@ -24,8 +24,9 @@ namespace TinyCity.Simulation
                     || (Construction.SiteOf(obj.Id) is Site site && site.OwnerId == r.Id && Construction.At(site.Id) == null));
             }
 
+            // Anyone may help build anyone's building, with their own materials.
             var project = Construction.At(obj?.Id);
-            return project != null && project.OwnerId == r.Id && project.Next is BlockCell next && (!project.NextTakesMaterial || r.Belongings.Count(next.Material) > 0);
+            return project != null && project.Next is BlockCell next && (!project.NextTakesMaterial || r.Belongings.Count(next.Material) > 0);
         }
 
         private void StartSketch(Resident r)
@@ -104,11 +105,22 @@ namespace TinyCity.Simulation
             }
 
             r.Sketch = null;
-            Construction.Add(new Project(site.Id, r.Id, site.Corner, plan, 0, Time.Day), standAt);
-            var needs = string.Join(", ", plan.Needs().Select(n => $"{n.count} {CraftingRules.Name(n.material)}"));
+            var project = new Project(site.Id, r.Id, site.Corner, plan, 0, Time.Day);
+            Construction.Add(project, standAt);
             var where = $"({site.Corner.Position.X}, {site.Corner.Position.Y})";
+            if (project.IsFinished)
+            {
+                // Only furniture, no blocks: it is there as soon as it is planned.
+                Pathfinder.Forget();
+                r.AddLog(Time, $"Set up a {plan.Name} at {where}");
+                Memories.Add(r.Id, Time, MemoryType.Event, 5, $"I set up a {plan.Name} at {where} on the {World.GetMap(site.Corner.MapId).Name.ToLowerInvariant()}. Anyone can use it.", tags: new[] { "building", "built", site.Id });
+                History.Add(Time, TownEventKind.Built, $"{r.FullName} set up a {plan.Name} on the {World.GetMap(site.Corner.MapId).Name.ToLowerInvariant()}.", new[] { r.Id });
+                return DecisionOutcome.Applied;
+            }
+
+            var needs = string.Join(", ", plan.Needs().Select(n => $"{n.count} {CraftingRules.Name(n.material)}"));
             r.AddLog(Time, $"Planned a {plan.Name} at {where}: {plan.Cells.Count} blocks ({needs})");
-            Memories.Add(r.Id, Time, MemoryType.Event, 5, $"I planned a {plan.Name} at {where} on the {World.GetMap(site.Corner.MapId).Name.ToLowerInvariant()}. It will take {needs}.", tags: new[] { "building", site.Id });
+            Memories.Add(r.Id, Time, MemoryType.Event, 5, $"I planned a {plan.Name} at {where} on the {World.GetMap(site.Corner.MapId).Name.ToLowerInvariant()}. It will take {needs}. Anyone can help build it with their own materials.", tags: new[] { "building", site.Id });
             return DecisionOutcome.Applied;
         }
 
@@ -133,51 +145,39 @@ namespace TinyCity.Simulation
             }
 
             var project = Construction.At(r.TargetObjectId);
-            if (project == null || project.OwnerId != r.Id || project.IsFinished)
+            if (project == null || project.IsFinished)
             {
                 return;
             }
 
-            var laid = Construction.LayBlocks(project, r.Belongings, BuildingRules.BlocksPerSession, at => residents.Any(o => o.IsAlive && o.Location == at), out var stoppedBy);
+            var laid = Construction.LayBlocks(project, r.Id, r.Belongings, BuildingRules.BlocksPerSession, at => residents.Any(o => o.IsAlive && o.Location == at), out var stoppedBy);
             if (laid.Count > 0)
             {
                 Pathfinder.Forget();
             }
 
-            var what = laid.Count == 0 ? "Laid no blocks" : $"Laid {laid.Count} block{(laid.Count == 1 ? string.Empty : "s")} of the {project.Plan.Name} ({project.Placed}/{project.Plan.Cells.Count})";
+            var owner = GetResident(project.OwnerId);
+            var whose = project.OwnerId == r.Id ? "the" : $"{owner?.FirstName ?? "someone"}'s";
+            var what = laid.Count == 0 ? "Laid no blocks" : $"Laid {laid.Count} block{(laid.Count == 1 ? string.Empty : "s")} of {whose} {project.Plan.Name} ({project.Placed}/{project.Plan.Cells.Count})";
             r.AddLog(Time, stoppedBy != null && !project.IsFinished ? $"{what}: {stoppedBy}" : what);
+            if (laid.Count > 0 && project.OwnerId != r.Id && owner != null)
+            {
+                Memories.Add(r.Id, Time, MemoryType.Event, 4, $"I helped build {owner.FullName}'s {project.Plan.Name}, laying {laid.Count} blocks with my own materials.", new[] { owner.Id }, new[] { "building", owner.Id, project.SiteId });
+            }
+
             if (project.IsFinished)
             {
-                Memories.Add(r.Id, Time, MemoryType.Event, 7, $"I finished building my {project.Plan.Name}, all {project.Plan.Cells.Count} blocks of it.", tags: new[] { "building", "built", project.SiteId });
-                var movedIn = MoveIntoBuilding(r, project);
-                History.Add(Time, TownEventKind.Built, $"{r.FullName} finished building a {project.Plan.Name} on the {World.GetMap(project.Corner.MapId).Name.ToLowerInvariant()}{(movedIn ? " and moved in" : string.Empty)}.", new[] { r.Id });
-            }
-        }
+                var names = project.Builders.Select(GetResident).Where(b => b != null).ToList();
+                foreach (var b in names)
+                {
+                    var others = names.Where(o => o != b).Select(o => o.FullName).ToList();
+                    var with = others.Count == 0 ? string.Empty : $", with {string.Join(" and ", others)}";
+                    Memories.Add(b.Id, Time, MemoryType.Event, 7, $"We finished building the {project.Plan.Name}{with}: all {project.Plan.Cells.Count} blocks of it. Anyone can use it.", others.Count == 0 ? null : names.Where(o => o != b).Select(o => o.Id).ToArray(), new[] { "building", "built", project.SiteId });
+                }
 
-        /// <summary>
-        /// A finished building with a bed becomes its owner's home: they sleep in its bed and pay no rent, and children
-        /// who shared their bed come too. The home they leave is free for anyone else.
-        /// </summary>
-        private bool MoveIntoBuilding(Resident r, Project project)
-        {
-            var bedId = Construction.BedIdOf(project.SiteId);
-            if (!project.Plan.IsHome || !World.TryGetObject(bedId, out var bed) || r.BedObjectId == bedId)
-            {
-                return false;
+                var by = names.Count == 0 ? r.FullName : string.Join(" and ", names.Select(o => o.FullName));
+                History.Add(Time, TownEventKind.Built, $"{by} finished building a {project.Plan.Name} on the {World.GetMap(project.Corner.MapId).Name.ToLowerInvariant()}.", names.Select(o => o.Id).DefaultIfEmpty(r.Id).ToArray());
             }
-
-            var oldBed = r.BedObjectId;
-            var oldHome = r.HomeMapId;
-            foreach (var mover in residents.Where(o => o == r || (o.IsAlive && o.IsMinor && o.BedObjectId == oldBed && o.ParentIds.Contains(r.Id))).ToList())
-            {
-                mover.HomeMapId = bed.Location.MapId;
-                mover.BedObjectId = bedId;
-                mover.WeeklyRentPence = 0;
-            }
-
-            r.AddLog(Time, $"Moved into the {project.Plan.Name}");
-            Memories.Add(r.Id, Time, MemoryType.Event, 8, $"I moved into the {project.Plan.Name} I built myself{(oldHome == null ? ", after having nowhere to live" : string.Empty)}. It's my home now.", tags: new[] { "home", "building", project.SiteId });
-            return true;
         }
     }
 }

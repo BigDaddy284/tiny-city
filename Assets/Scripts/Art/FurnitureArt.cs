@@ -373,6 +373,12 @@ namespace TinyCity.Art
 
                     SnowOn(p, palette, outdoors, 0.62, 0.46, 6, 0.18, 0.18);
                     break;
+                case ObjectType.SleepingSpot:
+                    // Tiny City 2's sleeping spot: a coat spread on the bare ground with a rolled-up bundle for a pillow.
+                    p.Box(0.16, 0.14, 0, 0.7, 0.72, 1.5, accent.Shade(0.8));
+                    p.Top(0.16, 0.14, 1.5, 0.7, 0.72, (s, t) => s < 0.06 || s > 0.94 || t < 0.06 || t > 0.94 ? accent.Shade(0.6) : accent.Shade(0.8));
+                    p.Box(0.2, 0.22, 1.5, 0.16, 0.56, 4, Palette.Ebony.Mix(Palette.White, 0.25));
+                    break;
                 case ObjectType.BuildPlot:
                     // Tiny City 2's plot marker: a post with a sign board and a neon strip, and two corner stakes.
                     p.Post(0.5, 0.3, 0, 0.04, 22, Palette.WoodDark);

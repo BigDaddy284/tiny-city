@@ -85,6 +85,7 @@ namespace TinyCity.Simulation
             Time = time;
             Construction = new Building.Construction(world);
             Food.Attach(world);
+            Sleeping.Attach(world);
             Pathfinder = new Pathfinder(world, Construction.IsBlocked);
             Economy = new TownEconomy(world, this.residents);
             Planner = new ActivityPlanner(world, Pathfinder, this.residents, Economy, () => Time) { Food = Food };
@@ -227,6 +228,7 @@ namespace TinyCity.Simulation
             StepBirths();
             StepFood();
             StepSketches();
+            StepSleepingGround();
             foreach (var resident in residents)
             {
                 if (!resident.IsAlive)
@@ -383,7 +385,7 @@ namespace TinyCity.Simulation
         /// <see cref="ActivityPlanner.FreeTimeOptions"/> right now. Reason and speech are cleaned and shortened.
         /// </summary>
         public DecisionOutcome ApplyDecision(string residentId, long decisionId, string actionId, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null,
-            int? x = null, int? y = null, string what = null)
+            int? x = null, int? y = null, string what = null, long? pricePence = null)
         {
             var r = GetResident(residentId);
             if (r == null)
@@ -435,7 +437,9 @@ namespace TinyCity.Simulation
                     DropUnplannedSite(r);
                 }
 
-                var placedId = option.Activity == ActivityCatalog.PlantCrops ? Food.AddPatch(spot, what, r.Id).Id : Construction.AddSite(r.Id, spot).Id;
+                var placedId = option.Activity == ActivityCatalog.PlantCrops ? Food.AddPatch(spot, what, r.Id).Id
+                    : option.Activity == ActivityCatalog.Sleep ? Sleeping.Add(spot, r.Id).Id
+                    : Construction.AddSite(r.Id, spot).Id;
                 World.TryGetObject(placedId, out var placed);
                 option = new FreeTimeOption(option.Activity, placed, Pathfinder.Distance(r.Location, spot));
             }
@@ -444,6 +448,12 @@ namespace TinyCity.Simulation
             if (why.Length == 0)
             {
                 why = option.Activity == null ? "Felt like taking it easy" : $"Fancied {option.Activity.Verb}";
+            }
+
+            if (option.Activity == ActivityCatalog.RunStall)
+            {
+                // Tiny City 2: the stall-holder names their own price; with none given, they keep the last one.
+                r.StallPricePence = Math.Max(0, pricePence ?? r.StallPricePence);
             }
 
             r.ResetActivity();

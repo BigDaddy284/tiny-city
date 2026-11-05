@@ -21,14 +21,14 @@ namespace TinyCity.Tools.StressTest
 
         private static readonly string[] Kinds = { "decision", "day plan", "line", "react", "insight", "reflection", "rating" };
 
-        /// <summary>How many people live on the open land in each run: the starter residents, a full camp, and the most who can ever be alive.</summary>
-        private static readonly int[] PeopleCounts = { 15, FlatLand.CampBeds, PopulationRules.MaxLiving };
+        /// <summary>How many people live on the open land in each run: the starter residents, then more (only for this test: the game never adds anyone), up to the most who could ever be alive.</summary>
+        private static readonly int[] PeopleCounts = { 15, 27, PopulationRules.MaxLiving };
 
         private static bool AiRunsEverything(int section, AiProfile profile, double days)
         {
             Line($"## {section}. Tiny City 2 on the open land with {profile.Name}");
             Line();
-            Line($"The AI makes every choice and the clock waits for it, as in the v2 game, on the flat map with {string.Join(", ", PeopleCounts)} people (the starter residents, then newcomers until the camp is full, then the most who can ever be alive; past the camp's beds they sleep on benches). The stand-in Ollama takes {profile.Description} and works on {ParallelRequests} request{(ParallelRequests == 1 ? string.Empty : "s")} at a time; one reply in 30 is not JSON and one in 50 never arrives. It picks options in turn rather than sensibly, so needs and deaths here say nothing about how a real model plays. {days:0.#} game day{(days == 1 ? string.Empty : "s")} at each speed.");
+            Line($"The AI makes every choice and the clock waits for it, as in the v2 game, on the flat map with {string.Join(", ", PeopleCounts)} people (the starter residents, then extra people added for the test only, since the game never adds anyone; nobody has a bed, so they sleep on benches or the ground). The stand-in Ollama takes {profile.Description} and works on {ParallelRequests} request{(ParallelRequests == 1 ? string.Empty : "s")} at a time; one reply in 30 is not JSON and one in 50 never arrives. It picks options in turn rather than sensibly, so needs and deaths here say nothing about how a real model plays. {days:0.#} game day{(days == 1 ? string.Empty : "s")} at each speed.");
             Line();
             Line("| People | Speed | Real time | Actually ran at | Clock held | Requests per game day | " + string.Join(" | ", Kinds.Select(k => k + "s")) + " | Avg wait for a choice (s) | Longest (s) | Avg reply (s) | Gave up | Deaths |");
             Line("|---|---|---|---|---|---|" + string.Concat(Kinds.Select(_ => "---|")) + "---|---|---|---|---|");
