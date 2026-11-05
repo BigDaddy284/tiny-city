@@ -49,22 +49,40 @@ namespace TinyCity.Simulation.Building
     public static class BuildingRules
     {
         /// <summary>A plot is this many tiles each way, behind (north of) its marker.</summary>
-        public const int PlotSize = 6;
+        public const int PlotSize = 8;
 
-        /// <summary>Walls are at most this many blocks high.</summary>
-        public const int MaxHeight = 3;
+        /// <summary>Blocks are a quarter of a tile, the size of a square on the ground: two each way per tile.</summary>
+        public const int CellsPerTile = 2;
 
-        public const int MinBlocks = 4;
+        /// <summary>A plan is this many letters each way.</summary>
+        public const int GridSize = PlotSize * CellsPerTile;
+
+        /// <summary>Walls are at most this many blocks high; four is about a person's height.</summary>
+        public const int MaxHeight = 6;
+
+        /// <summary>A doorway is cleared this many blocks high, so anything above it stays as a lintel.</summary>
+        public const int DoorHeight = 4;
+
+        public const int MinBlocks = 8;
+
+        /// <summary>One gathered material makes this many blocks.</summary>
+        public const int BlocksPerMaterial = 4;
 
         /// <summary>Blocks laid in one go at the plot, if they have the materials.</summary>
-        public const int BlocksPerSession = 8;
+        public const int BlocksPerSession = 32;
 
         public const int MaxNameLength = 40;
 
         /// <summary>How long a plan question waits for an answer before it is dropped.</summary>
         public const int SketchWaitMinutes = 240;
 
-        /// <summary>Letters a plan uses: one per material, '.' for floor and 'D' for a doorway (both open).</summary>
+        /// <summary>The letter for a bed, which makes a finished building its owner's home.</summary>
+        public const char BedLetter = 'B';
+
+        /// <summary>Ids of the furniture a building adds to the world: the plot's id plus this.</summary>
+        public const string BedSuffix = "-built-bed";
+
+        /// <summary>Letters a plan uses: one per material, '.' for floor, 'D' for a doorway and 'B' for a bed (all open).</summary>
         public static readonly IReadOnlyDictionary<char, MaterialKind> Letters = new Dictionary<char, MaterialKind>
         {
             ['W'] = MaterialKind.Wood,
@@ -78,17 +96,23 @@ namespace TinyCity.Simulation.Building
         /// <summary>Tiny City 2's building activities, which don't exist in v1.</summary>
         public static bool IsBuilding(ActivityDefinition a) => a == ActivityCatalog.PlanBuilding || a == ActivityCatalog.Build;
 
+        /// <summary>True for furniture a building put in the world (drawn with the blocks, not with the map).</summary>
+        public static bool IsBuilt(WorldObject o) => o != null && o.Id.EndsWith(BedSuffix, StringComparison.Ordinal);
+
         public static char LetterOf(MaterialKind m) => Letters.First(p => p.Value == m).Key;
 
-        /// <summary>The plot's back-left corner: the plot lies in the <see cref="PlotSize"/> rows behind its marker, two columns to its left and three to its right.</summary>
+        /// <summary>The plot's back-left corner: the plot lies in the <see cref="PlotSize"/> rows behind its marker, three columns to its left and four to its right.</summary>
         public static Location Corner(WorldObject plot) =>
-            new Location(plot.Location.MapId, plot.Location.Position.X - 2, plot.Location.Position.Y - PlotSize);
+            new Location(plot.Location.MapId, plot.Location.Position.X - 3, plot.Location.Position.Y - PlotSize);
 
-        public static Location TileOf(WorldObject plot, BlockCell cell)
+        /// <summary>The tile a block (or any letter of the plan) stands on.</summary>
+        public static Location TileOf(WorldObject plot, int cellX, int cellY)
         {
             var c = Corner(plot);
-            return new Location(c.MapId, c.Position.X + cell.X, c.Position.Y + cell.Y);
+            return new Location(c.MapId, c.Position.X + (cellX / CellsPerTile), c.Position.Y + (cellY / CellsPerTile));
         }
+
+        public static Location TileOf(WorldObject plot, BlockCell cell) => TileOf(plot, cell.X, cell.Y);
 
         public static IEnumerable<Location> Footprint(WorldObject plot)
         {
@@ -101,38 +125,54 @@ namespace TinyCity.Simulation.Building
                 }
             }
         }
+
+        /// <summary>Whole materials the first <paramref name="blocks"/> blocks of a plan take: each material comes in lots of <see cref="BlocksPerMaterial"/>.</summary>
+        public static Dictionary<MaterialKind, int> MaterialsFor(IEnumerable<BlockCell> blocks) =>
+            blocks.GroupBy(c => c.Material).ToDictionary(g => g.Key, g => (g.Count() + BlocksPerMaterial - 1) / BlocksPerMaterial);
     }
 
-    /// <summary>A building plan the game has checked: a name, a wall height, and the rows of its footprint.</summary>
+    /// <summary>
+    /// A building plan the game has checked: a name, a wall height, and <see cref="BuildingRules.GridSize"/> rows of letters,
+    /// one per block-sized square of the plot. People stand on whole tiles (2 × 2 letters), so a doorway clears its whole
+    /// tile up to <see cref="BuildingRules.DoorHeight"/>, and a bed clears its tile.
+    /// </summary>
     public sealed class BuildPlan
     {
-        private BuildPlan(string name, int height, IReadOnlyList<string> rows, List<BlockCell> cells)
+        private BuildPlan(string name, int height, IReadOnlyList<string> rows, List<BlockCell> cells, (int x, int y)? bedTile)
         {
             Name = name;
             Height = height;
             Rows = rows;
             Cells = cells;
+            BedTile = bedTile;
         }
 
         public string Name { get; }
 
         public int Height { get; }
 
-        /// <summary><see cref="BuildingRules.PlotSize"/> rows of <see cref="BuildingRules.PlotSize"/> letters, back row first.</summary>
+        /// <summary><see cref="BuildingRules.GridSize"/> rows of <see cref="BuildingRules.GridSize"/> letters, back row first.</summary>
         public IReadOnlyList<string> Rows { get; }
 
         /// <summary>Every block in building order: the whole bottom layer first, then each layer above.</summary>
         public IReadOnlyList<BlockCell> Cells { get; }
 
+        /// <summary>The plot tile (not letter) the bed stands on, or null for a building nobody can live in.</summary>
+        public (int x, int y)? BedTile { get; }
+
+        public bool IsHome => BedTile.HasValue;
+
         /// <summary>How many of each material the whole plan takes.</summary>
         public IEnumerable<(MaterialKind material, int count)> Needs() =>
-            Cells.GroupBy(c => c.Material).OrderBy(g => g.Key).Select(g => (g.Key, g.Count()));
+            BuildingRules.MaterialsFor(Cells).OrderBy(p => p.Key).Select(p => (p.Key, p.Value));
 
         /// <summary>Checks a plan: the letters, the size, enough blocks, and no room without a way in.</summary>
         public static bool TryParse(string name, int height, IReadOnlyList<string> rows, out BuildPlan plan, out string error)
         {
             plan = null;
-            var size = BuildingRules.PlotSize;
+            var size = BuildingRules.GridSize;
+            var tiles = BuildingRules.PlotSize;
+            var per = BuildingRules.CellsPerTile;
             if (height < 1 || height > BuildingRules.MaxHeight)
             {
                 error = $"the height must be 1 to {BuildingRules.MaxHeight}";
@@ -163,7 +203,7 @@ namespace TinyCity.Simulation.Building
                         c = '.';
                     }
 
-                    if (c != '.' && c != 'D' && !BuildingRules.Letters.ContainsKey(c))
+                    if (c != '.' && c != 'D' && c != BuildingRules.BedLetter && !BuildingRules.Letters.ContainsKey(c))
                     {
                         error = $"'{c}' is not a block letter";
                         return false;
@@ -172,6 +212,29 @@ namespace TinyCity.Simulation.Building
                     grid[x, y] = c;
                 }
             }
+
+            // Doorways and the bed take whole tiles: a doorway clears its tile up to door height, the (first) bed its whole tile.
+            var doorTiles = new bool[tiles, tiles];
+            (int x, int y)? bed = null;
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    if (grid[x, y] == 'D')
+                    {
+                        doorTiles[x / per, y / per] = true;
+                    }
+                    else if (grid[x, y] == BuildingRules.BedLetter && bed == null)
+                    {
+                        bed = (x / per, y / per);
+                    }
+                }
+            }
+
+            int ClearUpTo(int x, int y) =>
+                bed is (int bx, int by) && bx == x / per && by == y / per ? height
+                : doorTiles[x / per, y / per] ? Math.Min(height, BuildingRules.DoorHeight)
+                : 0;
 
             var walls = new List<(int x, int y, MaterialKind m)>();
             for (var y = 0; y < size; y++)
@@ -185,30 +248,58 @@ namespace TinyCity.Simulation.Building
                 }
             }
 
-            if (walls.Count * height < BuildingRules.MinBlocks)
+            var cells = new List<BlockCell>();
+            for (var level = 0; level < height; level++)
+            {
+                cells.AddRange(walls.Where(w => level >= ClearUpTo(w.x, w.y)).Select(w => new BlockCell(w.x, w.y, level, w.m)));
+            }
+
+            if (cells.Count < BuildingRules.MinBlocks)
             {
                 error = $"a building needs at least {BuildingRules.MinBlocks} blocks";
                 return false;
             }
 
-            // Every open tile must be reachable from outside the plot, so nobody is ever shut in.
-            var reached = new bool[size + 2, size + 2];
+            // People stand on whole tiles: a tile is open when no block stands on its ground.
+            var open = new bool[tiles, tiles];
+            for (var ty = 0; ty < tiles; ty++)
+            {
+                for (var tx = 0; tx < tiles; tx++)
+                {
+                    open[tx, ty] = true;
+                }
+            }
+
+            foreach (var c in cells.Where(c => c.Level == 0))
+            {
+                open[c.X / per, c.Y / per] = false;
+            }
+
+            // Every open tile must be reachable from outside the plot, so nobody is ever shut in. The bed is a destination, not a way through.
+            var reached = new bool[tiles + 2, tiles + 2];
             var queue = new Queue<(int x, int y)>();
             reached[0, 0] = true;
             queue.Enqueue((0, 0));
+            var bedReached = false;
             while (queue.Count > 0)
             {
                 var (px, py) = queue.Dequeue();
                 foreach (var (dx, dy) in new[] { (0, -1), (1, 0), (0, 1), (-1, 0) })
                 {
                     int nx = px + dx, ny = py + dy;
-                    if (nx < 0 || ny < 0 || nx > size + 1 || ny > size + 1 || reached[nx, ny])
+                    if (nx < 0 || ny < 0 || nx > tiles + 1 || ny > tiles + 1 || reached[nx, ny])
                     {
                         continue;
                     }
 
-                    var inside = nx >= 1 && ny >= 1 && nx <= size && ny <= size;
-                    if (inside && BuildingRules.Letters.ContainsKey(grid[nx - 1, ny - 1]))
+                    var inside = nx >= 1 && ny >= 1 && nx <= tiles && ny <= tiles;
+                    if (inside && bed is (int bx, int by) && bx == nx - 1 && by == ny - 1)
+                    {
+                        bedReached = true;
+                        continue;
+                    }
+
+                    if (inside && !open[nx - 1, ny - 1])
                     {
                         continue;
                     }
@@ -218,11 +309,12 @@ namespace TinyCity.Simulation.Building
                 }
             }
 
-            for (var y = 0; y < size; y++)
+            for (var y = 0; y < tiles; y++)
             {
-                for (var x = 0; x < size; x++)
+                for (var x = 0; x < tiles; x++)
                 {
-                    if (!BuildingRules.Letters.ContainsKey(grid[x, y]) && !reached[x + 1, y + 1])
+                    var isBed = bed is (int bx, int by) && bx == x && by == y;
+                    if (open[x, y] && !isBed && !reached[x + 1, y + 1])
                     {
                         error = "part of it is closed in with no doorway";
                         return false;
@@ -230,15 +322,15 @@ namespace TinyCity.Simulation.Building
                 }
             }
 
-            var cells = new List<BlockCell>();
-            for (var level = 0; level < height; level++)
+            if (bed != null && !bedReached)
             {
-                cells.AddRange(walls.Select(w => new BlockCell(w.x, w.y, level, w.m)));
+                error = "nobody could get to the bed";
+                return false;
             }
 
             var cleanRows = Enumerable.Range(0, size).Select(y => new string(Enumerable.Range(0, size).Select(x => grid[x, y]).ToArray())).ToList();
             var cleanName = TextRules.Clean(name, BuildingRules.MaxNameLength);
-            plan = new BuildPlan(cleanName.Length > 0 ? cleanName : "building", height, cleanRows, cells);
+            plan = new BuildPlan(cleanName.Length > 0 ? cleanName : "building", height, cleanRows, cells, bed);
             error = null;
             return true;
         }
@@ -274,8 +366,18 @@ namespace TinyCity.Simulation.Building
         public IEnumerable<BlockCell> PlacedCells => Plan.Cells.Take(Placed);
 
         /// <summary>Materials still needed to finish.</summary>
-        public IEnumerable<(MaterialKind material, int count)> StillNeeded() =>
-            Plan.Cells.Skip(Placed).GroupBy(c => c.Material).OrderBy(g => g.Key).Select(g => (g.Key, g.Count()));
+        public IEnumerable<(MaterialKind material, int count)> StillNeeded()
+        {
+            var all = BuildingRules.MaterialsFor(Plan.Cells);
+            var used = BuildingRules.MaterialsFor(PlacedCells);
+            return all.Select(p => (p.Key, p.Value - (used.TryGetValue(p.Key, out var u) ? u : 0))).Where(p => p.Item2 > 0).OrderBy(p => p.Key);
+        }
+
+        /// <summary>
+        /// True when laying the next block takes a new material from the builder: every <see cref="BuildingRules.BlocksPerMaterial"/>th
+        /// block of a material (counting from the first) does, the ones between use the rest of it.
+        /// </summary>
+        public bool NextTakesMaterial => Next is BlockCell next && Plan.Cells.Take(Placed).Count(c => c.Material == next.Material) % BuildingRules.BlocksPerMaterial == 0;
     }
 
     /// <summary>
@@ -291,6 +393,7 @@ namespace TinyCity.Simulation.Building
         public Construction(TownWorld world)
         {
             this.world = world;
+            world.SetBuilt(Array.Empty<WorldObject>());
         }
 
         public int Version { get; private set; }
@@ -329,7 +432,7 @@ namespace TinyCity.Simulation.Building
                     break;
                 }
 
-                if (!belongings.Take(next.Material, 1))
+                if (project.NextTakesMaterial && !belongings.Take(next.Material, 1))
                 {
                     stoppedBy = $"ran out of {CraftingRules.Name(next.Material)}";
                     break;
@@ -347,22 +450,33 @@ namespace TinyCity.Simulation.Building
             return laid;
         }
 
+        /// <summary>The bed of a finished home on this plot: in the world while the building stands finished.</summary>
+        public static string BedIdOf(string plotId) => plotId + BuildingRules.BedSuffix;
+
         private void Rebuild()
         {
             blocked.Clear();
-            foreach (var p in projects.Values)
+            var built = new List<WorldObject>();
+            foreach (var p in projects.Values.OrderBy(p => p.PlotId, StringComparer.Ordinal))
             {
                 if (!world.TryGetObject(p.PlotId, out var plot))
                 {
                     continue;
                 }
 
-                foreach (var cell in p.PlacedCells)
+                foreach (var cell in p.PlacedCells.Where(c => c.Level == 0))
                 {
                     blocked.Add(BuildingRules.TileOf(plot, cell));
                 }
+
+                if (p.IsFinished && p.Plan.BedTile is (int bx, int by))
+                {
+                    var tile = BuildingRules.TileOf(plot, bx * BuildingRules.CellsPerTile, by * BuildingRules.CellsPerTile);
+                    built.Add(new WorldObject(BedIdOf(p.PlotId), $"Bed in the {p.Plan.Name}", ObjectType.Bed, tile));
+                }
             }
 
+            world.SetBuilt(built);
             Version++;
         }
     }

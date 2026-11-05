@@ -179,7 +179,7 @@ namespace TinyCity.Art
 
             foreach (var obj in world.Objects)
             {
-                if (obj.Location.MapId != map.Id)
+                if (obj.Location.MapId != map.Id || TinyCity.Simulation.Building.BuildingRules.IsBuilt(obj))
                 {
                     continue;
                 }

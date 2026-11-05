@@ -171,6 +171,12 @@ namespace TinyCity.Simulation.Activities
                 return false;
             }
 
+            // A bed outdoors is in a home someone built (Tiny City 2): only theirs to sleep in.
+            if (obj.Type == ObjectType.Bed && world.GetMap(mapId).IsExterior)
+            {
+                return obj.Id == resident.BedObjectId;
+            }
+
             // A family shares the bed at home: children sleep with their parent.
             if (obj.Type == ObjectType.Bed && mapId == resident.HomeMapId)
             {

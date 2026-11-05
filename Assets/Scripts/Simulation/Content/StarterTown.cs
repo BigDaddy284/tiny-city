@@ -493,7 +493,7 @@ namespace TinyCity.Simulation.Content
         /// </summary>
         private static void AddOpenLand(List<TileMap> maps, List<WorldObject> objects, List<Portal> portals)
         {
-            const int width = 28, height = 26, pathRow = 11;
+            const int width = 30, height = 24, pathRow = 11;
             var rows = new List<string>();
             for (var y = 0; y < height; y++)
             {
@@ -508,12 +508,12 @@ namespace TinyCity.Simulation.Content
 
             maps.Add(TileMap.FromRows(OpenLandMapId, "Open land", true, rows, VillageLegend));
             var n = 0;
-            foreach (var markerY in new[] { pathRow - 2, height - 4 })
+            foreach (var markerY in new[] { pathRow - 1, height - 3 })
             {
-                foreach (var cornerX in new[] { 3, 11, 19 })
+                foreach (var cornerX in new[] { 2, 11, 20 })
                 {
                     n++;
-                    objects.Add(new WorldObject($"{PlotIdPrefix}{n}", $"Plot {n}", ObjectType.BuildPlot, new Location(OpenLandMapId, cornerX + 2, markerY)));
+                    objects.Add(new WorldObject($"{PlotIdPrefix}{n}", $"Plot {n}", ObjectType.BuildPlot, new Location(OpenLandMapId, cornerX + 3, markerY)));
                 }
             }
 

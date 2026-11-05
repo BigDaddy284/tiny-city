@@ -14,6 +14,7 @@ namespace TinyCity.Simulation.World
         private readonly List<WorldObject> objects;
         private readonly List<Portal> portals;
         private readonly HashSet<Location> blocked;
+        private readonly List<WorldObject> builtObjects = new List<WorldObject>();
 
         public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals, IEnumerable<Business> businesses = null, Community.CommunityCalendar calendar = null, IEnumerable<Job> jobOpenings = null)
         {
@@ -154,6 +155,37 @@ namespace TinyCity.Simulation.World
         public bool IsBlocked(Location location) => blocked.Contains(location);
 
         public bool IsWalkable(Location location) => TryGetMap(location.MapId, out var map) && map.IsWalkable(location.Position);
+
+        /// <summary>
+        /// Replaces the furniture Tiny City 2's buildings put in the world (a finished home's bed): the town's
+        /// <c>Construction</c> calls this whenever its buildings change, and a new town clears it.
+        /// </summary>
+        internal void SetBuilt(IEnumerable<WorldObject> built)
+        {
+            foreach (var old in builtObjects)
+            {
+                objects.Remove(old);
+                objectsById.Remove(old.Id);
+                blocked.Remove(old.Location);
+            }
+
+            builtObjects.Clear();
+            foreach (var obj in built)
+            {
+                if (objectsById.ContainsKey(obj.Id) || !IsWalkable(obj.Location))
+                {
+                    continue;
+                }
+
+                builtObjects.Add(obj);
+                objects.Add(obj);
+                objectsById.Add(obj.Id, obj);
+                if (obj.BlocksPassing)
+                {
+                    blocked.Add(obj.Location);
+                }
+            }
+        }
 
         public IEnumerable<WorldObject> ObjectsOfType(ObjectType type) => objects.Where(o => o.Type == type);
 

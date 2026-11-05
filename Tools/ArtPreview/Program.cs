@@ -83,12 +83,12 @@ namespace TinyCity.Tools.ArtPreview
             var sim = new TinyCity.Simulation.TownSimulation(world, residents, GameTime.FromDayAndTime(6, 12, 0));
             var plans = new[]
             {
-                ("wooden hut", 2, new[] { "WWWW", "W..W", "WDWW" }),
-                ("stone tower", 3, new[] { "", ".SSS", ".S.S", ".SDS" }),
-                ("hardwood cabin", 2, new[] { "HHHHH", "H...H", "H...H", "HHDHH" }),
-                ("iron shed", 1, new[] { "", "IIII", "I..I", "ID.I" }),
-                ("heartwood hall", 2, new[] { "TTTTTT", "T....T", "T....T", "T....T", "TTDDTT" }),
-                ("crystal lookout", 3, new[] { "", ".CC", ".CD" }),
+                ("wooden cabin", 4, new[] { "", "..WWWWWWWWWW", "..W........W", "..W.B......W", "..W........W", "..W........W", "..W........W", "..WWWWDWWWWW" }),
+                ("stone cottage", 5, new[] { "SSSSSSSSSSSS", "S..........S", "C..........C", "S.....B....S", "S..........S", "C..........C", "S..........S", "SSSSDSSSSSSS" }),
+                ("hardwood house", 5, new[] { "HHHHHHHHHHHHHH", "H......H.....H", "H......H.....H", "H.B....D.....H", "H......H.....H", "H......H.....H", "H......H.....H", "H......H.....H", "H......H.....H", "HHHHHHHHHHDHHH" }),
+                ("iron workshop", 3, new[] { "", "", "IIIIIIII", "I......I", "I......I", "I......I", "I......I", "IIDDIIII" }),
+                ("heartwood hall", 5, new[] { "TTTTCTTTTTTCTTTT", "T..............T", "C..............C", "T......B.......T", "T..............T", "C..............C", "T..............T", "TTTTTTDTTTTTTTTT" }),
+                ("crystal tower", 6, new[] { "..CCCC..", ".C....C.", "C......C", "C..B...C", "C......C", "C......C", ".C....C.", "..CDDC.." }),
             };
             var plots = world.ObjectsOfType(TinyCity.Simulation.World.ObjectType.BuildPlot).ToList();
             for (var i = 0; i < plots.Count && i < plans.Length; i++)

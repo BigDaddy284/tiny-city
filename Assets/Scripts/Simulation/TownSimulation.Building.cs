@@ -29,7 +29,7 @@ namespace TinyCity.Simulation
                     && !residents.Any(o => o.IsAlive && o.Sketch != null && o.Sketch.PlotId == plot.Id);
             }
 
-            return project != null && project.OwnerId == r.Id && project.Next is BlockCell next && r.Belongings.Count(next.Material) > 0;
+            return project != null && project.OwnerId == r.Id && project.Next is BlockCell next && (!project.NextTakesMaterial || r.Belongings.Count(next.Material) > 0);
         }
 
         private void StartSketch(Resident r)
@@ -134,8 +134,35 @@ namespace TinyCity.Simulation
             {
                 World.TryGetObject(project.PlotId, out var plot);
                 Memories.Add(r.Id, Time, MemoryType.Event, 7, $"I finished building my {project.Plan.Name}, all {project.Plan.Cells.Count} blocks of it.", tags: new[] { "building", "built", project.PlotId });
-                History.Add(Time, TownEventKind.Built, $"{r.FullName} finished building a {project.Plan.Name} on the {plot?.Name.ToLowerInvariant() ?? "plot"}.", new[] { r.Id });
+                var movedIn = MoveIntoBuilding(r, project);
+                History.Add(Time, TownEventKind.Built, $"{r.FullName} finished building a {project.Plan.Name} on the {plot?.Name.ToLowerInvariant() ?? "plot"}{(movedIn ? " and moved in" : string.Empty)}.", new[] { r.Id });
             }
+        }
+
+        /// <summary>
+        /// A finished building with a bed becomes its owner's home: they sleep in its bed and pay no rent, and children
+        /// who shared their bed come too. The home they leave is free for anyone else.
+        /// </summary>
+        private bool MoveIntoBuilding(Resident r, Project project)
+        {
+            var bedId = Construction.BedIdOf(project.PlotId);
+            if (!project.Plan.IsHome || !World.TryGetObject(bedId, out var bed) || r.BedObjectId == bedId)
+            {
+                return false;
+            }
+
+            var oldBed = r.BedObjectId;
+            var oldHome = r.HomeMapId;
+            foreach (var mover in residents.Where(o => o == r || (o.IsAlive && o.IsMinor && o.BedObjectId == oldBed && o.ParentIds.Contains(r.Id))).ToList())
+            {
+                mover.HomeMapId = bed.Location.MapId;
+                mover.BedObjectId = bedId;
+                mover.WeeklyRentPence = 0;
+            }
+
+            r.AddLog(Time, $"Moved into the {project.Plan.Name}");
+            Memories.Add(r.Id, Time, MemoryType.Event, 8, $"I moved into the {project.Plan.Name} I built myself{(oldHome == null ? ", after having nowhere to live" : string.Empty)}. It's my home now.", tags: new[] { "home", "building", project.PlotId });
+            return true;
         }
     }
 }

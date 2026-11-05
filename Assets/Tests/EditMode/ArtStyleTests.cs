@@ -63,7 +63,7 @@ namespace TinyCity.Tests.EditMode
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(858167960142718640UL), Locked);
+            Assert.That(hash.Value, Is.EqualTo(11728537815116734236UL), Locked);
         }
 
         [Test]
