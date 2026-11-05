@@ -67,7 +67,11 @@ namespace TinyCity.Simulation.AI
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are in {map.Name}.");
             sb.AppendLine($"How you feel: {PromptText.Feelings(r)}.");
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
-            sb.AppendLine($"Money: {PromptText.Purse(r, sim)}.");
+            if (!sim.FoodMustBeMade || sim.MoneyInUse)
+            {
+                sb.AppendLine($"Money: {PromptText.Purse(r, sim)}.");
+            }
+
             PromptText.AppendFood(sb, sim, r);
             if (sim.FoodMustBeMade)
             {
@@ -116,7 +120,7 @@ namespace TinyCity.Simulation.AI
                 sb.Append($" For target_id {PromptText.Quote(FreeTimeOption.GroundTargetId)}, also give \"x\" and \"y\": the spot you choose, and when planting, \"what\" you plant.");
             }
 
-            if (options.Any(o => o.Activity == ActivityCatalog.RunStall))
+            if (sim.MoneyInUse && options.Any(o => o.Activity == ActivityCatalog.RunStall))
             {
                 sb.Append($" For {PromptText.Quote(ActivityCatalog.RunStall.Id)}, also give \"price\": what you ask for each portion, in pounds, whatever you like (0 to give it away).");
             }

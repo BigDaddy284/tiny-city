@@ -419,11 +419,51 @@ namespace TinyCity.Tests.EditMode
             sim.ApplyConversationLine(session.Id, session.LineRequestId, payer.Id, "No chance.", "disagree", "tax", false, payTax: false);
             Assert.That(payer.Food.Total, Is.EqualTo(8), "refused");
             Assert.That(sim.Memories.ForResident(taxer.Id).Any(m => m.Summary.Contains("they refused")), Is.True);
+            var trades = sim.TradesOf(taxer.Id).ToList();
+            Assert.That(trades.Count, Is.EqualTo(3), "the wage, the tax paid and the tax refused are the taxer's trades");
+            Assert.That(trades[0].Summary, Does.Contain("they refused"), "newest first");
+            Assert.That(sim.TradesOf(payer.Id).Any(m => m.Summary.Contains("gave me")), Is.True);
 
             WaitForLine(sim, session);
             payer.Role = "farmer";
             sim.ApplyConversationLine(session.Id, session.LineRequestId, payer.Id, "Now you pay me.", "playful", "tax", false, taxPercent: 50);
             Assert.That(session.TaxDemand, Is.Null, "only a role that can tax may ask");
+        }
+
+        [Test]
+        public void MaterialsAndTools_CanBeHandedOverInAChat_AndWithNoMoneyAboutPromptsLeaveMoneyOut()
+        {
+            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            sim.AiDecisionsEnabled = true;
+            sim.FoodMustBeMade = true;
+            sim.Brief = WorldBrief.Default;
+            foreach (var r in sim.Residents)
+            {
+                r.MoneyPence = 0;
+            }
+
+            ConversationSessionFor(sim, out var session);
+            var giver = sim.GetResident(session.SpeakerId);
+            var taker = sim.GetResident(session.ListenerId);
+            giver.Belongings.Add(MaterialKind.Wood, 5);
+            giver.Belongings.SetTool(ToolKind.Axe, 7, 2);
+            Assert.That(sim.MoneyInUse, Is.False);
+            var prompt = DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]);
+            Assert.That(prompt, Does.Contain("give_item").And.Not.Contain("give_money").And.Not.Contain("Your money"));
+
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, giver.Id, "Have some wood.", "warm", "wood", false, giveItem: "wood", giveAmount: 9);
+            Assert.That((giver.Belongings.Count(MaterialKind.Wood), taker.Belongings.Count(MaterialKind.Wood)), Is.EqualTo((0, 5)), "no more than they have");
+            WaitForLine(sim, session);
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, taker.Id, "Thanks.", "warm", "wood", false);
+            WaitForLine(sim, session);
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, giver.Id, "And my axe.", "warm", "wood", false, giveItem: "stone axe");
+            Assert.That((giver.Belongings.Has(ToolKind.Axe), taker.Belongings.TierOf(ToolKind.Axe), taker.Belongings.UsesLeft(ToolKind.Axe)), Is.EqualTo((false, 2, 7)));
+            Assert.That(sim.TradesOf(taker.Id).Count(), Is.EqualTo(2));
+
+            Assert.That(DialoguePrompt.TryParse("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_item\":\"iron ore\",\"give_amount\":3}", out var reply, out _), Is.True);
+            Assert.That((reply.GiveItem, reply.GiveAmount), Is.EqualTo(("iron ore", 3)));
+            Assert.That(CraftingRules.TryMaterial(reply.GiveItem, out var kind) && kind == MaterialKind.Iron, Is.True);
+            Assert.That(CraftingRules.TryTool("iron pickaxe", out var tool) && tool == ToolKind.Pickaxe, Is.True);
         }
 
         [Test]

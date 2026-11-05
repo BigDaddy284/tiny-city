@@ -24,8 +24,10 @@ namespace TinyCity.Tests.EditMode
             Assert.That(problems, Is.Empty);
             Assert.That(profiles.Count, Is.EqualTo(StarterTown.StarterResidentIds.Count));
 
-            var fromProfiles = StarterTown.CreateNewGame(profiles);
-            var designed = StarterTown.CreateNewGame();
+            // Tiny City 2's shipped profiles start everyone with no money (owner, 5 November), as the open land does without them.
+            Assert.That(profiles.All(p => p.MoneyPence == 0), Is.True);
+            var fromProfiles = FlatLand.CreateNewGame(profiles);
+            var designed = FlatLand.CreateNewGame();
             Assert.That(SaveSerializer.Save(fromProfiles), Is.EqualTo(SaveSerializer.Save(designed)));
             Assert.That(designed.Residents.All(r => r.About.Length > 0), Is.True);
             Assert.That(designed.Residents.All(r => r.OwnsBusinessId == null), Is.True);

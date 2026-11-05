@@ -481,7 +481,7 @@ namespace TinyCity.Simulation
             if (option.Activity == ActivityCatalog.RunStall)
             {
                 // Tiny City 2: the stall-holder names their own price; with none given, they keep the last one.
-                r.StallPricePence = Math.Max(0, pricePence ?? r.StallPricePence);
+                r.StallPricePence = MoneyInUse ? Math.Max(0, pricePence ?? r.StallPricePence) : 0;
             }
 
             r.ResetActivity();
@@ -763,7 +763,8 @@ namespace TinyCity.Simulation
 
         /// <summary>Applies an AI-written conversation line, after checking it is for the turn the conversation is waiting on.</summary>
         public DecisionOutcome ApplyConversationLine(string conversationId, long lineRequestId, string speakerId, string text, string tone, string topic, bool wantsToEnd,
-            int giveFood = 0, long pricePence = 0, bool acceptOffer = false, long giveMoneyPence = 0, int taxPercent = 0, bool payTax = false)
+            int giveFood = 0, long pricePence = 0, bool acceptOffer = false, long giveMoneyPence = 0, int taxPercent = 0, bool payTax = false,
+            string giveItem = null, int giveAmount = 0)
         {
             var session = GetConversation(conversationId);
             if (session == null || !session.AwaitingLine || session.LineRequestId != lineRequestId || lineRequestId <= 0 || session.SpeakerId != speakerId)
@@ -790,6 +791,7 @@ namespace TinyCity.Simulation
 
             ApplyFoodInChat(session, speaker, giveFood, pricePence, acceptOffer);
             ApplyMoneyAndTaxInChat(session, speaker, giveMoneyPence, taxPercent, payTax);
+            ApplyGoodsInChat(session, speaker, giveItem, giveAmount);
             AddLine(session, clean, parsedTone, fromAi: true, SocialRules.CleanTopic(topic), wantsToEnd);
             return DecisionOutcome.Applied;
         }

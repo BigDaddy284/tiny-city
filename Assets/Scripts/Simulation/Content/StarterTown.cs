@@ -651,7 +651,7 @@ namespace TinyCity.Simulation.Content
         /// in their own words and no business owned (someone has to choose to take one on).
         /// </summary>
         public static IReadOnlyList<ResidentProfile> DefaultProfiles() =>
-            Designs.Select(d => new ResidentProfile(d.id, d.first, d.last, d.age, DefaultAbout(d.id), d.money, null,
+            Designs.Select(d => new ResidentProfile(d.id, d.first, d.last, d.age, DefaultAbout(d.id), 0, null,
                 DefaultPersonalities.TryGetValue(d.id, out var p) ? p : null)).ToList();
 
         /// <summary>The one-sentence personalities the shipped residents.json gives (Tiny City 2).</summary>

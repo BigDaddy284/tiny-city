@@ -741,7 +741,7 @@ namespace TinyCity.Simulation.AI
                         return AiReplyCheck.Invalid(error);
                     }
 
-                    var outcome = sim.ApplyConversationLine(session.Id, lineId, speakerId, reply.Say, reply.Tone, reply.Topic, reply.End, reply.GiveFood, reply.PricePence, reply.AcceptOffer, reply.GiveMoneyPence, reply.TaxPercent, reply.PayTax);
+                    var outcome = sim.ApplyConversationLine(session.Id, lineId, speakerId, reply.Say, reply.Tone, reply.Topic, reply.End, reply.GiveFood, reply.PricePence, reply.AcceptOffer, reply.GiveMoneyPence, reply.TaxPercent, reply.PayTax, reply.GiveItem, reply.GiveAmount);
                     switch (outcome)
                     {
                         case DecisionOutcome.Applied:
