@@ -163,6 +163,10 @@ namespace TinyCity.Simulation
             var partnerId = Relationships.PartnerOf(r.Id);
             Widow(r);
             History.Add(Time, TownEventKind.Death, $"{r.FullName} died of {cause}, aged {r.AgeYears}.", new[] { r.Id });
+            if (AiRunsEverything && LivingCount == 0)
+            {
+                History.Add(Time, TownEventKind.WorldEnded, $"Everyone has died: the last was {r.FullName}. {World.TownName} lasted {Legacy.Days(Time.Day - Content.StarterTown.StartTime.Day + 1)}. What they lived through is written down for the next world.", residents.Select(o => o.Id).ToArray());
+            }
 
             foreach (var other in residents.Where(o => o.IsAlive && o != r && o.Id != partnerId))
             {

@@ -96,7 +96,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(error, Does.Contain("doorway"));
             Assert.That(BuildPlan.TryParse("hut", 0, Hut, out _, out _), Is.False);
             Assert.That(BuildPlan.TryParse("hut", BuildingRules.MaxHeight + 1, Hut, out _, out _), Is.False);
-            Assert.That(BuildPlan.TryParse("x", 1, new[] { "WWX" }, out _, out _), Is.False, "X isn't a block");
+            Assert.That(BuildPlan.TryParse("x", 1, new[] { "WWQ" }, out _, out _), Is.False, "Q isn't a block");
             Assert.That(BuildPlan.TryParse("x", 1, new[] { "WW" }, out _, out _), Is.False, "too few blocks");
             Assert.That(BuildPlan.TryParse("x", 1, new[] { new string('W', BuildingRules.GridSize + 1) }, out _, out _), Is.False, "too wide");
             Assert.That(BuildPlan.TryParse("x", 1, Enumerable.Repeat("W", BuildingRules.GridSize + 1).ToList(), out _, out _), Is.False, "too deep");
@@ -113,8 +113,8 @@ namespace TinyCity.Tests.EditMode
             Assert.That(ground.IsGround, Is.True);
             Assert.That(Option(sim, ActivityCatalog.Build), Is.Null, "nothing to build yet");
 
-            var bed = sim.World.ObjectsOfType(ObjectType.Bed).First();
-            foreach (var (x, y, why) in new[] { (22, 31, "isn't open ground"), (0, 5, "isn't open ground"), (-3, 5, "off the land"), (bed.Location.Position.X, bed.Location.Position.Y, "already there") })
+            var bench = sim.World.ObjectsOfType(ObjectType.Bench).First();
+            foreach (var (x, y, why) in new[] { (22, 31, "isn't open ground"), (0, 5, "isn't open ground"), (-3, 5, "off the land"), (bench.Location.Position.X, bench.Location.Position.Y, "already there") })
             {
                 Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plan-building", "ground", "Home", "Here", null, x, y), Is.EqualTo(DecisionOutcome.InvalidTarget), $"({x}, {y})");
                 Assert.That(r.Log.Last().Text, Does.Contain(why));
@@ -134,9 +134,9 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = Town();
             var r = sim.Residents[0];
-            var bed = sim.World.ObjectsOfType(ObjectType.Bed).OrderBy(o => o.Location.Position.Y).ThenBy(o => o.Location.Position.X).First();
+            var bench = sim.World.ObjectsOfType(ObjectType.Bench).OrderBy(o => o.Location.Position.Y).ThenBy(o => o.Location.Position.X).First();
             BuildPlan.TryParse("hut", 1, Hut, out var hut, out _);
-            Assert.That(sim.Construction.CheckPlacement(new Location(FlatLand.MapId, bed.Location.Position.X - 1, bed.Location.Position.Y - 1), hut, null, _ => false, r.Location, out _), Does.Contain("already"), "not over a camp bed");
+            Assert.That(sim.Construction.CheckPlacement(new Location(FlatLand.MapId, bench.Location.Position.X - 1, bench.Location.Position.Y - 1), hut, null, _ => false, r.Location, out _), Does.Contain("already"), "not over a camp bench");
             Assert.That(sim.Construction.CheckPlacement(new Location(FlatLand.MapId, 19, 28), hut, null, _ => false, r.Location, out _), Does.Contain("open ground"), "not in the pond");
 
             // A wall across the land's top corner would shut in the ground behind it, though the plan alone looks fine.
@@ -180,7 +180,6 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.Construction.IsBlocked(wall), Is.True);
             Assert.That(sim.Pathfinder.Distance(westOfHut, inside), Is.GreaterThan(before), "they walk round to the doorway");
 
-            var oldBed = r.BedObjectId;
             r.Belongings.Add(MaterialKind.Wood, 30);
             for (var i = 0; i < 6 && !project.IsFinished; i++)
             {
@@ -190,15 +189,12 @@ namespace TinyCity.Tests.EditMode
             Assert.That(project.IsFinished, Is.True);
             Assert.That(r.Belongings.Count(MaterialKind.Wood), Is.EqualTo(10), "30 wood in all");
             Assert.That(Option(sim, ActivityCatalog.Build), Is.Null, "nothing left to lay");
-            Assert.That(sim.History.Events.Any(e => e.Kind == TownEventKind.Built && e.ResidentIds.Contains(r.Id) && e.Summary.Contains("moved in")), Is.True);
+            Assert.That(sim.History.Events.Any(e => e.Kind == TownEventKind.Built && e.ResidentIds.Contains(r.Id) && e.Summary.Contains("finished building")), Is.True);
             Assert.That(sim.Pathfinder.Distance(westOfHut, inside), Is.Not.EqualTo(Pathfinder.Unreachable), "the doorway lets them in");
 
             Assert.That(sim.World.TryGetObject(Construction.BedIdOf(project.SiteId), out var bed), Is.True, "a finished home has its bed");
             Assert.That(bed.Location, Is.EqualTo(Spot(1, 1)));
-            Assert.That(r.BedObjectId, Is.EqualTo(bed.Id), "and they live there");
-            Assert.That(r.HomeMapId, Is.EqualTo(FlatLand.MapId));
-            Assert.That(r.WeeklyRentPence, Is.EqualTo(0), "no rent on a home they built");
-            Assert.That(oldBed, Is.Not.EqualTo(bed.Id));
+            Assert.That(r.BedObjectId, Is.Null, "nobody is moved in: they choose where to sleep");
             Assert.That(sim.Planner.IsAvailableTo(r, bed), Is.True);
 
             var map = sim.World.GetMap(FlatLand.MapId);
@@ -209,7 +205,7 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void SomeoneElsesBuiltBed_IsNotTheirs()
+        public void ABuiltBed_IsAnyonesWhoFindsItFree()
         {
             var sim = Town();
             var r = sim.Residents[0];
@@ -218,7 +214,72 @@ namespace TinyCity.Tests.EditMode
             Do(sim, ActivityCatalog.Build);
             Assert.That(project.IsFinished, Is.True);
             sim.World.TryGetObject(Construction.BedIdOf(project.SiteId), out var bed);
-            Assert.That(sim.Planner.IsAvailableTo(sim.Residents[1], bed), Is.False, "a bed in someone's built home is theirs alone");
+            var other = sim.Residents[1];
+            Assert.That(sim.Planner.IsAvailableTo(other, bed), Is.True, "nothing belongs to anyone");
+            Assert.That(sim.Planner.FreeTimeOptions(other, everything: true).Any(o => o.ActionId == "sleep" && o.TargetId == bed.Id), Is.True);
+
+            r.TargetObjectId = bed.Id;
+            r.ActivityId = ActivityCatalog.Sleep.Id;
+            r.State = ResidentState.Performing;
+            Assert.That(sim.Planner.IsAvailableTo(other, bed), Is.False, "but one sleeper at a time");
+        }
+
+        [Test]
+        public void SomeoneElse_CanHelpBuild_WithTheirOwnMaterials_AndBothAreRemembered()
+        {
+            var sim = Town();
+            var owner = sim.Residents[0];
+            var project = PlanHut(sim, height: 1);
+            var helper = sim.Residents[1];
+            helper.Belongings.Add(MaterialKind.Wood, 8);
+            var site = sim.Construction.SiteOf(project.SiteId);
+            sim.World.TryGetObject(project.SiteId, out var siteObject);
+            Assert.That(sim.Planner.CanDo(helper, ActivityCatalog.Build, siteObject, sim.Time), Is.True, $"anyone may help: {ActivityCatalog.Build.CanUse(siteObject)} {sim.Planner.IsAvailableTo(helper, siteObject)} {FoodSupply.Allows(sim.Food, helper, ActivityCatalog.Build, siteObject, sim.Time.Day)}");
+
+            owner.Location = site.StandAt;
+            helper.ResetActivity();
+            helper.Location = site.StandAt;
+            helper.TargetObjectId = siteObject.Id;
+            helper.ActivityId = ActivityCatalog.Build.Id;
+            helper.State = ResidentState.Performing;
+            helper.MinutesRemaining = 1;
+            sim.Tick();
+            Assert.That(project.IsFinished, Is.True, string.Join(" | ", helper.Log.Select(l => l.Text)));
+            Assert.That(owner.Belongings.Count(MaterialKind.Wood), Is.EqualTo(0), "the owner's own wood wasn't touched");
+            Assert.That(helper.Belongings.Count(MaterialKind.Wood), Is.EqualTo(0), "the helper's wood built it");
+            Assert.That(project.Builders, Is.EqualTo(new[] { helper.Id }));
+            Assert.That(sim.Memories.ForResident(helper.Id).Any(m => m.Summary.StartsWith("I helped build")), Is.True);
+
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
+            Assert.That(loaded.Construction.At(project.SiteId).Builders, Is.EqualTo(new[] { helper.Id }));
+        }
+
+        [Test]
+        public void APlan_CanHoldFurniture_OrBeFurnitureAlone()
+        {
+            var cabin = new[] { "WWWWWWWWWWWW", "W..........W", "W.B..K..X..W", "W..........W", "W..........W", "W..........W", "W..B..M..N.W", "W..........W", "WWWWDWWWWWWW" };
+            Assert.That(BuildPlan.TryParse("cabin", 2, cabin, out var plan, out var error), Is.True, error);
+            Assert.That(plan.Furniture.Select(f => f.Type), Is.EqualTo(new[] { ObjectType.Bed, ObjectType.Kitchen, ObjectType.Workbench, ObjectType.Bed, ObjectType.MarketStall, ObjectType.Bench }));
+            Assert.That(plan.BedTile, Is.EqualTo(((int, int)?)(1, 1)));
+
+            Assert.That(BuildPlan.TryParse("fish stall", 1, new[] { "M" }, out var stall, out error), Is.True, "furniture alone, no blocks: " + error);
+            Assert.That(stall.Cells, Is.Empty);
+
+            var sim = Town();
+            var r = sim.Residents[0];
+            Do(sim, ActivityCatalog.PlanBuilding, SpotX, SpotY);
+            var siteId = r.Sketch.SiteId;
+            Assert.That(sim.ApplySketch(r.Id, r.Sketch.Id, "fish stall", 1, new[] { "M" }, out error), Is.EqualTo(DecisionOutcome.Applied), error);
+            Assert.That(sim.Construction.At(siteId).IsFinished, Is.True, "there as soon as it is planned");
+            var made = sim.World.Objects.Single(o => o.Type == ObjectType.MarketStall);
+            Assert.That((made.Name, made.Location), Is.EqualTo(("Fish stall", Spot())));
+            Assert.That(BuildingRules.IsBuilt(made), Is.True);
+            Assert.That(sim.History.Events.Any(e => e.Kind == TownEventKind.Built), Is.True);
+
+            r.Food.Add(FoodKind.Fish, 3, sim.Time.Day + 2);
+            Assert.That(sim.Planner.FreeTimeOptions(r, everything: true).Any(o => o.ActionId == ActivityCatalog.RunStall.Id && o.TargetId == made.Id), Is.True, "and they can sell from it");
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
+            Assert.That(loaded.World.Objects.Count(o => o.Type == ObjectType.MarketStall), Is.EqualTo(1));
         }
 
         [Test]
@@ -267,19 +328,20 @@ namespace TinyCity.Tests.EditMode
             loaded.FoodMustBeMade = true;
             loaded.AiRunsEverything = true;
             var prompt = DecisionPrompt.UserText(loaded, loaded.Residents[0], loaded.FreeTimeOptionsFor(loaded.Residents[0]), new TinyCity.Simulation.Memory.MemoryRecord[0]);
-            Assert.That(prompt, Does.Contain($"Your building: a Little hut at ({SpotX}, {SpotY}), 20 of 30 blocks laid; it still needs 3 wood. It has a bed, so it will be your home once finished."));
+            Assert.That(prompt, Does.Contain($"Your building: a Little hut at ({SpotX}, {SpotY}), 20 of 30 blocks laid; it still needs 3 wood."));
+            var other = loaded.Residents[1];
+            Assert.That(DecisionPrompt.UserText(loaded, other, loaded.FreeTimeOptionsFor(other), new TinyCity.Simulation.Memory.MemoryRecord[0]),
+                Does.Contain($"{r.FullName}'s Little hut at ({SpotX}, {SpotY}): 20 of 30 blocks laid, still needs 3 wood; you could help build it."));
             Assert.That(prompt, Does.Contain("your Little hut at x 31-35, y 10-13"));
 
             r.Belongings.Add(MaterialKind.Wood, 3);
             Do(sim, ActivityCatalog.Build);
             Assert.That(project.IsFinished, Is.True);
             var bedId = Construction.BedIdOf(project.SiteId);
-            Assert.That(r.BedObjectId, Is.EqualTo(bedId));
             result = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld());
             Assert.That(result.Success, Is.True);
             Assert.That(result.Warnings, Is.Empty);
             var home = result.Simulation.GetResident(r.Id);
-            Assert.That((home.HomeMapId, home.BedObjectId, home.WeeklyRentPence), Is.EqualTo((FlatLand.MapId, bedId, 0L)));
             Assert.That(result.Simulation.World.TryGetObject(bedId, out var bed), Is.True, "the bed is back with the building");
             Assert.That(result.Simulation.Planner.IsAvailableTo(home, bed), Is.True);
         }

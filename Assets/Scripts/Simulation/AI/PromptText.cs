@@ -204,24 +204,36 @@ namespace TinyCity.Simulation.AI
             var mine = sim.Construction.OwnedBy(r.Id).ToList();
             if (mine.Count == 0)
             {
-                sb.AppendLine("Building: anyone can choose a spot on open ground and build whatever they like there from blocks of the materials they gather; one with a bed becomes their home once it is finished.");
+                sb.AppendLine("Building: anyone can choose a spot on open ground and build whatever they like there from blocks of the materials they gather, with beds, stoves, stalls, crafting benches and benches inside or standing alone. Anyone can help build anyone's building with their own materials, and anyone can use what is built.");
             }
 
             foreach (var project in mine)
             {
                 var at = $"at ({project.Corner.Position.X}, {project.Corner.Position.Y})";
+                var helpers = project.Builders.Where(id => id != r.Id).Select(sim.GetResident).Where(o => o != null).Select(o => o.FirstName).ToList();
+                var helped = helpers.Count == 0 ? string.Empty : $" {string.Join(" and ", helpers)} helped build it.";
                 if (project.IsFinished)
                 {
-                    sb.AppendLine($"Your building: you built a {project.Plan.Name} {at}{(project.Plan.IsHome && r.BedObjectId == Building.Construction.BedIdOf(project.SiteId) ? ", and you live in it" : string.Empty)}.");
+                    sb.AppendLine($"Your building: you made a {project.Plan.Name} {at}.{helped}");
                 }
                 else
                 {
                     var needs = string.Join(", ", project.StillNeeded().Select(n => $"{n.count} {Economy.CraftingRules.Name(n.material)}"));
-                    var home = project.Plan.IsHome ? " It has a bed, so it will be your home once finished." : string.Empty;
-                    sb.AppendLine($"Your building: a {project.Plan.Name} {at}, {project.Placed} of {project.Plan.Cells.Count} blocks laid; it still needs {(needs.Length > 0 ? needs : "no more materials")}.{home}");
+                    sb.AppendLine($"Your building: a {project.Plan.Name} {at}, {project.Placed} of {project.Plan.Cells.Count} blocks laid; it still needs {(needs.Length > 0 ? needs : "no more materials")}.{helped}");
                 }
             }
+
+            var others = sim.Construction.Projects.Values.Where(p => p.OwnerId != r.Id && !p.IsFinished).OrderBy(p => p.SiteId, System.StringComparer.Ordinal).Take(MaxOtherBuildingsListed).ToList();
+            foreach (var project in others)
+            {
+                var owner = sim.GetResident(project.OwnerId);
+                var needs = string.Join(", ", project.StillNeeded().Select(n => $"{n.count} {Economy.CraftingRules.Name(n.material)}"));
+                sb.AppendLine($"{owner?.FullName ?? "Someone"}'s {project.Plan.Name} at ({project.Corner.Position.X}, {project.Corner.Position.Y}): {project.Placed} of {project.Plan.Cells.Count} blocks laid, still needs {needs}; you could help build it.");
+            }
         }
+
+        /// <summary>The most unfinished buildings of other people a prompt lists.</summary>
+        public const int MaxOtherBuildingsListed = 4;
 
         /// <summary>The most crops listed in a prompt.</summary>
         public const int MaxCropsListed = 12;

@@ -47,9 +47,11 @@ namespace TinyCity.Simulation.AI
             PromptText.AppendMemories(sb, sim.Memories.Recall(r.Id, sim.Time, new[] { "building", "crafting" }, MemoryCount, sim.Memories.FocusOf(r.Id)));
             sb.Append($"Draw it from above as up to {size} rows of up to {size} letters, the back row first. Each letter is a small square of ground, half a pace each way, and a block letter is a column of blocks there: ")
               .Append(string.Join(", ", BuildingRules.Letters.Select(l => $"{l.Key} = {CraftingRules.Name(l.Value)}")))
-              .Append(". Use . for open floor, D for a doorway and B for a bed. A wall one letter thick is fine. ")
-              .Append("A person needs a whole pace (2 by 2 letters) to stand on, so a doorway or a bed clears the 2 by 2 square it falls in. Blocks can't be walked through, so leave a doorway, and no open part may be shut in. ")
-              .Append($"A building with a bed becomes your home once it is finished, and you sleep there. \"height\" is how many blocks high the walls are, 1 to {BuildingRules.MaxHeight} (4 is about your height; a doorway is cleared up to 4). ")
+              .Append(". Use . for open floor and D for a doorway. Furniture: ")
+              .Append(string.Join(", ", BuildingRules.Furniture.Select(f => $"{f.Key} = {f.Value.name}")))
+              .Append(". A wall one letter thick is fine, and furniture can stand inside or on its own with no walls at all (for example just \"M\" for a market stall). ")
+              .Append("A person needs a whole pace (2 by 2 letters) to stand on, so a doorway or a piece of furniture clears the 2 by 2 square it falls in. Blocks can't be walked through, so leave a doorway, and no open part may be shut in. ")
+              .Append($"Whatever you build, anyone can use, and anyone can help you build it. \"height\" is how many blocks high the walls are, 1 to {BuildingRules.MaxHeight} (4 is about your height; a doorway is cleared up to 4). ")
               .Append($"Each {CraftingRules.Name(MaterialKind.Wood)} or other material you gather makes {BuildingRules.BlocksPerMaterial} blocks, so plan for what you have or can get. ")
               .Append("For example a small wooden home 4 high: \"WWWWWWWWWW\", \"W........W\", \"W.B......W\", \"W........W\", \"W........W\", \"W........W\", \"W........W\", \"WWWWDWWWWW\". Give it a short \"name\", like \"wooden cabin\" or \"stone tower\".");
             return sb.ToString();

@@ -39,7 +39,11 @@ namespace TinyCity.Simulation.AI
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
             sb.AppendLine($"Money: {PromptText.Purse(r, sim)}.");
             PromptText.AppendFood(sb, sim, r);
-            if (r.IsHomeless)
+            if (sim.FoodMustBeMade)
+            {
+                sb.AppendLine("Nobody has a bed of their own: you sleep wherever you choose, in any bed nobody is using, on a bench, or on the bare ground.");
+            }
+            else if (r.IsHomeless)
             {
                 sb.AppendLine("You have nowhere to live yet, so you sleep on a park bench.");
             }

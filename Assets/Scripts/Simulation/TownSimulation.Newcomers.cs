@@ -55,14 +55,6 @@ namespace TinyCity.Simulation
                 var home = PickFreeHome(r.Id);
                 if (home == null)
                 {
-                    if (TakeCampBed(r) is WorldObject campBed)
-                    {
-                        r.AddLog(Time, $"Took a free {campBed.Name.ToLowerInvariant()}");
-                        Memories.Add(r.Id, Time, MemoryType.Event, 6, $"After sleeping rough, I have a {campBed.Name.ToLowerInvariant()} of my own at the camp.", tags: new[] { campBed.Id, "home", "housed" });
-                        History.Add(Time, TownEventKind.Housed, $"{r.FullName} took a free {campBed.Name.ToLowerInvariant()} at the camp.", new[] { r.Id });
-                        continue;
-                    }
-
                     return;
                 }
 
@@ -86,27 +78,6 @@ namespace TinyCity.Simulation
             r.AddLog(Time, "Has nowhere to live, so sleeps on a park bench");
             Memories.Add(r.Id, Time, MemoryType.Event, 7, $"I have nowhere to live, so I sleep on a park bench. {reason}", tags: new[] { "home", "homeless" });
             History.Add(Time, TownEventKind.Homeless, $"{r.FullName} has nowhere to live and sleeps on a park bench.", new[] { r.Id });
-        }
-
-        /// <summary>
-        /// Tiny City 2's starter camp: gives the resident an outdoor bed nobody alive sleeps in (not one a building put
-        /// there), which is their home until they build one. Returns it, or null when every one is taken.
-        /// </summary>
-        private WorldObject TakeCampBed(Resident r)
-        {
-            var taken = new HashSet<string>(residents.Where(o => o.IsAlive && o.BedObjectId != null).Select(o => o.BedObjectId));
-            var bed = World.Objects
-                .Where(o => o.Type == ObjectType.Bed && !Building.BuildingRules.IsBuilt(o) && World.GetMap(o.Location.MapId).IsExterior && !taken.Contains(o.Id))
-                .OrderBy(o => o.Id, System.StringComparer.Ordinal)
-                .FirstOrDefault();
-            if (bed != null)
-            {
-                r.HomeMapId = bed.Location.MapId;
-                r.BedObjectId = bed.Id;
-                r.WeeklyRentPence = 0;
-            }
-
-            return bed;
         }
 
         private void MoveInto(Resident r, TileMap home)
@@ -156,13 +127,6 @@ namespace TinyCity.Simulation
                 newcomer.Goal = $"Just arrived; heading home to {home.Name}";
                 Memories.Add(newcomer.Id, Time, MemoryType.LifeHistory, 7, $"I moved to {World.TownName} from out of town and into {home.Name}.", tags: new[] { home.Id, "moved-in", "home" });
                 History.Add(Time, TownEventKind.MovedIn, $"{newcomer.FullName} moved to the city, into {home.Name}.", new[] { newcomer.Id });
-            }
-            else if (TakeCampBed(newcomer) is WorldObject campBed)
-            {
-                newcomer.AddLog(Time, $"Arrived, and took a free {campBed.Name.ToLowerInvariant()}");
-                newcomer.Goal = "Just arrived; settling in at the camp";
-                Memories.Add(newcomer.Id, Time, MemoryType.LifeHistory, 7, $"I came to {World.TownName} from out of town. There are no houses, so I took a free {campBed.Name.ToLowerInvariant()} at the camp.", tags: new[] { campBed.Id, "moved-in", "home" });
-                History.Add(Time, TownEventKind.MovedIn, $"{newcomer.FullName} arrived from out of town and took a free {campBed.Name.ToLowerInvariant()} at the camp.", new[] { newcomer.Id });
             }
             else
             {

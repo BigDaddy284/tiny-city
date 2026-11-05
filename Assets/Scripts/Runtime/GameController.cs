@@ -403,16 +403,44 @@ namespace TinyCity.Runtime
             view.RememberPositions(Simulation);
             Simulation.Tick();
             Sound?.Hear(Simulation);
+            WriteLegacyIfEveryoneDied();
             if (Simulation.Time.TotalMinutes - lastAutosaveMinute >= AutosaveEveryGameMinutes)
             {
                 Save("autosave");
             }
         }
 
+        /// <summary>Once everyone has died, the world's legacy log is written for the next world (not for the panel test's copy).</summary>
+        private void WriteLegacyIfEveryoneDied()
+        {
+            if (legacyWritten || PanelTest != null || !TinyCity.Simulation.History.Legacy.EveryoneHasDied(Simulation))
+            {
+                return;
+            }
+
+            legacyWritten = true;
+            try
+            {
+                var path = LegacyStore.Write(CurrentSlot, Simulation);
+                if (path != null)
+                {
+                    Status = $"Everyone has died. Their story is written down for the next world: {path}";
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[TinyCity] Couldn't write the legacy log: {e.Message}");
+            }
+        }
+
+        private bool legacyWritten;
+
         public void StartNewTown(string message)
         {
             var profiles = ProfilesLoader.Load(out var problems);
-            SetSimulation(FlatLand.CreateNewGame(profiles));
+            var lessons = LegacyStore.LatestLessons();
+            SetSimulation(FlatLand.CreateNewGame(profiles, lessons));
+            message = lessons.Count > 0 ? $"{message} They remember what the last world left behind.".Trim() : message;
             Status = problems.Count == 0 ? message : $"{message} residents.json: {problems.Count} problem(s), see Player.log.".Trim();
         }
 
@@ -421,8 +449,11 @@ namespace TinyCity.Runtime
             Simulation = simulation;
             simulation.RomanceEnabled = Settings.Simulation.romance;
             simulation.CommunityEventsEnabled = Settings.Simulation.communityEvents;
-            simulation.NewcomersEnabled = Settings.Simulation.newcomers;
-            simulation.BabiesEnabled = Settings.Simulation.babies;
+            // Tiny City 2 (owner, 5 November): the world starts with its residents and never grows, so nobody moves in
+            // and no babies are born, whatever settings.json says.
+            simulation.NewcomersEnabled = false;
+            simulation.BabiesEnabled = false;
+            legacyWritten = false;
             simulation.AiRunsEverything = true;
             simulation.FoodMustBeMade = true;
             Ai?.Attach(simulation);

@@ -10,8 +10,9 @@ namespace TinyCity.Simulation.AI
     /// <summary>What the AI answered for a free-time decision, before the game validates it.</summary>
     public sealed class DecisionReply
     {
-        public DecisionReply(string action, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null, int? x = null, int? y = null, string what = null)
+        public DecisionReply(string action, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null, int? x = null, int? y = null, string what = null, long? pricePence = null)
         {
+            PricePence = pricePence;
             Action = action;
             TargetId = targetId;
             Reason = reason;
@@ -26,6 +27,9 @@ namespace TinyCity.Simulation.AI
         public int? X { get; }
 
         public int? Y { get; }
+
+        /// <summary>What they ask per portion, when they run a stall (Tiny City 2), or null.</summary>
+        public long? PricePence { get; }
 
         /// <summary>What they plant, when planting on open ground, or null.</summary>
         public string What { get; }
@@ -65,7 +69,11 @@ namespace TinyCity.Simulation.AI
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
             sb.AppendLine($"Money: {PromptText.Purse(r, sim)}.");
             PromptText.AppendFood(sb, sim, r);
-            if (r.IsHomeless)
+            if (sim.FoodMustBeMade)
+            {
+                sb.AppendLine("Nobody has a bed of their own: you sleep wherever you choose, in any bed nobody is using, on a bench, or on the bare ground.");
+            }
+            else if (r.IsHomeless)
             {
                 sb.AppendLine("You have nowhere to live yet, so you sleep on a park bench.");
             }
@@ -106,6 +114,11 @@ namespace TinyCity.Simulation.AI
                 sb.Append($" For target_id {PromptText.Quote(FreeTimeOption.GroundTargetId)}, also give \"x\" and \"y\": the spot you choose, and when planting, \"what\" you plant.");
             }
 
+            if (options.Any(o => o.Activity == ActivityCatalog.RunStall))
+            {
+                sb.Append($" For {PromptText.Quote(ActivityCatalog.RunStall.Id)}, also give \"price\": what you ask for each portion, in pounds, whatever you like (0 to give it away).");
+            }
+
             return sb.ToString();
         }
 
@@ -137,6 +150,7 @@ namespace TinyCity.Simulation.AI
                     ["x"] = new Dictionary<string, object> { ["type"] = "integer" },
                     ["y"] = new Dictionary<string, object> { ["type"] = "integer" },
                     ["what"] = new Dictionary<string, object> { ["type"] = "string" },
+                    ["price"] = new Dictionary<string, object> { ["type"] = "number" },
                 },
                 ["required"] = new List<object> { "action", "target_id", "reason", "say", "then" },
             };
@@ -176,7 +190,8 @@ namespace TinyCity.Simulation.AI
 
             int? x = AiJson.TryGetInt(obj, "x", out var gx) ? gx : (int?)null;
             int? y = AiJson.TryGetInt(obj, "y", out var gy) ? gy : (int?)null;
-            reply = new DecisionReply(action, target, AiJson.GetString(obj, "reason"), AiJson.GetString(obj, "say"), ReadSteps(obj), x, y, AiJson.GetString(obj, "what"));
+            long? price = AiJson.TryGetNumber(obj, "price", out var pounds) ? Economy.FoodRules.PenceFromPounds(pounds) : (long?)null;
+            reply = new DecisionReply(action, target, AiJson.GetString(obj, "reason"), AiJson.GetString(obj, "say"), ReadSteps(obj), x, y, AiJson.GetString(obj, "what"), price);
             return true;
         }
 
@@ -258,10 +273,12 @@ namespace TinyCity.Simulation.AI
             {
                 return o.Activity == ActivityCatalog.PlantCrops
                     ? $"plant whatever you like, anywhere you like on open ground (about {o.Activity.DurationMinutes} minutes there)"
+                    : o.Activity == ActivityCatalog.Sleep
+                    ? $"lie down and sleep on the bare ground, anywhere you like (up to {o.Activity.DurationMinutes / 60} hours)"
                     : $"choose a spot anywhere on open ground and plan a building there; it is its back corner, and it reaches towards bigger x and y (about {o.Activity.DurationMinutes} minutes)";
             }
 
-            var cost = o.PricePence > 0 ? $", costs {Economy.Money.Format(o.PricePence)}" : string.Empty;
+            var cost = o.PricePence > 0 ? $", costs {Economy.Money.Format(o.PricePence)}" : o.Activity == ActivityCatalog.BuyFood ? ", given away free" : string.Empty;
             return $"{o.Activity.Name.ToLowerInvariant()} at the {o.Target.Name.ToLowerInvariant()} ({walk}, about {o.Activity.DurationMinutes} minutes{cost})";
         }
     }

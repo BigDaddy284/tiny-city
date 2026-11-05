@@ -245,15 +245,15 @@ namespace TinyCity.Simulation.Economy
             return r.Belongings.Wear(tool) ? $" (with {name}, which broke)" : $" (with {name})";
         }
 
-        /// <summary>What a portion costs at someone's stall: the game's fixed prices, so a seller only chooses to sell.</summary>
-        public const long MealPricePence = 600;
+        /// <summary>
+        /// The highest price, in pence, an answer can name (a stall's price or a chat offer). Not a rule of the world,
+        /// only a guard against numbers too big to handle: whether anyone pays is up to them and what they have.
+        /// </summary>
+        public const long LargestPricePence = 100_000_000_000;
 
-        public const long RawPricePence = 250;
-
-        /// <summary>The most portions offered in one go in a chat, and the highest price asked for them.</summary>
-        public const int MaxOfferPortions = 6;
-
-        public const long MaxOfferPence = 5000;
+        /// <summary>Pence for an answer's price in pounds, or 0 when it is missing, negative or absurd.</summary>
+        public static long PenceFromPounds(double pounds) =>
+            pounds > 0 && pounds * 100 <= LargestPricePence ? (long)Math.Round(pounds * 100) : 0;
 
         public static int DaysToKeep(FoodKind kind) => kind == FoodKind.Fish ? FishDays : kind == FoodKind.Meal ? MealDays : VegetableDays;
 
@@ -418,14 +418,11 @@ namespace TinyCity.Simulation.Economy
             if (a == ActivityCatalog.BuyFood)
             {
                 var seller = food.SellerAt?.Invoke(obj);
-                return seller != null && seller != r && seller.Food.Total > 0 && r.MoneyPence >= PriceOfNext(seller.Food);
+                return seller != null && seller != r && seller.Food.Total > 0 && r.MoneyPence >= seller.StallPricePence;
             }
 
             return true;
         }
-
-        /// <summary>What the next portion from this stock sells for: a cooked meal if there is one.</summary>
-        public static long PriceOfNext(FoodStock stock) => stock.Count(FoodKind.Meal) > 0 ? FoodRules.MealPricePence : FoodRules.RawPricePence;
 
         /// <summary>Takes the portion an eating activity uses as it starts. False, with a reason, if there's none.</summary>
         internal bool TakeAtStart(Resident r, ActivityDefinition a, out string reason)

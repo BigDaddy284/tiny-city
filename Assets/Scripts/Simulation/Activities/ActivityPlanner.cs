@@ -180,14 +180,9 @@ namespace TinyCity.Simulation.Activities
                 return false;
             }
 
-            // A bed outdoors is in a home someone built (Tiny City 2): only theirs to sleep in.
-            if (obj.Type == ObjectType.Bed && world.GetMap(mapId).IsExterior)
-            {
-                return obj.Id == resident.BedObjectId;
-            }
-
-            // A family shares the bed at home: children sleep with their parent.
-            if (obj.Type == ObjectType.Bed && mapId == resident.HomeMapId)
+            // A family shares the bed at home: children sleep with their parent. A bed outdoors (one somebody built,
+            // Tiny City 2) is anyone's who finds it free.
+            if (obj.Type == ObjectType.Bed && mapId == resident.HomeMapId && !world.GetMap(mapId).IsExterior)
             {
                 return true;
             }
@@ -275,7 +270,8 @@ namespace TinyCity.Simulation.Activities
 
             if (activity == ActivityCatalog.Sleep)
             {
-                return resident.IsHomeless && UsersOf(resident, obj) == 0;
+                // In Tiny City 2 anyone may sleep on a bench nobody else is using; in v1 only someone with no home.
+                return (resident.IsHomeless || (Food != null && Food.MustBeMade)) && UsersOf(resident, obj) == 0;
             }
 
             foreach (var other in residents)
@@ -575,13 +571,13 @@ namespace TinyCity.Simulation.Activities
 
                 options.AddRange(world.Objects
                     .Where(obj => CanDo(resident, activity, obj, time))
-                    .Select(obj => (option: new FreeTimeOption(activity, obj, pathfinder.Distance(resident.Location, obj.Location)) { PricePence = economy?.PriceOf(activity, obj) ?? 0 }, weighed: WeighedDistance(resident, obj)))
+                    .Select(obj => (option: new FreeTimeOption(activity, obj, pathfinder.Distance(resident.Location, obj.Location)) { PricePence = PriceFor(activity, obj) }, weighed: WeighedDistance(resident, obj)))
                     .Where(o => o.option.Distance != Pathfinder.Unreachable)
                     .OrderBy(o => o.weighed)
                     .ThenBy(o => o.option.Target.Id, StringComparer.Ordinal)
                     .Take(MaxTargetsPerActivity)
                     .Select(o => o.option));
-                if (ActivityCatalog.IsDoneOnGround(activity) && world.TryGetMap(resident.Location.MapId, out var here) && here.IsExterior
+                if (ActivityCatalog.IsDoneOnGround(activity) && Food != null && Food.MustBeMade && world.TryGetMap(resident.Location.MapId, out var here) && here.IsExterior
                     && FoodSupply.Allows(Food, resident, activity, null, time.Day))
                 {
                     options.Add(FreeTimeOption.OnGround(activity));
@@ -591,6 +587,10 @@ namespace TinyCity.Simulation.Activities
             options.Add(new FreeTimeOption(null, null, 0));
             return options;
         }
+
+        /// <summary>What an option costs: a business's price, or what the stall-holder asks for a portion (Tiny City 2).</summary>
+        private long PriceFor(ActivityDefinition activity, WorldObject obj) =>
+            activity == ActivityCatalog.BuyFood && Food?.SellerAt?.Invoke(obj) is Resident seller ? seller.StallPricePence : economy?.PriceOf(activity, obj) ?? 0;
 
         /// <summary>Whether something more important should stop the resident's current activity.</summary>
         public bool ShouldInterrupt(Resident resident, ActivityDefinition current, GameTime time)

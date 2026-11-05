@@ -9,7 +9,7 @@ namespace TinyCity.Simulation.Activities
     public static class ActivityCatalog
     {
         public static readonly ActivityDefinition Sleep = new ActivityDefinition(
-            "sleep", "Sleep", "sleeping", ActivityKind.Sleep, NeedType.Energy, new[] { ObjectType.Bed, ObjectType.Bench }, 10 * 60,
+            "sleep", "Sleep", "sleeping", ActivityKind.Sleep, NeedType.Energy, new[] { ObjectType.Bed, ObjectType.Bench, ObjectType.SleepingSpot }, 10 * 60,
             new Dictionary<NeedType, double> { [NeedType.Energy] = 12.5 / 60 },
             new Dictionary<NeedType, double>
             {
@@ -295,7 +295,7 @@ namespace TinyCity.Simulation.Activities
             new Dictionary<NeedType, double> { [NeedType.Energy] = 1.5, [NeedType.Hygiene] = 1.8, [NeedType.Thirst] = 1.4 });
 
         /// <summary>Tiny City 2: activities done on open ground wherever the resident chooses, rather than at a thing.</summary>
-        public static bool IsDoneOnGround(ActivityDefinition a) => a == PlantCrops || a == PlanBuilding;
+        public static bool IsDoneOnGround(ActivityDefinition a) => a == PlantCrops || a == PlanBuilding || a == Sleep;
 
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]

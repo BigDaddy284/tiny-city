@@ -9,9 +9,6 @@ namespace TinyCity.Simulation.Social
         /// <summary>The cheap filter: the same two people are only offered a reaction this often.</summary>
         public const int ReactCooldownMinutes = 180;
 
-        /// <summary>The AI budget: each resident is offered at most one reaction this often, whoever they see.</summary>
-        public const int ReactEveryMinutes = 120;
-
         /// <summary>A reaction not answered within this many game minutes is dropped (the moment has passed).</summary>
         public const int ReactWaitMinutes = 15;
 

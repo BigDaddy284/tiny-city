@@ -115,7 +115,7 @@ namespace TinyCity.Simulation.AI
               .Append("and \"end\" is true if you want to wrap up the chat.");
             if (food)
             {
-                sb.Append($" If you want to hand over some of your food, \"give_food\" is how many portions (0 to {FoodRules.MaxOfferPortions}) and \"price\" what you ask for them in pounds (0 for a gift); otherwise give_food is 0.")
+                sb.Append($" If you want to hand over some of your food, \"give_food\" is how many portions (any number up to what you have) and \"price\" what you ask for them in pounds (0 for a gift); otherwise give_food is 0.")
                   .Append(" \"accept_food\" is true if you take food you have just been offered.");
             }
 
@@ -157,8 +157,8 @@ namespace TinyCity.Simulation.AI
                 return false;
             }
 
-            var give = AiJson.TryGetNumber(obj, "give_food", out var g) && g >= 1 && g <= FoodRules.MaxOfferPortions ? (int)g : 0;
-            var price = AiJson.TryGetNumber(obj, "price", out var p) && p > 0 && p * 100 <= FoodRules.MaxOfferPence ? (long)Math.Round(p * 100) : 0;
+            var give = AiJson.TryGetNumber(obj, "give_food", out var g) && g >= 1 && g <= int.MaxValue ? (int)g : 0;
+            var price = AiJson.TryGetNumber(obj, "price", out var p) ? FoodRules.PenceFromPounds(p) : 0;
             reply = new DialogueReply(say, AiJson.GetString(obj, "tone"), AiJson.GetString(obj, "topic"), AiJson.TryGetBool(obj, "end", out var end) && end,
                 give, price, AiJson.TryGetBool(obj, "accept_food", out var accept) && accept);
             return true;

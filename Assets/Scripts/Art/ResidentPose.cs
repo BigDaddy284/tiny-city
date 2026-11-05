@@ -147,6 +147,7 @@ namespace TinyCity.Art
                 case ObjectType.Bed:
                 case ObjectType.ClinicBed:
                     return new Placement(0.5, 0.5, 0, Stance.Lying, Facing.DownRight);
+                case ObjectType.SleepingSpot: return new Placement(0.5, 0.5, 2, Stance.Lying, Facing.DownRight);
                 case ObjectType.Kitchen:
                 case ObjectType.Sink:
                 case ObjectType.Counter:

@@ -27,6 +27,15 @@ namespace TinyCity.Simulation
             set => Food.MustBeMade = value;
         }
 
+        /// <summary>Tiny City 2: the spots on bare ground where people sleep, each gone once its sleeper gets up.</summary>
+        public SleepingGround Sleeping { get; } = new SleepingGround();
+
+        private void StepSleepingGround()
+        {
+            Sleeping.Prune(spot => residents.Any(o => o.Id == spot.SleeperId && o.IsAlive && o.TargetObjectId == spot.Id
+                && (o.State == ResidentState.Travelling || o.State == ResidentState.Performing)));
+        }
+
         private void StepFood()
         {
             if (!FoodMustBeMade)
@@ -95,7 +104,7 @@ namespace TinyCity.Simulation
                 return false;
             }
 
-            var price = FoodSupply.PriceOfNext(seller.Food);
+            var price = seller.StallPricePence;
             if (r.MoneyPence < price)
             {
                 reason = $"they couldn't afford it ({Money.Format(price)})";
@@ -110,10 +119,11 @@ namespace TinyCity.Simulation
             }
 
             Pay(r, seller, price, FoodRules.Portions(kind, 1));
+            var paid = price > 0 ? $" for {Money.Format(price)}" : " for nothing";
             var sold = stallSales.TryGetValue(seller.Id, out var so) ? so : (0, 0L);
             stallSales[seller.Id] = (sold.Item1 + 1, sold.Item2 + price);
-            r.AddLog(Time, $"Bought {FoodRules.Portions(kind, 1)} from {seller.FullName} for {Money.Format(price)}");
-            seller.AddLog(Time, $"Sold {FoodRules.Portions(kind, 1)} to {r.FullName} for {Money.Format(price)}");
+            r.AddLog(Time, $"{(price > 0 ? "Bought" : "Was given")} {FoodRules.Portions(kind, 1)} from {seller.FullName}{paid}");
+            seller.AddLog(Time, $"{(price > 0 ? "Sold" : "Gave")} {FoodRules.Portions(kind, 1)} to {r.FullName}{paid}");
             return true;
         }
 
@@ -166,7 +176,7 @@ namespace TinyCity.Simulation
                 var other = session.ParticipantIds.FirstOrDefault(id => id != speaker.Id);
                 if (other != null)
                 {
-                    session.FoodOffer = new FoodOffer(speaker.Id, other, Math.Min(Math.Min(giveFood, FoodRules.MaxOfferPortions), speaker.Food.Total), Math.Max(0, Math.Min(pricePence, FoodRules.MaxOfferPence)));
+                    session.FoodOffer = new FoodOffer(speaker.Id, other, Math.Min(giveFood, speaker.Food.Total), Math.Max(0, Math.Min(pricePence, FoodRules.LargestPricePence)));
                 }
             }
         }
@@ -193,7 +203,9 @@ namespace TinyCity.Simulation
                 stallSales.Remove(r.Id);
                 var note = sold.portions == 0
                     ? "I sold food at a market stall, but nobody bought any."
-                    : $"I sold {sold.portions} portion{(sold.portions == 1 ? string.Empty : "s")} of food at a market stall for {Money.Format(sold.pence)}.";
+                    : sold.pence == 0
+                    ? $"I gave away {sold.portions} portion{(sold.portions == 1 ? string.Empty : "s")} of food at a market stall."
+                    : $"I sold {sold.portions} portion{(sold.portions == 1 ? string.Empty : "s")} of food at a market stall for {Money.Format(sold.pence)}, asking {Money.Format(r.StallPricePence)} a portion.";
                 r.AddLog(Time, sold.portions == 0 ? "Packed up the stall: nobody bought anything" : $"Packed up the stall: sold {sold.portions} for {Money.Format(sold.pence)}");
                 Memories.Add(r.Id, Time, MemoryType.Event, 3, note, tags: new[] { "food", "stall", r.TargetObjectId });
                 return;
