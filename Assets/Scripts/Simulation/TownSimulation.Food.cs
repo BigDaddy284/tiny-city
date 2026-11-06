@@ -10,7 +10,7 @@ using TinyCity.Simulation.World;
 
 namespace TinyCity.Simulation
 {
-    /// <summary>Food: nothing is free, so every meal is grown or caught, cooked or eaten raw, and food goes off.</summary>
+    /// <summary>Food: nothing is free, so every meal is grown or caught, and cooked before it is eaten, and food goes off.</summary>
     public sealed partial class TownSimulation
     {
         /// <summary>The crops and food rules: residents eat only what they grow, catch and cook.</summary>

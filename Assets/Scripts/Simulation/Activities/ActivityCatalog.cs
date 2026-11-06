@@ -8,11 +8,10 @@ namespace TinyCity.Simulation.Activities
     /// <summary>Every activity a resident can choose. Ids are stable because save files store them.</summary>
     public static class ActivityCatalog
     {
-        /// <summary>The open land has no taps or showers, so people drink and wash at the pond.</summary>
-        public static readonly ActivityDefinition DrinkFromPond = new ActivityDefinition(
-            "drink-pond", "Drink dirty pond water", "drinking dirty pond water", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.FishingSpot }, 5,
-            new Dictionary<NeedType, double> { [NeedType.Thirst] = 10 });
-
+        /// <summary>
+        /// The open land has no taps or showers, so people wash at the pond. Owner, 6 November: its water can't be
+        /// drunk, so the only drink is clean water from the water purifier.
+        /// </summary>
         public static readonly ActivityDefinition WashInPond = new ActivityDefinition(
             "wash-pond", "Wash in the dirty pond", "washing in the dirty pond", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.FishingSpot }, 20,
             new Dictionary<NeedType, double> { [NeedType.Hygiene] = 5 });
@@ -27,13 +26,21 @@ namespace TinyCity.Simulation.Activities
             "drink-clean", "Drink clean water", "drinking clean water", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.Kitchen, ObjectType.Bench, ObjectType.FishingSpot }, 5,
             new Dictionary<NeedType, double> { [NeedType.Thirst] = 14 });
 
+        /// <summary>
+        /// Owner, 6 November: only the water purifier may touch the dirty pond, so everyone else washes with a
+        /// portion of the clean water they make.
+        /// </summary>
+        public static readonly ActivityDefinition WashWithCleanWater = new ActivityDefinition(
+            "wash-clean", "Wash with clean water", "washing with clean water", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.Kitchen, ObjectType.Bench, ObjectType.FishingSpot }, 15,
+            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 6 });
+
         /// <summary>the weekly town meeting, where issues are raised and role changes are voted on.</summary>
         public static readonly ActivityDefinition AttendMeeting = new ActivityDefinition(
             "attend-meeting", "Go to the town meeting", "at the town meeting", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.GatheringSpot }, 90,
             new Dictionary<NeedType, double> { [NeedType.Social] = 1.0 });
 
         /// <summary>Drinking and washing out in the open, where nothing is laid on.</summary>
-        public static bool IsInTheWild(ActivityDefinition a) => a == DrinkFromPond || a == WashInPond;
+        public static bool IsInTheWild(ActivityDefinition a) => a == WashInPond;
 
         /// <summary>Walking over to someone and talking with them. The duration is set by the conversation, not here.</summary>
         public static readonly ActivityDefinition Chat = new ActivityDefinition(
@@ -73,11 +80,6 @@ namespace TinyCity.Simulation.Activities
         public static readonly ActivityDefinition EatMeal = new ActivityDefinition(
             "eat-meal", "Eat a cooked meal", "eating a meal", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.Kitchen, ObjectType.Bench }, 25,
             new Dictionary<NeedType, double> { [NeedType.Hunger] = 3.2, [NeedType.Fun] = 0.2 });
-
-        /// <summary>Eating raw vegetables or fish: it does, but not for long.</summary>
-        public static readonly ActivityDefinition EatRaw = new ActivityDefinition(
-            "eat-raw", "Eat something raw", "eating raw food", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.Kitchen, ObjectType.Bench }, 15,
-            new Dictionary<NeedType, double> { [NeedType.Hunger] = 2.0 });
 
         /// <summary>Selling food from a market stall: others nearby can buy a portion each at the game's price.</summary>
         public static readonly ActivityDefinition RunStall = new ActivityDefinition(
@@ -155,11 +157,11 @@ namespace TinyCity.Simulation.Activities
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
             Chat,
-            PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw, RunStall, BuyFood,
+            PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, RunStall, BuyFood,
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
             GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
-            PlanBuilding, Build, GatherSticks, GatherLooseStones, DrinkFromPond, WashInPond,
-            PurifyWater, DrinkCleanWater, AttendMeeting,
+            PlanBuilding, Build, GatherSticks, GatherLooseStones, WashInPond,
+            PurifyWater, DrinkCleanWater, WashWithCleanWater, AttendMeeting,
         };
 
         private static ActivityDefinition Gather(string id, string name, string verb, ObjectType where) => new ActivityDefinition(

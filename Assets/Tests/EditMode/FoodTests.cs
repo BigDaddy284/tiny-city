@@ -54,7 +54,6 @@ namespace TinyCity.Tests.EditMode
             sim.Tick();
             var options = sim.Planner.FreeTimeOptions(r);
             Assert.That(options.Any(o => o.Activity == ActivityCatalog.EatMeal), Is.False, "nothing to eat yet");
-            Assert.That(options.Any(o => o.Activity == ActivityCatalog.EatRaw), Is.False);
             Assert.That(options.Any(o => o.Activity == ActivityCatalog.PlantCrops), Is.True);
             Assert.That(options.Any(o => o.Activity == ActivityCatalog.CatchFish), Is.True);
 
@@ -165,7 +164,7 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void FishAreCaught_CookedIntoMeals_AndRawFoodCanBeEaten()
+        public void FishAreCaught_AndCookedIntoMeals_RawFoodCantBeEaten()
         {
             var sim = Town();
             var r = sim.Residents[0];
@@ -174,12 +173,12 @@ namespace TinyCity.Tests.EditMode
             Do(sim, ActivityCatalog.CatchFish);
             Assert.That(r.Food.Count(FoodKind.Fish), Is.EqualTo(FoodRules.CatchPortions));
 
-            Do(sim, ActivityCatalog.EatRaw);
-            Assert.That(r.Food.Count(FoodKind.Fish), Is.EqualTo(FoodRules.CatchPortions - 1));
+            Assert.That(ActivityCatalog.TryGet("eat-raw", out _), Is.False, "owner, 6 November: raw food can't be eaten");
+            Assert.That(sim.Planner.FreeTimeOptions(r).Any(o => o.Activity == ActivityCatalog.EatMeal), Is.False, "fish must be cooked first");
 
             Do(sim, ActivityCatalog.Cook);
             Assert.That(r.Food.Raw, Is.EqualTo(0));
-            Assert.That(r.Food.Count(FoodKind.Meal), Is.EqualTo(FoodRules.CatchPortions - 1));
+            Assert.That(r.Food.Count(FoodKind.Meal), Is.EqualTo(FoodRules.CatchPortions));
         }
 
         [Test]
@@ -346,7 +345,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.ApplyDecision(other.Id, other.PendingDecisionId, "plant-crops", "ground", "Food"), Is.EqualTo(DecisionOutcome.Applied), "no spot given");
 
             var third = sim.Residents[2];
-            Assert.That(sim.ApplyDecision(third.Id, third.PendingDecisionId, "drink-pond", "obj-nowhere", "Thirsty"), Is.EqualTo(DecisionOutcome.Applied), "the wrong target: the nearest place to drink");
+            Assert.That(sim.ApplyDecision(third.Id, third.PendingDecisionId, "wash-pond", "obj-nowhere", "Grubby"), Is.EqualTo(DecisionOutcome.Applied), "the wrong target: the nearest place to wash");
 
             var fourth = sim.Residents[3];
             var only = sim.FreeTimeOptionsFor(fourth).GroupBy(o => o.TargetId).First(g => g.Count() == 1).Single();

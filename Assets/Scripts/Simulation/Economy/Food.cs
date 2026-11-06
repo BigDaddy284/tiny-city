@@ -264,7 +264,7 @@ namespace TinyCity.Simulation.Economy
         /// <summary>The food activities.</summary>
         public static bool IsMadeFood(ActivityDefinition a) =>
             a == ActivityCatalog.PlantCrops || a == ActivityCatalog.WaterCrops || a == ActivityCatalog.Harvest || a == ActivityCatalog.CatchFish
-            || a == ActivityCatalog.Cook || a == ActivityCatalog.EatMeal || a == ActivityCatalog.EatRaw
+            || a == ActivityCatalog.Cook || a == ActivityCatalog.EatMeal
             || a == ActivityCatalog.RunStall || a == ActivityCatalog.BuyFood;
 
         /// <summary>Clean water a resident can carry, and how many portions one go of cleaning makes.</summary>
@@ -273,30 +273,21 @@ namespace TinyCity.Simulation.Economy
         public const int PurifyPortions = 4;
 
         /// <summary>
-        /// (owner, 5 November: push them to want the clean, better things): health lost to a drink of
-        /// pond water or a raw meal, and (owner, 6 November: "way too happy to continue drinking and washing in dirty
-        /// water") a wash in the pond. Clean water and cooked meals cost nothing. Health comes back at only
-        /// <see cref="Health.HealthRules.RecoveryPerHour"/>, so a few pond drinks a day wear it down.
+        /// Health lost to a wash in the pond (owner, 6 November: "way too happy to continue drinking and washing in
+        /// dirty water"). Pond water can't be drunk and raw food can't be eaten at all (owner, 6 November): only
+        /// clean water and cooked meals.
         /// </summary>
-        public const double DirtyWaterHealthCost = 4;
-
-        public const double RawFoodHealthCost = 3;
-
         public const double PondWashHealthCost = 1;
 
         /// <summary>What the decision prompt says beside an option that hurts, so they know before they choose.</summary>
         public static string HealthWarning(Activities.ActivityDefinition a) =>
-            a == Activities.ActivityCatalog.DrinkFromPond ? $"dirty water: it makes you ill, costs {DirtyWaterHealthCost:0} health"
-            : a == Activities.ActivityCatalog.EatRaw ? $"raw food: it makes you ill, costs {RawFoodHealthCost:0} health; cooked meals don't"
-            : a == Activities.ActivityCatalog.WashInPond ? $"dirty water: costs {PondWashHealthCost:0} health"
-            : a == Activities.ActivityCatalog.DrinkCleanWater ? "clean and safe"
+            a == Activities.ActivityCatalog.WashInPond ? $"dirty water: costs {PondWashHealthCost:0} health"
+            : a == Activities.ActivityCatalog.DrinkCleanWater || a == Activities.ActivityCatalog.WashWithCleanWater ? "clean and safe, uses one portion of clean water"
             : null;
 
-        /// <summary>Fish someone without the fishing role catches by hand in one go.</summary>
-        public const int ByHandCatch = 1;
 
         /// <summary>Activities that use up a portion as they start.</summary>
-        public static bool EatsFood(ActivityDefinition a) => a == ActivityCatalog.EatMeal || a == ActivityCatalog.EatRaw;
+        public static bool EatsFood(ActivityDefinition a) => a == ActivityCatalog.EatMeal;
     }
 
     /// <summary>
@@ -399,7 +390,7 @@ namespace TinyCity.Simulation.Economy
                 return r.CleanWater < FoodRules.MaxCleanWater;
             }
 
-            if (a == ActivityCatalog.DrinkCleanWater)
+            if (a == ActivityCatalog.DrinkCleanWater || a == ActivityCatalog.WashWithCleanWater)
             {
                 return r.CleanWater > 0;
             }
@@ -436,7 +427,7 @@ namespace TinyCity.Simulation.Economy
                 return crop != null && crop.IsReady;
             }
 
-            if (a == ActivityCatalog.Cook || a == ActivityCatalog.EatRaw)
+            if (a == ActivityCatalog.Cook)
             {
                 return r.Food.Raw > 0;
             }
@@ -464,7 +455,7 @@ namespace TinyCity.Simulation.Economy
         internal bool TakeAtStart(Resident r, ActivityDefinition a, out string reason)
         {
             reason = null;
-            var taken = a == ActivityCatalog.EatMeal ? r.Food.Take(FoodKind.Meal, 1) : a == ActivityCatalog.EatRaw ? r.Food.TakeRaw(1) : 1;
+            var taken = a == ActivityCatalog.EatMeal ? r.Food.Take(FoodKind.Meal, 1) : 1;
             if (taken == 0)
             {
                 reason = "they had no food left";
@@ -518,12 +509,6 @@ namespace TinyCity.Simulation.Economy
                 var hoe = r.Belongings.Has(ToolKind.Hoe);
                 var kept = r.Food.Add(FoodKind.Vegetables, FoodRules.HarvestPortions + (hoe ? CraftingRules.HoeExtraPortions : 0), today + FoodRules.VegetableDays);
                 return $"Picked {FoodRules.Portions(FoodKind.Vegetables, kept)} ({what}) at the {obj.Name.ToLowerInvariant()}" + (hoe ? FoodRules.WearNote(r, ToolKind.Hoe) : string.Empty);
-            }
-
-            if (a == ActivityCatalog.CatchFish && Skilled != null && !Skilled(r, a))
-            {
-                var caught = r.Food.Add(FoodKind.Fish, FoodRules.ByHandCatch, today + FoodRules.FishDays);
-                return $"Caught {FoodRules.Portions(FoodKind.Fish, caught)} by hand";
             }
 
             if (a == ActivityCatalog.CatchFish)

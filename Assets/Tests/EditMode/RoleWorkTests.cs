@@ -60,17 +60,12 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void WithoutARole_OnlyTheBasicsAreOpen_AndARoleOpensItsOwnWork()
+        public void WithoutARole_NoWorkIsOpen_AndARoleOpensItsOwnWork()
         {
             var sim = NewGame();
             var r = sim.Residents[0];
             var basics = Options(sim, r);
-            foreach (var id in new[] { "drink-pond", "wash-pond", "catch-fish" })
-            {
-                Assert.That(basics.Contains(id), Is.True, id);
-            }
-
-            foreach (var id in new[] { "plant-crops", "plan-building", "purify-water", "craft-axe", "cook", "gather-sticks", "gather-loose-stones" })
+            foreach (var id in new[] { "wash-pond", "catch-fish", "plant-crops", "plan-building", "purify-water", "craft-axe", "cook", "gather-sticks", "gather-loose-stones" })
             {
                 Assert.That(basics.Contains(id), Is.False, id + " belongs to a role");
             }
@@ -79,7 +74,7 @@ namespace TinyCity.Tests.EditMode
             var farmer = Options(sim, r);
             Assert.That(farmer.Contains("plant-crops"), Is.True);
             Assert.That(farmer.Contains("plan-building") || farmer.Contains("cook") || farmer.Contains("craft-axe"), Is.False, "a farmer can't build, cook or make tools");
-            Assert.That(farmer.Contains("catch-fish"), Is.True, "anyone can fish by hand");
+            Assert.That(farmer.Contains("catch-fish"), Is.False, "only a fisher fishes (owner, 6 November)");
 
             var miner = sim.Residents[1];
             TakeRole(sim, miner, "miner");
@@ -110,15 +105,21 @@ namespace TinyCity.Tests.EditMode
             var sim = NewGame();
             var shipped = WorldBrief.Default;
             // What towns started before 6 November saved: the lumberjack and miner without the hand-gathering, and words saying anyone could.
-            sim.Brief = new WorldBrief(shipped.Text.Replace("catch the odd fish by hand to eat raw", "eat raw fish and pick up fallen branches and loose stones"),
-                shipped.Roles.Select(role => new RoleOption(role.Name, role.About, role.CanTax, role.Skills.Where(id => id != "gather-sticks" && id != "gather-loose-stones"))));
+            const string cookBefore = "Only you can cook. You turn raw vegetables and fish into proper meals at a stove, which fill people up far better than raw food and don't make them ill. You keep an eye on what is running low and make sure nobody goes hungry.";
+            sim.Brief = new WorldBrief(
+                shipped.Text.Replace(
+                    "without one you can do nothing for yourself: you can't fish, grow or cook food or touch the pond's dirty water, so you need each other.",
+                    "without one you can only drink and wash in the dirty pond and eat raw fish and pick up fallen branches and loose stones, so you need each other."),
+                shipped.Roles.Select(role => new RoleOption(role.Name, role.Name == "cook" ? cookBefore : role.About, role.CanTax, role.Skills.Where(id => id != "gather-sticks" && id != "gather-loose-stones" && id != "wash-pond"))));
             Assert.That(sim.Brief.Text, Does.Contain("pick up fallen branches"));
 
             var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
             loaded.AiDecisionsEnabled = true;
             Assert.That(loaded.Brief.Find("lumberjack").Skills, Does.Contain("gather-sticks"));
             Assert.That(loaded.Brief.Find("miner").Skills, Does.Contain("gather-loose-stones"));
-            Assert.That(loaded.Brief.Text, Does.Not.Contain("pick up fallen branches").And.Contain("catch the odd fish by hand to eat raw"));
+            Assert.That(loaded.Brief.Text, Does.Not.Contain("pick up fallen branches").And.Not.Contain("eat raw").And.Contain("you can't fish, grow or cook food"));
+            Assert.That(loaded.Brief.Find("cook").About, Is.EqualTo(shipped.Find("cook").About), "the cook's old words about raw food are replaced");
+            Assert.That(loaded.Brief.Find("water purifier").Skills, Does.Contain("wash-pond"));
             var r = loaded.Residents[0];
             Assert.That(Options(loaded, r).Contains("gather-sticks"), Is.False);
             TakeRole(loaded, r, "lumberjack");
@@ -129,7 +130,7 @@ namespace TinyCity.Tests.EditMode
         public void Brief_ListsWhatEachRoleCanDo_AndRejectsUnknownWork()
         {
             Assert.That(WorldBrief.Default.Find("lumberjack").Skills, Does.Contain("gather-wood"));
-            Assert.That(WorldBrief.Default.Find("water purifier").Skills, Is.EqualTo(new[] { "purify-water" }));
+            Assert.That(WorldBrief.Default.Find("water purifier").Skills, Is.EqualTo(new[] { "purify-water", "wash-pond" }));
             Assert.That(WorldBrief.Default.Text, Does.Contain("majority vote at the weekly meeting"));
             var brief = ResidentProfiles.ParseBrief("{\"roles\":[{\"name\":\"digger\",\"about\":\"digs\",\"can\":[\"gather-stone\",\"juggling\"]}]}", out var problems);
             Assert.That(brief.Find("digger").Skills, Is.EqualTo(new[] { "gather-stone" }));
@@ -137,43 +138,47 @@ namespace TinyCity.Tests.EditMode
             Assert.That(brief.MayDo(null, "gather-stone"), Is.False);
             Assert.That(brief.MayDo(null, "gather-wood"), Is.False, "gathering always needs a role, even one no role lists (owner, 6 November)");
             Assert.That(brief.MayDo("digger", "gather-wood"), Is.False);
-            Assert.That(brief.MayDo(null, "drink-pond"), Is.True, "everyday things are open to everyone");
-            Assert.That(brief.MayDo(null, "catch-fish"), Is.True);
+            Assert.That(brief.MayDo(null, "drink-clean"), Is.True, "everyday things are open to everyone");
+            Assert.That(brief.MayDo(null, "wash-clean"), Is.True);
+            Assert.That(brief.MayDo(null, "catch-fish"), Is.False, "owner, 6 November: only a fisher catches fish");
+            Assert.That(brief.MayDo(null, "wash-pond"), Is.False, "and only the water purifier touches the pond");
         }
 
         [Test]
-        public void AnyoneCatchesAFishByHand_TheFisherCatchesFarMore()
+        public void OnlyTheFisher_CatchesFish()
         {
             var sim = NewGame();
             var anyone = sim.Residents[0];
             var fisher = sim.Residents[1];
             TakeRole(sim, fisher, "fisher");
-            var before = anyone.Food.Count(FoodKind.Fish);
-            Do(sim, anyone, ActivityCatalog.CatchFish);
-            Assert.That(anyone.Food.Count(FoodKind.Fish) - before, Is.EqualTo(FoodRules.ByHandCatch));
+            WaitUntilDeciding(sim, anyone);
+            Assert.That(Options(sim, anyone).Contains("catch-fish"), Is.False, "no fishing by hand");
 
-            before = fisher.Food.Count(FoodKind.Fish);
+            var before = fisher.Food.Count(FoodKind.Fish);
             Do(sim, fisher, ActivityCatalog.CatchFish);
             Assert.That(fisher.Food.Count(FoodKind.Fish) - before, Is.EqualTo(FoodRules.CatchPortions));
         }
 
         [Test]
-        public void DirtyWaterHurts_TheWaterPurifierMakesCleanWater_ThatAnyoneCanDrink()
+        public void OnlyTheWaterPurifierTouchesThePond_AndMakesCleanWater_ThatAnyoneCanDrinkAndWashWith()
         {
             var sim = NewGame();
             var r = sim.Residents[0];
-            var health = r.Health;
-            Do(sim, r, ActivityCatalog.DrinkFromPond);
-            Assert.That(r.Health, Is.LessThanOrEqualTo(health - FoodRules.DirtyWaterHealthCost + 0.5));
-            Assert.That(ActivityCatalog.DrinkFromPond.GainPerMinute(NeedType.Thirst), Is.LessThan(ActivityCatalog.DrinkCleanWater.GainPerMinute(NeedType.Thirst)), "dirty water fills less");
+            WaitUntilDeciding(sim, r);
+            Assert.That(ActivityCatalog.TryGet("drink-pond", out _), Is.False, "owner, 6 November: pond water can't be drunk");
+            Assert.That(Options(sim, r).Contains("wash-pond"), Is.False, "only the water purifier touches the pond");
             Assert.That(Options(sim, r).Contains("drink-clean"), Is.False, "no clean water yet");
 
             TakeRole(sim, r, "water purifier");
             Do(sim, r, ActivityCatalog.PurifyWater);
             Assert.That(r.CleanWater, Is.EqualTo(FoodRules.PurifyPortions));
-            health = r.Health;
+            var health = r.Health;
             Do(sim, r, ActivityCatalog.DrinkCleanWater);
             Assert.That(r.CleanWater, Is.EqualTo(FoodRules.PurifyPortions - 1));
+            r.Needs[NeedType.Hygiene] = 20;
+            Do(sim, r, ActivityCatalog.WashWithCleanWater);
+            Assert.That(r.CleanWater, Is.EqualTo(FoodRules.PurifyPortions - 2), "washing uses a portion too");
+            Assert.That(r.Needs[NeedType.Hygiene], Is.GreaterThan(60));
             Assert.That(r.Health, Is.GreaterThan(health - 0.5), "clean water does no harm");
             Assert.That(CraftingRules.ItemNames, Does.Contain(CraftingRules.CleanWaterName), "clean water can be traded");
 

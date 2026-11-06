@@ -39,8 +39,7 @@ namespace TinyCity.Simulation
 
     /// <summary>
     /// Roles that matter and the weekly town meeting (owner, 5 November). The work a role lists (<see cref="RoleOption.Skills"/>) is only open to its
-    /// holders; everyone else can drink and wash in the dirty pond, eat raw food, fish by hand and pick up branches
-    /// and stones. A first role is taken freely; changing it later is a request put to the next meeting, held a week
+    /// holders, and without a role nobody can work at all (owner, 6 November). A first role is taken freely; changing it later is a request put to the next meeting, held a week
     /// after the start and every week after (<see cref="FirstMeetingDay"/>), where it passes only if more than half of
     /// those present vote for it.
     /// </summary>
@@ -282,25 +281,20 @@ namespace TinyCity.Simulation
             History.Add(Time, TownEventKind.Meeting, $"The town meeting ({present.Count} came). {votesText}", present.Select(o => o.Id).ToArray());
         }
 
-        /// <summary>The open land's costs and gains as an activity finishes: dirty water and raw food hurt, cleaning water fills their flasks.</summary>
+        /// <summary>The open land's costs and gains as an activity finishes: washing in the dirty pond hurts, cleaning water fills their flasks.</summary>
         private void FinishOpenLand(Resident r, ActivityDefinition activity)
         {
-            if (activity == ActivityCatalog.DrinkFromPond || activity == ActivityCatalog.EatRaw || activity == ActivityCatalog.WashInPond)
+            if (activity == ActivityCatalog.WashInPond)
             {
-                var cost = activity == ActivityCatalog.EatRaw ? FoodRules.RawFoodHealthCost
-                    : activity == ActivityCatalog.WashInPond ? FoodRules.PondWashHealthCost
-                    : FoodRules.DirtyWaterHealthCost;
-                r.Health = Math.Max(LowestHealth, r.Health - cost);
-                var felt = activity == ActivityCatalog.EatRaw ? "The raw food made me feel sick"
-                    : activity == ActivityCatalog.WashInPond ? "Washing in the dirty pond left my skin itching"
-                    : "The dirty pond water made me feel sick";
+                r.Health = Math.Max(LowestHealth, r.Health - FoodRules.PondWashHealthCost);
+                const string felt = "Washing in the dirty pond left my skin itching";
                 r.AddLog(Time, felt);
 
                 // Remembered once a day for each, so it comes back to them when they next think about drinking or eating.
                 var tag = activity.Id;
                 if (!Memories.ForResident(r.Id).Any(m => m.Time.Day == Time.Day && m.Tags.Contains(tag) && m.Tags.Contains("felt-ill")))
                 {
-                    Memories.Add(r.Id, Time, MemoryType.Event, 5, felt + ". Clean water and cooked food don't do that.", tags: new[] { tag, "felt-ill", "health", "water", "food" });
+                    Memories.Add(r.Id, Time, MemoryType.Event, 5, felt + ".", tags: new[] { tag, "felt-ill", "health", "water", "food" });
                 }
             }
             else if (activity == ActivityCatalog.PurifyWater)

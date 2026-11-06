@@ -275,7 +275,7 @@ namespace TinyCity.Art
 
         private static ResidentAction ActionFor(string activityId, Stance stance)
         {
-            if (activityId == ActivityCatalog.EatMeal.Id || activityId == ActivityCatalog.EatRaw.Id)
+            if (activityId == ActivityCatalog.EatMeal.Id)
             {
                 return ResidentAction.Eat;
             }

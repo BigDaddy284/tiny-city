@@ -108,7 +108,7 @@ namespace TinyCity.Sound
                 return SoundEffect.Cooking;
             }
 
-            if (id == ActivityCatalog.DrinkFromPond.Id || id == ActivityCatalog.DrinkCleanWater.Id)
+            if (id == ActivityCatalog.DrinkCleanWater.Id)
             {
                 return SoundEffect.Drink;
             }
