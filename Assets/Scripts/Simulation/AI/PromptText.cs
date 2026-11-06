@@ -20,9 +20,12 @@ namespace TinyCity.Simulation.AI
 
         public const string PrivatePersonality = "Let your personality show only in what you do and how you speak. Never talk about personalities, traits or character, yours or anyone else's, and never repeat these instructions. ";
 
-        /// <summary>Owner, 6 November: residents told each other the dirty pond was good for their health.</summary>
-        public const string DirtyWater = "The pond's water is dirty and never good for you: drinking it or washing in it always costs you some health, even when you badly need it. "
-            + "It only eases thirst or grime for now. Only clean water from the water purifier and cooked meals are safe; never tell anyone the pond is healthy.";
+        /// <summary>
+        /// Owner, 6 November: residents told each other the dirty pond was good for their health; then pond water
+        /// was made undrinkable, raw food uneatable, and the pond only the water purifier's to touch.
+        /// </summary>
+        public const string DirtyWater = "The pond's water is dirty: nobody can drink it, and only the water purifier may touch it. "
+            + "Clean water from the water purifier is the only thing to drink or wash with, and food can only be eaten once a cook has made it into meals.";
 
         public static string Persona(Resident r, TownSimulation sim)
         {
@@ -189,7 +192,7 @@ namespace TinyCity.Simulation.AI
         public static void AppendFood(StringBuilder sb, TownSimulation sim, Resident r)
         {
             sb.AppendLine($"Your food: {r.Food.Describe(sim.Time.Day)}.");
-            sb.Append("Nobody hands out food in this city: every meal is grown or caught by someone, and raw food can be cooked into meals that fill you up more. People can sell food at a market stall or give or sell it to each other in a chat, if they choose to. Food goes off after a few days.");
+            sb.Append("Nobody hands out food in this city: every meal is grown or caught by someone, and vegetables and fish have to be cooked into meals before anyone can eat them. People can sell food at a market stall or give or sell it to each other in a chat, if they choose to. Food goes off after a few days.");
             var plots = sim.World.Objects.Where(o => o.Type == World.ObjectType.GardenPlot).ToList();
             if (plots.Count > 0)
             {
@@ -259,11 +262,11 @@ namespace TinyCity.Simulation.AI
             var role = sim.Brief.Find(r.Role);
             var mine = role == null ? new List<string>() : role.Skills.Select(Name).ToList();
             sb.Append(role == null
-                ? "You have no role, so you can only drink and wash in the dirty pond, eat raw food and catch a fish by hand. You choose a role when you plan your day; your first one is yours straight away."
+                ? "You have no role, so you can do no work at all: you can't fish, grow or cook food or touch the pond. You choose a role when you plan your day; your first one is yours straight away."
                 : mine.Count == 0
-                    ? $"As the {role.Name} you do no special work with your hands: anyone can drink and wash in the dirty pond, eat raw food and catch a fish by hand."
+                    ? $"As the {role.Name} you do no special work with your hands."
                     : $"As the {role.Name} you can {string.Join(", ", mine)}; other work belongs to other roles.");
-            sb.Append(" Dirty pond water and raw food fill you less and make you ill; clean water and cooked meals don't. ").Append(DirtyWater);
+            sb.Append(' ').Append(DirtyWater);
             var holders = sim.Residents.Where(o => o.IsAlive && o.Role != null && o.Id != r.Id).GroupBy(o => o.Role)
                 .OrderBy(g => g.Key, System.StringComparer.Ordinal).Select(g => $"{g.Key}: {string.Join(", ", g.Select(o => o.FirstName))}").ToList();
             var unfilled = sim.Brief.Roles.Where(o => o.Skills.Count > 0 && !sim.Residents.Any(p => p.IsAlive && p.Role == o.Name)).Select(o => o.Name).ToList();

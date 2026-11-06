@@ -164,7 +164,7 @@ namespace TinyCity.Tests.EditMode
 
             foreach (var (activity, effect) in new[]
             {
-                (ActivityCatalog.Cook, SoundEffect.Cooking), (ActivityCatalog.CatchFish, SoundEffect.Splash), (ActivityCatalog.DrinkFromPond, SoundEffect.Drink),
+                (ActivityCatalog.Cook, SoundEffect.Cooking), (ActivityCatalog.CatchFish, SoundEffect.Splash), (ActivityCatalog.DrinkCleanWater, SoundEffect.Drink),
                 (ActivityCatalog.GatherWood, SoundEffect.Digging), (ActivityCatalog.CraftAxe, SoundEffect.Typing), (ActivityCatalog.RunStall, SoundEffect.Till),
             })
             {

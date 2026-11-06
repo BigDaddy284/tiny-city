@@ -53,7 +53,8 @@ namespace TinyCity.Tests.EditMode
             Assert.That(PromptText.Persona(r, sim), Does.Contain("Never talk about personalities"));
             var decision = DecisionPrompt.UserText(sim, r, sim.FreeTimeOptionsFor(r), new TinyCity.Simulation.Memory.MemoryRecord[0]);
             Assert.That(decision, Does.Contain(PromptText.DirtyWater));
-            Assert.That(decision, Does.Contain("drink dirty pond water"));
+            Assert.That(decision, Does.Not.Contain("drink-pond").And.Not.Contain("eat-raw"), "pond water can't be drunk, nor raw food eaten");
+            Assert.That(PromptText.DirtyWater, Does.Contain("nobody can drink it"));
         }
     }
 }

@@ -1,6 +1,6 @@
 {
   "format": "tiny-city-2-profiles",
-  "brief": "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Each of you can only do the work of the role you take up; without one you can only drink and wash in the dirty pond and catch the odd fish by hand to eat raw, so you need each other. Your first role is yours as soon as you choose it; after that, changing it needs a majority vote at the weekly meeting. Look after yourself first: hunger, thirst and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
+  "brief": "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Each of you can only do the work of the role you take up; without one you can do nothing for yourself: you can't fish, grow or cook food or touch the pond's dirty water, so you need each other. Your first role is yours as soon as you choose it; after that, changing it needs a majority vote at the weekly meeting. Look after yourself first: hunger, thirst and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
   "roles": [
     {
       "name": "farmer",
@@ -14,7 +14,7 @@
     },
     {
       "name": "fisher",
-      "about": "You bring in fish from the pond. Anyone can catch the odd fish by hand, but you catch far more, and a rod means more still. Fish keep only a couple of days, so you catch what is needed and share or trade the rest.",
+      "about": "Only you can catch fish, and a rod means more. Fish keep only a couple of days and must be cooked before anyone can eat them, so you catch what is needed and share or trade the rest.",
       "can": [
         "catch-fish"
       ],
@@ -59,7 +59,7 @@
     },
     {
       "name": "cook",
-      "about": "Only you can cook. You turn raw vegetables and fish into proper meals at a stove, which fill people up far better than raw food and don't make them ill. You keep an eye on what is running low and make sure nobody goes hungry.",
+      "about": "Only you can cook. Nobody can eat vegetables or fish raw, so every meal goes through you: you turn them into meals at a stove. You keep an eye on what is running low and make sure nobody goes hungry.",
       "can": [
         "cook"
       ],
@@ -76,9 +76,10 @@
     },
     {
       "name": "water purifier",
-      "about": "Only you can clean water. Pond water is dirty and makes people unwell; you turn it into clean water at the pond, which quenches thirst properly, and you can share it or trade it.",
+      "about": "Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and you share it or trade it. You may also wash in the pond, though it costs you a little health.",
       "can": [
-        "purify-water"
+        "purify-water",
+        "wash-pond"
       ],
       "max": 2
     },

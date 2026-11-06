@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TinyCity.Simulation;
 using TinyCity.Simulation.Activities;
+using TinyCity.Simulation.AI;
 using TinyCity.Simulation.Content;
 using TinyCity.Simulation.Health;
 using TinyCity.Simulation.Residents;
@@ -90,6 +91,15 @@ namespace TinyCity.Tests.EditMode
                 if (!r.IsAlive || r.State != ResidentState.Deciding || r.PendingDecisionId <= 0)
                 {
                     continue;
+                }
+
+                // Owner, 6 November: without a role nobody can fish, cook or touch the pond, so the stand-in takes one up
+                // in the morning plan the way a real answer must.
+                if (sim.NeedsDayPlan(r) && r.Role == null && sim.Brief.Roles.Count > 0)
+                {
+                    var roles = DayPlanPrompt.RoleChoices(sim, r).Cast<string>().ToList();
+                    var role = roles[(int)(Chance.Roll(r.Id, sim.Time.Day, 13) * roles.Count) % roles.Count];
+                    sim.ApplyDayPlan(r.Id, DayPlan.DayFor(sim.Time), new System.Collections.Generic.List<DayPlanEntry> { new DayPlanEntry(sim.Time.Hour, "Get on with it") }, role);
                 }
 
                 var options = sim.FreeTimeOptionsFor(r).Where(o => !o.IsGround).ToList();

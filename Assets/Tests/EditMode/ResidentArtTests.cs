@@ -203,6 +203,13 @@ namespace TinyCity.Tests.EditMode
         public void ADayOnTheOpenLand_ShowsEveryEverydayAnimation()
         {
             var sim = FlatLand.CreateNewGame();
+
+            // Raw food can't be eaten, and the stand-in never trades it to a cook, so everyone starts with a meal to eat.
+            foreach (var r in sim.Residents)
+            {
+                r.Food.Add(TinyCity.Simulation.Economy.FoodKind.Meal, 2, sim.Time.Day + 3);
+            }
+
             var seen = new HashSet<ResidentAction>();
             var seenSitting = false;
             var last = sim.Residents.ToDictionary(r => r.Id, r => r.Location);
