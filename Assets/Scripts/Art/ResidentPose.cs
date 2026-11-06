@@ -323,29 +323,29 @@ namespace TinyCity.Art
 
         private static ResidentAction ActionFor(string activityId, Stance stance)
         {
-            if (activityId == ActivityCatalog.Sleep.Id || activityId == ActivityCatalog.Rest.Id)
+            if (activityId == ActivityCatalog.Sleep.Id)
             {
                 return stance == Stance.Lying ? ResidentAction.Sleep : ResidentAction.Stand;
             }
 
             if (activityId == ActivityCatalog.Eat.Id || activityId == ActivityCatalog.Snack.Id || activityId == ActivityCatalog.CafeMeal.Id
                 || activityId == ActivityCatalog.Pastry.Id || activityId == ActivityCatalog.Drink.Id || activityId == ActivityCatalog.Coffee.Id
-                || activityId == ActivityCatalog.BarDrink.Id || activityId == ActivityCatalog.EatMeal.Id || activityId == ActivityCatalog.EatRaw.Id)
+                || activityId == ActivityCatalog.EatMeal.Id || activityId == ActivityCatalog.EatRaw.Id)
             {
                 return ResidentAction.Eat;
             }
 
-            if (activityId == ActivityCatalog.Read.Id || activityId == ActivityCatalog.Knit.Id)
+            if (activityId == ActivityCatalog.Read.Id)
             {
                 return ResidentAction.Read;
             }
 
-            if (activityId == ActivityCatalog.Exercise.Id || activityId == ActivityCatalog.GymWorkout.Id)
+            if (activityId == ActivityCatalog.Exercise.Id)
             {
                 return ResidentAction.Exercise;
             }
 
-            if (activityId == ActivityCatalog.AttendEvent.Id || activityId == ActivityCatalog.Dance.Id || activityId == ActivityCatalog.Bowling.Id)
+            if (activityId == ActivityCatalog.AttendMeeting.Id)
             {
                 return ResidentAction.Cheer;
             }
@@ -355,11 +355,8 @@ namespace TinyCity.Art
                 return ResidentAction.Talk;
             }
 
-            if (activityId == ActivityCatalog.Work.Id || activityId == ActivityCatalog.Paint.Id || activityId == ActivityCatalog.PlayPiano.Id
-                || activityId == ActivityCatalog.Chess.Id || activityId == ActivityCatalog.Fish.Id || activityId == ActivityCatalog.Garden.Id
-                || activityId == ActivityCatalog.Bake.Id || activityId == ActivityCatalog.BuyGroceries.Id
-                || activityId == ActivityCatalog.PlayPool.Id || activityId == ActivityCatalog.PlaySnooker.Id || activityId == ActivityCatalog.PlayArcade.Id
-                || activityId == ActivityCatalog.BrowseMarket.Id || activityId == ActivityCatalog.PlantCrops.Id || activityId == ActivityCatalog.WaterCrops.Id
+            if (activityId == ActivityCatalog.Work.Id || activityId == ActivityCatalog.BuyGroceries.Id
+                || activityId == ActivityCatalog.PlantCrops.Id || activityId == ActivityCatalog.WaterCrops.Id
                 || activityId == ActivityCatalog.Harvest.Id || activityId == ActivityCatalog.CatchFish.Id || activityId == ActivityCatalog.Cook.Id
                 || activityId == ActivityCatalog.RunStall.Id || activityId == ActivityCatalog.BuyFood.Id
                 || TinyCity.Simulation.Economy.CraftingRules.IsCrafting(activityId)

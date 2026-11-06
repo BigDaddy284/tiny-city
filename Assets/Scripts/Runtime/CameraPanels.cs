@@ -23,7 +23,7 @@ namespace TinyCity.Runtime
         /// </summary>
         public const int MaxPanels = 16;
 
-        /// <summary>How many panels may be shown: <see cref="MaxPanels"/>, raised only while the panel test runs.</summary>
+        /// <summary>How many panels may be shown: <see cref="MaxPanels"/>.</summary>
         public int Limit { get; set; } = MaxPanels;
         public const float HeaderHeight = 22f;
         private const string PrefsKey = "TinyCity.Panels";
@@ -58,7 +58,7 @@ namespace TinyCity.Runtime
         /// <summary>Splits <paramref name="area"/> into <paramref name="count"/> cells: a near-square grid whose last row stretches to fill the width.</summary>
         public static Rect[] Layout(int count, Rect area)
         {
-            count = Mathf.Clamp(count, 1, PanelTest.Largest);
+            count = Mathf.Clamp(count, 1, MaxPanels);
             var columns = Mathf.CeilToInt(Mathf.Sqrt(count));
             var rows = Mathf.CeilToInt(count / (float)columns);
             var cells = new Rect[count];

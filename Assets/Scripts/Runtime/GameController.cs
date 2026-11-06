@@ -241,7 +241,6 @@ namespace TinyCity.Runtime
 
             Sound?.Steer(Simulation, Panels.Active, view, Preferences);
             settingsWindow?.Update();
-            StepPanelTest();
         }
 
         /// <summary>A line for the Cameras window: whether the cycle is running and when it next turns.</summary>
@@ -254,9 +253,9 @@ namespace TinyCity.Runtime
                     return "The cycle is off.";
                 }
 
-                if (PanelTest != null || Panels.InTownView)
+                if (Panels.InTownView)
                 {
-                    return "Paused while Town View or the panel test is showing.";
+                    return "Paused while Town View is showing.";
                 }
 
                 var left = cameraCycle.MinutesLeft(Simulation.Time.TotalMinutes, Preferences.CycleMinutes);
@@ -279,11 +278,11 @@ namespace TinyCity.Runtime
 
         /// <summary>
         /// Turns the camera panels over when the cycle is on and a turn is due, or straight away when the number of
-        /// panels has changed. Town View and the panel test pause it.
+        /// panels has changed. Town View pauses it.
         /// </summary>
         private void StepCameraCycle()
         {
-            if (!Preferences.CycleCameras || PanelTest != null || Panels.InTownView || Simulation == null)
+            if (!Preferences.CycleCameras || Panels.InTownView || Simulation == null)
             {
                 cycledPanels = 0;
                 return;
@@ -314,88 +313,8 @@ namespace TinyCity.Runtime
             }
         }
 
-        /// <summary>The camera panel test while it runs, otherwise null.</summary>
-        public PanelTest PanelTest { get; private set; }
-
-        private string panelTestLayout;
-        private int panelTestSpeed;
-        private TownSimulation panelTestOwnTown;
-
-        /// <summary>
-        /// Saves the town, swaps in a throwaway copy of the city filled to <see cref="PanelTest.Largest"/> people (so every
-        /// panel can follow someone), and shows 1 panel, then 2 and so on up to <see cref="PanelTest.Largest"/>, timing the
-        /// frames at 1x. Then it brings back the player's own town, panels and speed, writes the results to the exports
-        /// folder and says the suggested limit. Nothing is saved while the test town is showing.
-        /// </summary>
-        public void StartPanelTest()
-        {
-            if (PanelTest != null)
-            {
-                return;
-            }
-
-            Save("before the camera panel test");
-            panelTestLayout = Panels.Snapshot();
-            panelTestSpeed = SpeedIndex;
-            panelTestOwnTown = Simulation;
-            PanelTest = new PanelTest();
-            SetSimulation(FlatLand.CreateCrowdedTown(PanelTest.Largest));
-            SetSpeed(1);
-            Panels.Limit = PanelTest.Largest;
-            Panels.SetCount(PanelTest.PanelCount, view, Simulation);
-            Status = "Testing camera panels…";
-        }
-
-        /// <summary>Stops the test and puts the player's own town back.</summary>
-        private void EndPanelTest()
-        {
-            PanelTest = null;
-            Panels.Limit = CameraPanels.MaxPanels;
-            SetSimulation(panelTestOwnTown);
-            panelTestOwnTown = null;
-        }
-
-        private void StepPanelTest()
-        {
-            if (PanelTest == null || !PanelTest.AddFrame(UnityEngine.Time.unscaledDeltaTime))
-            {
-                return;
-            }
-
-            if (!PanelTest.Finished)
-            {
-                Panels.SetCount(PanelTest.PanelCount, view, Simulation);
-                Status = $"Testing camera panels: {PanelTest.PanelCount} of {PanelTest.Largest}…";
-                return;
-            }
-
-            var test = PanelTest;
-            var crowd = Simulation.LivingCount;
-            EndPanelTest();
-            Panels.Restore(panelTestLayout, view, Simulation);
-            SetSpeed(panelTestSpeed);
-            var machine = $"{SystemInfo.processorType}, {SystemInfo.graphicsDeviceName}, screen {Screen.width} × {Screen.height}, a test town of {crowd} people";
-            try
-            {
-                var path = ExportStore.Write("Camera panel test", Simulation.Time.Day, test.Report(machine));
-                Status = $"Camera panel test done: smooth up to {test.SuggestedLimit()} panels. Results in {path}.";
-            }
-            catch (Exception e)
-            {
-                Status = $"Camera panel test done: smooth up to {test.SuggestedLimit()} panels (results couldn't be written: {e.Message}).";
-            }
-
-            Debug.Log("[TinyCity] " + test.Report(machine));
-        }
-
         private void OnApplicationQuit()
         {
-            if (PanelTest != null)
-            {
-                EndPanelTest();
-                Panels?.Restore(panelTestLayout, view, Simulation);
-            }
-
             if (Simulation != null)
             {
                 Save("on exit");
@@ -417,10 +336,10 @@ namespace TinyCity.Runtime
             }
         }
 
-        /// <summary>Once everyone has died, the world's legacy log is written for the next world (not for the panel test's copy).</summary>
+        /// <summary>Once everyone has died, the world's legacy log is written for the next world.</summary>
         private void WriteLegacyIfEveryoneDied()
         {
-            if (legacyWritten || PanelTest != null || !TinyCity.Simulation.History.Legacy.EveryoneHasDied(Simulation))
+            if (legacyWritten || !TinyCity.Simulation.History.Legacy.EveryoneHasDied(Simulation))
             {
                 return;
             }
@@ -454,12 +373,6 @@ namespace TinyCity.Runtime
         private void SetSimulation(TownSimulation simulation)
         {
             Simulation = simulation;
-            simulation.RomanceEnabled = Settings.Simulation.romance;
-            simulation.CommunityEventsEnabled = Settings.Simulation.communityEvents;
-            // Tiny City 2 (owner, 5 November): the world starts with its residents and never grows, so nobody moves in
-            // and no babies are born, whatever settings.json says.
-            simulation.NewcomersEnabled = false;
-            simulation.BabiesEnabled = false;
             legacyWritten = false;
             simulation.AiRunsEverything = true;
             simulation.FoodMustBeMade = true;
@@ -501,12 +414,6 @@ namespace TinyCity.Runtime
 
         public void Save(string reason)
         {
-            if (PanelTest != null)
-            {
-                // The test town is never saved over the player's town.
-                return;
-            }
-
             try
             {
                 SaveStore.Write(CurrentSlot, SaveSerializer.Save(Simulation));
@@ -526,12 +433,6 @@ namespace TinyCity.Runtime
         /// <summary>Loads <paramref name="slot"/> (its backup if the save is damaged) and makes it the current slot. On failure the town being played carries on.</summary>
         public bool TryLoad(string slot)
         {
-            if (PanelTest != null)
-            {
-                Status = "Wait for the camera panel test to finish.";
-                return false;
-            }
-
             var world = FlatLand.CreateWorld();
             var problems = new List<string>();
             foreach (var useBackup in new[] { false, true })
@@ -582,12 +483,6 @@ namespace TinyCity.Runtime
         /// <summary>Saves the town being played, then switches to <paramref name="slot"/>.</summary>
         public bool LoadSlot(string slot)
         {
-            if (PanelTest != null)
-            {
-                Status = "Wait for the camera panel test to finish.";
-                return false;
-            }
-
             if (slot != CurrentSlot)
             {
                 Save("before switching towns");
@@ -599,12 +494,6 @@ namespace TinyCity.Runtime
         /// <summary>Saves the town being played and starts a brand-new one in a new slot.</summary>
         public string NewTownSlot(string name)
         {
-            if (PanelTest != null)
-            {
-                Status = "Wait for the camera panel test to finish.";
-                return null;
-            }
-
             Save("before starting a new town");
             var slot = SaveSlotIndex.NewSlotId(SaveStore.ListSlots().Append(CurrentSlot));
             SetSlotName(slot, string.IsNullOrWhiteSpace(name) ? SlotNames.NameOf(slot) : name);
@@ -618,12 +507,6 @@ namespace TinyCity.Runtime
         /// <summary>Copies a slot into a new one called "Copy of …". The town being played is saved first, so its copy is up to date.</summary>
         public string DuplicateSlot(string slot)
         {
-            if (PanelTest != null)
-            {
-                Status = "Wait for the camera panel test to finish.";
-                return null;
-            }
-
             try
             {
                 if (slot == CurrentSlot)

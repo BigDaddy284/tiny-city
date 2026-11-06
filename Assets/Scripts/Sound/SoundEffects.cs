@@ -11,8 +11,6 @@ namespace TinyCity.Sound
         Till,
         Cooking,
         Drink,
-        ChessMove,
-        Piano,
         Splash,
         Digging,
         Chime,
@@ -30,11 +28,7 @@ namespace TinyCity.Sound
 
         public static string Name(SoundEffect effect)
         {
-            switch (effect)
-            {
-                case SoundEffect.ChessMove: return "chess";
-                default: return effect.ToString().ToLowerInvariant();
-            }
+            return effect.ToString().ToLowerInvariant();
         }
 
         public static SoundBuffer Make(SoundEffect effect, int variant = 0)
@@ -67,14 +61,6 @@ namespace TinyCity.Sound
                 case SoundEffect.Drink:
                     samples = Drink();
                     peak = 0.4;
-                    break;
-                case SoundEffect.ChessMove:
-                    samples = ChessMove();
-                    peak = 0.4;
-                    break;
-                case SoundEffect.Piano:
-                    samples = Piano();
-                    peak = 0.45;
                     break;
                 case SoundEffect.Splash:
                     samples = Splash();
@@ -197,40 +183,6 @@ namespace TinyCity.Sound
                     var t = (double)i / Synth.Rate;
                     var hz = 320 + (b * 40) + (4000 * t);
                     s[first + i] += Synth.Sine(hz * t) * Synth.Bell(t, 0.07);
-                }
-            }
-
-            return s;
-        }
-
-        /// <summary>A wooden piece set down on the board.</summary>
-        private static double[] ChessMove()
-        {
-            var s = new double[Synth.Samples(0.15)];
-            for (var i = 0; i < s.Length; i++)
-            {
-                var t = (double)i / Synth.Rate;
-                s[i] = (Synth.Sine(820 * t) * Synth.Pluck(t, 0.001, 0.015)) + (0.5 * Synth.Noise(340, i) * Synth.Pluck(t, 0.0005, 0.004));
-            }
-
-            Synth.LowPass(s, 4000);
-            return s;
-        }
-
-        /// <summary>A short phrase on an electric piano.</summary>
-        private static double[] Piano()
-        {
-            var notes = new[] { 72.0, 76.0, 79.0, 84.0, 79.0 };
-            var s = new double[Synth.Samples(2.4)];
-            for (var n = 0; n < notes.Length; n++)
-            {
-                var hz = Synth.Hz(notes[n]);
-                var first = Synth.Samples(n * 0.28);
-                for (var i = 0; first + i < s.Length; i++)
-                {
-                    var t = (double)i / Synth.Rate;
-                    var tone = Synth.Sine(hz * t) + (0.3 * Synth.Sine(2 * hz * t) * Synth.Pluck(t, 0.001, 0.08)) + (0.1 * Synth.Sine(3 * hz * t));
-                    s[first + i] += tone * Synth.Pluck(t, 0.003, 0.35);
                 }
             }
 

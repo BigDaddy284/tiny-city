@@ -14,7 +14,7 @@ namespace TinyCity.Runtime
         private const float MaxWidth = 640f;
         private const string SearchControl = "JournalSearch";
 
-        private static readonly string[] TopicNames = { "All", "Life", "Love", "Health", "Friends", "Gatherings" };
+        private static readonly string[] TopicNames = { "All", "Life", "Friends", "Meetings" };
 
         private readonly GameController game;
         private string search = string.Empty;

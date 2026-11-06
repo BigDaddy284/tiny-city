@@ -107,12 +107,12 @@ namespace TinyCity.Sound
         public static SoundEffect? EffectFor(TownWorld world, Resident r)
         {
             var id = r.ActivityId;
-            if (id == ActivityCatalog.Eat.Id || id == ActivityCatalog.Snack.Id || id == ActivityCatalog.Bake.Id || id == ActivityCatalog.Cook.Id)
+            if (id == ActivityCatalog.Eat.Id || id == ActivityCatalog.Snack.Id || id == ActivityCatalog.Cook.Id)
             {
                 return SoundEffect.Cooking;
             }
 
-            if (id == ActivityCatalog.Drink.Id || id == ActivityCatalog.Coffee.Id || id == ActivityCatalog.BarDrink.Id)
+            if (id == ActivityCatalog.Drink.Id || id == ActivityCatalog.Coffee.Id)
             {
                 return SoundEffect.Drink;
             }
@@ -122,27 +122,7 @@ namespace TinyCity.Sound
                 return SoundEffect.Till;
             }
 
-            if (id == ActivityCatalog.PlayArcade.Id)
-            {
-                return SoundEffect.Typing;
-            }
-
-            if (id == ActivityCatalog.BrowseMarket.Id)
-            {
-                return SoundEffect.Till;
-            }
-
-            if (id == ActivityCatalog.Chess.Id || id == ActivityCatalog.PlayPool.Id || id == ActivityCatalog.PlaySnooker.Id)
-            {
-                return SoundEffect.ChessMove;
-            }
-
-            if (id == ActivityCatalog.PlayPiano.Id)
-            {
-                return SoundEffect.Piano;
-            }
-
-            if (id == ActivityCatalog.Fish.Id || id == ActivityCatalog.CatchFish.Id)
+            if (id == ActivityCatalog.CatchFish.Id)
             {
                 return SoundEffect.Splash;
             }
@@ -162,7 +142,7 @@ namespace TinyCity.Sound
                 return SoundEffect.Typing;
             }
 
-            if (id == ActivityCatalog.Garden.Id || id == ActivityCatalog.PlantCrops.Id || id == ActivityCatalog.WaterCrops.Id || id == ActivityCatalog.Harvest.Id)
+            if (id == ActivityCatalog.PlantCrops.Id || id == ActivityCatalog.WaterCrops.Id || id == ActivityCatalog.Harvest.Id)
             {
                 return SoundEffect.Digging;
             }

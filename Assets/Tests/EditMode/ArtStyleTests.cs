@@ -151,7 +151,7 @@ namespace TinyCity.Tests.EditMode
                 hash.Add(MoodArt.Icon(mood));
             }
 
-            Assert.That(hash.Value, Is.EqualTo(8545702447285596364UL), "Residents. " + Locked);
+            Assert.That(hash.Value, Is.EqualTo(14105420834406874446UL), "Residents. " + Locked);
         }
 
         [Test]

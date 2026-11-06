@@ -173,6 +173,11 @@ namespace TinyCity.Simulation
             set => decisionWaitMinutes = Math.Max(1, Math.Min(240, value));
         }
 
+        /// <summary>What has happened in the town, for the journal and life stories.</summary>
+        public TownHistory History { get; } = new TownHistory();
+
+        public int LivingCount => residents.Count(r => r.IsAlive);
+
         public Resident GetResident(string id) => residents.FirstOrDefault(r => r.Id == id);
 
         public ConversationSession GetConversation(string id) => sessions.FirstOrDefault(c => c.Id == id);
@@ -247,11 +252,6 @@ namespace TinyCity.Simulation
                 SettleWeek();
             }
 
-            StepLifeEvents();
-            StepRomanceDaily();
-            StepCommunityEvents();
-            StepNewcomers();
-            StepBirths();
             StepFood();
             StepSketches();
             StepSleepingGround();
@@ -263,14 +263,7 @@ namespace TinyCity.Simulation
                     continue;
                 }
 
-                if (resident.IsBaby)
-                {
-                    StepBaby(resident);
-                }
-                else
-                {
-                    Step(resident);
-                }
+                Step(resident);
             }
 
             StepConversations();
@@ -303,7 +296,7 @@ namespace TinyCity.Simulation
                 }
             }
 
-            NeedRules.ApplyMinute(r.Needs, r.Personality, r.State == ResidentState.Performing || r.State == ResidentState.Talking ? activity : null, IllnessCatalog.Get(r.IllnessId),
+            NeedRules.ApplyMinute(r.Needs, r.Personality, r.State == ResidentState.Performing || r.State == ResidentState.Talking ? activity : null,
                 AiRunsEverything ? HungerThirstRateWhenAiRuns : 1.0);
             if (!HasNeed(NeedType.Toilet))
             {
@@ -311,12 +304,6 @@ namespace TinyCity.Simulation
             }
 
             StepHealth(r, activity);
-            if (!r.IsAlive)
-            {
-                return;
-            }
-
-            StepSharedHobby(r, activity);
 
             switch (r.State)
             {
@@ -406,7 +393,6 @@ namespace TinyCity.Simulation
                     break;
 
                 default:
-                    NoteSickDay(r);
                     StartNextActivity(r);
                     break;
             }
@@ -861,7 +847,7 @@ namespace TinyCity.Simulation
 
             var choice = Planner.Choose(r, Time);
             var lonely = r.Needs[NeedType.Social] < NeedRules.ComfortThreshold(NeedType.Social, r.Personality);
-            var chatty = r.Personality.Sociable >= SocialRules.ChattyPersonality && choice?.Priority == PlanPriority.Leisure && choice.Activity != ActivityCatalog.AttendEvent;
+            var chatty = r.Personality.Sociable >= SocialRules.ChattyPersonality && choice?.Priority == PlanPriority.Leisure;
             if ((choice == null || (choice.IsDiscretionary && choice.Activity.PrimaryNeed == NeedType.Social) || chatty)
                 && (lonely || chatty || choice == null))
             {
@@ -936,11 +922,6 @@ namespace TinyCity.Simulation
             {
                 BeginPerforming(r, choice.Activity);
             }
-
-            if (choice.IsDiscretionary && !AiRunsEverything)
-            {
-                InviteToHobby(r, choice.Activity, choice.Target);
-            }
         }
 
         private static void Relax(Resident r, string goal)
@@ -950,10 +931,9 @@ namespace TinyCity.Simulation
             r.Goal = goal;
         }
 
-        /// <summary>People this resident could walk over to for a chat now: their partner first, then nearest first (ties by id).</summary>
+        /// <summary>People this resident could walk over to for a chat now: nearest first (ties by id).</summary>
         private IEnumerable<(Resident partner, int distance)> ChatPartners(Resident r)
         {
-            var sweetheart = Relationships.PartnerOf(r.Id);
             if (!SocialRules.CanJoinConversation(r, Time) && r.State != ResidentState.Idle && r.State != ResidentState.Deciding)
             {
                 return Enumerable.Empty<(Resident, int)>();
@@ -963,8 +943,7 @@ namespace TinyCity.Simulation
                 .Where(o => o != r && SocialRules.CanBeApproached(o, Time, IsOutdoors(o)) && !IsHeadingIndoors(o) && SocialRules.CooldownOver(Relationships, r.Id, o.Id, Time))
                 .Select(o => (partner: o, distance: Pathfinder.Distance(r.Location, o.Location)))
                 .Where(p => p.distance != Pathfinder.Unreachable && p.distance <= SocialRules.MaxSeekDistance)
-                .OrderBy(p => p.partner.Id == sweetheart ? 0 : 1)
-                .ThenBy(p => p.distance)
+                .OrderBy(p => p.distance)
                 .ThenBy(p => p.partner.Id, StringComparer.Ordinal)
                 .ToList();
         }
@@ -1144,8 +1123,6 @@ namespace TinyCity.Simulation
             {
                 Conversations.AddChat(session.Id, session.Started, session.ParticipantIds, string.IsNullOrEmpty(session.Topic) ? session.Place : session.Topic, session.Lines);
                 SocialRules.ApplyConversation(ab, ba, session.Lines, Time);
-                NoteExposure(a, b);
-                ApplyRomance(session, a, b, ab, ba);
                 RecordSocialHistory(session, a, b, firstMeeting, friendshipBefore);
             }
 
@@ -1338,10 +1315,6 @@ namespace TinyCity.Simulation
             r.State = ResidentState.Performing;
             r.MinutesRemaining = ActivityPlanner.DurationFor(r, activity, Time);
             r.AddLog(Time, $"Started {activity.Verb}");
-            if (activity == ActivityCatalog.AttendEvent)
-            {
-                ArriveAtEvent(r);
-            }
         }
     }
 }

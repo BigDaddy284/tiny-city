@@ -31,7 +31,6 @@ namespace TinyCity.Simulation.AI
                     (r.Role != null ? $"You have chosen to be the {r.Role}. {sim.Brief.Find(r.Role)?.About} " : sim.Brief.Roles.Count > 0 ? "You haven't taken up any role. " : string.Empty) +
                     (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Who you are, in your own words: {r.About} ") +
                     (r.Outlook.Length > 0 ? $"Your personality: {r.Outlook} " : $"Your personality: {r.Personality.Describe().ToLowerInvariant()}. ") +
-                    (r.Hobbies.Count > 0 ? $"Things you enjoy: {string.Join(", ", r.Hobbies)}. " : string.Empty) +
                     PrivatePersonality +
                     "Stay in character. Never mention being an AI. Answer with JSON only.";
             }
@@ -40,7 +39,6 @@ namespace TinyCity.Simulation.AI
             return $"You are {r.FullName}, aged {r.AgeYears}, {job} in Tiny City, a small, neon-lit city. " +
                 (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Your background, in your own words: {r.About} ") +
                 $"Your personality: {r.Personality.Describe().ToLowerInvariant()}. " +
-                (r.Hobbies.Count > 0 ? $"Your hobbies: {string.Join(", ", r.Hobbies)}. " : string.Empty) +
                 "Stay in character: warm, down to earth and a little playful. Never mention being an AI. Answer with JSON only.";
         }
 
@@ -127,14 +125,6 @@ namespace TinyCity.Simulation.AI
         /// <summary>How the resident's health feels from the inside, for prompts.</summary>
         public static string HealthText(Resident r)
         {
-            var illness = Health.IllnessCatalog.Get(r.IllnessId);
-            if (illness != null)
-            {
-                return illness.Serious
-                    ? $"you are seriously ill with {illness.Name}{(r.IllnessTreated ? " but the doctor has treated you" : " and need the doctor")}"
-                    : $"you are poorly with {illness.Name}";
-            }
-
             return r.Health >= 80 ? "you are in good health" : r.Health >= 50 ? "your health is fair" : "your health is poor";
         }
 
@@ -456,16 +446,6 @@ namespace TinyCity.Simulation.AI
             }
 
             text += $"), talked {rel.Interactions} time{(rel.Interactions == 1 ? string.Empty : "s")}";
-            var couple = sim.Relationships.PartnershipOf(r.Id);
-            if (couple != null && couple.Includes(other.Id))
-            {
-                text += couple.Stage == Social.RomanceStage.Committed ? "; your partner, in a committed relationship" : "; you are dating";
-            }
-            else if (rel.Romance >= Social.RomanceRules.SoftSpot)
-            {
-                text += "; you have a soft spot for them";
-            }
-
             return text;
         }
 

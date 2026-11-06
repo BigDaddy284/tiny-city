@@ -28,19 +28,6 @@ namespace TinyCity.Simulation.Residents
         Ai,
     }
 
-    public enum LifeStage
-    {
-        YoungAdult,
-        Adult,
-        MiddleAged,
-        Elderly,
-
-        // Added with babies. Not saved (it comes from the age), but kept after the others so their order holds.
-        Baby,
-        Child,
-        Teen,
-    }
-
     public sealed class ActivityLogEntry
     {
         public ActivityLogEntry(GameTime time, string text)
@@ -92,7 +79,7 @@ namespace TinyCity.Simulation.Residents
             Job = job;
             Location = location;
             Needs = needs ?? new Needs();
-            Health = TinyCity.Simulation.Health.HealthRules.StartingHealthFor(AgeYears);
+            Health = TinyCity.Simulation.Health.HealthRules.StartingHealth;
         }
 
         public string Id { get; }
@@ -103,38 +90,10 @@ namespace TinyCity.Simulation.Residents
 
         public string FullName => $"{FirstName} {LastName}".Trim();
 
-        /// <summary>Goes up on each birthday; see <see cref="Health.HealthRules.DaysPerYear"/>.</summary>
+        /// <summary>Their age, from the profile. Nobody ages in Tiny City 2.</summary>
         public int AgeYears { get; internal set; }
 
         public int BirthdayDayOfYear { get; }
-
-        public LifeStage LifeStage => AgeYears >= 65 ? LifeStage.Elderly
-            : AgeYears >= 45 ? LifeStage.MiddleAged
-            : AgeYears >= 30 ? LifeStage.Adult
-            : AgeYears >= PopulationRules.AdultAge ? LifeStage.YoungAdult
-            : AgeYears >= 13 ? LifeStage.Teen
-            : AgeYears >= PopulationRules.WalkingAge ? LifeStage.Child
-            : LifeStage.Baby;
-
-        /// <summary>Under <see cref="PopulationRules.WalkingAge"/>: carried about by a parent rather than living their own day.</summary>
-        public bool IsBaby => AgeYears < PopulationRules.WalkingAge;
-
-        /// <summary>Under <see cref="PopulationRules.AdultAge"/>: no work, no romance, no bar, and an early bedtime.</summary>
-        public bool IsMinor => AgeYears < PopulationRules.AdultAge;
-
-        /// <summary>The day they were born in the city, or 0 for someone who wasn't.</summary>
-        public int BornDay { get; internal set; }
-
-        private List<string> parentIds = new List<string>();
-
-        /// <summary>The ids of their parents, for someone born in the city.</summary>
-        public IReadOnlyList<string> ParentIds => parentIds;
-
-        internal void SetParents(IEnumerable<string> ids) => parentIds = (ids ?? new string[0]).Where(p => !string.IsNullOrWhiteSpace(p) && p != Id).Distinct().Take(2).ToList();
-
-        /// <summary>Parent and child, or brothers and sisters (sharing a parent).</summary>
-        public bool IsFamilyOf(Resident other) =>
-            other != null && (parentIds.Contains(other.Id) || other.parentIds.Contains(Id) || parentIds.Any(p => other.parentIds.Contains(p)));
 
         public string ColourHex { get; }
 
@@ -207,38 +166,6 @@ namespace TinyCity.Simulation.Residents
 
         /// <summary>0 (dying) to 100. Worn down by neglect and illness, slowly restored by good care and rest.</summary>
         public double Health { get; internal set; } = 90;
-
-        /// <summary>The current illness's id from <see cref="Health.IllnessCatalog"/>, or null when well.</summary>
-        public string IllnessId { get; internal set; }
-
-        /// <summary>Minutes of recovery left; resting counts double.</summary>
-        public int IllnessMinutesLeft { get; internal set; }
-
-        /// <summary>Whether the clinic has treated a serious illness, which lets recovery begin.</summary>
-        public bool IllnessTreated { get; internal set; }
-
-        /// <summary>The last day they chatted with someone contagious, or 0.</summary>
-        public int ExposedDay { get; internal set; }
-
-        /// <summary>The last day they called in sick, so it's only said once a day.</summary>
-        public int SickDay { get; internal set; }
-
-        private List<string> hobbies = new List<string>();
-
-        /// <summary>Hobby ids such as "chess", from <see cref="Activities.ActivityDefinition.Hobby"/>.</summary>
-        public IReadOnlyList<string> Hobbies => hobbies;
-
-        internal void SetHobbies(IEnumerable<string> ids) => hobbies = (ids ?? new string[0]).Where(h => !string.IsNullOrWhiteSpace(h)).Distinct().Take(MaxHobbies).ToList();
-
-        public const int MaxHobbies = 4;
-
-        /// <summary>The day they moved to the city from out of town, or 0 for someone who has always lived here.</summary>
-        public int MovedInDay { get; internal set; }
-
-        public bool IsNewcomer => MovedInDay > 0;
-
-        /// <summary>Whether they're open to romance at all. Some residents simply aren't looking.</summary>
-        public bool OpenToRomance { get; internal set; } = true;
 
         public Needs Needs { get; }
 

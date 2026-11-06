@@ -8,7 +8,6 @@ namespace TinyCity.Simulation.Residents
         None,
         Happy,
         Asleep,
-        Ill,
         NeedsToilet,
         Hungry,
         Thirsty,
@@ -16,7 +15,6 @@ namespace TinyCity.Simulation.Residents
         Grubby,
         Lonely,
         Bored,
-        InLove,
     }
 
     /// <summary>
@@ -44,11 +42,6 @@ namespace TinyCity.Simulation.Residents
             if (resident.State == ResidentState.Performing && resident.ActivityId == Activities.ActivityCatalog.Sleep.Id)
             {
                 return Mood.Asleep;
-            }
-
-            if (!string.IsNullOrEmpty(resident.IllnessId))
-            {
-                return Mood.Ill;
             }
 
             var needs = resident.Needs;
@@ -87,11 +80,6 @@ namespace TinyCity.Simulation.Residents
                 return Mood.Bored;
             }
 
-            if (resident.State == ResidentState.Talking && simulation != null && TalkingToPartner(simulation, resident))
-            {
-                return Mood.InLove;
-            }
-
             for (var i = 0; i < Needs.Count; i++)
             {
                 if (needs[(NeedType)i] < ContentNeed)
@@ -101,18 +89,6 @@ namespace TinyCity.Simulation.Residents
             }
 
             return Mood.Happy;
-        }
-
-        private static bool TalkingToPartner(TownSimulation simulation, Resident resident)
-        {
-            var partnerId = simulation.Relationships.PartnerOf(resident.Id);
-            if (partnerId == null || resident.ConversationId == null)
-            {
-                return false;
-            }
-
-            var partner = simulation.Residents.FirstOrDefault(r => r.Id == partnerId);
-            return partner != null && partner.IsAlive && partner.State == ResidentState.Talking && partner.ConversationId == resident.ConversationId;
         }
     }
 }

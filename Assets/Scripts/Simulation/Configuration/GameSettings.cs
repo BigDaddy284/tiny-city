@@ -13,10 +13,6 @@ namespace TinyCity.Simulation.Configuration
 
         public int version = CurrentVersion;
         public OllamaSettings ollama = new OllamaSettings();
-        public SimulationSettings simulation = new SimulationSettings();
-
-        /// <summary>The simulation options, or the defaults when an older settings file has none.</summary>
-        public SimulationSettings Simulation => simulation ?? new SimulationSettings();
 
         public IReadOnlyList<string> Validate()
         {

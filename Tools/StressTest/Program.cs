@@ -44,11 +44,9 @@ namespace TinyCity.Tools.StressTest
             var path = args.Length > 0 ? args[0] : "stress-report.md";
             var days = args.Length > 1 ? int.Parse(args[1]) : 336;
             var aiDays = args.Length > 2 ? int.Parse(args[2]) : 3;
-            var bigDays = args.Length > 3 ? int.Parse(args[3]) : 2;
-            Districts = args.Length > 4 ? int.Parse(args[4]) : 10;
-            ParallelRequests = args.Length > 5 ? int.Parse(args[5]) : OllamaSettings.DefaultParallelRequests;
-            DecisionWaitSeconds = args.Length > 6 ? int.Parse(args[6]) : OllamaSettings.DefaultDecisionWaitSeconds;
-            var v2Days = args.Length > 7 ? double.Parse(args[7], CultureInfo.InvariantCulture) : 1;
+            ParallelRequests = args.Length > 3 ? int.Parse(args[3]) : OllamaSettings.DefaultParallelRequests;
+            DecisionWaitSeconds = args.Length > 4 ? int.Parse(args[4]) : OllamaSettings.DefaultDecisionWaitSeconds;
+            var v2Days = args.Length > 5 ? double.Parse(args[5], CultureInfo.InvariantCulture) : 1;
 
             Line("# Tiny City stress test");
             Line();
@@ -64,7 +62,6 @@ namespace TinyCity.Tools.StressTest
             }
 
             ok &= Outage(section++);
-            ok &= bigDays == 0 || BigCity(section++, bigDays);
             foreach (var profile in AiProfile.All)
             {
                 // The CPU-only model is so slow that half a day is plenty to see the pattern.

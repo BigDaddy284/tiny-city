@@ -1,7 +1,6 @@
 using NUnit.Framework;
 using TinyCity.Simulation.Activities;
 using TinyCity.Simulation.Content;
-using TinyCity.Simulation.Health;
 using TinyCity.Simulation.Residents;
 
 namespace TinyCity.Tests.EditMode
@@ -52,9 +51,6 @@ namespace TinyCity.Tests.EditMode
             var r = sim.Residents[0];
             AllNeeds(r, 10);
             Assert.That(Moods.Of(sim, r), Is.EqualTo(Mood.NeedsToilet));
-
-            r.IllnessId = IllnessCatalog.Cold.Id;
-            Assert.That(Moods.Of(sim, r), Is.EqualTo(Mood.Ill));
         }
 
         [Test]

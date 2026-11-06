@@ -16,7 +16,7 @@ namespace TinyCity.Simulation.World
         private readonly HashSet<Location> blocked;
         private readonly SortedDictionary<string, List<WorldObject>> placedObjects = new SortedDictionary<string, List<WorldObject>>(StringComparer.Ordinal);
 
-        public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals, IEnumerable<Business> businesses = null, Community.CommunityCalendar calendar = null, IEnumerable<Job> jobOpenings = null)
+        public TownWorld(string townId, string townName, IEnumerable<TileMap> maps, IEnumerable<WorldObject> objects, IEnumerable<Portal> portals, IEnumerable<Business> businesses = null)
         {
             if (string.IsNullOrWhiteSpace(townId))
             {
@@ -62,24 +62,6 @@ namespace TinyCity.Simulation.World
                 }
             }
 
-            JobOpenings = (jobOpenings ?? Enumerable.Empty<Job>()).ToList();
-            foreach (var job in JobOpenings)
-            {
-                if (!objectsById.ContainsKey(job.WorkObjectId) || JobOpenings.Count(j => j.WorkObjectId == job.WorkObjectId) != 1)
-                {
-                    throw new ArgumentException($"Job opening '{job.Title}' needs its own existing work object.");
-                }
-            }
-
-            Calendar = calendar ?? new Community.CommunityCalendar(null);
-            foreach (var e in Calendar.Events)
-            {
-                if (!objectsById.TryGetValue(e.PlaceObjectId, out var place) || place.Type != ObjectType.GatheringSpot)
-                {
-                    throw new ArgumentException($"Community event '{e.Id}' needs a gathering spot.");
-                }
-            }
-
             this.portals = portals.ToList();
             foreach (var portal in this.portals)
             {
@@ -106,15 +88,6 @@ namespace TinyCity.Simulation.World
 
         /// <summary>Shops, café, bakery and clinic, each with its own interior map.</summary>
         public IReadOnlyList<Business> Businesses { get; }
-
-        /// <summary>
-        /// Jobs that wait for someone to take them, such as running the city's venues: each is filled by a jobseeker
-        /// (see <c>TownSimulation.FillVacancies</c>) whenever nobody alive has it.
-        /// </summary>
-        public IReadOnlyList<Job> JobOpenings { get; }
-
-        /// <summary>The village calendar of community events.</summary>
-        public Community.CommunityCalendar Calendar { get; }
 
         /// <summary>The business whose building contains this map, or null.</summary>
         public Business BusinessOnMap(string mapId) => Businesses.FirstOrDefault(b => b.MapId == mapId);

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyCity.Simulation.Building;
-using TinyCity.Simulation.Community;
 using TinyCity.Simulation.Economy;
 using TinyCity.Simulation.Memory;
 using TinyCity.Simulation.Residents;
@@ -482,7 +481,7 @@ namespace TinyCity.Simulation.Content
             }
 
             AddOpenLand(maps, objects, portals);
-            return new TownWorld(TownId, "Tiny City", maps, objects, portals, CreateBusinesses(), new CommunityCalendar(CreateCommunityEvents()), VenueJobs);
+            return new TownWorld(TownId, "Tiny City", maps, objects, portals, CreateBusinesses());
         }
 
         /// <summary>
@@ -585,19 +584,6 @@ namespace TinyCity.Simulation.Content
         /// <summary>The venues' jobs, held at the start by Marcus, Lola, Danny and Ruby; one that comes free goes to a jobseeker.</summary>
         public static IReadOnlyList<Job> VenueJobs => new[] { GymJob, BowlingJob, ArcadeJob, CueClubJob };
 
-        /// <summary>
-        /// The village calendar: a Sunday afternoon get-together by the pond, a Wednesday quiz night at the café, a
-        /// Friday club night at the neon bar, a Saturday morning market on the market square, and the village fête once a year (which replaces that Sunday's get-together).
-        /// </summary>
-        public static IEnumerable<CommunityEvent> CreateCommunityEvents()
-        {
-            yield return new CommunityEvent("get-together", "Sunday get-together", PondLawnId, Minute(15), Minute(17), days: 1 << (int)Weekday.Sunday, turnout: 0.45);
-            yield return new CommunityEvent("quiz-night", "Quiz night", QuizCornerId, Minute(18), Minute(20), days: 1 << (int)Weekday.Wednesday, turnout: 0.4);
-            yield return new CommunityEvent("club-night", "Club night", ClubCornerId, Minute(20), Minute(23), days: 1 << (int)Weekday.Friday, turnout: 0.35);
-            yield return new CommunityEvent("street-market", "Saturday market", MarketSquareId, Minute(10), Minute(13), days: 1 << (int)Weekday.Saturday, turnout: 0.4);
-            yield return new CommunityEvent("village-fete", "City festival", VillageGreenId, Minute(14), Minute(17), yearDay: FeteDayOfYear, turnout: 0.8);
-        }
-
         /// <summary>The fête's day in each 28-day year: the second Sunday.</summary>
         public const int FeteDayOfYear = 14;
 
@@ -628,8 +614,6 @@ namespace TinyCity.Simulation.Content
 
                 var r = new Resident(d.id, profile?.FirstName ?? d.first, profile?.LastName ?? d.last, profile?.Age ?? d.age, d.birthday, d.colour, d.personality, d.homeMapId, d.bedId, d.job, Bed(world, d.bedId), needs);
                 ApplyFinances(r, d);
-                r.SetHobbies(HobbiesOf(d.id));
-                r.OpenToRomance = d.openToRomance;
                 // Tiny City 2 (owner, 5 November): no backstories on the open land, only what type of person they are.
                 r.About = profile?.About ?? (openLand ? string.Empty : DefaultAbout(d.id));
                 r.Outlook = profile?.Personality ?? (DefaultPersonalities.TryGetValue(d.id, out var personality) ? personality : string.Empty);
@@ -743,7 +727,6 @@ namespace TinyCity.Simulation.Content
             public long rent;
             public long income;
             public string incomeLabel = string.Empty;
-            public bool openToRomance = true;
         }
 
         private static int Minute(int hour, int minute = 0) => GameTime.MinuteOfDayFor(hour, minute);
@@ -764,7 +747,7 @@ namespace TinyCity.Simulation.Content
             },
             new Design
             {
-                id = ArthurId, first = "Arthur", last = "Bramble", age = 71, birthday = 290, colour = "#5B7DB1", openToRomance = false,
+                id = ArthurId, first = "Arthur", last = "Bramble", age = 71, birthday = 290, colour = "#5B7DB1",
                 personality = new Personality(active: 0.3, sociable: 0.8, tidy: 0.55, bookish: 0.75),
                 homeMapId = WillowCottageMapId, bedId = "obj-cottage2-bed",
                 needsLevel = 70, needAdjustments = { [NeedType.Energy] = 85, [NeedType.Social] = 45 },
@@ -835,7 +818,7 @@ namespace TinyCity.Simulation.Content
             },
             new Design
             {
-                id = EdithId, first = "Edith", last = "Crumb", age = 82, birthday = 5, colour = "#B0A8A0", openToRomance = false,
+                id = EdithId, first = "Edith", last = "Crumb", age = 82, birthday = 5, colour = "#B0A8A0",
                 personality = new Personality(active: 0.15, sociable: 0.6, tidy: 0.7, bookish: 0.8),
                 homeMapId = "map-cottage-10", bedId = "obj-cottage10-bed",
                 needsLevel = 72, needAdjustments = { [NeedType.Energy] = 80 },
@@ -881,36 +864,13 @@ namespace TinyCity.Simulation.Content
             },
             new Design
             {
-                id = WalterId, first = "Walter", last = "Penn", age = 76, birthday = 309, colour = "#9C8B6E", openToRomance = false,
+                id = WalterId, first = "Walter", last = "Penn", age = 76, birthday = 309, colour = "#9C8B6E",
                 personality = new Personality(active: 0.35, sociable: 0.5, tidy: 0.7, bookish: 0.7),
                 homeMapId = "map-cottage-11", bedId = "obj-cottage11-bed",
                 needsLevel = 72, needAdjustments = { [NeedType.Energy] = 82 },
                 money = Money.Pounds(900), groceries = 5, rent = Money.Pounds(120), income = Money.Pounds(250), incomeLabel = "Pension",
             },
         };
-
-        /// <summary>Each starter resident's hobbies, chosen to suit them; shared ones give neighbours something to do together.</summary>
-        private static readonly Dictionary<string, string[]> StarterHobbies = new Dictionary<string, string[]>
-        {
-            [ResidentId] = new[] { "gardening", "painting" },
-            [ArthurId] = new[] { "chess", "fishing" },
-            [NellId] = new[] { "fishing", "chess" },
-            [RosaId] = new[] { "knitting", "baking" },
-            [TomId] = new[] { "baking", "piano" },
-            [PriyaId] = new[] { "painting", "piano" },
-            [IvyId] = new[] { "gardening", "fishing" },
-            [SamuelId] = new[] { "chess", "piano" },
-            [FelixId] = new[] { "chess", "painting" },
-            [EdithId] = new[] { "knitting", "gardening" },
-            [MarcusId] = new[] { "fishing", "gardening" },
-            [LolaId] = new[] { "painting", "baking" },
-            [DannyId] = new[] { "chess", "piano" },
-            [RubyId] = new[] { "chess", "knitting" },
-            [WalterId] = new[] { "fishing", "gardening" },
-        };
-
-        private static IEnumerable<string> HobbiesOf(string residentId) =>
-            StarterHobbies.TryGetValue(residentId, out var hobbies) ? hobbies : new string[0];
 
         private static void ApplyFinances(Resident r, Design d)
         {
@@ -919,21 +879,6 @@ namespace TinyCity.Simulation.Content
             r.WeeklyRentPence = d.rent;
             r.WeeklyIncomePence = d.income;
             r.IncomeLabel = d.incomeLabel;
-        }
-
-        /// <summary>
-        /// A new city filled to <paramref name="people"/> living residents (at most <see cref="PopulationRules.MaxLiving"/>)
-        /// with newcomers who all arrive at once; those without a free home sleep on benches. Only for the camera panel
-        /// test, which throws it away afterwards: it is never saved.
-        /// </summary>
-        public static TownSimulation CreateCrowdedTown(int people)
-        {
-            var simulation = CreateNewGame();
-            while (simulation.LivingCount < Math.Min(people, PopulationRules.MaxLiving) && simulation.MoveInNewcomer(anyNumber: true) != null)
-            {
-            }
-
-            return simulation;
         }
 
         public static TownSimulation CreateNewGame() => CreateNewGame(null);

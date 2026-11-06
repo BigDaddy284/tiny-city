@@ -22,7 +22,7 @@ namespace TinyCity.Simulation
 
         /// <summary>Someone who can be walked up to and talked to: alive, not a baby, not already chatting, asleep or at work.</summary>
         public static bool FreeToTalk(Resident r) =>
-            r != null && r.IsAlive && !r.IsBaby && r.State != ResidentState.Talking
+            r != null && r.IsAlive && r.State != ResidentState.Talking
             && r.ActivityId != ActivityCatalog.Sleep.Id && r.ActivityId != ActivityCatalog.Work.Id;
 
         /// <summary>Up and about and free to notice someone and change what they're doing.</summary>

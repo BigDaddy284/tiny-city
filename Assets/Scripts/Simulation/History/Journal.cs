@@ -11,10 +11,8 @@ namespace TinyCity.Simulation.History
     {
         All,
         Life,
-        Love,
-        Health,
         Friends,
-        Gatherings,
+        Meetings,
     }
 
     /// <summary>
@@ -30,44 +28,22 @@ namespace TinyCity.Simulation.History
         {
             switch (kind)
             {
-                case TownEventKind.Couple:
-                case TownEventKind.Committed:
-                case TownEventKind.BreakUp:
-                case TownEventKind.Reconciled:
-                    return JournalTopic.Love;
-                case TownEventKind.Illness:
-                case TownEventKind.SeriousIllness:
-                case TownEventKind.Recovered:
-                    return JournalTopic.Health;
                 case TownEventKind.Met:
                 case TownEventKind.Friends:
                     return JournalTopic.Friends;
-                case TownEventKind.Gathering:
                 case TownEventKind.Meeting:
-                    return JournalTopic.Gatherings;
+                    return JournalTopic.Meetings;
                 default:
                     return JournalTopic.Life;
             }
         }
 
-        /// <summary>The big moments that pop up as a notification: deaths, love, new life stages, serious illness, newcomers and new jobs.</summary>
+        /// <summary>The big moments that pop up as a notification: deaths, finished buildings, the end of the world and town meetings.</summary>
         public static bool IsNotable(TownEventKind kind)
         {
             switch (kind)
             {
                 case TownEventKind.Death:
-                case TownEventKind.Couple:
-                case TownEventKind.Committed:
-                case TownEventKind.BreakUp:
-                case TownEventKind.Reconciled:
-                case TownEventKind.LifeStage:
-                case TownEventKind.SeriousIllness:
-                case TownEventKind.MovedIn:
-                case TownEventKind.Housed:
-                case TownEventKind.Homeless:
-                case TownEventKind.Born:
-                case TownEventKind.MovedOut:
-                case TownEventKind.NewJob:
                 case TownEventKind.Built:
                 case TownEventKind.WorldEnded:
                 case TownEventKind.Meeting:

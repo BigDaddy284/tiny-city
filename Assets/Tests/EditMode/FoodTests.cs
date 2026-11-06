@@ -442,20 +442,6 @@ namespace TinyCity.Tests.EditMode
             Assert.That(CraftingRules.TryTool("iron pickaxe", out var tool) && tool == ToolKind.Pickaxe, Is.True);
         }
 
-        [Test]
-        public void NobodyFallsIll_InTinyCity2()
-        {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
-            sim.AiRunsEverything = true;
-            foreach (var r in sim.Residents)
-            {
-                r.Health = 30;
-            }
-
-            sim.Advance(24 * 60);
-            Assert.That(sim.Residents.All(r => r.IllnessId == null), Is.True);
-        }
-
         [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":2,\"accept_food\":true}", 2, true)]
         [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":99,\"price\":-4}", 99, false)]
         [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":-3}", 0, false)]

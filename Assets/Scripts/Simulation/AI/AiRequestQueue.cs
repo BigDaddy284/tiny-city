@@ -67,7 +67,7 @@ namespace TinyCity.Simulation.AI
         /// wait on a choice, a day plan, a line and a reaction at once, and anything dropped is only asked again, so a
         /// smaller queue just churns (32 gave up thousands of requests a game day at 50 people).
         /// </summary>
-        public const int DefaultMaxPending = 4 * Residents.PopulationRules.MaxLiving;
+        public const int DefaultMaxPending = 4 * Content.FlatLand.MaxResidents;
 
         /// <summary>Every this many seconds of waiting counts as one priority class better, so low priorities still get served.</summary>
         public const double AgingSecondsPerClass = 20;

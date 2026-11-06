@@ -9,107 +9,23 @@ using TinyCity.Simulation.Time;
 
 namespace TinyCity.Simulation
 {
-    /// <summary>Birthdays, health, illness and death. All of it follows <see cref="HealthRules"/>; nothing here is up to the AI.</summary>
+    /// <summary>Health and death. All of it follows <see cref="HealthRules"/>; nothing here is up to the AI.</summary>
     public sealed partial class TownSimulation
     {
-        /// <summary>Once-a-day events: birthdays at midnight, old age in the small hours, falling ill before breakfast.</summary>
-        private void StepLifeEvents()
+        /// <summary>One minute of health after needs have changed. Sleeping and resting in bed help recovery.</summary>
+        private void StepHealth(Resident r, ActivityDefinition activity)
         {
-            var minute = Time.MinuteOfDay;
-            if (minute != 0 && minute != HealthRules.OldAgeCheckMinute && minute != HealthRules.IllnessCheckMinute)
+            var resting = r.State == ResidentState.Performing && activity == ActivityCatalog.Sleep;
+            if (!HealthRules.ApplyMinute(r, resting, LowestHealthWhenAiRuns))
             {
                 return;
             }
 
-            foreach (var r in residents.Where(r => r.IsAlive).ToList())
+            // Nobody dies: they are left as weak as can be, and know it.
+            if (!r.Log.Any(e => e.Time.Day == Time.Day && e.Text.StartsWith("Collapsed")))
             {
-                if (minute == 0 && !AiRunsEverything && HealthRules.IsBirthday(r, Time.Day))
-                {
-                    CelebrateBirthday(r);
-                }
-                else if (minute == HealthRules.OldAgeCheckMinute && !AiRunsEverything && HealthRules.DiesOfOldAge(r, Time.Day))
-                {
-                    Die(r, "old age");
-                }
-                else if (minute == HealthRules.IllnessCheckMinute && !AiRunsEverything)
-                {
-                    var illness = HealthRules.CatchesIllness(r, Time.Day);
-                    if (illness != null)
-                    {
-                        FallIll(r, illness);
-                    }
-                }
-            }
-        }
-
-        private void CelebrateBirthday(Resident r)
-        {
-            var stage = r.LifeStage;
-            r.AgeYears++;
-            r.AddLog(Time, $"Turned {r.AgeYears} today");
-            Memories.Add(r.Id, Time, MemoryType.Event, 4, $"It was my {Ordinal(r.AgeYears)} birthday.", tags: new[] { "birthday", "age" });
-            History.Add(Time, TownEventKind.Birthday, $"{r.FullName} turned {r.AgeYears}.", new[] { r.Id });
-            if (r.LifeStage != stage)
-            {
-                Memories.Add(r.Id, Time, MemoryType.Event, 6, LifeStageSummary(r.LifeStage), tags: new[] { "age", "life-stage" });
-                History.Add(Time, TownEventKind.LifeStage, $"{r.FullName} is now {StageWords(r.LifeStage)}.", new[] { r.Id });
-            }
-
-            r.Health = System.Math.Min(r.Health, HealthRules.MaxHealthFor(r.AgeYears));
-            if (r.BornDay > 0)
-            {
-                GrowingUp(r);
-            }
-        }
-
-        /// <summary>Starts an illness. Used by the daily check, and by tests and future events.</summary>
-        internal void FallIll(Resident r, Illness illness)
-        {
-            r.IllnessId = illness.Id;
-            r.IllnessMinutesLeft = illness.RecoveryMinutes;
-            r.IllnessTreated = false;
-            r.AddLog(Time, $"Woke up with {illness.Name}");
-            Memories.Add(r.Id, Time, MemoryType.Event, illness.Serious ? 7 : 4, $"I came down with {illness.Name}.", tags: new[] { "health", "ill", illness.Id });
-            History.Add(Time, illness.Serious ? TownEventKind.SeriousIllness : TownEventKind.Illness, $"{r.FullName} came down with {illness.Name}.", new[] { r.Id });
-        }
-
-        /// <summary>One minute of health after needs have changed. Sleeping and resting in bed help recovery.</summary>
-        private void StepHealth(Resident r, ActivityDefinition activity)
-        {
-            var resting = r.State == ResidentState.Performing && (activity == ActivityCatalog.Sleep || activity == ActivityCatalog.Rest);
-            var illness = IllnessCatalog.Get(r.IllnessId);
-            var health = HealthRules.ApplyMinute(r, resting);
-            if (AiRunsEverything && r.Health < LowestHealthWhenAiRuns)
-            {
-                r.Health = LowestHealthWhenAiRuns;
-                health = HealthEvent.Died;
-            }
-
-            switch (health)
-            {
-                case HealthEvent.Recovered:
-                    r.AddLog(Time, $"Felt better: over {illness.Name}");
-                    Memories.Add(r.Id, Time, MemoryType.Event, illness.Serious ? 6 : 3, $"I got over {illness.Name}.", tags: new[] { "health", "recovered", illness.Id });
-                    History.Add(Time, TownEventKind.Recovered, $"{r.FullName} got over {illness.Name}.", new[] { r.Id });
-                    break;
-                case HealthEvent.Worsened:
-                    r.AddLog(Time, $"Got worse: {illness.Name} turned into {IllnessCatalog.Get(r.IllnessId).Name}");
-                    Memories.Add(r.Id, Time, MemoryType.Event, 7, $"My {illness.Name} turned into {IllnessCatalog.Get(r.IllnessId).Name}; I need to see the doctor.", tags: new[] { "health", "ill", r.IllnessId });
-                    History.Add(Time, TownEventKind.SeriousIllness, $"{r.FullName}'s {illness.Name} turned into {IllnessCatalog.Get(r.IllnessId).Name}.", new[] { r.Id });
-                    break;
-                case HealthEvent.Died when AiRunsEverything:
-                    // Tiny City 2: nobody dies. They are left as weak as can be, and know it.
-                    r.Health = LowestHealthWhenAiRuns;
-                    if (!r.Log.Any(e => e.Time.Day == Time.Day && e.Text.StartsWith("Collapsed")))
-                    {
-                        r.AddLog(Time, "Collapsed from neglect, too weak to go on like this");
-                        Memories.Add(r.Id, Time, MemoryType.Event, 8, "I collapsed, as weak as I have ever been. I must eat, drink and rest.", tags: new[] { "health" });
-                    }
-
-                    break;
-                case HealthEvent.Died:
-                    Die(r, illness != null ? IllnessCatalog.Get(r.IllnessId)?.Name ?? illness.Name : "neglect");
-                    break;
+                r.AddLog(Time, "Collapsed from neglect, too weak to go on like this");
+                Memories.Add(r.Id, Time, MemoryType.Event, 8, "I collapsed, as weak as I have ever been. I must eat, drink and rest.", tags: new[] { "health" });
             }
         }
 
@@ -120,36 +36,6 @@ namespace TinyCity.Simulation
             FinishCrafting(r, activity);
             FinishBuilding(r, activity);
             FinishOpenLand(r, activity);
-            if (activity == ActivityCatalog.SeeDoctor && HealthRules.NeedsDoctor(r))
-            {
-                r.IllnessTreated = true;
-                r.AddLog(Time, "The doctor treated them; recovery can begin");
-                Memories.Add(r.Id, Time, MemoryType.Event, 6, $"The doctor at the clinic treated my {IllnessCatalog.Get(r.IllnessId).Name}.", tags: new[] { "health", "clinic", r.IllnessId });
-            }
-        }
-
-        /// <summary>Too unwell for work: said once a day, and it costs a day's wages.</summary>
-        private void NoteSickDay(Resident r)
-        {
-            if (ActivityPlanner.IsWorkTime(r, Time) && !HealthRules.CanWork(r) && r.SickDay != Time.Day)
-            {
-                r.SickDay = Time.Day;
-                r.AddLog(Time, $"Called in sick ({IllnessCatalog.Get(r.IllnessId).Name})");
-            }
-        }
-
-        /// <summary>Contagious illnesses can pass on through a chat.</summary>
-        private void NoteExposure(Resident a, Resident b)
-        {
-            if (IllnessCatalog.Get(b.IllnessId)?.Contagious == true)
-            {
-                a.ExposedDay = Time.Day;
-            }
-
-            if (IllnessCatalog.Get(a.IllnessId)?.Contagious == true)
-            {
-                b.ExposedDay = Time.Day;
-            }
         }
 
         /// <summary>
@@ -178,15 +64,13 @@ namespace TinyCity.Simulation
             r.CauseOfDeath = cause;
             r.UnpaidWorkMinutes = 0;
             r.AddLog(Time, $"Died of {cause}");
-            var partnerId = Relationships.PartnerOf(r.Id);
-            Widow(r);
             History.Add(Time, TownEventKind.Death, $"{r.FullName} died of {cause}, aged {r.AgeYears}.", new[] { r.Id });
             if (AiRunsEverything && LivingCount == 0)
             {
                 History.Add(Time, TownEventKind.WorldEnded, $"Everyone has died: the last was {r.FullName}. {World.TownName} lasted {Legacy.Days(Time.Day - Content.StarterTown.StartTime.Day + 1)}. What they lived through is written down for the next world.", residents.Select(o => o.Id).ToArray());
             }
 
-            foreach (var other in residents.Where(o => o.IsAlive && o != r && o.Id != partnerId))
+            foreach (var other in residents.Where(o => o.IsAlive && o != r))
             {
                 var met = Relationships.TryGet(other.Id, r.Id, out var rel) && rel.HaveMet;
                 var close = met && rel.Friendship >= SocialRules.GoodFriendsAt;
@@ -194,52 +78,6 @@ namespace TinyCity.Simulation
                     : met ? $"{r.FullName} died of {cause}. I knew them a little."
                     : $"{r.FullName}, who lived in the city, died of {cause}.";
                 Memories.Add(other.Id, Time, MemoryType.Event, close ? 9 : met ? 7 : 5, summary, new[] { r.Id }, new[] { r.Id, "death", "loss" });
-            }
-        }
-
-        private static string Ordinal(int n)
-        {
-            var suffix = (n % 100) is 11 or 12 or 13 ? "th" : (n % 10) switch { 1 => "st", 2 => "nd", 3 => "rd", _ => "th" };
-            return n + suffix;
-        }
-
-        private static string LifeStageSummary(LifeStage stage)
-        {
-            switch (stage)
-            {
-                case LifeStage.Adult:
-                    return "I'm thirty now: properly grown up, apparently.";
-                case LifeStage.MiddleAged:
-                    return "I've reached middle age. Where did the years go?";
-                case LifeStage.Elderly:
-                    return "I'm officially elderly now, and I intend to enjoy it.";
-                case LifeStage.Child:
-                    return "I'm big enough to go about on my own now.";
-                case LifeStage.Teen:
-                    return "I'm a teenager now.";
-                case LifeStage.YoungAdult:
-                    return "I'm eighteen: grown up, and ready for a place of my own.";
-                default:
-                    return "A new chapter of life has begun.";
-            }
-        }
-
-        private static string StageWords(LifeStage stage)
-        {
-            switch (stage)
-            {
-                case LifeStage.Adult:
-                    return "a grown adult";
-                case LifeStage.MiddleAged:
-                    return "middle-aged";
-                case LifeStage.Elderly:
-                    return "elderly";
-                case LifeStage.Child:
-                    return "a child";
-                case LifeStage.Teen:
-                    return "a teenager";
-                default:
-                    return "a young adult";
             }
         }
     }

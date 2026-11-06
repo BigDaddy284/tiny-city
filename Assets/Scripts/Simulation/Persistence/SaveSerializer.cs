@@ -138,14 +138,6 @@ namespace TinyCity.Simulation.Persistence
 
                     return (object)item;
                 }).ToList(),
-                ["partnerships"] = simulation.Relationships.Partnerships.Select(p => (object)new Dictionary<string, object>
-                {
-                    ["firstId"] = p.FirstId,
-                    ["secondId"] = p.SecondId,
-                    ["stage"] = p.Stage.ToString(),
-                    ["sinceMinutes"] = p.Since.TotalMinutes,
-                    ["stageSinceMinutes"] = p.StageSince.TotalMinutes,
-                }).ToList(),
                 ["history"] = new Dictionary<string, object>
                 {
                     ["nextNumber"] = simulation.History.NextNumber,
@@ -399,7 +391,6 @@ namespace TinyCity.Simulation.Persistence
                 }
             }
 
-            ReadPartnerships(GetList(root, "partnerships"), simulation, warnings);
             ReadHistory(GetObject(root, "history"), simulation, warnings);
 
             ReconcileSocialState(simulation, warnings);
@@ -475,24 +466,11 @@ namespace TinyCity.Simulation.Persistence
                 ["outlook"] = r.Outlook,
                 ["unpaidWorkMinutes"] = r.UnpaidWorkMinutes,
                 ["health"] = r.Health,
-                ["illness"] = r.IllnessId == null ? null : new Dictionary<string, object>
-                {
-                    ["id"] = r.IllnessId,
-                    ["minutesLeft"] = r.IllnessMinutesLeft,
-                    ["treated"] = r.IllnessTreated,
-                },
-                ["exposedDay"] = r.ExposedDay,
-                ["sickDay"] = r.SickDay,
                 ["death"] = r.DiedAt == null ? null : new Dictionary<string, object>
                 {
                     ["gameMinutes"] = r.DiedAt.Value.TotalMinutes,
                     ["cause"] = r.CauseOfDeath,
                 },
-                ["hobbies"] = r.Hobbies.Cast<object>().ToList(),
-                ["openToRomance"] = r.OpenToRomance,
-                ["movedInDay"] = r.MovedInDay,
-                ["bornDay"] = r.BornDay,
-                ["parents"] = r.ParentIds.Cast<object>().ToList(),
                 ["alive"] = r.IsAlive,
                 ["needs"] = needs,
                 ["location"] = new Dictionary<string, object>
@@ -850,8 +828,6 @@ namespace TinyCity.Simulation.Persistence
             ["dislike"] = r.Dislike,
             ["interactions"] = r.Interactions,
             ["lastInteractionMinutes"] = r.LastInteractionMinute,
-            ["romance"] = r.Romance,
-            ["brokeUpMinutes"] = r.BrokeUpMinute,
         };
 
         private static void ReadRelationships(List<object> list, TownSimulation simulation, List<string> warnings)
@@ -874,13 +850,10 @@ namespace TinyCity.Simulation.Persistence
                     GetDouble(data, "friendship", defaults.Friendship),
                     GetDouble(data, "trust", defaults.Trust),
                     GetDouble(data, "respect", defaults.Respect),
-                    GetDouble(data, "dislike", defaults.Dislike),
-                    GetDouble(data, "romance", 0));
+                    GetDouble(data, "dislike", defaults.Dislike));
                 defaults.Interactions = Math.Max(0, GetInt(data, "interactions", 0));
                 var last = GetDouble(data, "lastInteractionMinutes", Relationship.Never);
                 defaults.LastInteractionMinute = last >= 0 && last <= simulation.Time.TotalMinutes && last == Math.Floor(last) ? (long)last : Relationship.Never;
-                var brokeUp = GetDouble(data, "brokeUpMinutes", Relationship.Never);
-                defaults.BrokeUpMinute = brokeUp >= 0 && brokeUp <= simulation.Time.TotalMinutes && brokeUp == Math.Floor(brokeUp) ? (long)brokeUp : Relationship.Never;
             }
 
             if (skipped > 0)
@@ -1065,35 +1038,11 @@ namespace TinyCity.Simulation.Persistence
             }
         }
 
-        /// <summary>Health, illness, death and hobbies. Missing values (older saves) give a well resident of their age.</summary>
+        /// <summary>Health and death. A missing value gives a resident in good health.</summary>
         private static void ReadHealth(Resident resident, Dictionary<string, object> data, string label, List<string> warnings)
         {
             var health = GetDouble(data, "health", double.NaN);
-            resident.Health = double.IsNaN(health) ? HealthRules.StartingHealthFor(resident.AgeYears) : Math.Max(0, Math.Min(HealthRules.MaxHealthFor(resident.AgeYears), health));
-
-            var illness = GetObject(data, "illness");
-            if (illness != null)
-            {
-                var kind = IllnessCatalog.Get(GetString(illness, "id"));
-                if (kind == null)
-                {
-                    warnings.Add($"{label}: an unknown illness was dropped.");
-                }
-                else
-                {
-                    resident.IllnessId = kind.Id;
-                    resident.IllnessMinutesLeft = Math.Max(1, Math.Min(GetInt(illness, "minutesLeft", kind.RecoveryMinutes), kind.RecoveryMinutes));
-                    resident.IllnessTreated = kind.Serious && GetBool(illness, "treated", false);
-                }
-            }
-
-            resident.ExposedDay = Math.Max(0, GetInt(data, "exposedDay", 0));
-            resident.SickDay = Math.Max(0, GetInt(data, "sickDay", 0));
-            resident.SetHobbies(GetList(data, "hobbies").OfType<string>().Where(h => ActivityCatalog.ForHobby(h) != null));
-            resident.OpenToRomance = GetBool(data, "openToRomance", true);
-            resident.MovedInDay = Math.Max(0, GetInt(data, "movedInDay", 0));
-            resident.BornDay = Math.Max(0, GetInt(data, "bornDay", 0));
-            resident.SetParents(GetList(data, "parents").OfType<string>());
+            resident.Health = double.IsNaN(health) ? HealthRules.StartingHealth : Math.Max(0, Math.Min(HealthRules.MaxHealth, health));
 
             var death = GetObject(data, "death");
             if (!resident.IsAlive)
@@ -1105,10 +1054,6 @@ namespace TinyCity.Simulation.Persistence
                 {
                     resident.CauseOfDeath = "unknown causes";
                 }
-
-                resident.IllnessId = null;
-                resident.IllnessMinutesLeft = 0;
-                resident.IllnessTreated = false;
             }
         }
 
@@ -1191,37 +1136,6 @@ namespace TinyCity.Simulation.Persistence
             if (skipped > 0)
             {
                 warnings.Add($"{skipped} damaged money record(s) were skipped.");
-            }
-        }
-
-        /// <summary>Couples. Both must be living residents of this town, neither already in a couple, and the dates in the past.</summary>
-        private static void ReadPartnerships(List<object> list, TownSimulation simulation, List<string> warnings)
-        {
-            var skipped = 0;
-            foreach (var d in list)
-            {
-                var data = d as Dictionary<string, object>;
-                var a = data == null ? null : simulation.GetResident(GetString(data, "firstId"));
-                var b = data == null ? null : simulation.GetResident(GetString(data, "secondId"));
-                var since = data == null ? -1 : GetDouble(data, "sinceMinutes", -1);
-                var stageSince = data == null ? -1 : GetDouble(data, "stageSinceMinutes", since);
-                if (a == null || b == null || a == b || !a.IsAlive || !b.IsAlive
-                    || simulation.Relationships.PartnershipOf(a.Id) != null || simulation.Relationships.PartnershipOf(b.Id) != null
-                    || !Enum.TryParse(GetString(data, "stage"), out RomanceStage stage) || !Enum.IsDefined(typeof(RomanceStage), stage)
-                    || since < 0 || stageSince < since || stageSince > simulation.Time.TotalMinutes)
-                {
-                    skipped++;
-                    continue;
-                }
-
-                var couple = simulation.Relationships.StartPartnership(a.Id, b.Id, new GameTime((long)since));
-                couple.Stage = stage;
-                couple.StageSince = new GameTime((long)stageSince);
-            }
-
-            if (skipped > 0)
-            {
-                warnings.Add($"{skipped} damaged couple record(s) were skipped.");
             }
         }
 
