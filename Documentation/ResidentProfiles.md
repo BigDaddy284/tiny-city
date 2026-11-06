@@ -17,7 +17,9 @@ Two more entries at the top of the file speak to everyone:
   an optional `canTax` (true lets whoever takes the role ask people for a share of their goods) and an
   optional `can`: the work only that role may do, as activity ids (for example `"can": ["plant-crops",
   "water-crops", "harvest"]`; an unknown id is left out and reported). Work no role lists is open to everyone,
-  and anyone can still catch a fish by hand (one, where a role's `catch-fish` gives the full catch). Nobody is
+  and anyone can still catch a fish by hand (one, where a role's `catch-fish` gives the full catch). An optional
+  `max` (a whole number from 1 to 100) is how many people may hold the role at once; once it is full nobody else
+  can take it up, or be voted into it, until a place comes free. Leave it out for no limit. Nobody is
   given a role. Each morning, as they plan their day, each resident may take one up; their first choice is
   theirs at once. After that, changing role or giving it up (`"none"`) is a request put to the weekly town
   meeting (Monday 10:00 at the meeting circle, from a week after the start; there is no first-day meeting),

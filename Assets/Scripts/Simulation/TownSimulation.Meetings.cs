@@ -249,16 +249,21 @@ namespace TinyCity.Simulation
                 var wanted = roleRequests[requester.Id];
                 var yes = meeting.Votes.Values.Count(v => v.TryGetValue(requester.Id, out var y) && y);
                 var no = meeting.Votes.Values.Count(v => v.TryGetValue(requester.Id, out var y) && !y);
-                var passed = yes * 2 > present.Count;
                 var none = wanted == RoleNone;
+                var full = !none && RoleIsFull(Brief.Find(wanted), requester);
+                var passed = yes * 2 > present.Count && !full;
                 var change = none ? $"to give up being the {requester.Role}" : $"to become the {wanted}";
-                outcomes.Add($"{requester.FirstName} asked {change}: {yes} for, {no} against, so it {(passed ? "passed" : "failed")}");
+                outcomes.Add($"{requester.FirstName} asked {change}: {yes} for, {no} against, so it {(full ? "could not happen because every place in that role is taken" : passed ? "passed" : "failed")}");
                 roleRequests.Remove(requester.Id);
                 if (passed)
                 {
                     var old = requester.Role;
                     requester.Role = none ? null : wanted;
                     requester.AddLog(Time, none ? $"The meeting voted to let them give up being the {old}" : $"The meeting voted them in as the {wanted}");
+                }
+                else if (full)
+                {
+                    requester.AddLog(Time, $"Could not become the {wanted}: every place in that role is taken");
                 }
                 else
                 {

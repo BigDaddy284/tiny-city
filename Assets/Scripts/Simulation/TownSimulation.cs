@@ -603,6 +603,15 @@ namespace TinyCity.Simulation
                 return;
             }
 
+            if (role != null && RoleIsFull(role, r))
+            {
+                r.AddLog(Time, $"Wanted to be the {role.Name}, but all {role.Max} places are taken");
+                Memories.Add(r.Id, Time, MemoryType.Event, 4,
+                    $"I wanted to be the {role.Name}, but there can only be {role.Max} and they are all taken, so I need to do something else for now.",
+                    tags: new[] { "role" });
+                return;
+            }
+
             if (RequestRoleChange(r, role, none))
             {
                 return;
@@ -615,6 +624,18 @@ namespace TinyCity.Simulation
                 role == null ? $"I decided to stop being the {old}." : old == null ? $"I decided to take up being the {role.Name}." : $"I decided to stop being the {old} and be the {role.Name} instead.",
                 tags: new[] { "role" });
         }
+
+        /// <summary>How many living people hold this role.</summary>
+        public int HoldersOf(string role) =>
+            role == null ? 0 : residents.Count(o => o.IsAlive && string.Equals(o.Role, role, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// Owner, 6 November: whether every place in a limited role (<see cref="RoleOption.Max"/>) is taken by
+        /// someone other than <paramref name="except"/>, so nobody else may take it up.
+        /// </summary>
+        public bool RoleIsFull(RoleOption role, Resident except = null) =>
+            role != null && role.Max > 0
+            && residents.Count(o => o.IsAlive && o != except && string.Equals(o.Role, role.Name, StringComparison.OrdinalIgnoreCase)) >= role.Max;
 
         /// <summary>What a day plan answers to have no role.</summary>
         public const string RoleNone = "none";

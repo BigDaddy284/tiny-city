@@ -241,6 +241,19 @@ namespace TinyCity.Simulation.AI
         /// what their role lets them do, who does each kind of work, and the weekly meeting where role
         /// changes are voted on, so they work out together how to live.
         /// </summary>
+        /// <summary>How many places a limited role has left for this resident, such as " (full, 3 of 3)" or " (1 of 2 places left)"; empty for a role with no limit.</summary>
+        public static string PlacesLeft(TownSimulation sim, RoleOption role, Resident r)
+        {
+            if (role == null || role.Max <= 0)
+            {
+                return string.Empty;
+            }
+
+            var taken = sim.Residents.Count(o => o.IsAlive && o != r && string.Equals(o.Role, role.Name, System.StringComparison.OrdinalIgnoreCase));
+            var left = System.Math.Max(0, role.Max - taken);
+            return left == 0 ? $" (full, {role.Max} of {role.Max} taken)" : $" ({left} of {role.Max} place{(role.Max == 1 ? string.Empty : "s")} left)";
+        }
+
         public static void AppendRoleAndMeeting(StringBuilder sb, TownSimulation sim, Resident r)
         {
             var role = sim.Brief.Find(r.Role);
@@ -262,6 +275,12 @@ namespace TinyCity.Simulation.AI
             if (unfilled.Count > 0)
             {
                 sb.Append(" Nobody yet is the ").Append(string.Join(", ", unfilled)).Append('.');
+            }
+
+            var full = sim.Brief.Roles.Where(o => o.Name != r.Role && sim.RoleIsFull(o, r)).Select(o => $"{o.Name} ({o.Max} of {o.Max})").ToList();
+            if (full.Count > 0)
+            {
+                sb.Append(" Full, so nobody else can take them up until a place comes free: ").Append(string.Join(", ", full)).Append('.');
             }
 
             sb.AppendLine();

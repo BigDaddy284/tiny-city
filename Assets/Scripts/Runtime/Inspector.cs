@@ -292,7 +292,7 @@ namespace TinyCity.Runtime
                 foreach (var role in roles.Skip(column * perColumn).Take(perColumn))
                 {
                     var holders = Simulation.Residents.Where(o => o.IsAlive && o.Role == role.Name).OrderBy(o => o.FirstName, StringComparer.Ordinal).ToList();
-                    SelectableText.Label(Capital(role.Name), styles.Text);
+                    SelectableText.Label(role.Max > 0 ? $"{Capital(role.Name)} ({holders.Count}/{role.Max})" : Capital(role.Name), styles.Text);
                     if (holders.Count == 0)
                     {
                         SelectableText.Label("   nobody yet", styles.Small);
