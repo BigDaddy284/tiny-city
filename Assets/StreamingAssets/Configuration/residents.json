@@ -1,6 +1,6 @@
 {
   "format": "tiny-city-2-profiles",
-  "brief": "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Each of you can only do the work of the role you take up; without one you can only drink and wash in the dirty pond, eat raw fish and pick up fallen branches and loose stones, so you need each other. A role can only be changed by a majority vote at the weekly meeting. Look after yourself first: hunger, thirst, tiredness and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
+  "brief": "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Each of you can only do the work of the role you take up; without one you can only drink and wash in the dirty pond and catch the odd fish by hand to eat raw, so you need each other. A role can only be changed by a majority vote at the weekly meeting. Look after yourself first: hunger, thirst, tiredness and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
   "roles": [
     {
       "name": "farmer",
@@ -20,8 +20,9 @@
     },
     {
       "name": "lumberjack",
-      "about": "Only you can cut wood from the trees; everyone else can only pick up fallen branches. Better axes let you cut hardwood and then heartwood, and everyone building or making tools needs what you bring in.",
+      "about": "Only you can gather wood: fallen branches by hand, and with an axe, wood from the trees. Better axes let you cut hardwood and then heartwood, and everyone building or making tools needs what you bring in.",
       "can": [
+        "gather-sticks",
         "gather-wood",
         "gather-hardwood",
         "gather-heartwood"
@@ -29,8 +30,9 @@
     },
     {
       "name": "miner",
-      "about": "Only you can break stone from the rocks; everyone else can only pick up loose stones. Better pickaxes let you dig iron ore and then crystal, the strongest materials there are.",
+      "about": "Only you can gather stone: loose stones by hand, and with a pickaxe, stone from the rocks. Better pickaxes let you dig iron ore and then crystal, the strongest materials there are.",
       "can": [
+        "gather-loose-stones",
         "gather-stone",
         "gather-iron",
         "gather-crystal"

@@ -156,6 +156,9 @@ namespace TinyCity.Simulation.Content
                 r.WeeklyIncomePence = 0;
                 r.IncomeLabel = string.Empty;
                 r.OwnsBusinessId = null;
+
+                // Owner, 6 November: nobody arrives with food; v1's starting groceries would become cooked meals.
+                r.Groceries = 0;
                 if (profiles == null)
                 {
                     // Tiny City 2 has no money to start with (owner, 5 November): they barter.

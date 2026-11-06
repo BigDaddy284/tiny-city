@@ -41,6 +41,10 @@ namespace TinyCity.Simulation.AI
             {
                 sb.AppendLine($"Money: {PromptText.Purse(r, sim)}.");
             }
+            else
+            {
+                sb.AppendLine(PromptText.NoMoney);
+            }
 
             PromptText.AppendFood(sb, sim, r);
             if (sim.FoodMustBeMade)

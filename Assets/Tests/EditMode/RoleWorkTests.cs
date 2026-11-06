@@ -68,12 +68,12 @@ namespace TinyCity.Tests.EditMode
             var sim = NewGame();
             var r = sim.Residents[0];
             var basics = Options(sim, r);
-            foreach (var id in new[] { "drink-pond", "wash-pond", "catch-fish", "gather-sticks", "gather-loose-stones", "sleep" })
+            foreach (var id in new[] { "drink-pond", "wash-pond", "catch-fish", "sleep" })
             {
                 Assert.That(basics.Contains(id), Is.True, id);
             }
 
-            foreach (var id in new[] { "plant-crops", "plan-building", "purify-water", "craft-axe", "cook" })
+            foreach (var id in new[] { "plant-crops", "plan-building", "purify-water", "craft-axe", "cook", "gather-sticks", "gather-loose-stones" })
             {
                 Assert.That(basics.Contains(id), Is.False, id + " belongs to a role");
             }
@@ -83,6 +83,11 @@ namespace TinyCity.Tests.EditMode
             Assert.That(farmer.Contains("plant-crops"), Is.True);
             Assert.That(farmer.Contains("plan-building") || farmer.Contains("cook") || farmer.Contains("craft-axe"), Is.False, "a farmer can't build, cook or make tools");
             Assert.That(farmer.Contains("catch-fish"), Is.True, "anyone can fish by hand");
+
+            var miner = sim.Residents[1];
+            TakeRole(sim, miner, "miner");
+            Assert.That(Options(sim, miner).Contains("gather-loose-stones"), Is.True, "only a miner picks up stones (owner, 6 November)");
+            Assert.That(Options(sim, miner).Contains("gather-sticks"), Is.False, "branches are the lumberjack's");
 
             var s = new System.Text.StringBuilder();
             PromptText.AppendFood(s, sim, r);
@@ -251,6 +256,27 @@ namespace TinyCity.Tests.EditMode
             Assert.That(feelings.Contains("parched with thirst"), Is.True, feelings);
             Assert.That(feelings.Contains("getting worse every hour"), Is.True, feelings);
             Assert.That(ActivityCatalog.All.Any(a => a.Id == "toilet-outdoors"), Is.False);
+        }
+
+        [Test]
+        public void NobodyStartsWithFood()
+        {
+            var sim = NewGame();
+            sim.Tick();
+            Assert.That(sim.Residents.All(o => o.Groceries == 0 && o.Food.Count(FoodKind.Meal) == 0), Is.True);
+        }
+
+        [Test]
+        public void PersonalityIsKeptPrivate()
+        {
+            var sim = NewGame();
+            var r = sim.Residents[0];
+            var other = sim.Residents[1];
+            Assert.That(PromptText.Persona(r, sim), Does.Contain(PromptText.PrivatePersonality));
+            Assert.That(PromptText.Persona(r, sim), Does.Contain(r.Outlook));
+            var s = new System.Text.StringBuilder();
+            PromptText.AppendFood(s, sim, r);
+            Assert.That(s.ToString().Contains(other.Outlook), Is.False, "nobody is told someone else's personality");
         }
     }
 }

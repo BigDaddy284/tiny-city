@@ -124,7 +124,7 @@ namespace TinyCity.Simulation.AI
             {
                 sb.AppendLine(money
                     ? $"Your food: {speaker.Food.Describe(sim.Time.Day)}. Your money: {Economy.Money.Format(speaker.MoneyPence)}."
-                    : $"Your food: {speaker.Food.Describe(sim.Time.Day)}.");
+                    : $"Your food: {speaker.Food.Describe(sim.Time.Day)}. {PromptText.NoMoney}");
                 sb.AppendLine($"Your things: {speaker.Belongings.Describe()}; clean water: {speaker.CleanWater}. {listener.FirstName}'s things: {listener.Food.Describe(sim.Time.Day)}; {listener.Belongings.Describe()}; clean water: {listener.CleanWater}.");
                 if (sim.RolesLimitSkills)
                 {
