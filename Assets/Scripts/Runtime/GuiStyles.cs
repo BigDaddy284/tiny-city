@@ -4,10 +4,10 @@ using UnityEngine;
 namespace TinyCity.Runtime
 {
     /// <summary>
-    /// The IMGUI styles shared by the inspector, windows and camera panels, in the colours of a <see cref="UiPalette"/>.
+    /// The IMGUI styles shared by the inspector, windows and the camera, in the colours of a <see cref="UiPalette"/>.
     /// <see cref="UiTheme"/> makes one per palette, inside OnGUI with its skin set. Labels drawn on the town itself
-    /// (resident names, object and door signs) are neon whatever the theme: pale text over a soft glow, pink for
-    /// people, cyan for doors and violet for things (the art palette's Poppy, door cyan, Purple, Cream and Outline).
+    /// (resident names and object names) are neon whatever the theme: pale text over a soft glow, pink for people and
+    /// violet for things (the art palette's Poppy, Purple, Cream and Outline).
     /// </summary>
     public sealed class GuiStyles
     {
@@ -19,9 +19,6 @@ namespace TinyCity.Runtime
 
         /// <summary>The glow around residents' names.</summary>
         public static readonly Color PersonGlow = Hex(0xff3d8b);
-
-        /// <summary>The glow around door signs.</summary>
-        public static readonly Color DoorGlow = Hex(0x35e0ff);
 
         /// <summary>The glow around the names of things on the map.</summary>
         public static readonly Color ThingGlow = Hex(0xb45cff);
@@ -42,15 +39,10 @@ namespace TinyCity.Runtime
             Sign = new GUIStyle(GUI.skin.label) { fontSize = 11, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, clipping = TextClipping.Overflow };
             Name.normal.textColor = Sign.normal.textColor = Color.white;
 
-            Header = new GUIStyle(GUI.skin.label) { fontSize = 12, fontStyle = FontStyle.Bold, clipping = TextClipping.Clip, alignment = TextAnchor.MiddleLeft };
-            Header.normal.textColor = text;
             HeaderButton = new GUIStyle(GUI.skin.button) { fontSize = 11, padding = new RectOffset(2, 2, 1, 1), border = new RectOffset(4, 4, 4, 4) };
 
             Bubble = new GUIStyle(GUI.skin.box) { fontSize = 13, wordWrap = true, alignment = TextAnchor.MiddleCenter, padding = new RectOffset(8, 8, 6, 6) };
             Bubble.normal.textColor = text;
-
-            Card = new GUIStyle(GUI.skin.box) { fontSize = 13, wordWrap = true, richText = true, alignment = TextAnchor.UpperLeft, padding = new RectOffset(10, 10, 6, 7) };
-            Card.normal.textColor = text;
 
             AiNote = new GUIStyle(GUI.skin.box) { fontSize = 12, wordWrap = true, alignment = TextAnchor.UpperLeft, padding = new RectOffset(6, 6, 4, 4) };
             AiNote.normal.background = PlaceholderArt.Solid(UiTheme.ToColor(p.Pill));
@@ -84,18 +76,13 @@ namespace TinyCity.Runtime
         /// <summary>A line that needs attention, in the theme's warning colour.</summary>
         public GUIStyle Warning { get; }
 
-        /// <summary>Object names and door signs drawn on the town.</summary>
+        /// <summary>Object names drawn on the town.</summary>
         public GUIStyle Sign { get; }
 
         /// <summary>Residents' names over their heads.</summary>
         public GUIStyle Name { get; }
 
-        /// <summary>The card about a building that appears while the pointer is over it.</summary>
-        public GUIStyle Card { get; }
-
-        /// <summary>The text in a camera panel's header bar.</summary>
-        public GUIStyle Header { get; }
-
+        /// <summary>The small "◀ Panel" button that brings the hidden side panel back.</summary>
         public GUIStyle HeaderButton { get; }
 
         public GUIStyle Bubble { get; }

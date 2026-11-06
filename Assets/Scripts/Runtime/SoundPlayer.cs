@@ -105,7 +105,7 @@ namespace TinyCity.Runtime
         public void PlayChime() => Play(SoundEffects.KeyOf(SoundEffect.Chime, 0), 1f, 1f);
 
         /// <summary>Called every frame with the game's state.</summary>
-        public void Steer(TownSimulation simulation, CameraPanel active, TownView view, PlayerPreferences prefs)
+        public void Steer(TownSimulation simulation, TownCamera active, TownView view, PlayerPreferences prefs)
         {
             if (!Ready)
             {
@@ -148,7 +148,7 @@ namespace TinyCity.Runtime
                     continue;
                 }
 
-                // Louder the nearer they are to the middle of the panel; silent once well off screen.
+                // Louder the nearer they are to the middle of the view; silent once well off screen.
                 var size = Mathf.Max(1f, active.Camera.orthographicSize);
                 var distance = Vector2.Distance(view.ToWorld(cue.Location), active.Camera.transform.position);
                 var nearness = Mathf.Clamp01(1.4f - (distance / (size * 1.5f)));

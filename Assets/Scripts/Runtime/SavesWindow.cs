@@ -31,7 +31,7 @@ namespace TinyCity.Runtime
 
         public bool IsOpen { get; private set; }
 
-        /// <summary>Where the window was last drawn, so clicks on it don't reach the camera panels.</summary>
+        /// <summary>Where the window was last drawn, so clicks on it don't reach the camera.</summary>
         public Rect Area { get; private set; }
 
         public void Toggle()

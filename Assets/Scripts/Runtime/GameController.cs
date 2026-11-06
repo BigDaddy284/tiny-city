@@ -14,7 +14,7 @@ namespace TinyCity.Runtime
 {
     /// <summary>
     /// Runs the town: advances the simulation with the clock, saves and loads, and hands drawing to the
-    /// <see cref="TownView"/> (the maps and residents), the <see cref="CameraPanels"/> (what each camera watches), the
+    /// <see cref="TownView"/> (the maps and residents), the <see cref="TownCamera"/> (what the camera watches), the
     /// <see cref="Inspector"/> (the panel on the right), the <see cref="JournalWindow"/> and the <see cref="Notifications"/>.
     /// All rules live in <see cref="TownSimulation"/>.
     /// </summary>
@@ -41,10 +41,6 @@ namespace TinyCity.Runtime
         private JournalWindow journal;
         private SavesWindow saves;
         private SettingsWindow settingsWindow;
-        private int placeMenuPanel = -1;
-        private Rect placeMenuButton;
-        private Rect placeMenuArea;
-        private Vector2 placeMenuScroll;
         private GuiStyles styles;
 
         public TownSimulation Simulation { get; private set; }
@@ -54,8 +50,8 @@ namespace TinyCity.Runtime
         /// <summary>Talks to Ollama; residents fall back to their built-in routine whenever it can't help.</summary>
         public AiService Ai { get; private set; }
 
-        /// <summary>The camera panels, from one to sixteen. Panel 0 uses the main camera.</summary>
-        public CameraPanels Panels { get; private set; }
+        /// <summary>The one camera, which is the main camera.</summary>
+        public TownCamera TownCamera { get; private set; }
 
         /// <summary>Pop-ups for the town's big moments.</summary>
         public Notifications Notifications { get; private set; }
@@ -126,8 +122,8 @@ namespace TinyCity.Runtime
         {
             view = new GameObject("Town").AddComponent<TownView>();
             Sound = gameObject.AddComponent<SoundPlayer>();
-            // Tiny City 2 (owner, 5 November): one camera only. Town View shows the whole land, and clicking someone follows them.
-            Panels = new CameraPanels(Camera.main) { Limit = 1, ResidentClicked = id => Select(Simulation.GetResident(id), followInActivePanel: true) };
+            // Tiny City 2 (owner, 5 November): one camera only. It starts over the whole land, and clicking someone follows them.
+            TownCamera = new TownCamera(Camera.main) { ResidentClicked = id => Select(Simulation.GetResident(id), follow: true) };
             inspector = new Inspector(this);
             journal = new JournalWindow(this);
             saves = new SavesWindow(this);
@@ -161,12 +157,7 @@ namespace TinyCity.Runtime
                 StartNewTown(Status.Length == 0 ? "Started a new town." : Status + " Started a new town instead.");
             }
 
-            Panels.LoadLayout(view, Simulation);
-            if (!Panels.InTownView)
-            {
-                ToggleTownView();
-            }
-
+            TownCamera.ShowWholeLand(view, Simulation);
             ApplyThemeToCameras();
             UpdateView(1f);
         }
@@ -176,14 +167,10 @@ namespace TinyCity.Runtime
             UiTheme.Changed -= ApplyThemeToCameras;
         }
 
-        /// <summary>Behind the maps, every panel shows the theme's canvas colour, and the title bar takes the theme too.</summary>
+        /// <summary>Behind the maps, the camera shows the theme's canvas colour, and the title bar takes the theme too.</summary>
         private void ApplyThemeToCameras()
         {
-            var colour = UiTheme.ToColor(UiTheme.Palette.Canvas);
-            foreach (var panel in Panels.All)
-            {
-                panel.Camera.backgroundColor = colour;
-            }
+            TownCamera.Camera.backgroundColor = UiTheme.ToColor(UiTheme.Palette.Canvas);
 
             WindowFrame.Apply(UiTheme.Palette);
         }
@@ -232,7 +219,7 @@ namespace TinyCity.Runtime
                 Sound?.PlayChime();
             }
 
-            Sound?.Steer(Simulation, Panels.Active, view, Preferences);
+            Sound?.Steer(Simulation, TownCamera, view, Preferences);
             settingsWindow?.Update();
         }
 
@@ -241,7 +228,6 @@ namespace TinyCity.Runtime
             if (Simulation != null)
             {
                 Save("on exit");
-                Panels?.SaveLayout();
             }
 
             settingsWindow?.SaveNow();
@@ -306,25 +292,17 @@ namespace TinyCity.Runtime
 
             view.ForgetResidents();
             Sound?.Forget();
-            Panels.ClearSpeech();
+            TownCamera.ClearSpeech();
             Notifications.Reset(simulation);
             if (simulation.GetResident(selectedId) == null)
             {
                 selectedId = simulation.Residents[0].Id;
             }
 
-            // A new panel, or one following someone who isn't in this town, follows the selected resident.
-            for (var i = 0; i < Panels.Count; i++)
+            // A camera over a map this town doesn't have, or following someone who isn't in it, shows the whole land.
+            if (TownCamera.IsFree ? TownCamera.MapId != null && !simulation.World.TryGetMap(TownCamera.MapId, out _) : simulation.GetResident(TownCamera.FollowId) == null)
             {
-                var panel = Panels.All[i];
-                if (panel.IsFree ? panel.MapId == null : simulation.GetResident(panel.FollowId) == null)
-                {
-                    Panels.Follow(i, selectedId, simulation);
-                }
-                else if (panel.IsFree && !simulation.World.TryGetMap(panel.MapId, out _))
-                {
-                    panel.LookAtMap(simulation.Residents[0].Location.MapId, view);
-                }
+                TownCamera.ShowWholeLand(view, simulation);
             }
 
             lastAutosaveMinute = simulation.Time.TotalMinutes;
@@ -526,7 +504,7 @@ namespace TinyCity.Runtime
             view.ApplyTime(Simulation.Time);
             view.ShowBlocks(Simulation.Construction);
             view.UpdateResidents(Simulation, Mathf.Clamp01(tickProgress));
-            Panels.Update(CameraArea(), view, Simulation);
+            TownCamera.Update(CameraArea(), view, Simulation);
         }
 
         /// <summary>The part of the window left of the inspector, in GUI coordinates (origin top left).</summary>
@@ -539,16 +517,6 @@ namespace TinyCity.Runtime
             PlayerPrefs.Save();
         }
 
-        /// <summary>
-        /// While the side panel is hidden, the top-right camera panel's header starts with a button that brings it back,
-        /// so it sits in line with that panel's own buttons instead of over them.
-        /// </summary>
-        private bool ShowsSidebarButton(Rect panel)
-        {
-            var area = CameraArea();
-            return SidebarHidden && panel.yMin <= area.yMin + 1f && panel.xMax >= area.xMax - 1f;
-        }
-
         public void SetSpeed(int index)
         {
             SpeedIndex = Mathf.Clamp(index, 0, Speeds.Length - 1);
@@ -558,8 +526,8 @@ namespace TinyCity.Runtime
             }
         }
 
-        /// <summary>Shows <paramref name="r"/> in the inspector, and optionally points the active panel at them.</summary>
-        public void Select(Resident r, bool followInActivePanel)
+        /// <summary>Shows <paramref name="r"/> in the inspector, and optionally points the camera at them.</summary>
+        public void Select(Resident r, bool follow)
         {
             if (r == null)
             {
@@ -567,13 +535,11 @@ namespace TinyCity.Runtime
             }
 
             selectedId = r.Id;
-            if (followInActivePanel && r.IsAlive)
+            if (follow && r.IsAlive)
             {
-                Panels.Follow(Panels.ActiveIndex, r.Id, Simulation);
+                TownCamera.Follow(r.Id, Simulation);
             }
         }
-
-        public void SetPanelCount(int count) => Panels.SetCount(count, view, Simulation);
 
         public void ToggleJournal()
         {
@@ -629,15 +595,15 @@ namespace TinyCity.Runtime
         /// <summary>Opens the journal with only the inspector's resident's entries.</summary>
         public void ShowJournalFor(Resident r)
         {
-            Select(r, followInActivePanel: false);
+            Select(r, follow: false);
             journal.ShowOnly(r.Id);
         }
 
-        /// <summary>Shows whoever a journal entry or notification is about, and points the active panel at them if they're alive.</summary>
+        /// <summary>Shows whoever a journal entry or notification is about, and points the camera at them if they're alive.</summary>
         public void GoTo(TownEvent entry)
         {
             var r = entry.ResidentIds.Select(id => Simulation.GetResident(id)).FirstOrDefault(x => x != null);
-            Select(r, followInActivePanel: true);
+            Select(r, follow: true);
         }
 
         public void ExportLifeStory(Resident r) => Export($"{r.FullName} life story", LifeStory.Write(Simulation, r.Id), $"{r.FirstName}'s life story");
@@ -658,11 +624,6 @@ namespace TinyCity.Runtime
             }
         }
 
-        public void WatchEveryone() => Panels.WatchEveryone(view, Simulation);
-
-        /// <summary>One panel over the whole city, or back to the panels shown before.</summary>
-        public void ToggleTownView() => Panels.ToggleTownView(view, Simulation);
-
         private void OnGUI()
         {
             if (Simulation == null)
@@ -679,14 +640,9 @@ namespace TinyCity.Runtime
                 GUIUtility.keyboardControl = 0;
             }
 
-            if (e.type == EventType.MouseDown && placeMenuPanel >= 0 && !placeMenuArea.Contains(e.mousePosition) && !placeMenuButton.Contains(e.mousePosition))
-            {
-                placeMenuPanel = -1;
-            }
-
             HandleKeys(e);
-            Panels.DrawOverlays(view, Simulation, styles, DrawPanelHeader, !OverWindow(e.mousePosition) && placeMenuPanel < 0);
-            DrawPlaceMenu();
+            TownCamera.DrawOverlays(view, Simulation, styles, !OverWindow(e.mousePosition));
+            DrawSidebarButton();
             journal.Draw(CameraArea(), styles);
             saves.Draw(CameraArea(), styles);
             settingsWindow.Draw(CameraArea(), styles);
@@ -696,143 +652,33 @@ namespace TinyCity.Runtime
                 inspector.Draw(styles);
             }
 
-            var overMenu = placeMenuPanel >= 0 && placeMenuArea.Contains(e.mousePosition);
-            if ((e.isMouse || e.type == EventType.ScrollWheel) && !OverWindow(e.mousePosition) && !overMenu)
+            if ((e.isMouse || e.type == EventType.ScrollWheel) && !OverWindow(e.mousePosition))
             {
-                // After the buttons have had their chance, so header buttons and the inspector win over the panels.
-                Panels.HandleMouse(e, view, Simulation);
+                // After the buttons have had their chance, so they and the inspector win over the camera.
+                TownCamera.HandleMouse(e, view);
             }
         }
 
-        private void DrawPanelHeader(int index)
+        /// <summary>While the side panel is hidden, a button in the top right corner brings it back.</summary>
+        private void DrawSidebarButton()
         {
-            var panel = Panels.All[index];
-            var rect = panel.ScreenRect;
-            var y = rect.y + 2f;
-            var x = rect.xMax - 4f;
-
-            // An open place list may hang over this header; its buttons mustn't take the list's clicks.
-            GUI.enabled = !(placeMenuPanel >= 0 && placeMenuArea.Contains(Event.current.mousePosition));
-            if (ShowsSidebarButton(rect))
+            if (!SidebarHidden)
             {
-                x -= 62f;
-                if (GUI.Button(new Rect(x, y, 60f, 18f), "◀ Panel", styles.HeaderButton))
-                {
-                    ToggleSidebar();
-                    GUI.enabled = true;
-                    return;
-                }
-            }
-
-            if (Panels.Count > 1)
-            {
-                x -= 22f;
-                if (GUI.Button(new Rect(x, y, 20f, 18f), "×", styles.HeaderButton))
-                {
-                    Panels.Remove(index);
-                    placeMenuPanel = -1;
-                    GUI.enabled = true;
-                    return;
-                }
-            }
-
-            x -= 52f;
-            if (GUI.Button(new Rect(x, y, 50f, 18f), panel.IsFree ? "Follow" : "Free", styles.HeaderButton))
-            {
-                Panels.Activate(index);
-                if (panel.IsFree)
-                {
-                    Panels.Follow(index, selectedId, Simulation);
-                }
-                else
-                {
-                    Panels.CycleMap(index, view, Simulation);
-                }
-            }
-
-            x -= 62f;
-            var placeButton = new Rect(x, y, 60f, 18f);
-            if (GUI.Button(placeButton, "Place ▾", styles.HeaderButton))
-            {
-                Panels.Activate(index);
-                placeMenuPanel = placeMenuPanel == index ? -1 : index;
-                placeMenuScroll = Vector2.zero;
-            }
-
-            if (placeMenuPanel == index)
-            {
-                placeMenuButton = placeButton;
-            }
-
-            x -= 22f;
-            if (GUI.Button(new Rect(x, y, 20f, 18f), "▶", styles.HeaderButton))
-            {
-                Panels.Activate(index);
-                Step(index, 1);
-            }
-
-            x -= 22f;
-            if (GUI.Button(new Rect(x, y, 20f, 18f), "◀", styles.HeaderButton))
-            {
-                Panels.Activate(index);
-                Step(index, -1);
-            }
-
-            GUI.enabled = true;
-            GUI.Label(new Rect(rect.x + 6f, y, Mathf.Max(0f, x - rect.x - 10f), 18f), Panels.Describe(index, Simulation), styles.Header);
-        }
-
-        /// <summary>
-        /// The list under a panel's "Place" button: the village and every building. Picking one makes that panel a
-        /// free camera there. Drawn after every header so it sits on top of the panels below.
-        /// </summary>
-        private void DrawPlaceMenu()
-        {
-            if (placeMenuPanel < 0 || placeMenuPanel >= Panels.Count)
-            {
-                placeMenuPanel = -1;
                 return;
             }
 
-            const float RowHeight = 22f;
-            const float MenuWidth = 220f;
-            var places = CameraPanels.Places(Simulation.World);
             var area = CameraArea();
-            var x = Mathf.Clamp(placeMenuButton.xMax - MenuWidth, area.x + 4f, area.xMax - MenuWidth - 4f);
-            var y = placeMenuButton.yMax + 2f;
-            var height = Mathf.Min((places.Count * RowHeight) + 8f, area.yMax - y - 6f);
-            placeMenuArea = new Rect(x, y, MenuWidth, height);
-            GUI.Box(placeMenuArea, GUIContent.none, styles.Notice);
-
-            var current = Panels.All[placeMenuPanel];
-            var inner = new Rect(0f, 0f, MenuWidth - 20f, places.Count * RowHeight);
-            placeMenuScroll = GUI.BeginScrollView(new Rect(x + 4f, y + 4f, MenuWidth - 8f, height - 8f), placeMenuScroll, inner);
-            for (var i = 0; i < places.Count; i++)
+            if (GUI.Button(new Rect(area.xMax - 66f, area.y + 4f, 62f, 20f), "◀ Panel", styles.HeaderButton))
             {
-                var map = places[i];
-                var label = (map.IsExterior ? $"{map.Name} (outside)" : map.Name) + (current.IsFree && current.MapId == map.Id ? "  ✓" : string.Empty);
-                if (GUI.Button(new Rect(0f, i * RowHeight, inner.width, RowHeight - 2f), label, styles.Entry))
-                {
-                    Panels.ShowPlace(placeMenuPanel, map.Id, view);
-                    placeMenuPanel = -1;
-                }
+                ToggleSidebar();
             }
-
-            GUI.EndScrollView();
         }
 
-        /// <summary>A following panel moves to the next or previous resident; a free one to the next or previous place.</summary>
-        private void Step(int index, int step)
+        /// <summary>Follows the next or previous resident, and shows them in the inspector.</summary>
+        private void StepResident(int step)
         {
-            if (Panels.All[index].IsFree)
-            {
-                Panels.CycleMap(index, view, Simulation, step);
-            }
-            else
-            {
-                Panels.CycleResident(index, step, Simulation);
-                selectedId = Panels.All[index].FollowId ?? selectedId;
-            }
+            TownCamera.CycleResident(step, Simulation);
+            selectedId = TownCamera.FollowId ?? selectedId;
         }
 
         private void HandleKeys(Event e)
@@ -854,7 +700,6 @@ namespace TinyCity.Runtime
                 return;
             }
 
-            var active = Panels.ActiveIndex;
             switch (e.keyCode)
             {
                 case KeyCode.Space:
@@ -872,26 +717,20 @@ namespace TinyCity.Runtime
                 case KeyCode.F9:
                     TryLoad();
                     break;
-                case KeyCode.Tab:
-                    Panels.CycleMap(active, view, Simulation);
-                    break;
                 case KeyCode.F:
-                    Panels.Follow(active, selectedId, Simulation);
+                    TownCamera.Follow(selectedId, Simulation);
                     break;
                 case KeyCode.N:
-                    Step(active, 1);
+                    StepResident(1);
                     break;
                 case KeyCode.B:
-                    Step(active, -1);
+                    StepResident(-1);
                     break;
                 case KeyCode.H:
                     ToggleSidebar();
                     break;
                 case KeyCode.J:
                     ToggleJournal();
-                    break;
-                case KeyCode.Escape when placeMenuPanel >= 0:
-                    placeMenuPanel = -1;
                     break;
                 case KeyCode.Escape when JournalOpen:
                     ToggleJournal();
