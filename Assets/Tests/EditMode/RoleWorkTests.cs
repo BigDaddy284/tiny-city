@@ -154,9 +154,9 @@ namespace TinyCity.Tests.EditMode
             WaitUntilDeciding(sim, anyone);
             Assert.That(Options(sim, anyone).Contains("catch-fish"), Is.False, "no fishing by hand");
 
-            var before = fisher.Food.Count(FoodKind.Fish);
+            var before = sim.Food.Store.Food.Count(FoodKind.Fish);
             Do(sim, fisher, ActivityCatalog.CatchFish);
-            Assert.That(fisher.Food.Count(FoodKind.Fish) - before, Is.EqualTo(FoodRules.CatchPortions));
+            Assert.That(sim.Food.Store.Food.Count(FoodKind.Fish) - before, Is.EqualTo(FoodRules.CatchPortions), "into the camp store");
         }
 
         [Test]
@@ -171,19 +171,27 @@ namespace TinyCity.Tests.EditMode
 
             TakeRole(sim, r, "water purifier");
             Do(sim, r, ActivityCatalog.PurifyWater);
-            Assert.That(r.CleanWater, Is.EqualTo(FoodRules.PurifyPortions));
+            var store = sim.Food.Store;
+            Assert.That(store.Water, Is.EqualTo(FoodRules.PurifyPortions), "cleaned water goes to the camp store");
+            var other = sim.Residents[1];
+            WaitUntilDeciding(sim, other);
+            Assert.That(Options(sim, other).Contains("drink-clean"), Is.True, "anyone can drink from the store");
             var health = r.Health;
             Do(sim, r, ActivityCatalog.DrinkCleanWater);
-            Assert.That(r.CleanWater, Is.EqualTo(FoodRules.PurifyPortions - 1));
+            Assert.That(store.Water, Is.EqualTo(FoodRules.PurifyPortions - 1));
             r.Needs[NeedType.Hygiene] = 20;
             Do(sim, r, ActivityCatalog.WashWithCleanWater);
-            Assert.That(r.CleanWater, Is.EqualTo(FoodRules.PurifyPortions - 2), "washing uses a portion too");
+            Assert.That(store.Water, Is.EqualTo(FoodRules.PurifyPortions - 2), "washing uses a portion too");
+            r.CleanWater = 1;
+            Do(sim, r, ActivityCatalog.DrinkCleanWater);
+            Assert.That((r.CleanWater, store.Water), Is.EqualTo((0, FoodRules.PurifyPortions - 2)), "their own water is used first");
             Assert.That(r.Needs[NeedType.Hygiene], Is.GreaterThan(60));
             Assert.That(r.Health, Is.GreaterThan(health - 0.5), "clean water does no harm");
             Assert.That(CraftingRules.ItemNames, Does.Contain(CraftingRules.CleanWaterName), "clean water can be traded");
 
             var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
             Assert.That(loaded.GetResident(r.Id).CleanWater, Is.EqualTo(r.CleanWater));
+            Assert.That(loaded.Food.Store.Water, Is.EqualTo(store.Water), "the camp store is saved");
         }
 
         [Test]

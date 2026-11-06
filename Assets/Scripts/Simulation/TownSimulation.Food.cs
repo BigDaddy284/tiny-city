@@ -19,6 +19,11 @@ namespace TinyCity.Simulation
         private void StepFood()
         {
             var spoilNow = Time.MinuteOfDay == FoodRules.SpoilMinute;
+            if (spoilNow)
+            {
+                Food.Store.Food.Spoil(Time.Day);
+            }
+
             foreach (var r in residents)
             {
                 if (!r.IsAlive)

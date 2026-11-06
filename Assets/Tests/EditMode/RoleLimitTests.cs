@@ -193,5 +193,33 @@ namespace TinyCity.Tests.EditMode
             PromptText.AppendRoleAndMeeting(s, sim, sim.Residents[0]);
             Assert.That(s.ToString(), Does.Not.Contain("With no"));
         }
+    
+        [Test]
+        public void ThePrompts_SayHowTheCampIsDoing()
+        {
+            var sim = NewGame();
+            var living = sim.Residents.Count;
+            foreach (var r in sim.Residents.Take(8))
+            {
+                r.Needs[NeedType.Hunger] = 5;
+            }
+
+            sim.Residents[0].Needs[NeedType.Thirst] = 5;
+            var status = PromptText.CampStatus(sim);
+            Assert.That(status, Does.StartWith("How the camp is doing: badly."));
+            Assert.That(status, Does.Contain($"of {living} people, 8 are starving, 1 is parched with thirst"));
+            Assert.That(status, Does.Contain("the store has 0 meals and no portions of clean water"));
+            Assert.That(DecisionPrompt.UserText(sim, sim.Residents[1], sim.FreeTimeOptionsFor(sim.Residents[1]), new List<TinyCity.Simulation.Memory.MemoryRecord>()), Does.Contain(status));
+
+            foreach (var r in sim.Residents)
+            {
+                r.Needs[NeedType.Hunger] = 90;
+                r.Needs[NeedType.Thirst] = 90;
+            }
+
+            sim.Food.Store.Water = living;
+            sim.Food.Store.Food.Add(TinyCity.Simulation.Economy.FoodKind.Meal, living, sim.Time.Day + 3);
+            Assert.That(PromptText.CampStatus(sim), Does.StartWith($"How the camp is doing: well. Right now all {living} are keeping up"));
+        }
     }
 }

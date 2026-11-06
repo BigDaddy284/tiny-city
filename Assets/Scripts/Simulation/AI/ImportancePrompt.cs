@@ -15,7 +15,11 @@ namespace TinyCity.Simulation.AI
         /// <summary>The most memories rated in one request.</summary>
         public const int MaxPerRequest = 8;
 
-        public const int MaxTokens = 200;
+        /// <summary>
+        /// Owner's log of 6 November: 200 cut off answers for eight memories, which the model lays out over about
+        /// 450 characters, so the list was left unfinished.
+        /// </summary>
+        public const int MaxTokens = 400;
         public const double Temperature = 0.2;
 
         public static string BuildBody(string model, TownSimulation sim, Resident r, IReadOnlyList<MemoryRecord> memories)

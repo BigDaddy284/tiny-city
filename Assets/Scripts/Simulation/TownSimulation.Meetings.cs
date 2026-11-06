@@ -299,9 +299,9 @@ namespace TinyCity.Simulation
             }
             else if (activity == ActivityCatalog.PurifyWater)
             {
-                var made = Math.Min(FoodRules.PurifyPortions, FoodRules.MaxCleanWater - r.CleanWater);
-                r.CleanWater += made;
-                r.AddLog(Time, made > 0 ? $"Cleaned {made} portion{(made == 1 ? string.Empty : "s")} of water" : "Cleaned water, but couldn't carry any more");
+                var made = Math.Min(FoodRules.PurifyPortions, CampStore.MaxWater - Food.Store.Water);
+                Food.Store.Water += made;
+                r.AddLog(Time, made > 0 ? $"Cleaned {made} portion{(made == 1 ? string.Empty : "s")} of water and put it in the camp store" : "Cleaned water, but the camp store was full");
             }
         }
     }

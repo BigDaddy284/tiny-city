@@ -27,6 +27,64 @@ namespace TinyCity.Simulation.AI
         public const string DirtyWater = "The pond's water is dirty: nobody can drink it, and only the water purifier may touch it. "
             + "Clean water from the water purifier is the only thing to drink or wash with, and food can only be eaten once a cook has made it into meals.";
 
+        /// <summary>Below this a need counts as badly neglected in <see cref="CampStatus"/>.</summary>
+        public const double BadNeed = 20;
+
+        /// <summary>Below this health counts as failing in <see cref="CampStatus"/>.</summary>
+        public const double BadHealth = 40;
+
+        /// <summary>
+        /// Owner's choice of 6 November ("shared store plus camp status"): one line on how everyone is doing, such as
+        /// "How the camp is doing: badly. 6 of 20 are starving, 4 are parched, 3 are in poor health; the store has 0
+        /// meals and no clean water." It states the stakes and leaves what to do about them to each resident.
+        /// </summary>
+        public static string CampStatus(TownSimulation sim)
+        {
+            var living = sim.Residents.Where(o => o.IsAlive).ToList();
+            if (living.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var starving = living.Count(o => o.Needs[NeedType.Hunger] < BadNeed);
+            var parched = living.Count(o => o.Needs[NeedType.Thirst] < BadNeed);
+            var filthy = living.Count(o => o.Needs[NeedType.Hygiene] < BadNeed);
+            var ill = living.Count(o => o.Health < BadHealth);
+            var meals = sim.Food.Store.Food.Count(Economy.FoodKind.Meal);
+            var water = sim.Food.Store.Water;
+            var troubles = new List<string>();
+            if (starving > 0)
+            {
+                troubles.Add($"{starving} {(starving == 1 ? "is" : "are")} starving");
+            }
+
+            if (parched > 0)
+            {
+                troubles.Add($"{parched} {(parched == 1 ? "is" : "are")} parched with thirst");
+            }
+
+            if (filthy > 0)
+            {
+                troubles.Add($"{filthy} {(filthy == 1 ? "is" : "are")} filthy");
+            }
+
+            if (ill > 0)
+            {
+                troubles.Add($"{ill} {(ill == 1 ? "is" : "are")} in poor health");
+            }
+
+            var worst = System.Math.Max(System.Math.Max(starving, parched), ill);
+            var verdict = troubles.Count == 0 && meals >= living.Count && water >= living.Count ? "well"
+                : worst * 3 >= living.Count ? "badly"
+                : troubles.Count == 0 ? "all right for now"
+                : "not well";
+            var people = troubles.Count == 0 ? $"all {living.Count} are keeping up" : $"of {living.Count} people, {string.Join(", ", troubles)}";
+            return $"How the camp is doing: {verdict}. Right now {people}; the store has {meals} meal{(meals == 1 ? string.Empty : "s")} and {(water == 0 ? "no" : water.ToString())} portion{(water == 1 ? string.Empty : "s")} of clean water for everyone.";
+        }
+
+        /// <summary>How the camp's shared store works, for every prompt that shows it.</summary>
+        public const string CampStoreText = "Fish and vegetables that are caught or picked, meals that are cooked and water that is cleaned all go into the camp store, and anyone can eat a meal, drink or wash from it; cooks cook what is in it. When it is empty, nobody eats or drinks until those roles fill it again.";
+
         public static string Persona(Resident r, TownSimulation sim)
         {
             // No city and no jobs, only the open land, what the player told everyone, and the role they chose.
@@ -192,7 +250,9 @@ namespace TinyCity.Simulation.AI
         public static void AppendFood(StringBuilder sb, TownSimulation sim, Resident r)
         {
             sb.AppendLine($"Your food: {r.Food.Describe(sim.Time.Day)}.");
-            sb.Append("Nobody hands out food in this city: every meal is grown or caught by someone, and vegetables and fish have to be cooked into meals before anyone can eat them. People can sell food at a market stall or give or sell it to each other in a chat, if they choose to. Food goes off after a few days.");
+            sb.AppendLine($"The camp store, shared by everyone: {sim.Food.Store.Describe(sim.Time.Day)}. {CampStoreText}");
+            sb.AppendLine(CampStatus(sim));
+            sb.Append("Nobody hands out food in this city: every meal is grown or caught by someone, and vegetables and fish have to be cooked into meals before anyone can eat them. People can also give food to each other in a chat. Food goes off after a few days.");
             var plots = sim.World.Objects.Where(o => o.Type == World.ObjectType.GardenPlot).ToList();
             if (plots.Count > 0)
             {

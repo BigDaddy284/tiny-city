@@ -80,9 +80,9 @@ namespace TinyCity.Tests.EditMode
             Do(sim, ActivityCatalog.WaterCrops);
             Assert.That(sim.Food.CropAt(plot).IsReady, Is.True);
 
-            var before = r.Food.Count(FoodKind.Vegetables);
+            var before = sim.Food.Store.Food.Count(FoodKind.Vegetables);
             Do(sim, ActivityCatalog.Harvest);
-            Assert.That(r.Food.Count(FoodKind.Vegetables), Is.EqualTo(before + FoodRules.HarvestPortions));
+            Assert.That(sim.Food.Store.Food.Count(FoodKind.Vegetables), Is.EqualTo(before + FoodRules.HarvestPortions), "picked crops go to the camp store");
             Assert.That(sim.Food.CropAt(plot), Is.Null);
             Assert.That(sim.Memories.ForResident(r.Id).Any(m => m.Summary.StartsWith("I picked")), Is.True);
         }
@@ -134,7 +134,7 @@ namespace TinyCity.Tests.EditMode
                 sim.Tick();
             }
 
-            Assert.That(r.Food.Count(FoodKind.Vegetables), Is.EqualTo(FoodRules.HarvestPortions));
+            Assert.That(sim.Food.Store.Food.Count(FoodKind.Vegetables), Is.EqualTo(FoodRules.HarvestPortions));
             Assert.That(sim.Food.Patches, Is.Empty, "the patch is gone once picked");
             Assert.That(sim.World.TryGetObject(patch.Id, out _), Is.False);
             Assert.That(sim.GroundProblem(r, patch.Location), Is.Null, "and the ground is free again");
@@ -171,14 +171,23 @@ namespace TinyCity.Tests.EditMode
             sim.Tick();
             r.Food.Clear();
             Do(sim, ActivityCatalog.CatchFish);
-            Assert.That(r.Food.Count(FoodKind.Fish), Is.EqualTo(FoodRules.CatchPortions));
+            var store = sim.Food.Store.Food;
+            Assert.That(store.Count(FoodKind.Fish), Is.EqualTo(FoodRules.CatchPortions), "the catch goes to the camp store");
+            Assert.That(r.Food.Total, Is.EqualTo(0));
 
             Assert.That(ActivityCatalog.TryGet("eat-raw", out _), Is.False, "owner, 6 November: raw food can't be eaten");
             Assert.That(sim.Planner.FreeTimeOptions(r).Any(o => o.Activity == ActivityCatalog.EatMeal), Is.False, "fish must be cooked first");
 
             Do(sim, ActivityCatalog.Cook);
-            Assert.That(r.Food.Raw, Is.EqualTo(0));
-            Assert.That(r.Food.Count(FoodKind.Meal), Is.EqualTo(FoodRules.CatchPortions));
+            Assert.That(store.Raw, Is.EqualTo(0), "the cook takes from the store");
+            Assert.That(store.Count(FoodKind.Meal), Is.EqualTo(FoodRules.CatchPortions), "and the meals go back in it");
+
+            Do(sim, ActivityCatalog.EatMeal);
+            Assert.That(store.Count(FoodKind.Meal), Is.EqualTo(FoodRules.CatchPortions - 1), "anyone eats from the store");
+
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld());
+            Assert.That(loaded.Warnings, Is.Empty);
+            Assert.That(loaded.Simulation.Food.Store.Food.Count(FoodKind.Meal), Is.EqualTo(store.Count(FoodKind.Meal)), "the camp store is saved");
         }
 
         [Test]

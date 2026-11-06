@@ -158,7 +158,7 @@ namespace TinyCity.Tests.EditMode
             r.Food.Clear();
             r.Belongings.SetTool(ToolKind.FishingRod, CraftingRules.UsesFor(1));
             Do(sim, ActivityCatalog.CatchFish);
-            Assert.That(r.Food.Count(FoodKind.Fish), Is.EqualTo(FoodRules.CatchPortions + CraftingRules.RodExtraPortions));
+            Assert.That(sim.Food.Store.Food.Count(FoodKind.Fish), Is.EqualTo(FoodRules.CatchPortions + CraftingRules.RodExtraPortions));
             Assert.That(r.Belongings.UsesLeft(ToolKind.FishingRod), Is.EqualTo(CraftingRules.UsesFor(1) - 1));
 
             r.Belongings.SetTool(ToolKind.Hoe, CraftingRules.UsesFor(1));
@@ -166,9 +166,9 @@ namespace TinyCity.Tests.EditMode
             Do(sim, ActivityCatalog.WaterCrops);
             sim.Advance(24 * 60);
             Do(sim, ActivityCatalog.WaterCrops);
-            r.Food.Clear();
+            sim.Food.Store.Food.Clear();
             Do(sim, ActivityCatalog.Harvest);
-            Assert.That(r.Food.Count(FoodKind.Vegetables), Is.EqualTo(FoodRules.HarvestPortions + CraftingRules.HoeExtraPortions));
+            Assert.That(sim.Food.Store.Food.Count(FoodKind.Vegetables), Is.EqualTo(FoodRules.HarvestPortions + CraftingRules.HoeExtraPortions));
         }
 
         [Test]
