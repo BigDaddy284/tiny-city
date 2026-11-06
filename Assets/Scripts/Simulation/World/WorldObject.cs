@@ -87,8 +87,11 @@ namespace TinyCity.Simulation.World
         {
             switch (type)
             {
-                case ObjectType.Bench:
+                // Owner's log, 6 November: with only the pond to drink from, twenty people kept finding its three
+                // spots full by the time their answer came, so each spot round the pond takes four.
                 case ObjectType.FishingSpot:
+                    return 4;
+                case ObjectType.Bench:
                 case ObjectType.Workbench:
                 case ObjectType.MarketStall:
                 case ObjectType.Woodland:

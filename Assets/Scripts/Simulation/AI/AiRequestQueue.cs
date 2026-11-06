@@ -125,6 +125,54 @@ namespace TinyCity.Simulation.AI
 
         public AiQueueStats Stats { get; } = new AiQueueStats();
 
+        /// <summary>
+        /// How long a request of this kind (its key up to the colon, such as <c>dayplan</c>) may take: like
+        /// <see cref="CurrentTimeoutSeconds"/>, but from the answer times of its own kind, because a day plan takes
+        /// far longer to write than a chat line (owner's log, 6 November: most day plans were given up on while
+        /// short lines set the pace). Until a kind has been answered a few times, the setting applies.
+        /// </summary>
+        public double TimeoutFor(AiRequest request)
+        {
+            var kind = KindOf(request?.Key);
+            return !kindLatency.TryGetValue(kind, out var seen) || seen.count < AdaptiveTimeoutAfterCalls
+                ? TimeoutSeconds
+                : Math.Min(TimeoutSeconds, Math.Max(MinAdaptiveTimeoutSeconds, AdaptiveTimeoutFactor * seen.total / seen.count));
+        }
+
+        /// <summary>A request key's kind: the part before the first colon.</summary>
+        public static string KindOf(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                return string.Empty;
+            }
+
+            var colon = key.IndexOf(':');
+            return colon < 0 ? key : key.Substring(0, colon);
+        }
+
+        private readonly Dictionary<string, (double total, int count)> kindLatency = new Dictionary<string, (double total, int count)>();
+
+        private void RecordKindLatency(AiRequest request, double seconds)
+        {
+            var kind = KindOf(request.Key);
+            kindLatency.TryGetValue(kind, out var seen);
+            kindLatency[kind] = (seen.total + seconds, seen.count + 1);
+        }
+
+        /// <summary>Tells <see cref="Answered"/> about a request that got no usable answer at all, so the AI log shows timeouts too.</summary>
+        private void ReportFailure(AiRequest request, string reason)
+        {
+            try
+            {
+                Answered?.Invoke(request, string.Empty, AiReplyCheck.Invalid(reason));
+            }
+            catch (Exception)
+            {
+                // The log must never stop the game.
+            }
+        }
+
         /// <summary>The oldest request being answered now, or null.</summary>
         public AiRequest Active => active.Count == 0 ? null : active[0].Request;
 
@@ -240,12 +288,13 @@ namespace TinyCity.Simulation.AI
 
             if (!slot.Call.IsDone)
             {
-                var limit = CurrentTimeoutSeconds;
+                var limit = TimeoutFor(request);
                 if (now - slot.SentAt > limit)
                 {
                     slot.Call.Cancel();
                     active.Remove(slot);
                     Stats.TimedOut++;
+                    ReportFailure(request, $"no answer within {limit:0} seconds (attempt {request.Attempts} of {MaxAttempts})");
                     RetryOrGiveUp(request, $"no answer within {limit:0} seconds", now);
                 }
 
@@ -255,10 +304,12 @@ namespace TinyCity.Simulation.AI
             var call = slot.Call;
             active.Remove(slot);
             Stats.RecordLatency(Math.Max(0, now - slot.SentAt));
+            RecordKindLatency(request, Math.Max(0, now - slot.SentAt));
             if (!call.Succeeded)
             {
                 Stats.TransportErrors++;
                 Stats.ConsecutiveTransportFailures++;
+                ReportFailure(request, $"the request failed: {(string.IsNullOrEmpty(call.Error) ? "no reason given" : call.Error)}");
                 RetryOrGiveUp(request, string.IsNullOrEmpty(call.Error) ? "the request failed" : call.Error, now);
                 return;
             }

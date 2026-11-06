@@ -50,7 +50,13 @@ namespace TinyCity.Simulation.AI
 
         /// <summary>Tiny City 2: the plan day each resident was last asked to plan, and the day a plan was given up on.</summary>
         private readonly Dictionary<string, int> requestedPlans = new Dictionary<string, int>();
-        private readonly Dictionary<string, int> skippedPlans = new Dictionary<string, int>();
+        private readonly Dictionary<string, (int day, double retryAt)> skippedPlans = new Dictionary<string, (int day, double retryAt)>();
+
+        /// <summary>
+        /// A day plan given up on (no answer in time, or none usable) is asked for again after this many real seconds,
+        /// while the resident gets on with their choices, so nobody goes a whole day without a plan or a role.
+        /// </summary>
+        public const double DayPlanRetrySeconds = 60;
 
         /// <summary>
         /// Tiny City 2's AI budget: a resident's new memories are rated once there are this many to rate in one
@@ -553,8 +559,14 @@ namespace TinyCity.Simulation.AI
             }
 
             var day = DayPlan.DayFor(sim.Time);
-            if (skippedPlans.TryGetValue(r.Id, out var skipped) && skipped == day)
+            if (skippedPlans.TryGetValue(r.Id, out var skipped) && skipped.day == day)
             {
+                if (now >= skipped.retryAt)
+                {
+                    skippedPlans[r.Id] = (day, double.MaxValue);
+                    Queue.Enqueue(DayPlanRequest(sim, r, day), now);
+                }
+
                 return false;
             }
 
@@ -958,7 +970,7 @@ namespace TinyCity.Simulation.AI
                 () => Simulation == sim && r.IsAlive && DayPlan.DayFor(sim.Time) == day && r.DayPlan?.Day != day,
                 reason =>
                 {
-                    skippedPlans[r.Id] = day;
+                    skippedPlans[r.Id] = (day, lastNow + DayPlanRetrySeconds);
                     AddEvent($"{r.FirstName} goes without a plan today: {reason}");
                 });
         }

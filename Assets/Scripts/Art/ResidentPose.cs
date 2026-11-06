@@ -146,6 +146,8 @@ namespace TinyCity.Art
             {
                 case ObjectType.Bench when seat == 1: return new Placement(0.68, 0.5, 12, Stance.Sitting, Facing.DownLeft);
                 case ObjectType.FishingSpot when seat == 1: return new Placement(0.7, 0.26, 4, Stance.Standing, Facing.DownRight);
+                case ObjectType.FishingSpot when seat == 2: return new Placement(0.45, 0.62, 4, Stance.Standing, Facing.DownRight);
+                case ObjectType.FishingSpot when seat == 3: return new Placement(0.45, 0.38, 4, Stance.Standing, Facing.DownRight);
                 case ObjectType.MarketStall when seat == 1: return new Placement(0.2, 1.0, 0, Stance.Standing, Facing.UpRight);
                 case ObjectType.Workbench:
                     return seat <= 2 ? new Placement(seat == 1 ? 0.2 : 0.8, 1.0, 0, Stance.Standing, Facing.UpRight) : (Placement?)null;

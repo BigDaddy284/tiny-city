@@ -195,7 +195,7 @@ namespace TinyCity.Tests.EditMode
             var now = 0.0;
             for (var i = 0; i < AiRequestQueue.AdaptiveTimeoutAfterCalls; i++)
             {
-                slowQueue.Enqueue(Request($"quick-{i}", residentId: $"res-{i}"), now);
+                slowQueue.Enqueue(Request($"quick:{i}", residentId: $"res-{i}"), now);
                 slowQueue.Update(now);
                 now += 0.4;
                 transport.Calls.Last().Succeed("{}");
@@ -204,7 +204,7 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(slowQueue.CurrentTimeoutSeconds, Is.EqualTo(AiRequestQueue.MinAdaptiveTimeoutSeconds), "0.4 s answers: 6 × 0.4 is under the 10 s floor");
 
-            slowQueue.Enqueue(Request("lost"), now);
+            slowQueue.Enqueue(Request("quick:lost"), now);
             slowQueue.Update(now);
             slowQueue.Update(now + 9);
             Assert.That(slowQueue.Active, Is.Not.Null, "still waiting at 9 s");
@@ -214,6 +214,35 @@ namespace TinyCity.Tests.EditMode
 
             var cautious = new AiRequestQueue(transport, "http://ollama/api/chat", timeoutSeconds: 5, maxAttempts: 1);
             Assert.That(cautious.CurrentTimeoutSeconds, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void EachKindOfRequest_HasItsOwnTimeout_SoLongAnswersArentCutShortByQuickOnes()
+        {
+            var queue = new AiRequestQueue(transport, "http://ollama/api/chat", timeoutSeconds: 120, maxAttempts: 1, maxPending: 16);
+            var logged = new List<string>();
+            queue.Answered = (request, response, check) => logged.Add($"{request.Key} {check.Detail}");
+            var now = 0.0;
+            for (var i = 0; i < AiRequestQueue.AdaptiveTimeoutAfterCalls; i++)
+            {
+                queue.Enqueue(Request($"dialogue:{i}", residentId: $"res-{i}"), now);
+                queue.Update(now);
+                now += 0.5;
+                transport.Calls.Last().Succeed("{}");
+                queue.Update(now);
+            }
+
+            Assert.That(queue.TimeoutFor(Request("dialogue:x")), Is.EqualTo(AiRequestQueue.MinAdaptiveTimeoutSeconds));
+            Assert.That(queue.TimeoutFor(Request("dayplan:res-1")), Is.EqualTo(120), "day plans haven't been timed yet");
+
+            queue.Enqueue(Request("dayplan:res-1"), now);
+            queue.Update(now);
+            queue.Update(now + 30);
+            Assert.That(queue.Active, Is.Not.Null, "a day plan isn't held to the chat lines' 10 seconds");
+            queue.Update(now + 121);
+            Assert.That(queue.Active, Is.Null);
+            Assert.That(logged.Last(), Does.StartWith("dayplan:res-1 no answer within 120 seconds"), "timeouts reach the AI log");
+            Assert.That(AiRequestQueue.KindOf("insight:res-0002"), Is.EqualTo("insight"));
         }
 
         [Test]

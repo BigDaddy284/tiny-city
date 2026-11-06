@@ -36,14 +36,17 @@ namespace TinyCity.Simulation.AI
                 {
                     ["ratings"] = new Dictionary<string, object>
                     {
+                        // Owner's log, 6 November: a small model counted "1", "2", "3"… until it ran out of words, so
+                        // the ids are only those asked about and the list is no longer than the memories.
                         ["type"] = "array",
+                        ["maxItems"] = memories.Count,
                         ["items"] = new Dictionary<string, object>
                         {
                             ["type"] = "object",
                             ["properties"] = new Dictionary<string, object>
                             {
-                                ["id"] = new Dictionary<string, object> { ["type"] = "string" },
-                                ["importance"] = new Dictionary<string, object> { ["type"] = "integer" },
+                                ["id"] = new Dictionary<string, object> { ["type"] = "string", ["enum"] = memories.Select(m => (object)m.Id).ToList() },
+                                ["importance"] = new Dictionary<string, object> { ["type"] = "integer", ["minimum"] = 1, ["maximum"] = 10 },
                             },
                             ["required"] = new List<object> { "id", "importance" },
                         },
