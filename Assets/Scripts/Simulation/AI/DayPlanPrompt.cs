@@ -37,9 +37,13 @@ namespace TinyCity.Simulation.AI
                 ? "You have no job."
                 : $"Your job: {r.Job.Title.ToLowerInvariant()}, {Clock(r.Job.StartMinuteOfDay)} to {Clock(r.Job.EndMinuteOfDay)} on {r.Job.DaysText()}. Today is {sim.Time.Weekday}.");
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
-            if (!sim.FoodMustBeMade || sim.MoneyInUse)
+            if (!sim.FoodMustBeMade)
             {
                 sb.AppendLine($"Money: {PromptText.Purse(r, sim)}.");
+            }
+            else
+            {
+                sb.AppendLine(PromptText.NoMoney);
             }
 
             PromptText.AppendFood(sb, sim, r);

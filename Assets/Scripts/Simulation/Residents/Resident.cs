@@ -183,12 +183,6 @@ namespace TinyCity.Simulation.Residents
         public string OwnsBusinessId { get; internal set; }
 
         /// <summary>
-        /// Tiny City 2: what they ask for each portion when they run a stall, in pence, chosen by them each time they
-        /// set one up (0 gives it away). Saved.
-        /// </summary>
-        public long StallPricePence { get; internal set; }
-
-        /// <summary>
         /// Tiny City 2: the role they have chosen to take up from the world's <see cref="WorldBrief.Roles"/>, or null
         /// for none. Their own choice, made in their morning plan; it changes nothing they can do. Saved.
         /// </summary>

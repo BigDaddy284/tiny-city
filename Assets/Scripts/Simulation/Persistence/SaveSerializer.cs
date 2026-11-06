@@ -470,7 +470,6 @@ namespace TinyCity.Simulation.Persistence
                 ["incomeLabel"] = r.IncomeLabel,
                 ["about"] = r.About,
                 ["ownsBusinessId"] = r.OwnsBusinessId,
-                ["stallPrice"] = r.StallPricePence,
                 ["role"] = r.Role,
                 ["cleanWater"] = r.CleanWater,
                 ["outlook"] = r.Outlook,
@@ -650,7 +649,6 @@ namespace TinyCity.Simulation.Persistence
             resident.WeeklyIncomePence = Math.Max(0, GetLong(data, "weeklyIncome", 0));
             resident.IncomeLabel = TextRules.Clean(GetString(data, "incomeLabel"), 40);
             resident.About = TextRules.Clean(GetString(data, "about"), ResidentProfile.MaxAboutLength);
-            resident.StallPricePence = Math.Max(0, GetLong(data, "stallPrice", 0));
             var role = TextRules.Clean(GetString(data, "role"), WorldBrief.MaxRoleNameLength);
             resident.Role = role.Length == 0 ? null : role;
             resident.CleanWater = Math.Min(FoodRules.MaxCleanWater, Math.Max(0, GetInt(data, "cleanWater", 0)));

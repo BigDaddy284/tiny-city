@@ -158,7 +158,8 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.Space(6f);
-            tab = GUILayout.Toolbar(tab, Simulation.FoodMustBeMade ? TabNamesV2 : TabNames);
+            var tabNames = Simulation.FoodMustBeMade ? TabNamesV2 : TabNames;
+            tab = GUILayout.Toolbar(tab, tabNames, Fitted(tabNames, (Width - 28f) / tabNames.Length - GUI.skin.button.margin.horizontal));
             scroll = BeginVerticalScroll(scroll);
             // On the Now tab the name, who they are, where and what they're doing sit on the left, with their health
             // and needs as bars beside them (owner, 5 November).
@@ -269,19 +270,21 @@ namespace TinyCity.Runtime
             var hasRoles = Simulation.Brief.Roles.Count > 0;
             var count = GameController.Speeds.Length + (hasRoles ? 2 : 1);
             var gap = GUI.skin.button.margin.horizontal;
-            var each = GUILayout.Width(Mathf.Max(20f, ((Width - 28f) / count) - gap));
+            var eachWidth = Mathf.Max(20f, ((Width - 28f) / count) - gap);
+            var each = GUILayout.Width(eachWidth);
+            var row = Fitted(RowLabels, eachWidth);
             GUILayout.BeginHorizontal();
             for (var i = 0; i < GameController.Speeds.Length; i++)
             {
                 var label = GameController.Speeds[i] == 0 ? "Pause" : $"{GameController.Speeds[i]}x";
-                if (GUILayout.Toggle(game.SpeedIndex == i, label, GUI.skin.button, each) && game.SpeedIndex != i)
+                if (GUILayout.Toggle(game.SpeedIndex == i, label, row, each) && game.SpeedIndex != i)
                 {
                     game.SetSpeed(i);
                 }
             }
 
             // The people list and the roles list drop down under this row, one at a time.
-            var openPeople = GUILayout.Toggle(peopleOpen, peopleOpen ? "People ▲" : "People ▼", GUI.skin.button, each);
+            var openPeople = GUILayout.Toggle(peopleOpen, peopleOpen ? "People ▲" : "People ▼", row, each);
             if (openPeople != peopleOpen)
             {
                 peopleOpen = openPeople;
@@ -290,7 +293,7 @@ namespace TinyCity.Runtime
 
             if (hasRoles)
             {
-                var openRoles = GUILayout.Toggle(rolesOpen, rolesOpen ? "Roles ▲" : "Roles ▼", GUI.skin.button, each);
+                var openRoles = GUILayout.Toggle(rolesOpen, rolesOpen ? "Roles ▲" : "Roles ▼", row, each);
                 if (openRoles != rolesOpen)
                 {
                     rolesOpen = openRoles;
@@ -326,18 +329,41 @@ namespace TinyCity.Runtime
         private void DrawRoles(Resident r)
         {
             rolesScroll = BeginVerticalScroll(rolesScroll, GUILayout.Height(listHeight));
-            foreach (var role in Simulation.Brief.Roles)
+
+            // Owner, 6 November: two columns, the first half of the roles on the left and the rest on the right.
+            var roles = Simulation.Brief.Roles.ToList();
+            var perColumn = (roles.Count + 1) / 2;
+            var columnWidth = (ScrollContentWidth() - 6f) / 2f;
+            GUILayout.BeginHorizontal();
+            for (var column = 0; column < 2; column++)
             {
-                var holders = Simulation.Residents.Where(o => o.IsAlive && o.Role == role.Name).OrderBy(o => o.FirstName, StringComparer.Ordinal).ToList();
-                GUILayout.Label($"{Capital(role.Name)}{(holders.Count == 0 ? ": nobody yet" : string.Empty)}", styles.Text);
-                foreach (var holder in holders)
+                GUILayout.BeginVertical(GUILayout.Width(columnWidth));
+                foreach (var role in roles.Skip(column * perColumn).Take(perColumn))
                 {
-                    if (GUILayout.Toggle(holder == r, "   " + holder.FullName, GUI.skin.button) && holder != r)
+                    var holders = Simulation.Residents.Where(o => o.IsAlive && o.Role == role.Name).OrderBy(o => o.FirstName, StringComparer.Ordinal).ToList();
+                    GUILayout.Label(Capital(role.Name), styles.Text);
+                    if (holders.Count == 0)
                     {
-                        Pick(holder);
+                        GUILayout.Label("   nobody yet", styles.Small);
+                    }
+
+                    foreach (var holder in holders)
+                    {
+                        if (GUILayout.Toggle(holder == r, holder.FullName, GUI.skin.button, GUILayout.Width(columnWidth)) && holder != r)
+                        {
+                            Pick(holder);
+                        }
                     }
                 }
+
+                GUILayout.EndVertical();
+                if (column == 0)
+                {
+                    GUILayout.Space(6f);
+                }
             }
+
+            GUILayout.EndHorizontal();
 
             var without = Simulation.Residents.Count(o => o.IsAlive && o.Role == null);
             GUILayout.Label($"No role: {without}", styles.Small);
@@ -385,6 +411,12 @@ namespace TinyCity.Runtime
             {
                 expanded = false;
                 search = string.Empty;
+                return;
+            }
+
+            if (Simulation.AiRunsEverything)
+            {
+                DrawNames(r);
                 return;
             }
 
@@ -450,6 +482,30 @@ namespace TinyCity.Runtime
         }
 
         /// <summary>
+        /// Tiny City 2's People list (owner, 6 November: no search, filters or orders, "just the peoples names to click
+        /// on"): everyone alive by first name, two to a row.
+        /// </summary>
+        private void DrawNames(Resident r)
+        {
+            peopleScroll = BeginVerticalScroll(peopleScroll, GUILayout.Height(listHeight));
+            var shown = PeopleList.Of(Simulation.Residents, PeopleFilter.Living, PeopleOrder.FirstName);
+            if (shown.Count == 0)
+            {
+                GUILayout.Label("Nobody here.", styles.Small);
+            }
+
+            var labels = shown.Select(o => o.FullName).ToArray();
+            var picked = GUILayout.SelectionGrid(shown.IndexOf(r), labels, 2, GUILayout.Width(ScrollContentWidth()));
+            if (picked >= 0 && picked < shown.Count && shown[picked] != r)
+            {
+                Pick(shown[picked]);
+            }
+
+            EndVerticalScroll();
+            ListSplitter();
+        }
+
+        /// <summary>
         /// The expanded people view: everyone (as filtered and sorted above, first name A–Z to start with) in a grid
         /// that fills the rest of the side panel instead of the resident's tabs. Picking someone keeps the grid open.
         /// </summary>
@@ -471,6 +527,46 @@ namespace TinyCity.Runtime
             }
 
             EndVerticalScroll();
+        }
+
+        /// <summary>The longest words in the speed row, so it is fitted to them.</summary>
+        private static readonly string[] RowLabels = { "Pause", "People ▼", "Roles ▼" };
+
+        private static readonly Dictionary<string, GUIStyle> fittedStyles = new Dictionary<string, GUIStyle>();
+
+        /// <summary>
+        /// A button style whose text is as big as it can be (up to the skin's own size) while every one of
+        /// <paramref name="labels"/> fits in <paramref name="width"/> (owner, 6 November: the text fits the buttons at the
+        /// smallest panel width).
+        /// </summary>
+        private static GUIStyle Fitted(string[] labels, float width)
+        {
+            var key = $"{GUI.skin.GetHashCode()}|{Mathf.RoundToInt(width)}|{string.Join("|", labels)}";
+            if (fittedStyles.TryGetValue(key, out var cached))
+            {
+                return cached;
+            }
+
+            var style = new GUIStyle(GUI.skin.button) { clipping = TextClipping.Clip };
+            var size = style.fontSize > 0 ? style.fontSize : 13;
+            style.padding = new RectOffset(Mathf.Min(style.padding.left, 4), Mathf.Min(style.padding.right, 4), style.padding.top, style.padding.bottom);
+            for (; size > 8; size--)
+            {
+                style.fontSize = size;
+                if (labels.All(o => style.CalcSize(new GUIContent(o)).x <= width))
+                {
+                    break;
+                }
+            }
+
+            style.fontSize = size;
+            if (fittedStyles.Count > 64)
+            {
+                fittedStyles.Clear();
+            }
+
+            fittedStyles[key] = style;
+            return style;
         }
 
         /// <summary>
@@ -799,7 +895,6 @@ namespace TinyCity.Runtime
             {
                 GUILayout.Label(wanted == TownSimulation.RoleNone ? "Asked to give up their role at the next meeting" : $"Asked to become the {wanted} at the next meeting", styles.Small);
             }
-            GUILayout.Label($"Money: {Money.Format(r.MoneyPence)}", styles.Text);
             GUILayout.Space(4f);
             GUILayout.Label("CARRYING", styles.Section);
             if (r.Food.Total == 0)
@@ -868,25 +963,15 @@ namespace TinyCity.Runtime
             {
                 GUILayout.Label($"Day {trade.Time.Day} {trade.Time.ClockText}  {trade.Summary}", styles.Small);
             }
-
-            GUILayout.Space(4f);
-            GUILayout.Label("MONEY IN AND OUT", styles.Section);
-            var payments = Simulation.Economy.Ledger.For(r.Id).Reverse().Take(10).ToList();
-            if (payments.Count == 0)
-            {
-                GUILayout.Label("No money has changed hands yet.", styles.Small);
-            }
-
-            foreach (var payment in payments)
-            {
-                var sign = payment.AmountPence >= 0 ? "+" : string.Empty;
-                GUILayout.Label($"Day {payment.Time.Day} {payment.Time.ClockText}  {sign}{Money.Format(payment.AmountPence)}  {payment.Description}", styles.Small);
-            }
         }
 
         private void DrawTimeline(Resident r)
         {
-            GUILayout.Label($"Born on day {HealthRules.BirthdayCycleDay(r)} of each {HealthRules.DaysPerYear}-day year · {r.Personality.Describe()}", styles.Small);
+            if (!Simulation.AiRunsEverything)
+            {
+                GUILayout.Label($"Born on day {HealthRules.BirthdayCycleDay(r)} of each {HealthRules.DaysPerYear}-day year · {r.Personality.Describe()}", styles.Small);
+            }
+
             GUILayout.Label($"Hobbies: {(r.Hobbies.Count > 0 ? string.Join(", ", r.Hobbies) : "none")}", styles.Small);
             GUILayout.Label(DescribeLoveLife(r), styles.Small);
             if (!r.IsAlive)

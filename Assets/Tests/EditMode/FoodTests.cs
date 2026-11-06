@@ -249,7 +249,7 @@ namespace TinyCity.Tests.EditMode
         }
     
         [Test]
-        public void AStallHolder_NamesTheirOwnPrice_WhenTheyChooseToRunAStall()
+        public void ThereAreNoPrices_ForAStall_OrAnywhereInTinyCity2()
         {
             var sim = TestTown.WithResidents(TestTown.WeekendAfternoon);
             sim.FoodMustBeMade = true;
@@ -261,22 +261,14 @@ namespace TinyCity.Tests.EditMode
             r.ResetActivity();
             r.State = ResidentState.Deciding;
             r.PendingDecisionId = 41;
-            var option = sim.Planner.FreeTimeOptions(r, everything: true).First(o => o.ActionId == ActivityCatalog.RunStall.Id);
             var prompt = DecisionPrompt.UserText(sim, r, sim.Planner.FreeTimeOptions(r, everything: true), new TinyCity.Simulation.Memory.MemoryRecord[0]);
-            Assert.That(prompt, Does.Contain("\"price\""));
-            Assert.That(sim.ApplyDecision(r.Id, 41, option.ActionId, option.TargetId, "sell", "", pricePence: 12345), Is.EqualTo(DecisionOutcome.Applied));
-            Assert.That(r.StallPricePence, Is.EqualTo(12345), "no fixed prices: whatever they ask");
-
-            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), sim.World).Simulation;
-            Assert.That(loaded.GetResident(r.Id).StallPricePence, Is.EqualTo(12345));
-            var options = loaded.Planner.FreeTimeOptions(loaded.GetResident(sim.Residents[1].Id), everything: true);
-            var stallOption = options.First(o => o.ActionId == ActivityCatalog.RunStall.Id || o.Activity != null);
-            Assert.That(DecisionPrompt.TryParse($"{{\"action\":\"{stallOption.ActionId}\",\"target_id\":\"{stallOption.TargetId}\",\"price\":2.5}}", options, out var reply, out var parseError), Is.True, parseError);
-            Assert.That(reply.PricePence, Is.EqualTo(250));
+            Assert.That(prompt, Does.Not.Contain("\"price\"").And.Not.Contain("Money:").And.Contain(PromptText.NoMoney));
+            Assert.That(OllamaProtocol.BuildChatBody("m", "s", "u", DecisionPrompt.Schema(sim.Planner.FreeTimeOptions(r, everything: true), 3), 0.5, 100), Does.Not.Contain("price"));
+            Assert.That(DialoguePrompt.Schema().ContainsKey("properties") && !((System.Collections.Generic.Dictionary<string, object>)DialoguePrompt.Schema()["properties"]).ContainsKey("give_money"), Is.True);
         }
 
         [Test]
-        public void ASeller_AtAStall_SellsAPortionToABuyer_AndRemembersTheDay()
+        public void AStallHolder_HandsOutFood_AndRemembersTheDay()
         {
             var sim = TestTown.WithResidents(TestTown.WeekendAfternoon);
             sim.FoodMustBeMade = true;
@@ -287,20 +279,19 @@ namespace TinyCity.Tests.EditMode
             seller.Food.Add(FoodKind.Meal, 2, sim.Time.Day + 3);
             var stall = sim.World.Objects.First(o => o.Type == TinyCity.Simulation.World.ObjectType.MarketStall);
 
-            Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.BuyFood, stall, sim.Time), Is.False, "nobody is selling yet");
+            Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.BuyFood, stall, sim.Time), Is.False, "nobody is at the stall yet");
             Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.RunStall, stall, sim.Time), Is.EqualTo(buyer.Food.Total > 0));
 
             seller.ResetActivity();
-            seller.StallPricePence = 750;
             seller.TargetObjectId = stall.Id;
             seller.ActivityId = ActivityCatalog.RunStall.Id;
             seller.State = ResidentState.Performing;
             seller.MinutesRemaining = 30;
             seller.Location = stall.Location;
-            Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.BuyFood, stall, sim.Time), Is.True);
+            buyer.MoneyPence = 0;
+            Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.BuyFood, stall, sim.Time), Is.True, "no money needed");
             Assert.That(sim.Planner.CanDo(seller, ActivityCatalog.BuyFood, stall, sim.Time), Is.False, "not from yourself");
 
-            var money = (seller.MoneyPence, buyer.MoneyPence);
             var meals = buyer.Food.Count(FoodKind.Meal);
             buyer.ResetActivity();
             buyer.TargetObjectId = stall.Id;
@@ -311,20 +302,19 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(buyer.Food.Count(FoodKind.Meal), Is.EqualTo(meals + 1));
             Assert.That(seller.Food.Count(FoodKind.Meal), Is.EqualTo(1));
-            Assert.That(buyer.MoneyPence, Is.EqualTo(money.Item2 - 750), "the seller's own price");
-            Assert.That(seller.MoneyPence, Is.EqualTo(money.Item1 + 750));
-            Assert.That(sim.Economy.Ledger.All.Any(t => t.ResidentId == seller.Id && t.Kind == TransactionKind.Sale), Is.True);
+            Assert.That(buyer.MoneyPence, Is.EqualTo(0));
+            Assert.That(sim.Economy.Ledger.All.Any(), Is.False, "nothing is paid");
 
             for (var i = 0; i < 40 && seller.ActivityId == ActivityCatalog.RunStall.Id; i++)
             {
                 sim.Tick();
             }
 
-            Assert.That(sim.Memories.ForResident(seller.Id).Any(m => m.Summary.StartsWith("I sold 1 portion of food at a market stall")), Is.True);
+            Assert.That(sim.Memories.ForResident(seller.Id).Any(m => m.Summary.StartsWith("I handed out 1 portion of food at a market stall")), Is.True);
         }
 
         [Test]
-        public void FoodOfferedInAChat_MovesOnlyIfTheOtherAccepts_AndIsPaidFor()
+        public void FoodOfferedInAChat_MovesOnlyIfTheOtherAccepts()
         {
             var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
             sim.AiDecisionsEnabled = true;
@@ -335,19 +325,17 @@ namespace TinyCity.Tests.EditMode
             first.Food.Clear();
             second.Food.Clear();
             first.Food.Add(FoodKind.Fish, 3, sim.Time.Day + 2);
-            second.MoneyPence = 1000;
 
             Assert.That(DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]), Does.Contain("give_food").And.Contain("Your food: 3 fish"));
-            Assert.That(sim.ApplyConversationLine(session.Id, session.LineRequestId, first.Id, "Fancy some fish?", "warm", "fish", false, giveFood: 2, pricePence: 300), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyConversationLine(session.Id, session.LineRequestId, first.Id, "Fancy some fish?", "warm", "fish", false, giveFood: 2), Is.EqualTo(DecisionOutcome.Applied));
             Assert.That(first.Food.Total, Is.EqualTo(3), "nothing moves until they accept");
 
             WaitForLine(sim, session);
-            Assert.That(DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]), Does.Contain("offered you 2 portions of food for £3.00"));
+            Assert.That(DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]), Does.Contain("offered you 2 portions of food."));
             Assert.That(sim.ApplyConversationLine(session.Id, session.LineRequestId, second.Id, "Go on then.", "warm", "fish", false, acceptOffer: true), Is.EqualTo(DecisionOutcome.Applied));
             Assert.That(second.Food.Count(FoodKind.Fish), Is.EqualTo(2));
             Assert.That(first.Food.Count(FoodKind.Fish), Is.EqualTo(1));
-            Assert.That(second.MoneyPence, Is.EqualTo(700));
-            Assert.That(sim.Memories.ForResident(second.Id).Any(m => m.Summary.Contains("sold me 2 portions of food")), Is.True);
+            Assert.That(sim.Memories.ForResident(second.Id).Any(m => m.Summary.Contains("gave me 2 portions of food")), Is.True);
             Assert.That(session.FoodOffer, Is.Null);
 
             WaitForLine(sim, session);
@@ -384,7 +372,7 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void MoneyHandedOverInAChat_Moves_AndATaxMan_CanAskForAShare_WhichTheOtherMayRefuse()
+        public void ATaxMan_CanAskForAShare_WhichTheOtherMayRefuse()
         {
             var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
             sim.AiDecisionsEnabled = true;
@@ -397,13 +385,8 @@ namespace TinyCity.Tests.EditMode
             payer.Food.Clear();
             payer.Food.Add(FoodKind.Fish, 10, sim.Time.Day + 2);
             payer.Belongings.Add(MaterialKind.Wood, 5);
-            taxer.MoneyPence = 2000;
-            var payerMoney = payer.MoneyPence;
-
-            Assert.That(DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]), Does.Contain("\"tax\"").And.Contain("give_money"));
-            sim.ApplyConversationLine(session.Id, session.LineRequestId, taxer.Id, "Here's your wage, and I'll have my tax.", "neutral", "tax", false, giveMoneyPence: 500, taxPercent: 20);
-            Assert.That((taxer.MoneyPence, payer.MoneyPence), Is.EqualTo((1500L, payerMoney + 500)), "money moves at once");
-            Assert.That(sim.Economy.Ledger.All.Any(t => t.ResidentId == payer.Id && t.Kind == TransactionKind.Gift), Is.True);
+            Assert.That(DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]), Does.Contain("\"tax\"").And.Not.Contain("give_money"));
+            sim.ApplyConversationLine(session.Id, session.LineRequestId, taxer.Id, "I'll have my tax.", "neutral", "tax", false, taxPercent: 20);
             Assert.That(payer.Food.Total, Is.EqualTo(10), "nothing is taxed until they pay");
 
             WaitForLine(sim, session);
@@ -420,9 +403,8 @@ namespace TinyCity.Tests.EditMode
             Assert.That(payer.Food.Total, Is.EqualTo(8), "refused");
             Assert.That(sim.Memories.ForResident(taxer.Id).Any(m => m.Summary.Contains("they refused")), Is.True);
             var trades = sim.TradesOf(taxer.Id).ToList();
-            Assert.That(trades.Count, Is.EqualTo(3), "the wage, the tax paid and the tax refused are the taxer's trades");
+            Assert.That(trades.Count, Is.EqualTo(2), "the tax paid and the tax refused are the taxer's trades");
             Assert.That(trades[0].Summary, Does.Contain("they refused"), "newest first");
-            Assert.That(sim.TradesOf(payer.Id).Any(m => m.Summary.Contains("gave me")), Is.True);
 
             WaitForLine(sim, session);
             payer.Role = "farmer";
@@ -431,23 +413,17 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void MaterialsAndTools_CanBeHandedOverInAChat_AndWithNoMoneyAboutPromptsLeaveMoneyOut()
+        public void MaterialsAndTools_CanBeHandedOverInAChat_AndPromptsHaveNoMoney()
         {
             var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
             sim.AiDecisionsEnabled = true;
             sim.FoodMustBeMade = true;
             sim.Brief = WorldBrief.Default;
-            foreach (var r in sim.Residents)
-            {
-                r.MoneyPence = 0;
-            }
-
             ConversationSessionFor(sim, out var session);
             var giver = sim.GetResident(session.SpeakerId);
             var taker = sim.GetResident(session.ListenerId);
             giver.Belongings.Add(MaterialKind.Wood, 5);
             giver.Belongings.SetTool(ToolKind.Axe, 7, 2);
-            Assert.That(sim.MoneyInUse, Is.False);
             var prompt = DialoguePrompt.UserText(sim, session, new TinyCity.Simulation.Memory.MemoryRecord[0]);
             Assert.That(prompt, Does.Contain("give_item").And.Not.Contain("give_money").And.Not.Contain("Your money"));
 
@@ -480,14 +456,14 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.Residents.All(r => r.IllnessId == null), Is.True);
         }
 
-        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":2,\"price\":1.5,\"accept_food\":true}", 2, 150, true)]
-        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":99,\"price\":-4}", 99, 0, false)]
-        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":40,\"price\":250}", 40, 25000, false)]
-        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false}", 0, 0, false)]
-        public void DialogueReplies_ReadFoodOffersWithinLimits(string content, int give, long price, bool accept)
+        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":2,\"accept_food\":true}", 2, true)]
+        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":99,\"price\":-4}", 99, false)]
+        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false,\"give_food\":-3}", 0, false)]
+        [TestCase("{\"say\":\"Hi\",\"tone\":\"warm\",\"topic\":\"x\",\"end\":false}", 0, false)]
+        public void DialogueReplies_ReadFoodOffers(string content, int give, bool accept)
         {
             Assert.That(DialoguePrompt.TryParse(content, out var reply, out _), Is.True);
-            Assert.That((reply.GiveFood, reply.PricePence, reply.AcceptOffer), Is.EqualTo((give, price, accept)));
+            Assert.That((reply.GiveFood, reply.AcceptOffer), Is.EqualTo((give, accept)));
         }
 
         private static void ConversationSessionFor(TownSimulation sim, out TinyCity.Simulation.Social.ConversationSession session)

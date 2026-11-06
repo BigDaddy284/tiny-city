@@ -1,6 +1,6 @@
 {
   "format": "tiny-city-2-profiles",
-  "brief": "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Each of you can only do the work of the role you take up; without one you can only drink and wash in the dirty pond, eat raw fish and pick up fallen branches and loose stones, so you need each other. A role can only be changed by a majority vote at the weekly meeting. Look after yourself first: hunger, thirst, tiredness and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
+  "brief": "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Each of you can only do the work of the role you take up; without one you can only drink and wash in the dirty pond and catch the odd fish by hand to eat raw, so you need each other. A role can only be changed by a majority vote at the weekly meeting. Look after yourself first: hunger, thirst, tiredness and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
   "roles": [
     {
       "name": "farmer",
@@ -20,8 +20,9 @@
     },
     {
       "name": "lumberjack",
-      "about": "Only you can cut wood from the trees; everyone else can only pick up fallen branches. Better axes let you cut hardwood and then heartwood, and everyone building or making tools needs what you bring in.",
+      "about": "Only you can gather wood: fallen branches by hand, and with an axe, wood from the trees. Better axes let you cut hardwood and then heartwood, and everyone building or making tools needs what you bring in.",
       "can": [
+        "gather-sticks",
         "gather-wood",
         "gather-hardwood",
         "gather-heartwood"
@@ -29,8 +30,9 @@
     },
     {
       "name": "miner",
-      "about": "Only you can break stone from the rocks; everyone else can only pick up loose stones. Better pickaxes let you dig iron ore and then crystal, the strongest materials there are.",
+      "about": "Only you can gather stone: loose stones by hand, and with a pickaxe, stone from the rocks. Better pickaxes let you dig iron ore and then crystal, the strongest materials there are.",
       "can": [
+        "gather-loose-stones",
         "gather-stone",
         "gather-iron",
         "gather-crystal"
@@ -100,8 +102,7 @@
       "lastName": "Thornbury",
       "age": 34,
       "personality": "Kind, patient and gentle. Puts everyone else first and never complains.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0002",
@@ -109,8 +110,7 @@
       "lastName": "Bramble",
       "age": 71,
       "personality": "Nosy, chatty and opinionated. Knows everyone's business and says what he thinks.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0003",
@@ -118,8 +118,7 @@
       "lastName": "Finch",
       "age": 27,
       "personality": "Quiet, practical and controlling. Happiest fixing things, awkward with people.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0004",
@@ -127,8 +126,7 @@
       "lastName": "Pennywhistle",
       "age": 46,
       "personality": "Tidy, careful and tight-fisted. Counts everything and hates waste.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0005",
@@ -136,8 +134,7 @@
       "lastName": "Hartley",
       "age": 31,
       "personality": "Proud, warm and a bit of a show-off. Loves feeding people and wants credit for it.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0006",
@@ -145,8 +142,7 @@
       "lastName": "Lane",
       "age": 38,
       "personality": "Friendly, curious and caring. Notices when someone is struggling and keeps the peace.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0007",
@@ -154,8 +150,7 @@
       "lastName": "Marsh",
       "age": 23,
       "personality": "Restless, tough and selfish. Works hard but looks out for herself first.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0008",
@@ -163,8 +158,7 @@
       "lastName": "Okafor",
       "age": 54,
       "personality": "Calm, careful and soft-hearted. Worries about everyone and can't say no.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0009",
@@ -172,8 +166,7 @@
       "lastName": "Wren",
       "age": 19,
       "personality": "Cheerful, trusting and reckless. Makes friends fast and jumps in without thinking.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0010",
@@ -181,8 +174,7 @@
       "lastName": "Crumb",
       "age": 82,
       "personality": "Cautious, sharp-tongued and stubborn. Full of opinions and always keeps something back.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0011",
@@ -190,8 +182,7 @@
       "lastName": "Vale",
       "age": 29,
       "personality": "Strong, disciplined and bossy. Impatient with anyone who can't keep up.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0012",
@@ -199,8 +190,7 @@
       "lastName": "Brightwater",
       "age": 22,
       "personality": "Loud, fun and easily bored. Loves a crowd and hates dull work.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0013",
@@ -208,8 +198,7 @@
       "lastName": "Cho",
       "age": 20,
       "personality": "Shy, clever and stubborn. Would rather build alone than talk.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0014",
@@ -217,8 +206,7 @@
       "lastName": "Starling",
       "age": 41,
       "personality": "Shrewd, competitive and tough. Always after the best deal and hates losing.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0015",
@@ -226,8 +214,7 @@
       "lastName": "Penn",
       "age": 76,
       "personality": "Slow, steady and generous. Thinks before he acts and shares with hard workers.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0016",
@@ -235,8 +222,7 @@
       "lastName": "Calloway",
       "age": 33,
       "personality": "Fair, methodical and serious. Wants things done properly and traded honestly.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0017",
@@ -244,8 +230,7 @@
       "lastName": "Kettle",
       "age": 52,
       "personality": "Stubborn, proud and independent. Won't take orders from anyone.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0018",
@@ -253,8 +238,7 @@
       "lastName": "Reyes",
       "age": 22,
       "personality": "Eager, curious and unsettled. Keen to prove herself and tries anything once.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0019",
@@ -262,8 +246,7 @@
       "lastName": "Flint",
       "age": 61,
       "personality": "Blunt, gruff and hard-working. Has no time for talk or excuses.",
-      "about": "",
-      "money": 0
+      "about": ""
     },
     {
       "id": "res-0020",
@@ -271,8 +254,7 @@
       "lastName": "Quill",
       "age": 44,
       "personality": "Organised, encouraging and a little bossy. Gets people working together.",
-      "about": "",
-      "money": 0
+      "about": ""
     }
   ]
 }

@@ -245,16 +245,6 @@ namespace TinyCity.Simulation.Economy
             return r.Belongings.Wear(tool) ? $" (with {name}, which broke)" : $" (with {name})";
         }
 
-        /// <summary>
-        /// The highest price, in pence, an answer can name (a stall's price or a chat offer). Not a rule of the world,
-        /// only a guard against numbers too big to handle: whether anyone pays is up to them and what they have.
-        /// </summary>
-        public const long LargestPricePence = 100_000_000_000;
-
-        /// <summary>Pence for an answer's price in pounds, or 0 when it is missing, negative or absurd.</summary>
-        public static long PenceFromPounds(double pounds) =>
-            pounds > 0 && pounds * 100 <= LargestPricePence ? (long)Math.Round(pounds * 100) : 0;
-
         public static int DaysToKeep(FoodKind kind) => kind == FoodKind.Fish ? FishDays : kind == FoodKind.Meal ? MealDays : VegetableDays;
 
         public static string Portions(FoodKind kind, int n)
@@ -475,7 +465,7 @@ namespace TinyCity.Simulation.Economy
             if (a == ActivityCatalog.BuyFood)
             {
                 var seller = food.SellerAt?.Invoke(obj);
-                return seller != null && seller != r && seller.Food.Total > 0 && r.MoneyPence >= seller.StallPricePence;
+                return seller != null && seller != r && seller.Food.Total > 0;
             }
 
             return true;

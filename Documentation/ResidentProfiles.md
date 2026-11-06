@@ -27,20 +27,17 @@ Two more entries at the top of the file speak to everyone:
 The shipped roles: farmer (crops), fisher (the full catch), lumberjack (trees), miner (rocks), toolmaker
 (every tool), cook, builder (planning and building), water purifier (cleaning pond water into clean water,
 which anyone can drink and trade) and merchant (a stall), plus tax man, security enforcer and mayor, who run
-no work of their own. Without a role you can drink and wash in the dirty pond, eat raw food, catch a fish by
-hand and pick up fallen branches and loose stones. Dirty water and raw food fill less and cost a little
+no work of their own. Without a role you can drink and wash in the dirty pond, eat raw food and catch a fish by
+hand; fallen branches are the lumberjack's and loose stones the miner's. Dirty water and raw food fill less and cost a little
 health; clean water and cooked meals don't.
 
 Tax: someone in a role with `canTax` (the shipped "tax man") may, in any chat, name a percentage of the other
 person's food and materials. The other person's next line says whether they pay; if they do, that share of each
-kind (rounded down) is handed over. Nobody has to pay. Anyone can also hand money over in a chat (a gift, a wage
-for a security enforcer, a payment), and it moves at once if they have it.
+kind (rounded down) is handed over. Nobody has to pay.
 
-Barter: the shipped profiles start everyone with no money and the brief says there is none, so residents
-trade goods. In a chat anyone can hand over clean water, a material (wood, stone, hardwood, iron ore, heartwood, crystal) or
-a tool (axe, pickaxe, hoe, fishing rod; a tool only to someone without one of that kind), and food as before.
-While nobody alive has any money, the prompts leave money, prices and `give_money` out. Give someone `money`
-here and money comes back into play for everyone.
+Barter: there is no money in Tiny City 2 at all (owner, 6 November), so residents trade goods. In a chat anyone can hand over clean water, a material (wood, stone, hardwood, iron ore, heartwood, crystal) or
+a tool (axe, pickaxe, hoe, fishing rod; a tool only to someone without one of that kind), and food. A
+merchant's stall hands food out to whoever comes.
 
 Illness is switched off in Tiny City 2, so there is no doctor role.
 
@@ -68,8 +65,7 @@ saved with it.
       "lastName": "Pennywhistle",
       "age": 46,
       "about": "",
-      "personality": "Tidy, careful and tight-fisted. Counts everything and hates waste.",
-      "money": 0
+      "personality": "Tidy, careful and tight-fisted. Counts everything and hates waste."
     }
   ]
 }
@@ -82,7 +78,6 @@ saved with it.
 | `age` | A whole number from 18 to 100. |
 | `about` | Optional, up to 300 letters of background, given to the AI as the resident's own words. The shipped file leaves it empty for everyone (owner, 5 November: no backstories), and on the open land a resident with no profile has none either. |
 | `personality` | Optional, up to 200 letters: bluntly, what type of person they are, such as "Kind, patient and gentle. Puts everyone else first and never complains." In Tiny City 2 it replaces the personality traits in every prompt. |
-| `money` | Pounds they start with, from 0 to 1,000,000. |
 | `owns` | Optional. The business they start as boss of: `biz-store`, `biz-cafe`, `biz-bakery`, `biz-clinic`, `biz-bar`, `biz-cue-club`, `biz-bowling`, `biz-arcade` or `biz-gym`. Each business has at most one owner. With none, a business has no boss until someone chooses to take it on. |
 
 Only the residents listed start, in the order listed. A profile with a problem is left out or repaired, and the reason is written to `Player.log`; if no profile can be used, or the file is missing, everyone starts as designed: all twenty on the open land (fifteen in v1's city).

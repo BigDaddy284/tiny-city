@@ -11,12 +11,11 @@ namespace TinyCity.Simulation.Social
     /// <summary>Tiny City 2: food one speaker has offered the other in a chat, waiting for their answer. Not saved.</summary>
     public sealed class FoodOffer
     {
-        public FoodOffer(string fromId, string toId, int portions, long pricePence)
+        public FoodOffer(string fromId, string toId, int portions)
         {
             FromId = fromId;
             ToId = toId;
             Portions = portions;
-            PricePence = pricePence;
         }
 
         public string FromId { get; }
@@ -24,9 +23,6 @@ namespace TinyCity.Simulation.Social
         public string ToId { get; }
 
         public int Portions { get; }
-
-        /// <summary>0 for a gift.</summary>
-        public long PricePence { get; }
     }
 
     /// <summary>

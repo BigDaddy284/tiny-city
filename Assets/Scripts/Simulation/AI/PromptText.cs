@@ -11,6 +11,15 @@ namespace TinyCity.Simulation.AI
     /// <summary>Shared pieces of prompt text describing a resident and their situation.</summary>
     internal static class PromptText
     {
+        /// <summary>
+        /// Owner, 6 November: everyone was telling each other their personality. It is only for this resident's own
+        /// AI: others learn it from how they act.
+        /// </summary>
+        /// <summary>Owner, 6 November: with no money anywhere, the AI still talked of selling fish for money.</summary>
+        public const string NoMoney = "There is no money here at all, not a penny anywhere: you can only swap things, so never ask for, offer or talk about money, pounds or paying.";
+
+        public const string PrivatePersonality = "Your personality is private, known only to you: never say it, describe it or name your traits to anyone; let it show only in what you do and how you say things. ";
+
         public static string Persona(Resident r, TownSimulation sim = null)
         {
             if (sim != null && sim.FoodMustBeMade)
@@ -23,6 +32,7 @@ namespace TinyCity.Simulation.AI
                     (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Who you are, in your own words: {r.About} ") +
                     (r.Outlook.Length > 0 ? $"Your personality: {r.Outlook} " : $"Your personality: {r.Personality.Describe().ToLowerInvariant()}. ") +
                     (r.Hobbies.Count > 0 ? $"Things you enjoy: {string.Join(", ", r.Hobbies)}. " : string.Empty) +
+                    PrivatePersonality +
                     "Stay in character. Never mention being an AI. Answer with JSON only.";
             }
 
