@@ -1052,14 +1052,20 @@ namespace TinyCity.Simulation
 
             if (activity == ActivityCatalog.DrinkCleanWater || activity == ActivityCatalog.WashWithCleanWater)
             {
-                if (r.CleanWater <= 0)
+                if (r.CleanWater > 0)
                 {
-                    r.AddLog(Time, $"Couldn't {activity.Name.ToLowerInvariant()}: they had no clean water left");
+                    r.CleanWater--;
+                }
+                else if (Food.Store.Water > 0)
+                {
+                    Food.Store.Water--;
+                }
+                else
+                {
+                    r.AddLog(Time, $"Couldn't {activity.Name.ToLowerInvariant()}: there was no clean water left");
                     r.ResetActivity();
                     return;
                 }
-
-                r.CleanWater--;
             }
 
             if (activity == ActivityCatalog.PlanBuilding)

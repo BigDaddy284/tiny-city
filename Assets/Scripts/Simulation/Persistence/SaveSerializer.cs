@@ -90,6 +90,16 @@ namespace TinyCity.Simulation.Persistence
                     ["wateredDays"] = c.Value.WateredDays,
                     ["lastWateredDay"] = c.Value.LastWateredDay,
                 }).ToList(),
+                ["store"] = new Dictionary<string, object>
+                {
+                    ["food"] = simulation.Food.Store.Food.Batches.Select(b => (object)new Dictionary<string, object>
+                    {
+                        ["kind"] = b.Kind.ToString(),
+                        ["count"] = b.Count,
+                        ["goesOffDay"] = b.GoesOffDay,
+                    }).ToList(),
+                    ["water"] = simulation.Food.Store.Water,
+                },
                 ["nextPatchNumber"] = simulation.Food.NextPatchNumber,
                 ["patches"] = simulation.Food.Patches.Select(p => (object)new Dictionary<string, object>
                 {
@@ -365,6 +375,24 @@ namespace TinyCity.Simulation.Persistence
                 {
                     warnings.Add($"A crop on \"{objectId}\", which isn't a garden plot or crop patch, was dropped.");
                 }
+            }
+
+            var store = GetObject(root, "store");
+            if (store != null)
+            {
+                foreach (var batch in GetList(store, "food").OfType<Dictionary<string, object>>())
+                {
+                    if (Enum.TryParse<FoodKind>(GetString(batch, "kind"), out var kind) && Enum.IsDefined(typeof(FoodKind), kind))
+                    {
+                        simulation.Food.Store.Food.Add(kind, Math.Max(0, GetInt(batch, "count", 0)), GetInt(batch, "goesOffDay", 0));
+                    }
+                    else
+                    {
+                        warnings.Add($"The camp store's unknown food \"{GetString(batch, "kind")}\" was dropped.");
+                    }
+                }
+
+                simulation.Food.Store.Water = Math.Min(CampStore.MaxWater, Math.Max(0, GetInt(store, "water", 0)));
             }
 
             ReadHistory(GetObject(root, "history"), simulation, warnings);

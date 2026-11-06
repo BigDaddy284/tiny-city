@@ -45,6 +45,14 @@ namespace TinyCity.Simulation.Economy
         /// <summary>No one keeps more than this many portions; the rest is left behind.</summary>
         public const int MaxPortions = 60;
 
+        public FoodStock(int capacity = MaxPortions)
+        {
+            Capacity = Math.Max(1, capacity);
+        }
+
+        /// <summary>The most portions this stock holds.</summary>
+        public int Capacity { get; }
+
         private readonly List<FoodBatch> batches = new List<FoodBatch>();
 
         public IReadOnlyList<FoodBatch> Batches => batches;
@@ -61,7 +69,7 @@ namespace TinyCity.Simulation.Economy
         /// <summary>Adds portions, as many as there's room for. Returns how many were kept.</summary>
         public int Add(FoodKind kind, int count, int goesOffDay)
         {
-            count = Math.Min(count, MaxPortions - Total);
+            count = Math.Min(count, Capacity - Total);
             if (count <= 0)
             {
                 return 0;
@@ -161,6 +169,34 @@ namespace TinyCity.Simulation.Economy
 
             var soon = batches.Where(b => b.GoesOffDay <= today + 1).Sum(b => b.Count);
             return string.Join(", ", parts) + (soon > 0 ? $" ({soon} go{(soon == 1 ? "es" : string.Empty)} off by tomorrow morning)" : string.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Owner, 6 November ("they don't really care about anything or keep their stats up"): the camp's shared store.
+    /// What the fishers and farmers bring in, the meals the cooks make and the water the purifiers clean go in it,
+    /// and anyone may eat, drink and wash from it, so nobody depends on a hand-over in a chat going right. Saved.
+    /// </summary>
+    public sealed class CampStore
+    {
+        /// <summary>The most portions of food it holds.</summary>
+        public const int MaxPortions = 240;
+
+        /// <summary>The most portions of clean water it holds.</summary>
+        public const int MaxWater = 120;
+
+        public FoodStock Food { get; } = new FoodStock(MaxPortions);
+
+        public int Water { get; internal set; }
+
+        /// <summary>For prompts and the inspector, such as "6 cooked meals, 4 fish; 10 portions of clean water".</summary>
+        public string Describe(int today) =>
+            $"{(Food.IsEmpty ? "no food" : Food.Describe(today))}; {(Water == 0 ? "no clean water" : $"{Water} portion{(Water == 1 ? string.Empty : "s")} of clean water")}";
+
+        internal void Clear()
+        {
+            Food.Clear();
+            Water = 0;
         }
     }
 
@@ -317,6 +353,9 @@ namespace TinyCity.Simulation.Economy
         /// <summary>The number the next patch's id gets. Saved, so ids are never reused.</summary>
         public int NextPatchNumber { get; internal set; } = 1;
 
+        /// <summary>The camp's shared store of food and clean water.</summary>
+        public CampStore Store { get; } = new CampStore();
+
         public IEnumerable<CropPatch> Patches => patches.Values;
 
         public CropPatch PatchOf(string objectId) => objectId != null && patches.TryGetValue(objectId, out var p) ? p : null;
@@ -387,12 +426,12 @@ namespace TinyCity.Simulation.Economy
 
             if (a == ActivityCatalog.PurifyWater)
             {
-                return r.CleanWater < FoodRules.MaxCleanWater;
+                return food.Store.Water < CampStore.MaxWater;
             }
 
             if (a == ActivityCatalog.DrinkCleanWater || a == ActivityCatalog.WashWithCleanWater)
             {
-                return r.CleanWater > 0;
+                return r.CleanWater > 0 || food.Store.Water > 0;
             }
 
             if (a == ActivityCatalog.AttendMeeting)
@@ -429,12 +468,12 @@ namespace TinyCity.Simulation.Economy
 
             if (a == ActivityCatalog.Cook)
             {
-                return r.Food.Raw > 0;
+                return r.Food.Raw > 0 || food.Store.Food.Raw > 0;
             }
 
             if (a == ActivityCatalog.EatMeal)
             {
-                return r.Food.Count(FoodKind.Meal) > 0;
+                return r.Food.Count(FoodKind.Meal) > 0 || food.Store.Food.Count(FoodKind.Meal) > 0;
             }
 
             if (a == ActivityCatalog.RunStall)
@@ -455,7 +494,17 @@ namespace TinyCity.Simulation.Economy
         internal bool TakeAtStart(Resident r, ActivityDefinition a, out string reason)
         {
             reason = null;
-            var taken = a == ActivityCatalog.EatMeal ? r.Food.Take(FoodKind.Meal, 1) : 1;
+            var taken = 1;
+            if (a == ActivityCatalog.EatMeal)
+            {
+                // Their own meal first, then one from the camp store.
+                taken = r.Food.Take(FoodKind.Meal, 1);
+                if (taken == 0)
+                {
+                    taken = Store.Food.Take(FoodKind.Meal, 1);
+                }
+            }
+
             if (taken == 0)
             {
                 reason = "they had no food left";
@@ -507,27 +556,28 @@ namespace TinyCity.Simulation.Economy
                 }
 
                 var hoe = r.Belongings.Has(ToolKind.Hoe);
-                var kept = r.Food.Add(FoodKind.Vegetables, FoodRules.HarvestPortions + (hoe ? CraftingRules.HoeExtraPortions : 0), today + FoodRules.VegetableDays);
-                return $"Picked {FoodRules.Portions(FoodKind.Vegetables, kept)} ({what}) at the {obj.Name.ToLowerInvariant()}" + (hoe ? FoodRules.WearNote(r, ToolKind.Hoe) : string.Empty);
+                var kept = Store.Food.Add(FoodKind.Vegetables, FoodRules.HarvestPortions + (hoe ? CraftingRules.HoeExtraPortions : 0), today + FoodRules.VegetableDays);
+                return $"Picked {FoodRules.Portions(FoodKind.Vegetables, kept)} ({what}) at the {obj.Name.ToLowerInvariant()} and put them in the camp store" + (hoe ? FoodRules.WearNote(r, ToolKind.Hoe) : string.Empty);
             }
 
             if (a == ActivityCatalog.CatchFish)
             {
                 var rod = r.Belongings.Has(ToolKind.FishingRod);
-                var kept = r.Food.Add(FoodKind.Fish, FoodRules.CatchPortions + (rod ? CraftingRules.RodExtraPortions : 0), today + FoodRules.FishDays);
-                return $"Caught {FoodRules.Portions(FoodKind.Fish, kept)}" + (rod ? FoodRules.WearNote(r, ToolKind.FishingRod) : string.Empty);
+                var kept = Store.Food.Add(FoodKind.Fish, FoodRules.CatchPortions + (rod ? CraftingRules.RodExtraPortions : 0), today + FoodRules.FishDays);
+                return $"Caught {FoodRules.Portions(FoodKind.Fish, kept)} and put them in the camp store" + (rod ? FoodRules.WearNote(r, ToolKind.FishingRod) : string.Empty);
             }
 
             if (a == ActivityCatalog.Cook)
             {
                 var n = r.Food.TakeRaw(FoodRules.CookPortions);
+                n += Store.Food.TakeRaw(FoodRules.CookPortions - n);
                 if (n == 0)
                 {
                     return null;
                 }
 
-                r.Food.Add(FoodKind.Meal, n, today + FoodRules.MealDays);
-                return $"Cooked {FoodRules.Portions(FoodKind.Meal, n)}";
+                var stored = Store.Food.Add(FoodKind.Meal, n, today + FoodRules.MealDays);
+                return $"Cooked {FoodRules.Portions(FoodKind.Meal, n)} and put {(stored == n ? "them" : stored.ToString())} in the camp store";
             }
 
             return null;
