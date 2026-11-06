@@ -78,7 +78,7 @@ namespace TinyCity.Simulation.AI
             var speaker = sim.GetResident(session.SpeakerId);
             var listener = sim.GetResident(session.ListenerId);
             var sb = new StringBuilder();
-            sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are chatting with {listener.FullName} (aged {listener.AgeYears}) at the {session.Place.ToLowerInvariant()}.");
+            sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are chatting with {listener.FullName}{(listener.Role == null ? string.Empty : $" (the {listener.Role})")} at the {session.Place.ToLowerInvariant()}.");
             sb.AppendLine($"{listener.FirstName} to you: {PromptText.Relationship(sim, speaker, listener)}.");
             sb.AppendLine($"How you feel: {PromptText.Feelings(speaker, sim)}.");
             PromptText.AppendMemories(sb, memories);

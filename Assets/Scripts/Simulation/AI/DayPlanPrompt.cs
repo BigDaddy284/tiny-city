@@ -65,17 +65,35 @@ namespace TinyCity.Simulation.AI
             {
                 sb.AppendLine("Roles anyone here may take up, if there is a place left (each role's work is only for those who hold it, and a full role can't be taken until a place comes free): "
                     + string.Join("; ", roles.Select(o => (o.About.Length > 0 ? $"{o.Name} ({o.About})" : o.Name) + (o.Name == r.Role ? string.Empty : PromptText.PlacesLeft(sim, o, r)))) + ".");
-                sb.AppendLine(r.Role == null ? "You haven't taken up a role." : $"You have chosen to be the {r.Role}.");
+                sb.AppendLine(r.Role == null
+                    ? "You haven't taken up a role yet, and without one you can do almost nothing useful, so choose one now from those with a place left. Your first role is yours straight away, with no vote."
+                    : $"You have chosen to be the {r.Role}.");
             }
 
             sb.Append($"Plan the rest of your day, from now until late evening, in broad strokes: up to {AskedEntries} entries in \"plan\", ")
-              .Append("each with \"hour\" (the hour it starts, 0 to 23 on a 24-hour clock) and \"plan\" (what you mean to do, under 12 words), in order.");
+              .Append($"each with \"hour\" (the hour it starts, from {sim.Time.Hour} to 23 on a 24-hour clock) and \"plan\" (what you mean to do, under 12 words), in order.");
             if (roles.Count > 0)
             {
-                sb.Append($" Also give \"role\": the role you want from today (the same one to keep it, another to change, or \"{TownSimulation.RoleNone}\" for none).");
+                sb.Append(r.Role == null
+                    ? " Also give \"role\": the role you take up from today."
+                    : $" Also give \"role\": the role you want from today (the same one to keep it, another to change, or \"{TownSimulation.RoleNone}\" to give it up).");
             }
 
             return sb.ToString();
+        }
+
+        private static bool HasRoles(TownSimulation sim) => sim != null && sim.Brief.Roles.Count > 0;
+
+        /// <summary>The roles this resident may name: their own, any with a place left, and "none" only once they have one to give up.</summary>
+        public static List<object> RoleChoices(TownSimulation sim, Resident r)
+        {
+            var choices = sim.Brief.Roles.Where(o => o.Name == r?.Role || !sim.RoleIsFull(o, r)).Select(o => (object)o.Name).ToList();
+            if (r?.Role != null || choices.Count == 0)
+            {
+                choices.Add(TownSimulation.RoleNone);
+            }
+
+            return choices;
         }
 
         public static Dictionary<string, object> Schema(TownSimulation sim = null, Resident r = null)
@@ -96,11 +114,13 @@ namespace TinyCity.Simulation.AI
                 ["properties"] = new Dictionary<string, object>
                 {
                     ["plan"] = new Dictionary<string, object> { ["type"] = "array", ["items"] = entry, ["maxItems"] = AskedEntries },
-                    ["role"] = sim != null && sim.Brief.Roles.Count > 0
-                        ? new Dictionary<string, object> { ["type"] = "string", ["enum"] = sim.Brief.Roles.Where(o => o.Name == r?.Role || !sim.RoleIsFull(o, r)).Select(o => (object)o.Name).Append(TownSimulation.RoleNone).ToList() }
+                    ["role"] = HasRoles(sim)
+                        ? new Dictionary<string, object> { ["type"] = "string", ["enum"] = RoleChoices(sim, r) }
                         : new Dictionary<string, object> { ["type"] = "string" },
                 },
-                ["required"] = new List<object> { "plan" },
+                // Owner's log, 6 November: small models nearly always answered "none" or left the role out, so
+                // someone without a role must name one with a place left.
+                ["required"] = HasRoles(sim) && r != null && r.Role == null ? new List<object> { "plan", "role" } : new List<object> { "plan" },
             };
         }
 

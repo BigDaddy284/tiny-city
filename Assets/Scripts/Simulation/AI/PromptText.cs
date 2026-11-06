@@ -259,9 +259,9 @@ namespace TinyCity.Simulation.AI
             var role = sim.Brief.Find(r.Role);
             var mine = role == null ? new List<string>() : role.Skills.Select(Name).ToList();
             sb.Append(role == null
-                ? "You have no role, so you can only drink and wash in the dirty pond, eat raw food, catch a fish by hand and pick up fallen branches and loose stones."
+                ? "You have no role, so you can only drink and wash in the dirty pond, eat raw food and catch a fish by hand. You choose a role when you plan your day; your first one is yours straight away."
                 : mine.Count == 0
-                    ? $"As the {role.Name} you do no special work with your hands: anyone can drink and wash in the dirty pond, eat raw food, catch a fish by hand and pick up branches and stones."
+                    ? $"As the {role.Name} you do no special work with your hands: anyone can drink and wash in the dirty pond, eat raw food and catch a fish by hand."
                     : $"As the {role.Name} you can {string.Join(", ", mine)}; other work belongs to other roles.");
             sb.Append(" Dirty pond water and raw food fill you less and make you ill; clean water and cooked meals don't. ").Append(DirtyWater);
             var holders = sim.Residents.Where(o => o.IsAlive && o.Role != null && o.Id != r.Id).GroupBy(o => o.Role)

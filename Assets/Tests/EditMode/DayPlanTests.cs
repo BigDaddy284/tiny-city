@@ -141,5 +141,61 @@ namespace TinyCity.Tests.EditMode
             Assert.That(transport.Calls.Count(c => c.Body != null && c.Body.Contains("Plan the rest of your day")), Is.LessThanOrEqualTo(new OllamaSettings().maxRetries + 1));
             Assert.That(transport.Calls.Any(c => c.Body != null && c.Body.Contains("Choose one option")), Is.True);
         }
+    
+        [Test]
+        public void AiService_AsksForAGivenUpPlanAgain_ALittleLater()
+        {
+            var sim = Town();
+            var working = false;
+            var transport = FakeAiTransport.WorkingOllama(body => body.Contains("Plan the rest of your day") ? (working ? PlanJson : "not json") : null);
+            var ai = new AiService(new OllamaSettings(), transport);
+            ai.Attach(sim);
+            for (var i = 0; i < 60; i++)
+            {
+                ai.Update(i * 0.5);
+            }
+
+            Assert.That(sim.Residents[0].DayPlan, Is.Null, "given up on for now");
+            working = true;
+            for (var i = 60; i < 60 + (int)(AiService.DayPlanRetrySeconds * 2) + 20; i++)
+            {
+                ai.Update(i * 0.5);
+                if (sim.Residents[0].State != ResidentState.Deciding)
+                {
+                    sim.Tick();
+                }
+            }
+
+            Assert.That(sim.Residents[0].DayPlan, Is.Not.Null, "they are asked again, not left without a plan all day");
+        }
+
+        [Test]
+        public void SomeoneWithoutARole_MustNameOneWithAPlaceLeft()
+        {
+            var sim = TinyCity.Simulation.Content.FlatLand.CreateNewGame();
+            var r = sim.Residents[0];
+            var schema = DayPlanPrompt.Schema(sim, r);
+            Assert.That((List<object>)schema["required"], Does.Contain("role"));
+            Assert.That(DayPlanPrompt.RoleChoices(sim, r), Does.Not.Contain(TownSimulation.RoleNone));
+            Assert.That(DayPlanPrompt.UserText(sim, r, DayPlan.DayFor(sim.Time)), Does.Contain("Your first role is yours straight away"));
+
+            Assert.That(sim.ApplyDayPlan(r.Id, DayPlan.DayFor(sim.Time), new List<DayPlanEntry> { new DayPlanEntry(9, "Fish") }, "fisher"), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(DayPlanPrompt.RoleChoices(sim, r), Does.Contain(TownSimulation.RoleNone), "once they have one they may give it up");
+            Assert.That((List<object>)DayPlanPrompt.Schema(sim, r)["required"], Does.Not.Contain("role"));
+        }
+
+        [Test]
+        public void ImportanceRatings_MayOnlyNameTheMemoriesAskedAbout()
+        {
+            var sim = TinyCity.Simulation.Content.FlatLand.CreateNewGame();
+            var r = sim.Residents[0];
+            var memories = sim.Memories.ForResident(r.Id).Take(3).ToList();
+            var body = ImportancePrompt.BuildBody("m", sim, r, memories);
+            Assert.That(System.Text.RegularExpressions.Regex.IsMatch(body, "\"maxItems\":\\s*" + memories.Count), Is.True, body);
+            foreach (var m in memories)
+            {
+                Assert.That(body, Does.Contain($"\"{m.Id}\""));
+            }
+        }
     }
 }
