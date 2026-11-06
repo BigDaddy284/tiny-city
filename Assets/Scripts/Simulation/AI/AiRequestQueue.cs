@@ -395,6 +395,7 @@ namespace TinyCity.Simulation.AI
                 lastServed[request.ResidentId] = now;
             }
 
+            request.RefreshBody();
             request.Attempts++;
             Stats.Sent++;
             IAiCall call = null;

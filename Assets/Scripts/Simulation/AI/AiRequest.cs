@@ -76,6 +76,35 @@ namespace TinyCity.Simulation.AI
             Url = url;
         }
 
+        /// <summary>
+        /// A request whose body is made just before each time it is sent, so a prompt that waited in the queue
+        /// describes the town as it is then (such as which roles are still free), not as it was when it was asked.
+        /// </summary>
+        public AiRequest(
+            string key,
+            string residentId,
+            AiPriority priority,
+            string description,
+            Func<string> makeBody,
+            Func<string, AiReplyCheck> handleReply,
+            Func<bool> isStillWanted = null,
+            Action<string> onGiveUp = null)
+            : this(key, residentId, priority, description, string.Empty, handleReply, isStillWanted, onGiveUp)
+        {
+            this.makeBody = makeBody ?? throw new ArgumentNullException(nameof(makeBody));
+        }
+
+        private readonly Func<string> makeBody;
+
+        /// <summary>Makes the body again from the town as it is now, for a request made with a body maker.</summary>
+        internal void RefreshBody()
+        {
+            if (makeBody != null)
+            {
+                Body = makeBody() ?? string.Empty;
+            }
+        }
+
         /// <summary>Where to send it, or null for the queue's own address (the chat endpoint).</summary>
         public string Url { get; }
 
@@ -92,7 +121,7 @@ namespace TinyCity.Simulation.AI
         /// <summary>Short text for diagnostics, e.g. "decision for Mabel".</summary>
         public string Description { get; }
 
-        public string Body { get; }
+        public string Body { get; private set; }
 
         public Func<string, AiReplyCheck> HandleReply { get; }
 

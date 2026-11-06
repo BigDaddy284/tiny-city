@@ -39,6 +39,20 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void ABodyMaker_IsAskedWhenTheRequestIsSent_NotWhenItIsQueued()
+        {
+            var state = "when queued";
+            queue.Enqueue(Request("first"), 0);
+            queue.Enqueue(new AiRequest("later", "res-0002", AiPriority.Decision, "later", () => "{\"town\":\"" + state + "\"}", _ => AiReplyCheck.Accepted()), 0);
+            queue.Update(0);
+            state = "when sent";
+            transport.Calls[0].Succeed("{}");
+            queue.Update(1);
+
+            Assert.That(transport.Calls[1].Body, Does.Contain("when sent"), "the prompt describes the town as it is when it goes");
+        }
+
+        [Test]
         public void ResidentJustServed_WaitsBehindOthersOfTheSamePriority()
         {
             queue.Enqueue(Request("mabel-1", residentId: "res-0001"), 0);

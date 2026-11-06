@@ -280,6 +280,11 @@ namespace TinyCity.Simulation.AI
                 sb.Append(" Nobody yet is the ").Append(string.Join(", ", unfilled)).Append('.');
             }
 
+            foreach (var warning in MissingWork(sim))
+            {
+                sb.Append(' ').Append(warning);
+            }
+
             var full = sim.Brief.Roles.Where(o => o.Name != r.Role && sim.RoleIsFull(o, r)).Select(o => $"{o.Name} ({o.Max} of {o.Max})").ToList();
             if (full.Count > 0)
             {
@@ -299,6 +304,46 @@ namespace TinyCity.Simulation.AI
 
                 sb.AppendLine();
             }
+        }
+
+        /// <summary>
+        /// From the owner's log of 6 November (everyone happy to stand around chatting while thirsty): what nobody can
+        /// have while no living resident holds the role that does that work, such as clean water without a water
+        /// purifier, so the danger is plain.
+        /// </summary>
+        public static List<string> MissingWork(TownSimulation sim)
+        {
+            var warnings = new List<string>();
+            string Missing(params string[] activities)
+            {
+                var roles = sim.Brief.Roles.Where(o => activities.Any(o.Skills.Contains)).ToList();
+                if (roles.Count == 0 || roles.Any(o => sim.HoldersOf(o.Name) > 0))
+                {
+                    return null;
+                }
+
+                return string.Join(" or ", roles.Select(o => o.Name));
+            }
+
+            var water = Missing("purify-water");
+            if (water != null)
+            {
+                warnings.Add($"With no {water}, nobody can get clean water: everyone will go thirsty and dirty and their health will fail until someone takes it up.");
+            }
+
+            var cook = Missing("cook");
+            if (cook != null)
+            {
+                warnings.Add($"With no {cook}, nobody can eat anything at all.");
+            }
+
+            var food = Missing("plant-crops", "catch-fish");
+            if (food != null)
+            {
+                warnings.Add($"With no {food}, there is no food for anyone.");
+            }
+
+            return warnings;
         }
 
         private static string Name(string activityId) =>
