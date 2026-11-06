@@ -39,6 +39,19 @@ namespace TinyCity.Simulation.Activities
             "attend-meeting", "Go to the town meeting", "at the town meeting", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.GatheringSpot }, 90,
             new Dictionary<NeedType, double> { [NeedType.Social] = 1.0 });
 
+        /// <summary>
+        /// Owner, 6 November: the merchant keeps the camp store at the camp stove. While they are doing this it is
+        /// open: others can bring in what they made and take out meals and clean water.
+        /// </summary>
+        public static readonly ActivityDefinition KeepStore = new ActivityDefinition(
+            "keep-store", "Keep the camp store open", "keeping the camp store", ActivityKind.Errand, null, new[] { ObjectType.Kitchen }, 240,
+            new Dictionary<NeedType, double> { [NeedType.Social] = 0.6, [NeedType.Fun] = 0.2 });
+
+        /// <summary>Handing everything they carry (food and clean water) to the merchant at the open camp store.</summary>
+        public static readonly ActivityDefinition BringToStore = new ActivityDefinition(
+            "bring-to-store", "Bring your food and water to the camp store", "bringing things to the camp store", ActivityKind.Errand, null, new[] { ObjectType.Kitchen }, 10,
+            new Dictionary<NeedType, double> { [NeedType.Social] = 0.5 });
+
         /// <summary>Drinking and washing out in the open, where nothing is laid on.</summary>
         public static bool IsInTheWild(ActivityDefinition a) => a == WashInPond;
 
@@ -161,7 +174,7 @@ namespace TinyCity.Simulation.Activities
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
             GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
             PlanBuilding, Build, GatherSticks, GatherLooseStones, WashInPond,
-            PurifyWater, DrinkCleanWater, WashWithCleanWater, AttendMeeting,
+            PurifyWater, DrinkCleanWater, WashWithCleanWater, AttendMeeting, KeepStore, BringToStore,
         };
 
         private static ActivityDefinition Gather(string id, string name, string verb, ObjectType where) => new ActivityDefinition(

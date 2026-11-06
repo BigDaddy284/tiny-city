@@ -57,7 +57,13 @@ namespace TinyCity.Simulation.World
         public Location Location { get; }
 
         /// <summary>How many residents can use or head for it at once. Benches and café tables (one chair each side) seat two; most things serve one.</summary>
-        public int Capacity => CapacityOf(Type);
+        /// <summary>
+        /// Owner, 6 November: the merchant keeps the camp store at the camp stove nearly all day, so that stove has
+        /// room for them, a cook and people bringing things or taking them out. Other stoves take one cook.
+        /// </summary>
+        public const int CampStoveCapacity = 4;
+
+        public int Capacity => Id == Economy.CampStore.StoveId ? CampStoveCapacity : CapacityOf(Type);
 
         /// <summary>
         /// Furniture and fittings stand in the way: residents walk around them and step onto one only to use it.

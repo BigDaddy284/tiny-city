@@ -83,7 +83,11 @@ namespace TinyCity.Simulation.AI
         }
 
         /// <summary>How the camp's shared store works, for every prompt that shows it.</summary>
-        public const string CampStoreText = "Fish and vegetables that are caught or picked, meals that are cooked and water that is cleaned all go into the camp store, and anyone can eat a meal, drink or wash from it; cooks cook what is in it. When it is empty, nobody eats or drinks until those roles fill it again.";
+        public const string CampStoreText = "The merchant keeps the camp store at the camp stove. While it is open, anyone can bring the food and clean water they carry to it, and take meals and clean water from it to eat, drink and wash; cooks cook what is in it. While it is shut, or empty, nobody can take anything out.";
+
+        /// <summary>Whether the store is open and who is keeping it, for prompts and the side panel.</summary>
+        public static string StoreState(TownSimulation sim) =>
+            sim.StoreKeeper is Resident keeper ? $"open, kept by {keeper.FullName}" : sim.StoreIsOpen ? "open" : "shut";
 
         public static string Persona(Resident r, TownSimulation sim)
         {
@@ -250,7 +254,7 @@ namespace TinyCity.Simulation.AI
         public static void AppendFood(StringBuilder sb, TownSimulation sim, Resident r)
         {
             sb.AppendLine($"Your food: {r.Food.Describe(sim.Time.Day)}.");
-            sb.AppendLine($"The camp store, shared by everyone: {sim.Food.Store.Describe(sim.Time.Day)}. {CampStoreText}");
+            sb.AppendLine($"The camp store ({StoreState(sim)}): {sim.Food.Store.Describe(sim.Time.Day)}. {CampStoreText}");
             sb.AppendLine(CampStatus(sim));
             sb.Append("Nobody hands out food in this city: every meal is grown or caught by someone, and vegetables and fish have to be cooked into meals before anyone can eat them. People can also give food to each other in a chat. Food goes off after a few days.");
             var plots = sim.World.Objects.Where(o => o.Type == World.ObjectType.GardenPlot).ToList();
@@ -395,6 +399,12 @@ namespace TinyCity.Simulation.AI
             if (cook != null)
             {
                 warnings.Add($"With no {cook}, nobody can eat anything at all.");
+            }
+
+            var keeper = Missing("keep-store");
+            if (keeper != null)
+            {
+                warnings.Add($"With no {keeper}, the camp store stays shut: nobody can bring anything to it or take meals or water out.");
             }
 
             var food = Missing("plant-crops", "catch-fish");

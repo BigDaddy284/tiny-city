@@ -71,12 +71,12 @@ namespace TinyCity.Simulation.Residents
 
         /// <summary>What the shipped residents.json says, and what a file without a brief gets.</summary>
         public static WorldBrief Default => new WorldBrief(
-            "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Each of you can only do the work of the role you take up; without one you can do nothing for yourself: you can't fish, grow or cook food or touch the pond's dirty water, so you need each other. Your first role is yours as soon as you choose it; after that, changing it needs a majority vote at the weekly meeting. Look after yourself first: hunger, thirst and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
+            "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any. Everything people make goes through the merchant: fish, vegetables, meals and clean water go into the camp store, which only the merchant keeps open, and come out only while it is open. Nobody hands food, water, materials or tools to anyone but the merchant. Each of you can only do the work of the role you take up; without one you can do nothing for yourself: you can't fish, grow or cook food or touch the pond's dirty water, so you need each other. Your first role is yours as soon as you choose it; after that, changing it needs a majority vote at the weekly meeting. Look after yourself first: hunger, thirst and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
             new[]
             {
                 new RoleOption("farmer", "You grow the food everyone depends on, and only a farmer can. You plant squares of the farming patch, the only soil where crops grow, water them on different days until they are ready and pick them, and you plan ahead so there is always something growing. A hoe makes each harvest bigger.",
                     skills: new[] { "plant-crops", "water-crops", "harvest" }, max: 3),
-                new RoleOption("fisher", "Only you can catch fish, and a rod means more. Fish keep only a couple of days and must be cooked before anyone can eat them, so you catch what is needed and share or trade the rest.",
+                new RoleOption("fisher", "Only you can catch fish, and a rod means more. Fish keep only a couple of days and must be cooked before anyone can eat them, so you catch what is needed and bring it to the camp store while the merchant has it open.",
                     skills: new[] { "catch-fish" }, max: 3),
                 new RoleOption("lumberjack", "Only you can gather wood: fallen branches by hand, and with an axe, wood from the trees. Better axes let you cut hardwood and then heartwood, and everyone building or making tools needs what you bring in.",
                     skills: new[] { "gather-sticks", "gather-wood", "gather-hardwood", "gather-heartwood" }, max: 2),
@@ -84,14 +84,14 @@ namespace TinyCity.Simulation.Residents
                     skills: new[] { "gather-loose-stones", "gather-stone", "gather-iron", "gather-crystal" }, max: 2),
                 new RoleOption("toolmaker", "Only you can make tools: the axes, pickaxes, hoes and rods at the crafting bench that let everyone else work, and you replace them as they wear out and break. You may make them for others or trade them.",
                     skills: new[] { "craft-axe", "craft-pickaxe", "craft-stone-axe", "craft-stone-pickaxe", "craft-iron-axe", "craft-iron-pickaxe", "craft-hoe", "craft-rod" }, max: 1),
-                new RoleOption("cook", "Only you can cook. Nobody can eat vegetables or fish raw, so every meal goes through you: you turn them into meals at a stove. You keep an eye on what is running low and make sure nobody goes hungry.",
+                new RoleOption("cook", "Only you can cook. Nobody can eat vegetables or fish raw, so every meal goes through you: you turn them into meals at a stove, taking what you need from the camp store while the merchant has it open, and bring the meals back to it. You keep an eye on what is running low and make sure nobody goes hungry.",
                     skills: new[] { "cook" }, max: 2),
                 new RoleOption("builder", "Only you know masonry and building. You plan and build what the group needs: shelters, stoves, stalls, benches and crafting benches. You can ask others to bring materials, and you think about where things should go.",
                     skills: new[] { "plan-building", "build" }, max: 3),
-                new RoleOption("water purifier", "Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and you share it or trade it. You may also wash in the pond, though it costs you a little health.",
+                new RoleOption("water purifier", "Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and bring it to the camp store while the merchant has it open. You may also wash in the pond, though it costs you a little health.",
                     skills: new[] { "purify-water", "wash-pond" }, max: 2),
-                new RoleOption("merchant", "Only you can run a stall. You trade food and goods with the others, deciding what you want in return. You can build up plenty for yourself or help everyone get what they need; how fair you are is up to you.",
-                    skills: new[] { "run-stall" }, max: 1),
+                new RoleOption("merchant", "You keep the camp store. Only you can open it, at the camp stove, and only while you keep it open can anyone bring in what they have made or take out meals, clean water and food to cook. Every hand-over of food, water, materials or tools goes through you, in or out, so keeping it open is your work nearly all the time: the whole camp depends on you being there, and you step away only to eat, drink and wash, which you can always do from the store yourself. What you ask in return, and how fair you are, is up to you.",
+                    skills: new[] { "run-stall", "keep-store" }, max: 1),
                 new RoleOption("tax man", "You collect a share of what people hold for the good of everyone. In a chat you can ask someone to hand over a percentage of their food and materials; they decide whether to pay, so they have to accept your authority. You may pay a security enforcer from what you collect.", canTax: true, max: 1),
                 new RoleOption("security enforcer", "You keep the peace. You stand up for anyone being treated unfairly and back up whoever pays you, such as the tax man, if you agree to work for them. Your only tools are your words and your presence.", max: 1),
                 new RoleOption("mayor", "You lead the group and run the weekly meeting, helping everyone decide what to do: who grows, who builds, what is shared. You have no power except what people give you by listening, so you have to earn their trust.", max: 1),
@@ -114,10 +114,14 @@ namespace TinyCity.Simulation.Residents
         public static bool IsRoleWork(string activityId) =>
             activityId != null && (activityId.StartsWith("gather-", StringComparison.Ordinal) || activityId.StartsWith("craft-", StringComparison.Ordinal) || RoleWork.Contains(activityId));
 
-        private static readonly string[] RoleWork = { "cook", "plant-crops", "water-crops", "harvest", "catch-fish", "purify-water", "wash-pond", "plan-building", "build" };
+        private static readonly string[] RoleWork = { "keep-store", "cook", "plant-crops", "water-crops", "harvest", "catch-fish", "purify-water", "wash-pond", "plan-building", "build" };
 
         /// <summary>Whether some role lists this activity as its own, or it is <see cref="IsRoleWork"/> in a world with roles.</summary>
         public bool IsSkill(string activityId) => Roles.Any(r => r.Skills.Contains(activityId)) || (Roles.Count > 0 && IsRoleWork(activityId));
+
+        // Owner, 6 November: everything goes through the merchant, not free trading.
+        private const string OldTradeWords = "nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help.";
+        private const string TradeWords = "nobody has any. Everything people make goes through the merchant: fish, vegetables, meals and clean water go into the camp store, which only the merchant keeps open, and come out only while it is open. Nobody hands food, water, materials or tools to anyone but the merchant.";
 
         /// <summary>The words towns started before 6 November were told, which said anyone could pick up branches and stones.</summary>
         private const string OldHandGatheringWords = "eat raw fish and pick up fallen branches and loose stones";
@@ -134,6 +138,10 @@ namespace TinyCity.Simulation.Residents
         {
             ["Only you can cook. You turn raw vegetables and fish into proper meals at a stove, which fill people up far better than raw food and don't make them ill. You keep an eye on what is running low and make sure nobody goes hungry."] = "cook",
             ["Only you can clean water. Pond water is dirty and makes people unwell; you turn it into clean water at the pond, which quenches thirst properly, and you can share it or trade it."] = "water purifier",
+            ["Only you can catch fish, and a rod means more. Fish keep only a couple of days and must be cooked before anyone can eat them, so you catch what is needed and share or trade the rest."] = "fisher",
+            ["Only you can cook. Nobody can eat vegetables or fish raw, so every meal goes through you: you turn them into meals at a stove. You keep an eye on what is running low and make sure nobody goes hungry."] = "cook",
+            ["Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and you share it or trade it. You may also wash in the pond, though it costs you a little health."] = "water purifier",
+            ["Only you can run a stall. You trade food and goods with the others, deciding what you want in return. You can build up plenty for yourself or help everyone get what they need; how fair you are is up to you."] = "merchant",
             ["You bring in fish from the pond. Anyone can catch the odd fish by hand, but you catch far more, and a rod means more still. Fish keep only a couple of days, so you catch what is needed and share or trade the rest."] = "fisher",
         };
 
@@ -150,16 +158,18 @@ namespace TinyCity.Simulation.Residents
                 var same = shipped.Find(r.Name);
                 var missing = same == null ? new List<string>() : same.Skills.Where(id => !r.Skills.Contains(id)).ToList();
                 var about = r.About.Replace(OldFarmerWords, NewFarmerWords);
+                var max = r.Max == 0 && same != null ? same.Max : r.Max;
                 if (same != null && OldAbouts.TryGetValue(about, out var newer) && newer == same.Name)
                 {
                     about = same.About;
                 }
-                var max = r.Max == 0 && same != null ? same.Max : r.Max;
+
                 return missing.Count == 0 && about == r.About && max == r.Max ? r : new RoleOption(r.Name, about, r.CanTax, r.Skills.Concat(missing), max);
             });
             var text = Text.Replace(OldHandGatheringWords, "catch the odd fish by hand to eat raw")
                 .Replace("without one you can only drink and wash in the dirty pond and catch the odd fish by hand to eat raw, so you need each other.", "without one you can do nothing for yourself: you can't fish, grow or cook food or touch the pond's dirty water, so you need each other.")
                 .Replace("hunger, thirst, tiredness and dirt", "hunger, thirst and dirt")
+                .Replace(OldTradeWords, TradeWords)
                 .Replace("A role can only be changed by a majority vote at the weekly meeting.", "Your first role is yours as soon as you choose it; after that, changing it needs a majority vote at the weekly meeting.");
             return new WorldBrief(text, roles);
         }

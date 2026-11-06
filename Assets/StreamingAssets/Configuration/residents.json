@@ -1,6 +1,6 @@
 {
   "format": "tiny-city-2-profiles",
-  "brief": "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Each of you can only do the work of the role you take up; without one you can do nothing for yourself: you can't fish, grow or cook food or touch the pond's dirty water, so you need each other. Your first role is yours as soon as you choose it; after that, changing it needs a majority vote at the weekly meeting. Look after yourself first: hunger, thirst and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
+  "brief": "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any. Everything people make goes through the merchant: fish, vegetables, meals and clean water go into the camp store, which only the merchant keeps open, and come out only while it is open. Nobody hands food, water, materials or tools to anyone but the merchant. Each of you can only do the work of the role you take up; without one you can do nothing for yourself: you can't fish, grow or cook food or touch the pond's dirty water, so you need each other. Your first role is yours as soon as you choose it; after that, changing it needs a majority vote at the weekly meeting. Look after yourself first: hunger, thirst and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
   "roles": [
     {
       "name": "farmer",
@@ -14,7 +14,7 @@
     },
     {
       "name": "fisher",
-      "about": "Only you can catch fish, and a rod means more. Fish keep only a couple of days and must be cooked before anyone can eat them, so you catch what is needed and share or trade the rest.",
+      "about": "Only you can catch fish, and a rod means more. Fish keep only a couple of days and must be cooked before anyone can eat them, so you catch what is needed and bring it to the camp store while the merchant has it open.",
       "can": [
         "catch-fish"
       ],
@@ -59,7 +59,7 @@
     },
     {
       "name": "cook",
-      "about": "Only you can cook. Nobody can eat vegetables or fish raw, so every meal goes through you: you turn them into meals at a stove. You keep an eye on what is running low and make sure nobody goes hungry.",
+      "about": "Only you can cook. Nobody can eat vegetables or fish raw, so every meal goes through you: you turn them into meals at a stove, taking what you need from the camp store while the merchant has it open, and bring the meals back to it. You keep an eye on what is running low and make sure nobody goes hungry.",
       "can": [
         "cook"
       ],
@@ -76,7 +76,7 @@
     },
     {
       "name": "water purifier",
-      "about": "Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and you share it or trade it. You may also wash in the pond, though it costs you a little health.",
+      "about": "Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and bring it to the camp store while the merchant has it open. You may also wash in the pond, though it costs you a little health.",
       "can": [
         "purify-water",
         "wash-pond"
@@ -85,9 +85,10 @@
     },
     {
       "name": "merchant",
-      "about": "Only you can run a stall. You trade food and goods with the others, deciding what you want in return. You can build up plenty for yourself or help everyone get what they need; how fair you are is up to you.",
+      "about": "You keep the camp store. Only you can open it, at the camp stove, and only while you keep it open can anyone bring in what they have made or take out meals, clean water and food to cook. Every hand-over of food, water, materials or tools goes through you, in or out, so keeping it open is your work nearly all the time: the whole camp depends on you being there, and you step away only to eat, drink and wash, which you can always do from the store yourself. What you ask in return, and how fair you are, is up to you.",
       "can": [
-        "run-stall"
+        "run-stall",
+        "keep-store"
       ],
       "max": 1
     },

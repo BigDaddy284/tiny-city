@@ -154,9 +154,9 @@ namespace TinyCity.Tests.EditMode
             WaitUntilDeciding(sim, anyone);
             Assert.That(Options(sim, anyone).Contains("catch-fish"), Is.False, "no fishing by hand");
 
-            var before = sim.Food.Store.Food.Count(FoodKind.Fish);
+            var before = fisher.Food.Count(FoodKind.Fish);
             Do(sim, fisher, ActivityCatalog.CatchFish);
-            Assert.That(sim.Food.Store.Food.Count(FoodKind.Fish) - before, Is.EqualTo(FoodRules.CatchPortions), "into the camp store");
+            Assert.That(fisher.Food.Count(FoodKind.Fish) - before, Is.EqualTo(FoodRules.CatchPortions), "they carry it to bring to the store");
         }
 
         [Test]
@@ -171,27 +171,85 @@ namespace TinyCity.Tests.EditMode
 
             TakeRole(sim, r, "water purifier");
             Do(sim, r, ActivityCatalog.PurifyWater);
-            var store = sim.Food.Store;
-            Assert.That(store.Water, Is.EqualTo(FoodRules.PurifyPortions), "cleaned water goes to the camp store");
-            var other = sim.Residents[1];
-            WaitUntilDeciding(sim, other);
-            Assert.That(Options(sim, other).Contains("drink-clean"), Is.True, "anyone can drink from the store");
+            Assert.That(r.CleanWater, Is.EqualTo(FoodRules.PurifyPortions), "they carry what they clean, to bring to the store");
+            Assert.That(sim.Food.Store.Water, Is.EqualTo(0));
             var health = r.Health;
             Do(sim, r, ActivityCatalog.DrinkCleanWater);
-            Assert.That(store.Water, Is.EqualTo(FoodRules.PurifyPortions - 1));
+            Assert.That(r.CleanWater, Is.EqualTo(FoodRules.PurifyPortions - 1));
             r.Needs[NeedType.Hygiene] = 20;
             Do(sim, r, ActivityCatalog.WashWithCleanWater);
-            Assert.That(store.Water, Is.EqualTo(FoodRules.PurifyPortions - 2), "washing uses a portion too");
-            r.CleanWater = 1;
-            Do(sim, r, ActivityCatalog.DrinkCleanWater);
-            Assert.That((r.CleanWater, store.Water), Is.EqualTo((0, FoodRules.PurifyPortions - 2)), "their own water is used first");
+            Assert.That(r.CleanWater, Is.EqualTo(FoodRules.PurifyPortions - 2), "washing uses a portion too");
             Assert.That(r.Needs[NeedType.Hygiene], Is.GreaterThan(60));
             Assert.That(r.Health, Is.GreaterThan(health - 0.5), "clean water does no harm");
             Assert.That(CraftingRules.ItemNames, Does.Contain(CraftingRules.CleanWaterName), "clean water can be traded");
 
             var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
             Assert.That(loaded.GetResident(r.Id).CleanWater, Is.EqualTo(r.CleanWater));
-            Assert.That(loaded.Food.Store.Water, Is.EqualTo(store.Water), "the camp store is saved");
+        }
+
+        [Test]
+        public void TheMerchant_KeepsTheCampStore_AndThingsGoInAndOutOnlyWhileItIsOpen()
+        {
+            var sim = NewGame();
+            var other = sim.Residents[0];
+            var fisher = sim.Residents[1];
+            var merchant = sim.Residents[2];
+            TakeRole(sim, fisher, "fisher");
+            TakeRole(sim, merchant, "merchant");
+            fisher.Food.Add(FoodKind.Meal, 3, sim.Time.Day + 3);
+            fisher.CleanWater = 2;
+            WaitUntilDeciding(sim, other);
+            WaitUntilDeciding(sim, fisher);
+            WaitUntilDeciding(sim, merchant);
+            Assert.That(sim.StoreIsOpen, Is.False, "shut until the merchant opens it");
+            Assert.That(Options(sim, fisher).Contains("bring-to-store"), Is.False, "nothing goes in while it's shut");
+            Assert.That(Options(sim, other).Contains("keep-store"), Is.False, "only the merchant keeps it");
+            Assert.That(PromptText.StoreState(sim), Is.EqualTo("shut"));
+
+            var open = sim.Planner.FreeTimeOptions(merchant).Single(o => o.Activity == ActivityCatalog.KeepStore);
+            Assert.That(open.TargetId, Is.EqualTo(CampStore.StoveId));
+            Assert.That(sim.ApplyDecision(merchant.Id, merchant.PendingDecisionId, open.ActionId, open.TargetId, "Work"), Is.EqualTo(DecisionOutcome.Applied));
+            for (var i = 0; i < 200 && sim.StoreKeeper != merchant; i++)
+            {
+                sim.Tick();
+            }
+
+            Assert.That(sim.StoreKeeper, Is.SameAs(merchant));
+            Assert.That(PromptText.StoreState(sim), Does.Contain("open, kept by " + merchant.FullName));
+            Do(sim, fisher, ActivityCatalog.BringToStore);
+            Assert.That((sim.Food.Store.Food.Count(FoodKind.Meal), sim.Food.Store.Water), Is.EqualTo((3, 2)), "everything they carry goes in");
+            Assert.That((fisher.Food.Total, fisher.CleanWater), Is.EqualTo((0, 0)));
+
+            Do(sim, other, ActivityCatalog.DrinkCleanWater);
+            Assert.That(sim.Food.Store.Water, Is.EqualTo(1), "anyone takes from it while it's open");
+
+            for (var i = 0; i < 400 && merchant.State != ResidentState.Deciding; i++)
+            {
+                sim.Tick();
+            }
+
+            Assert.That(sim.StoreIsOpen, Is.False, "the shift is over");
+            Assert.That(merchant.Log.Any(e => e.Text.Contains("Shut the camp store")), Is.True);
+            WaitUntilDeciding(sim, other);
+            Assert.That(Options(sim, other).Contains("drink-clean"), Is.False, "nothing comes out while it's shut");
+            Assert.That(Options(sim, other).Contains("eat-meal"), Is.False);
+            Assert.That(Options(sim, merchant).Contains("drink-clean"), Is.True, "but the merchant can always eat and drink from it");
+            Assert.That(Options(sim, merchant).Contains("eat-meal"), Is.True);
+        }
+
+        [Test]
+        public void AnOlderTown_IsToldThatEverythingGoesThroughTheMerchant()
+        {
+            var sim = NewGame();
+            const string oldTrade = "nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help.";
+            const string oldMerchant = "Only you can run a stall. You trade food and goods with the others, deciding what you want in return. You can build up plenty for yourself or help everyone get what they need; how fair you are is up to you.";
+            var text = sim.Brief.Text.Substring(0, sim.Brief.Text.IndexOf("nobody has any.", System.StringComparison.Ordinal)) + oldTrade
+                + sim.Brief.Text.Substring(sim.Brief.Text.IndexOf(" Each of you", System.StringComparison.Ordinal));
+            var older = new WorldBrief(text, sim.Brief.Roles.Select(o => o.Name == "merchant" ? new RoleOption(o.Name, oldMerchant, o.CanTax, new[] { "run-stall" }) : o));
+            var upgraded = older.UpgradedFromOlderSave();
+            Assert.That(upgraded.Text, Is.EqualTo(sim.Brief.Text));
+            Assert.That(upgraded.Find("merchant").About, Is.EqualTo(sim.Brief.Find("merchant").About));
+            Assert.That(upgraded.Find("merchant").Skills, Does.Contain("keep-store"));
         }
 
         [Test]
