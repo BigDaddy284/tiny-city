@@ -30,6 +30,12 @@ namespace TinyCity.Simulation
 
         /// <summary>The text was empty or unusable.</summary>
         InvalidText,
+
+        /// <summary>
+        /// A day plan from someone without a role named a role that is full (or none), so it is asked again with the
+        /// roles that are free now.
+        /// </summary>
+        RoleTaken,
     }
 
     /// <summary>
@@ -571,6 +577,18 @@ namespace TinyCity.Simulation
             if (plan == null)
             {
                 return DecisionOutcome.InvalidText;
+            }
+
+            // From the owner's log of 6 November: all twenty planned at once and most picked the same full role, so
+            // fifteen had none all day and could only chat. Someone without a role must name one with a place left.
+            if (r.Role == null && Brief.Roles.Count > 0 && Brief.Roles.Any(o => !RoleIsFull(o, r)))
+            {
+                var wanted = string.IsNullOrWhiteSpace(role) ? null : Brief.Find(role);
+                if (wanted == null || RoleIsFull(wanted, r))
+                {
+                    r.AddLog(Time, wanted == null ? "Planned the day without choosing a role" : $"Wanted to be the {wanted.Name}, but all {wanted.Max} places are taken");
+                    return DecisionOutcome.RoleTaken;
+                }
             }
 
             r.DayPlan = plan;

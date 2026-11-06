@@ -4,6 +4,7 @@ using NUnit.Framework;
 using TinyCity.Simulation;
 using TinyCity.Simulation.Activities;
 using TinyCity.Simulation.AI;
+using TinyCity.Simulation.Configuration;
 using TinyCity.Simulation.Content;
 using TinyCity.Simulation.History;
 using TinyCity.Simulation.Persistence;
@@ -94,10 +95,10 @@ namespace TinyCity.Tests.EditMode
             PromptText.AppendRoleAndMeeting(s, sim, late);
             Assert.That(s.ToString(), Does.Contain("Full, so nobody else can take them up until a place comes free: farmer (3 of 3)"));
 
-            Choose(sim, late, "farmer");
+            Assert.That(sim.ApplyDayPlan(late.Id, DayPlan.DayFor(sim.Time), Plan(), "farmer"), Is.EqualTo(DecisionOutcome.RoleTaken), "asked again");
             Assert.That(late.Role, Is.Null, "the fourth farmer is turned away");
-            Assert.That(sim.Memories.ForResident(late.Id).Any(m => m.Summary.Contains("there can only be 3")), Is.True);
-            sim.Advance(24 * 60);
+            Assert.That(late.DayPlan, Is.Null, "the plan waits for a role with room");
+            Assert.That(sim.ApplyDayPlan(late.Id, DayPlan.DayFor(sim.Time), Plan()), Is.EqualTo(DecisionOutcome.RoleTaken), "no role at all is asked again too");
             Choose(sim, late, "fisher");
             Assert.That(late.Role, Is.EqualTo("fisher"), "another role with room is fine");
         }
@@ -132,6 +133,65 @@ namespace TinyCity.Tests.EditMode
             Assert.That(asker.Role, Is.EqualTo("farmer"), "both cook places are taken");
             Assert.That(sim.RoleRequests.ContainsKey(asker.Id), Is.False);
             Assert.That(sim.History.Events.Last(e => e.Kind == TownEventKind.Meeting).Summary, Does.Contain("every place in that role is taken"));
+        }
+    
+        [Test]
+        public void SomeoneWithARole_WhoWantsAFullOne_KeepsTheirPlanAndTheirRole()
+        {
+            var sim = NewGame();
+            Choose(sim, sim.Residents[0], "toolmaker");
+            var r = sim.Residents[1];
+            Choose(sim, r, "farmer");
+            sim.Advance(24 * 60);
+            Choose(sim, r, "toolmaker");
+            Assert.That(r.Role, Is.EqualTo("farmer"));
+            Assert.That(sim.Memories.ForResident(r.Id).Any(m => m.Summary.Contains("there can only be 1")), Is.True);
+        }
+
+        [Test]
+        public void EveryonePlanningAtOnce_AllGetARole_WithinTheLimits()
+        {
+            // From the owner's log of 6 November: twenty plans were asked for at 07:00, each listing every role as
+            // free, most answered toolmaker or lumberjack and fifteen were left with no role and nothing to do but chat.
+            var sim = NewGame();
+            var favourites = new[] { "toolmaker", "lumberjack", "miner", "cook", "farmer", "fisher", "builder", "water purifier", "merchant", "tax man", "security enforcer", "mayor" };
+            var transport = FakeAiTransport.WorkingOllama(body =>
+            {
+                if (!body.Contains("Plan the rest of your day"))
+                {
+                    return null;
+                }
+
+                var role = favourites.First(f => body.Contains("\"" + f + "\""));
+                return "{\"role\":\"" + role + "\",\"plan\":[{\"hour\":9,\"plan\":\"Work\"}]}";
+            });
+            var ai = new AiService(new OllamaSettings(), transport);
+            ai.Attach(sim);
+            sim.Tick();
+            for (var i = 0; i < 2000 && sim.Residents.Any(r => r.Role == null); i++)
+            {
+                ai.Update(i * 0.5);
+            }
+
+            Assert.That(sim.Residents.All(r => r.Role != null), Is.True, string.Join(", ", sim.Residents.Where(r => r.Role == null).Select(r => r.FirstName)));
+            Assert.That(sim.HoldersOf("toolmaker"), Is.EqualTo(1));
+            Assert.That(sim.Brief.Roles.All(o => sim.HoldersOf(o.Name) <= o.Max), Is.True);
+        }
+
+        [Test]
+        public void ThePrompts_SayWhatNobodyCanHave_WhileItsRoleIsEmpty()
+        {
+            var sim = NewGame();
+            var s = new System.Text.StringBuilder();
+            PromptText.AppendRoleAndMeeting(s, sim, sim.Residents[0]);
+            Assert.That(s.ToString(), Does.Contain("With no water purifier, nobody can get clean water").And.Contain("With no cook, nobody can eat").And.Contain("With no farmer or fisher, there is no food"));
+
+            Choose(sim, sim.Residents[1], "water purifier");
+            Choose(sim, sim.Residents[2], "cook");
+            Choose(sim, sim.Residents[3], "fisher");
+            s.Clear();
+            PromptText.AppendRoleAndMeeting(s, sim, sim.Residents[0]);
+            Assert.That(s.ToString(), Does.Not.Contain("With no"));
         }
     }
 }

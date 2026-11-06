@@ -69,7 +69,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(loaded.GetResident(r.Id).Role, Is.EqualTo("farmer"));
             Assert.That(loaded.Brief.Text, Is.EqualTo(WorldBrief.Default.Text), "the world keeps its brief");
 
-            Assert.That(sim.ApplyDayPlan(other.Id, DayPlan.DayFor(sim.Time), Plan(), "astronaut"), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDayPlan(other.Id, DayPlan.DayFor(sim.Time), Plan(), "astronaut"), Is.EqualTo(DecisionOutcome.RoleTaken), "someone without a role is asked again");
             Assert.That(other.Role, Is.Null, "a role not on offer is ignored");
             sim.Advance(24 * 60);
             Assert.That(sim.ApplyDayPlan(r.Id, DayPlan.DayFor(sim.Time), Plan(), TownSimulation.RoleNone), Is.EqualTo(DecisionOutcome.Applied));

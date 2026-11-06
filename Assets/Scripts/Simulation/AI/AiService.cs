@@ -946,7 +946,7 @@ namespace TinyCity.Simulation.AI
                 r.Id,
                 AiPriority.Decision,
                 $"day {day} plan for {r.FirstName}",
-                DayPlanPrompt.BuildBody(Model, sim, r, day),
+                () => DayPlanPrompt.BuildBody(Model, sim, r, day),
                 text =>
                 {
                     if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
@@ -963,6 +963,8 @@ namespace TinyCity.Simulation.AI
                             return AiReplyCheck.Accepted();
                         case DecisionOutcome.InvalidText:
                             return AiReplyCheck.Invalid("the plan had nothing usable in it");
+                        case DecisionOutcome.RoleTaken:
+                            return AiReplyCheck.Invalid($"they chose the {role}, but every place in it is taken");
                         default:
                             return AiReplyCheck.Stale(outcome.ToString());
                     }
