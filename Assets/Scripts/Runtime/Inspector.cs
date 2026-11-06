@@ -160,7 +160,33 @@ namespace TinyCity.Runtime
             GUILayout.Space(6f);
             tab = GUILayout.Toolbar(tab, Simulation.FoodMustBeMade ? TabNamesV2 : TabNames);
             scroll = BeginVerticalScroll(scroll);
+            // On the Now tab the name, who they are, where and what they're doing sit on the left, with their health
+            // and needs as bars beside them (owner, 5 November).
+            var columns = tab == 0 && r.IsAlive;
+            var leftWidth = Mathf.Floor(ScrollContentWidth() * 0.55f);
+            if (columns)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.BeginVertical(GUILayout.Width(leftWidth));
+            }
+
             GUILayout.Label(Simulation.AiRunsEverything ? $"{r.FullName}{RoleText(r)}" : $"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", styles.Title);
+            if (columns)
+            {
+                DrawNowSummary(r);
+                GUILayout.EndVertical();
+                GUILayout.Space(8f);
+                GUILayout.BeginVertical();
+                var barsWidth = ScrollContentWidth() - leftWidth - 12f;
+                Bar("Health", r.Health, HealthRules.MaxHealthFor(r.AgeYears), barsWidth);
+                for (var i = 0; i < Needs.Count; i++)
+                {
+                    Bar(((NeedType)i).ToString(), r.Needs[(NeedType)i], Needs.Max, barsWidth);
+                }
+
+                GUILayout.EndVertical();
+                GUILayout.EndHorizontal();
+            }
             if (r.IsNewcomer)
             {
                 GUILayout.Label($"Moved to the city on day {r.MovedInDay}", styles.Text);
@@ -556,18 +582,30 @@ namespace TinyCity.Runtime
 
         private static string RoleText(Resident r) => string.IsNullOrEmpty(r.Role) ? string.Empty : $" ({r.Role})";
 
-        private void DrawNow(Resident r)
+        /// <summary>The Now tab's left column under the name: who they are, any illness, where they are and what they're doing.</summary>
+        private void DrawNowSummary(Resident r)
         {
             GUILayout.Label(Simulation.FoodMustBeMade ? r.Personality.Describe() : $"{DescribeLivelihood(r)} · {r.Personality.Describe()}", styles.Small);
+            var illness = DescribeIllness(r);
+            if (illness.Length > 0)
+            {
+                GUILayout.Label($"Unwell{illness}", styles.Small);
+            }
+
+            GUILayout.Label($"Where: {DescribeLocation(r)}", styles.Text);
+            GUILayout.Label($"Doing: {DescribeActivity(r)}", styles.Text);
+        }
+
+        private void DrawNow(Resident r)
+        {
             if (!r.IsAlive)
             {
+                GUILayout.Label(Simulation.FoodMustBeMade ? r.Personality.Describe() : $"{DescribeLivelihood(r)} · {r.Personality.Describe()}", styles.Small);
                 GUILayout.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}. Remembered by the town.", styles.Text);
                 return;
             }
 
-            GUILayout.Label($"Health: {r.Health:0}/{HealthRules.MaxHealthFor(r.AgeYears):0}{DescribeIllness(r)}", styles.Text);
-            GUILayout.Label($"Where: {DescribeLocation(r)}", styles.Text);
-            GUILayout.Label($"Doing: {DescribeActivity(r)}", styles.Text);
+            GUILayout.Space(4f);
 
             if (r.State == ResidentState.Deciding)
             {
@@ -631,12 +669,6 @@ namespace TinyCity.Runtime
                 {
                     GUILayout.Label($"Last said ({said.Time.ClockText}): “{said.Text}”", styles.Small);
                 }
-            }
-
-            GUILayout.Space(6f);
-            for (var i = 0; i < Needs.Count; i++)
-            {
-                NeedBar((NeedType)i, r.Needs[(NeedType)i]);
             }
 
             GUILayout.Space(6f);
@@ -983,19 +1015,23 @@ namespace TinyCity.Runtime
             return text;
         }
 
-        private void NeedBar(NeedType need, double value)
+        /// <summary>A labelled bar <paramref name="width"/> wide: name, a bar coloured by how full it is, and the number.</summary>
+        private void Bar(string name, double value, double max, float width)
         {
-            var rect = GUILayoutUtility.GetRect(ScrollContentWidth(), 18f, GUILayout.ExpandWidth(false));
-            GUI.Label(new Rect(rect.x, rect.y, 90f, rect.height), need.ToString(), styles.Small);
-            var bar = new Rect(rect.x + 90f, rect.y + 3f, rect.width - 130f, rect.height - 6f);
+            const float labelWidth = 62f;
+            const float numberWidth = 28f;
+            var rect = GUILayoutUtility.GetRect(width, 18f, GUILayout.Width(width));
+            GUI.Label(new Rect(rect.x, rect.y, labelWidth, rect.height), name, styles.Small);
+            var bar = new Rect(rect.x + labelWidth, rect.y + 4f, Mathf.Max(10f, rect.width - labelWidth - numberWidth - 4f), rect.height - 8f);
             var p = UiTheme.Palette;
             GUI.color = UiTheme.ToColor(p.Control);
             GUI.DrawTexture(bar, Texture2D.whiteTexture);
-            var fraction = (float)(value / Needs.Max);
+            var fraction = Mathf.Clamp01((float)(value / Math.Max(1.0, max)));
+            value = value / Math.Max(1.0, max) * Needs.Max;
             GUI.color = UiTheme.ToColor(value < 20 ? p.Error : value < 50 ? p.Warning : p.Success);
             GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * fraction, bar.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
-            GUI.Label(new Rect(bar.xMax + 6f, rect.y, 40f, rect.height), $"{value:0}", styles.Small);
+            GUI.Label(new Rect(bar.xMax + 4f, rect.y, numberWidth, rect.height), $"{value:0}", styles.Small);
         }
 
         private string DescribeLocation(Resident r)
