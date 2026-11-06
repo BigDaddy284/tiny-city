@@ -23,7 +23,7 @@ namespace TinyCity.Simulation
 
             foreach (var r in residents.Where(r => r.IsAlive).ToList())
             {
-                if (minute == 0 && HealthRules.IsBirthday(r, Time.Day))
+                if (minute == 0 && !AiRunsEverything && HealthRules.IsBirthday(r, Time.Day))
                 {
                     CelebrateBirthday(r);
                 }
@@ -119,6 +119,7 @@ namespace TinyCity.Simulation
             FinishFood(r, activity);
             FinishCrafting(r, activity);
             FinishBuilding(r, activity);
+            FinishOpenLand(r, activity);
             if (activity == ActivityCatalog.SeeDoctor && HealthRules.NeedsDoctor(r))
             {
                 r.IllnessTreated = true;

@@ -13,7 +13,7 @@ namespace TinyCity.Tests.EditMode
         private static List<string> Businesses => StarterTown.CreateWorld().Businesses.Select(b => b.Id).ToList();
 
         private static List<ResidentProfile> Parse(string json, out List<string> problems) =>
-            ResidentProfiles.Parse(json, StarterTown.StarterResidentIds, Businesses, out problems);
+            ResidentProfiles.Parse(json, StarterTown.OpenLandResidentIds, Businesses, out problems);
 
         [Test]
         public void DefaultProfiles_RoundTrip_AndStartTheDesignedTown()
@@ -22,14 +22,14 @@ namespace TinyCity.Tests.EditMode
             var profiles = Parse(json, out var problems);
 
             Assert.That(problems, Is.Empty);
-            Assert.That(profiles.Count, Is.EqualTo(StarterTown.StarterResidentIds.Count));
+            Assert.That(profiles.Count, Is.EqualTo(StarterTown.OpenLandResidentIds.Count));
 
             // Tiny City 2's shipped profiles start everyone with no money (owner, 5 November), as the open land does without them.
             Assert.That(profiles.All(p => p.MoneyPence == 0), Is.True);
             var fromProfiles = FlatLand.CreateNewGame(profiles);
             var designed = FlatLand.CreateNewGame();
             Assert.That(SaveSerializer.Save(fromProfiles), Is.EqualTo(SaveSerializer.Save(designed)));
-            Assert.That(designed.Residents.All(r => r.About.Length > 0), Is.True);
+            Assert.That(designed.Residents.All(r => r.About.Length == 0 && r.Outlook.Length > 0), Is.True, "no backstories, only what type of person they are");
             Assert.That(designed.Residents.All(r => r.OwnsBusinessId == null), Is.True);
         }
 

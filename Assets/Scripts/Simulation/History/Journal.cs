@@ -43,6 +43,7 @@ namespace TinyCity.Simulation.History
                 case TownEventKind.Friends:
                     return JournalTopic.Friends;
                 case TownEventKind.Gathering:
+                case TownEventKind.Meeting:
                     return JournalTopic.Gatherings;
                 default:
                     return JournalTopic.Life;
@@ -69,6 +70,7 @@ namespace TinyCity.Simulation.History
                 case TownEventKind.NewJob:
                 case TownEventKind.Built:
                 case TownEventKind.WorldEnded:
+                case TownEventKind.Meeting:
                     return true;
                 default:
                     return false;

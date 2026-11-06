@@ -68,7 +68,7 @@ namespace TinyCity.Tests.EditMode
         public void EveryResident_StartsAtTheCamp_WithNoBedJobOrRent()
         {
             var sim = NewGame();
-            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.StarterResidentIds.Count));
+            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.OpenLandResidentIds.Count));
             Assert.That(sim.Residents.Select(r => r.Location).Distinct().Count(), Is.EqualTo(sim.Residents.Count));
             foreach (var r in sim.Residents)
             {
@@ -114,7 +114,7 @@ namespace TinyCity.Tests.EditMode
             var sim = NewGame();
             Assert.That((sim.NewcomersEnabled, sim.BabiesEnabled), Is.EqualTo((false, false)));
             sim.Advance(3 * 24 * 60);
-            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.StarterResidentIds.Count));
+            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.OpenLandResidentIds.Count));
         }
 
         [Test]
@@ -150,7 +150,7 @@ namespace TinyCity.Tests.EditMode
             var r = sim.Residents[0];
             var ids = new HashSet<string>(sim.Planner.FreeTimeOptions(r, everything: true).Select(o => o.ActionId));
             Assert.That(ids.Contains("gather-wood"), Is.False, "trees need an axe");
-            foreach (var id in new[] { "gather-sticks", "gather-loose-stones", "plant-crops", "catch-fish", "plan-building", "drink-pond", "wash-pond", "toilet-outdoors", "sleep" })
+            foreach (var id in new[] { "gather-sticks", "gather-loose-stones", "plant-crops", "catch-fish", "plan-building", "drink-pond", "wash-pond", "sleep" })
             {
                 Assert.That(ids.Contains(id), Is.True, id + ": " + string.Join(",", ids));
             }

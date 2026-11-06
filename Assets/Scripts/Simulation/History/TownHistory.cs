@@ -38,6 +38,9 @@ namespace TinyCity.Simulation.History
 
         // Tiny City 2: the last resident died, and the world's legacy log was written for the next one.
         WorldEnded,
+
+        // Tiny City 2: the weekly town meeting and its votes on role changes.
+        Meeting,
     }
 
     /// <summary>Something that happened in the village and belongs to its history, separate from any one resident's memories.</summary>

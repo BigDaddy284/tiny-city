@@ -73,7 +73,11 @@ namespace TinyCity.Tests.PlayMode
             Assert.That(game.Simulation.AiDecisionsEnabled, Is.False);
 
             game.AdvanceMinutes(120);
-            Assert.That(game.Simulation.Residents[0].State, Is.EqualTo(TinyCity.Simulation.Residents.ResidentState.Deciding));
+            // The test before ran the old routine, which can leave a chat going; it waits for AI lines, so that
+            // pair stays talking. Everyone else is waiting to decide, and nobody is left idle.
+            var residents = game.Simulation.Residents;
+            Assert.That(System.Linq.Enumerable.Any(residents, r => r.State == TinyCity.Simulation.Residents.ResidentState.Deciding), Is.True);
+            Assert.That(System.Linq.Enumerable.Any(residents, r => r.IsAlive && r.State == TinyCity.Simulation.Residents.ResidentState.Idle), Is.False);
             Assert.That(game.HoldingForAi, Is.True);
         }
     }

@@ -59,6 +59,12 @@ namespace TinyCity.Simulation.Content
 
         public static GameTime StartTime => StarterTown.StartTime;
 
+        /// <summary>The meeting circle's two spots in the camp.</summary>
+        public static readonly string[] MeetingCircleIds = { "obj-flat-meeting-1", "obj-flat-meeting-2" };
+
+        /// <summary>The first weekly town meeting is a week after the start (owner, 5 November: there is no first-day meeting).</summary>
+        public const int DaysToFirstMeeting = 7;
+
         public static IReadOnlyList<string> Rows()
         {
             var rows = new List<string>();
@@ -95,6 +101,10 @@ namespace TinyCity.Simulation.Content
 
             objects.Add(new WorldObject("obj-flat-crafting-1", "Crafting bench", ObjectType.Workbench, At(48, 40)));
             objects.Add(new WorldObject("obj-flat-crafting-2", "Crafting bench", ObjectType.Workbench, At(52, 40)));
+
+            // The meeting circle, where everyone meets once a week (two spots, so all twenty fit).
+            objects.Add(new WorldObject(MeetingCircleIds[0], "Meeting circle", ObjectType.GatheringSpot, At(40, 31)));
+            objects.Add(new WorldObject(MeetingCircleIds[1], "Meeting circle", ObjectType.GatheringSpot, At(43, 31)));
 
             // Trees to chop along the left quarter's far edge, with fallen branches under them to pick up by hand.
             var trees = new[] { (2, 23), (5, 24), (2, 26), (4, 28), (2, 30), (5, 31), (2, 33), (4, 35) };
@@ -133,7 +143,7 @@ namespace TinyCity.Simulation.Content
         /// </summary>
         public static IReadOnlyList<Resident> CreateResidents(TownWorld world, IReadOnlyList<ResidentProfile> profiles)
         {
-            var residents = StarterTown.CreateResidents(StarterTown.CreateWorld(), profiles);
+            var residents = StarterTown.CreateResidents(StarterTown.CreateWorld(), profiles, openLand: true);
             var spots = StartingSpots().ToList();
             for (var i = 0; i < residents.Count && i < spots.Count; i++)
             {
@@ -174,7 +184,7 @@ namespace TinyCity.Simulation.Content
         public static TownSimulation CreateNewGame(IReadOnlyList<ResidentProfile> profiles = null, IReadOnlyList<string> lessons = null, WorldBrief brief = null)
         {
             var world = CreateWorld();
-            var simulation = new TownSimulation(world, CreateResidents(world, profiles), StartTime) { Brief = brief ?? WorldBrief.Default };
+            var simulation = new TownSimulation(world, CreateResidents(world, profiles), StartTime) { Brief = brief ?? WorldBrief.Default, FirstMeetingDay = StartTime.Day + DaysToFirstMeeting };
             foreach (var r in simulation.Residents)
             {
                 simulation.Memories.Add(r.Id, simulation.Time, MemoryType.LifeHistory, 8,

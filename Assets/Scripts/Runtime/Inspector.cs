@@ -21,7 +21,7 @@ namespace TinyCity.Runtime
     {
         public const float DefaultWidth = 380f;
         public const float MinWidth = 320f;
-        private const float GripWidth = 6f;
+        private const float GripWidth = 10f;
         private const string WidthPrefsKey = "TinyCity.SidebarWidth";
 
         /// <summary>The side panel's width: drag its left edge to change it (owner, 5 November); kept in PlayerPrefs.</summary>
@@ -30,7 +30,18 @@ namespace TinyCity.Runtime
         private static bool widthLoaded;
         private bool resizing;
         private const int SearchMatchesShown = 6;
-        private const float PeopleListHeight = 180f;
+        private const float DefaultListHeight = 180f;
+        private const float DefaultFooterHeight = 150f;
+        private const float MinSectionHeight = 60f;
+        private const float SplitterHeight = 12f;
+        private const string ListHeightPrefsKey = "TinyCity.ListHeight";
+        private const string FooterHeightPrefsKey = "TinyCity.FooterHeight";
+
+        /// <summary>How tall the People and Roles lists and the bottom section are: drag the bars between them (owner, 5 November); kept in PlayerPrefs.</summary>
+        private static float listHeight = DefaultListHeight;
+        private static float footerHeight = DefaultFooterHeight;
+        private static bool heightsLoaded;
+        private Vector2 footerScroll;
         private const int GridColumns = 2;
         private const string SearchControl = "inspector-people-search";
         private const int TimelineShown = 40;
@@ -47,6 +58,8 @@ namespace TinyCity.Runtime
         private int tab;
         private Vector2 scroll;
         private bool peopleOpen;
+        private bool rolesOpen;
+        private Vector2 rolesScroll;
         private bool expanded;
         private Vector2 gridScroll;
         private PeopleFilter peopleFilter;
@@ -77,6 +90,13 @@ namespace TinyCity.Runtime
                 Width = PlayerPrefs.GetFloat(WidthPrefsKey, DefaultWidth);
             }
 
+            if (!heightsLoaded)
+            {
+                heightsLoaded = true;
+                listHeight = PlayerPrefs.GetFloat(ListHeightPrefsKey, DefaultListHeight);
+                footerHeight = PlayerPrefs.GetFloat(FooterHeightPrefsKey, DefaultFooterHeight);
+            }
+
             Width = Mathf.Clamp(Width, MinWidth, MaxWidth);
             var grip = new Rect(Screen.width - Width - (GripWidth / 2f), 0f, GripWidth, Screen.height);
             var e = Event.current;
@@ -96,13 +116,22 @@ namespace TinyCity.Runtime
                     PlayerPrefs.Save();
                     e.Use();
                     break;
-                case EventType.Repaint:
-                    // A thin bar shows where to grab, brighter while dragging.
-                    GUI.color = UiTheme.ToColor(UiTheme.Palette.BarBorder);
-                    GUI.DrawTexture(new Rect(grip.x + 1f, 0f, resizing ? 4f : 2f, Screen.height), Texture2D.whiteTexture);
-                    GUI.color = Color.white;
-                    break;
             }
+        }
+
+        /// <summary>A thin bar down the left edge, with a handle halfway down to show where to grab, brighter while dragging.</summary>
+        private void DrawGrip()
+        {
+            if (Event.current.type != EventType.Repaint)
+            {
+                return;
+            }
+
+            var x = Screen.width - Width;
+            var hover = new Rect(x - (GripWidth / 2f), 0f, GripWidth, Screen.height).Contains(Event.current.mousePosition);
+            GUI.color = UiTheme.ToColor(UiTheme.Palette.BarBorder);
+            GUI.DrawTexture(new Rect(x - 1f, 0f, resizing ? 4f : 2f, Screen.height), Texture2D.whiteTexture);
+            DrawHandle(new Rect(x - 4f, (Screen.height / 2f) - 30f, 8f, 60f), vertical: true, active: resizing || hover);
         }
 
         public void Draw(GuiStyles guiStyles)
@@ -116,6 +145,7 @@ namespace TinyCity.Runtime
             GUI.color = UiTheme.ToColor(UiTheme.Palette.BarBorder);
             GUI.DrawTexture(new Rect(area.x, 0f, 1f, area.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
+            DrawGrip();
 
             GUILayout.BeginArea(new Rect(area.x + 14f, 10f, Width - 28f, Screen.height - 20f));
             DrawTownControls(r);
@@ -130,7 +160,38 @@ namespace TinyCity.Runtime
             GUILayout.Space(6f);
             tab = GUILayout.Toolbar(tab, Simulation.FoodMustBeMade ? TabNamesV2 : TabNames);
             scroll = BeginVerticalScroll(scroll);
+            // On the Now tab the name, who they are, where and what they're doing sit on the left, with their health
+            // and needs as bars beside them (owner, 5 November).
+            var columns = tab == 0 && r.IsAlive;
+            var leftWidth = Mathf.Floor(ScrollContentWidth() * 0.55f);
+            if (columns)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.BeginVertical(GUILayout.Width(leftWidth));
+            }
+
             GUILayout.Label(Simulation.AiRunsEverything ? $"{r.FullName}{RoleText(r)}" : $"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", styles.Title);
+            if (columns)
+            {
+                DrawNowSummary(r);
+                GUILayout.EndVertical();
+                GUILayout.Space(8f);
+                GUILayout.BeginVertical();
+                var barsWidth = ScrollContentWidth() - leftWidth - 12f;
+                Bar("Health", r.Health, HealthRules.MaxHealthFor(r.AgeYears), barsWidth);
+                for (var i = 0; i < Needs.Count; i++)
+                {
+                    if (!Simulation.HasNeed((NeedType)i))
+                    {
+                        continue;
+                    }
+
+                    Bar(((NeedType)i).ToString(), r.Needs[(NeedType)i], Needs.Max, barsWidth);
+                }
+
+                GUILayout.EndVertical();
+                GUILayout.EndHorizontal();
+            }
             if (r.IsNewcomer)
             {
                 GUILayout.Label($"Moved to the city on day {r.MovedInDay}", styles.Text);
@@ -148,7 +209,7 @@ namespace TinyCity.Runtime
                 GUILayout.Label(carer == null ? "A baby, looked after at home" : $"A baby, carried about by {carer.FirstName}", styles.Text);
             }
 
-            if (r.IsHomeless && r.IsAlive)
+            if (r.IsHomeless && r.IsAlive && !Simulation.FoodMustBeMade)
             {
                 GUILayout.Label("Nowhere to live: sleeps on a park bench until a home comes free", styles.Text);
             }
@@ -179,9 +240,16 @@ namespace TinyCity.Runtime
 
         private void DrawTownControls(Resident r)
         {
+            // The title, then the journal, settings and hide buttons (owner, 5 November: no Town View button; a
+            // middle click lets go of whoever the camera follows).
             GUILayout.BeginHorizontal();
             GUILayout.Label("Tiny City 2", styles.Title);
             GUILayout.FlexibleSpace();
+            if (GUILayout.Toggle(game.JournalOpen, "Journal", GUI.skin.button, FitWidth("Journal"), GUILayout.Height(28f)) != game.JournalOpen)
+            {
+                game.ToggleJournal();
+            }
+
             if (GUILayout.Toggle(game.SettingsOpen, "Settings", GUI.skin.button, FitWidth("Settings"), GUILayout.Height(28f)) != game.SettingsOpen)
             {
                 game.ToggleSettings();
@@ -193,18 +261,45 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label($"Town: {game.CurrentTownName}", styles.Small);
+            GUILayout.Label($"Town: {game.CurrentTownName} · {Simulation.LivingCount} people", styles.Small);
             GUILayout.Label($"{Simulation.Time.Weekday}, Day {Simulation.Time.Day}   {Simulation.Time.ClockText}", styles.Text);
-            GUILayout.Label(DescribeCalendar(), styles.Small);
+            GUILayout.Label(Simulation.RolesLimitSkills ? DescribeMeeting() : DescribeCalendar(), styles.Small);
 
+            // The speeds, then the People and Roles drop-downs, all the same width on one line.
+            var hasRoles = Simulation.Brief.Roles.Count > 0;
+            var count = GameController.Speeds.Length + (hasRoles ? 2 : 1);
+            var gap = GUI.skin.button.margin.horizontal;
+            var each = GUILayout.Width(Mathf.Max(20f, ((Width - 28f) / count) - gap));
             GUILayout.BeginHorizontal();
             for (var i = 0; i < GameController.Speeds.Length; i++)
             {
                 var label = GameController.Speeds[i] == 0 ? "Pause" : $"{GameController.Speeds[i]}x";
-                if (GUILayout.Toggle(game.SpeedIndex == i, label, GUI.skin.button) && game.SpeedIndex != i)
+                if (GUILayout.Toggle(game.SpeedIndex == i, label, GUI.skin.button, each) && game.SpeedIndex != i)
                 {
                     game.SetSpeed(i);
                 }
+            }
+
+            // The people list and the roles list drop down under this row, one at a time.
+            var openPeople = GUILayout.Toggle(peopleOpen, peopleOpen ? "People ▲" : "People ▼", GUI.skin.button, each);
+            if (openPeople != peopleOpen)
+            {
+                peopleOpen = openPeople;
+                rolesOpen = rolesOpen && !peopleOpen;
+            }
+
+            if (hasRoles)
+            {
+                var openRoles = GUILayout.Toggle(rolesOpen, rolesOpen ? "Roles ▲" : "Roles ▼", GUI.skin.button, each);
+                if (openRoles != rolesOpen)
+                {
+                    rolesOpen = openRoles;
+                    peopleOpen = peopleOpen && !rolesOpen;
+                }
+            }
+            else
+            {
+                rolesOpen = false;
             }
 
             GUILayout.EndHorizontal();
@@ -217,23 +312,66 @@ namespace TinyCity.Runtime
                 GUILayout.Label($"Running at {game.ActualSpeed:0.0}x of {game.Speed}x.{waiting}", styles.Small);
             }
 
-            // The journal, Town View, then the camera panels: fewer or more, and everyone in view.
-            // Each button is as wide as its words, so the five fit the side panel's width.
-            var panels = game.Panels;
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(game.JournalOpen, "Town Journal", GUI.skin.button, FitWidth("Town Journal")) != game.JournalOpen)
-            {
-                game.ToggleJournal();
-            }
-
-            if (GUILayout.Toggle(panels.InTownView, "Town View", GUI.skin.button, FitWidth("Town View")) != panels.InTownView)
-            {
-                game.ToggleTownView();
-            }
-
-            GUILayout.EndHorizontal();
-
             DrawPeopleFinder(r);
+            if (rolesOpen)
+            {
+                DrawRoles(r);
+            }
+        }
+
+        /// <summary>
+        /// Tiny City 2: every role on offer with who has taken it up (or nobody), and the role changes waiting for
+        /// the next town meeting. Picking a name shows that person.
+        /// </summary>
+        private void DrawRoles(Resident r)
+        {
+            rolesScroll = BeginVerticalScroll(rolesScroll, GUILayout.Height(listHeight));
+            foreach (var role in Simulation.Brief.Roles)
+            {
+                var holders = Simulation.Residents.Where(o => o.IsAlive && o.Role == role.Name).OrderBy(o => o.FirstName, StringComparer.Ordinal).ToList();
+                GUILayout.Label($"{Capital(role.Name)}{(holders.Count == 0 ? ": nobody yet" : string.Empty)}", styles.Text);
+                foreach (var holder in holders)
+                {
+                    if (GUILayout.Toggle(holder == r, "   " + holder.FullName, GUI.skin.button) && holder != r)
+                    {
+                        Pick(holder);
+                    }
+                }
+            }
+
+            var without = Simulation.Residents.Count(o => o.IsAlive && o.Role == null);
+            GUILayout.Label($"No role: {without}", styles.Small);
+            if (Simulation.RoleRequests.Count > 0)
+            {
+                GUILayout.Label("Asked to change at the next meeting:", styles.Small);
+                foreach (var request in Simulation.RoleRequests.OrderBy(o => o.Key, StringComparer.Ordinal))
+                {
+                    var who = Simulation.GetResident(request.Key);
+                    if (who != null)
+                    {
+                        GUILayout.Label(request.Value == TownSimulation.RoleNone ? $"   {who.FullName}: give up being the {who.Role}" : $"   {who.FullName}: {who.Role ?? "no role"} to {request.Value}", styles.Small);
+                    }
+                }
+            }
+
+            EndVerticalScroll();
+            ListSplitter();
+        }
+
+        private string DescribeMeeting()
+        {
+            if (Simulation.Meeting != null && Simulation.Meeting.Day == Simulation.Time.Day)
+            {
+                return $"Town meeting on now at the meeting circle: {Simulation.Meeting.Attendees.Count} there";
+            }
+
+            var day = Simulation.NextMeetingDay(Simulation.Time.Day);
+            if (day == Simulation.Time.Day && Simulation.Time.MinuteOfDay >= TownSimulation.MeetingCloseMinute)
+            {
+                day = Simulation.NextMeetingDay(day + 1);
+            }
+
+            return day <= 0 ? "No town meetings" : $"Next town meeting: {TinyCity.Simulation.Time.GameTime.FromDayAndTime(day, 0, 0).Weekday} (day {day}) at 10:00";
         }
 
         /// <summary>
@@ -243,9 +381,14 @@ namespace TinyCity.Runtime
         /// </summary>
         private void DrawPeopleFinder(Resident r)
         {
+            if (!peopleOpen)
+            {
+                expanded = false;
+                search = string.Empty;
+                return;
+            }
+
             GUILayout.BeginHorizontal();
-            GUILayout.Box(Simulation.LivingCount.ToString(), CountStyle(), GUILayout.Width(28f));
-            peopleOpen = GUILayout.Toggle(peopleOpen, peopleOpen ? "People ▲" : "People ▼", GUI.skin.button, GUILayout.Width(110f));
             GUI.SetNextControlName(SearchControl);
             search = GUILayout.TextField(search ?? string.Empty, 40);
             if (string.IsNullOrEmpty(search) && GUI.GetNameOfFocusedControl() != SearchControl)
@@ -287,7 +430,7 @@ namespace TinyCity.Runtime
                 return;
             }
 
-            peopleScroll = BeginVerticalScroll(peopleScroll, GUILayout.Height(PeopleListHeight));
+            peopleScroll = BeginVerticalScroll(peopleScroll, GUILayout.Height(listHeight));
             var shown = PeopleList.Of(Simulation.Residents, peopleFilter, peopleOrder);
             if (shown.Count == 0)
             {
@@ -303,6 +446,7 @@ namespace TinyCity.Runtime
             }
 
             EndVerticalScroll();
+            ListSplitter();
         }
 
         /// <summary>
@@ -338,6 +482,68 @@ namespace TinyCity.Runtime
             var bar = GUI.skin.verticalScrollbar;
             var barWidth = (bar.fixedWidth > 0f ? bar.fixedWidth : 12f) + bar.margin.horizontal;
             return Width - 28f - barWidth - 4f;
+        }
+
+        /// <summary>The bar under the People or Roles list: drag it to make the list taller or shorter.</summary>
+        private static void ListSplitter()
+        {
+            if (Splitter(ref listHeight, MinSectionHeight, Mathf.Max(MinSectionHeight, Screen.height * 0.7f), upward: false))
+            {
+                PlayerPrefs.SetFloat(ListHeightPrefsKey, listHeight);
+                PlayerPrefs.Save();
+            }
+        }
+
+        /// <summary>
+        /// A bar across the panel with a handle in the middle: press on it and drag up or down to change
+        /// <paramref name="height"/> (the section above it, or with <paramref name="upward"/> the one below). True when let go.
+        /// </summary>
+        private static bool Splitter(ref float height, float min, float max, bool upward)
+        {
+            var rect = GUILayoutUtility.GetRect(1f, SplitterHeight, GUILayout.ExpandWidth(true));
+            var id = GUIUtility.GetControlID(FocusType.Passive);
+            var e = Event.current;
+            switch (e.GetTypeForControl(id))
+            {
+                case EventType.MouseDown when e.button == 0 && rect.Contains(e.mousePosition):
+                    GUIUtility.hotControl = id;
+                    e.Use();
+                    break;
+                case EventType.MouseDrag when GUIUtility.hotControl == id:
+                    height = Mathf.Clamp(height + (upward ? -e.delta.y : e.delta.y), min, max);
+                    e.Use();
+                    break;
+                case EventType.MouseUp when GUIUtility.hotControl == id:
+                    GUIUtility.hotControl = 0;
+                    e.Use();
+                    return true;
+                case EventType.Repaint:
+                    var active = GUIUtility.hotControl == id;
+                    GUI.color = UiTheme.ToColor(UiTheme.Palette.BarBorder);
+                    GUI.DrawTexture(new Rect(rect.x, rect.center.y - 0.5f, rect.width, 1f), Texture2D.whiteTexture);
+                    DrawHandle(new Rect(rect.center.x - 30f, rect.y + 2f, 60f, rect.height - 4f), vertical: false, active: active || rect.Contains(e.mousePosition));
+                    break;
+            }
+
+            height = Mathf.Clamp(height, min, max);
+            return false;
+        }
+
+        /// <summary>A rounded-looking grab handle: a filled bar with three grip lines across it.</summary>
+        private static void DrawHandle(Rect rect, bool vertical, bool active)
+        {
+            GUI.color = UiTheme.ToColor(active ? UiTheme.Palette.AccentB : UiTheme.Palette.Muted);
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = UiTheme.ToColor(UiTheme.Palette.Panel);
+            for (var i = -1; i <= 1; i++)
+            {
+                var line = vertical
+                    ? new Rect(rect.x + 2f, rect.center.y + (i * 5f) - 0.5f, rect.width - 4f, 1f)
+                    : new Rect(rect.center.x + (i * 5f) - 0.5f, rect.y + 2f, 1f, rect.height - 4f);
+                GUI.DrawTexture(line, Texture2D.whiteTexture);
+            }
+
+            GUI.color = Color.white;
         }
 
         /// <summary>A scroll view that only scrolls up and down: its content is kept to <see cref="ScrollContentWidth"/>.</summary>
@@ -381,18 +587,30 @@ namespace TinyCity.Runtime
 
         private static string RoleText(Resident r) => string.IsNullOrEmpty(r.Role) ? string.Empty : $" ({r.Role})";
 
+        /// <summary>The Now tab's left column under the name: who they are, any illness, where they are and what they're doing.</summary>
+        private void DrawNowSummary(Resident r)
+        {
+            GUILayout.Label(Simulation.FoodMustBeMade ? r.Personality.Describe() : $"{DescribeLivelihood(r)} · {r.Personality.Describe()}", styles.Small);
+            var illness = DescribeIllness(r);
+            if (illness.Length > 0)
+            {
+                GUILayout.Label($"Unwell{illness}", styles.Small);
+            }
+
+            GUILayout.Label($"Where: {DescribeLocation(r)}", styles.Text);
+            GUILayout.Label($"Doing: {DescribeActivity(r)}", styles.Text);
+        }
+
         private void DrawNow(Resident r)
         {
-            GUILayout.Label($"{DescribeLivelihood(r)} · {r.Personality.Describe()}", styles.Small);
             if (!r.IsAlive)
             {
+                GUILayout.Label(Simulation.FoodMustBeMade ? r.Personality.Describe() : $"{DescribeLivelihood(r)} · {r.Personality.Describe()}", styles.Small);
                 GUILayout.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}. Remembered by the town.", styles.Text);
                 return;
             }
 
-            GUILayout.Label($"Health: {r.Health:0}/{HealthRules.MaxHealthFor(r.AgeYears):0}{DescribeIllness(r)}", styles.Text);
-            GUILayout.Label($"Where: {DescribeLocation(r)}", styles.Text);
-            GUILayout.Label($"Doing: {DescribeActivity(r)}", styles.Text);
+            GUILayout.Space(4f);
 
             if (r.State == ResidentState.Deciding)
             {
@@ -418,7 +636,7 @@ namespace TinyCity.Runtime
                 {
                     GUILayout.Label($"Planned next (checked again when it's time): {string.Join(", then ", r.PlannedSteps.Select(DescribePlanStep))}", styles.Small);
                 }
-                else
+                else if (r.GoalSource != DecisionSource.Ai)
                 {
                     GUILayout.Label($"Why (game routine): {r.Goal}", styles.Small);
                 }
@@ -456,12 +674,6 @@ namespace TinyCity.Runtime
                 {
                     GUILayout.Label($"Last said ({said.Time.ClockText}): “{said.Text}”", styles.Small);
                 }
-            }
-
-            GUILayout.Space(6f);
-            for (var i = 0; i < Needs.Count; i++)
-            {
-                NeedBar((NeedType)i, r.Needs[(NeedType)i]);
             }
 
             GUILayout.Space(6f);
@@ -583,6 +795,10 @@ namespace TinyCity.Runtime
         {
             var day = Simulation.Time.Day;
             GUILayout.Label(string.IsNullOrEmpty(r.Role) ? "No role chosen" : $"Role: {r.Role}", styles.Text);
+            if (Simulation.RoleRequests.TryGetValue(r.Id, out var wanted))
+            {
+                GUILayout.Label(wanted == TownSimulation.RoleNone ? "Asked to give up their role at the next meeting" : $"Asked to become the {wanted} at the next meeting", styles.Small);
+            }
             GUILayout.Label($"Money: {Money.Format(r.MoneyPence)}", styles.Text);
             GUILayout.Space(4f);
             GUILayout.Label("CARRYING", styles.Section);
@@ -613,6 +829,8 @@ namespace TinyCity.Runtime
             {
                 GUILayout.Label("Materials: none", styles.Small);
             }
+
+            GUILayout.Label($"Clean water: {(r.CleanWater == 0 ? "none" : r.CleanWater.ToString())}", styles.Small);
 
             var anyTool = false;
             foreach (var (tool, tier, usesLeft) in r.Belongings.Tools)
@@ -729,6 +947,19 @@ namespace TinyCity.Runtime
 
         private void DrawFooter()
         {
+            if (Splitter(ref footerHeight, MinSectionHeight, Mathf.Max(MinSectionHeight, Screen.height * 0.6f), upward: true))
+            {
+                PlayerPrefs.SetFloat(FooterHeightPrefsKey, footerHeight);
+                PlayerPrefs.Save();
+            }
+
+            footerScroll = BeginVerticalScroll(footerScroll, GUILayout.Height(footerHeight));
+            DrawFooterContents();
+            EndVerticalScroll();
+        }
+
+        private void DrawFooterContents()
+        {
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Save (F5)"))
             {
@@ -746,7 +977,7 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label("Click someone to follow them and see who they are · Town View: the whole land · N/B: next/previous resident · drag and wheel: pan and zoom · J: journal · S: saved towns · H: hide this panel · Settings: top right", styles.Small);
+            GUILayout.Label("Click someone to follow them and see who they are · middle click: stop following · N/B: next/previous resident · drag and wheel: pan and zoom · J: journal · S: saved towns · H: hide this panel · Settings: top right", styles.Small);
             GUILayout.Label(game.Ai.Summary(), styles.Small);
             var lastEvent = game.Ai.RecentEvents.LastOrDefault();
             if (lastEvent != null)
@@ -789,19 +1020,23 @@ namespace TinyCity.Runtime
             return text;
         }
 
-        private void NeedBar(NeedType need, double value)
+        /// <summary>A labelled bar <paramref name="width"/> wide: name, a bar coloured by how full it is, and the number.</summary>
+        private void Bar(string name, double value, double max, float width)
         {
-            var rect = GUILayoutUtility.GetRect(ScrollContentWidth(), 18f, GUILayout.ExpandWidth(false));
-            GUI.Label(new Rect(rect.x, rect.y, 90f, rect.height), need.ToString(), styles.Small);
-            var bar = new Rect(rect.x + 90f, rect.y + 3f, rect.width - 130f, rect.height - 6f);
+            const float labelWidth = 62f;
+            const float numberWidth = 28f;
+            var rect = GUILayoutUtility.GetRect(width, 18f, GUILayout.Width(width));
+            GUI.Label(new Rect(rect.x, rect.y, labelWidth, rect.height), name, styles.Small);
+            var bar = new Rect(rect.x + labelWidth, rect.y + 4f, Mathf.Max(10f, rect.width - labelWidth - numberWidth - 4f), rect.height - 8f);
             var p = UiTheme.Palette;
             GUI.color = UiTheme.ToColor(p.Control);
             GUI.DrawTexture(bar, Texture2D.whiteTexture);
-            var fraction = (float)(value / Needs.Max);
+            var fraction = Mathf.Clamp01((float)(value / Math.Max(1.0, max)));
+            value = value / Math.Max(1.0, max) * Needs.Max;
             GUI.color = UiTheme.ToColor(value < 20 ? p.Error : value < 50 ? p.Warning : p.Success);
             GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * fraction, bar.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
-            GUI.Label(new Rect(bar.xMax + 6f, rect.y, 40f, rect.height), $"{value:0}", styles.Small);
+            GUI.Label(new Rect(bar.xMax + 4f, rect.y, numberWidth, rect.height), $"{value:0}", styles.Small);
         }
 
         private string DescribeLocation(Resident r)

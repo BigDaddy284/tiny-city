@@ -238,8 +238,8 @@ namespace TinyCity.Runtime
         }
 
         /// <summary>
-        /// Clicks select a panel and the resident under the pointer; a double click on a building shows its inside in
-        /// that panel; dragging pans a free panel; the wheel zooms.
+        /// Clicks select a panel and the resident under the pointer; a middle click stops following them; a double click
+        /// on a building shows its inside in that panel; dragging pans a free panel; the wheel zooms.
         /// </summary>
         public void HandleMouse(Event e, TownView view, TownSimulation simulation)
         {
@@ -252,6 +252,12 @@ namespace TinyCity.Runtime
             var panel = panels[index];
             switch (e.type)
             {
+                case EventType.MouseDown when e.button == 2:
+                    // A middle click anywhere lets go of whoever the panel follows; the camera stays where it is.
+                    ActiveIndex = index;
+                    panel.Release(view);
+                    e.Use();
+                    break;
                 case EventType.MouseDown:
                     ActiveIndex = index;
                     var clicked = ResidentAt(panel, e.mousePosition, view);
@@ -510,7 +516,7 @@ namespace TinyCity.Runtime
                     continue;
                 }
 
-                Label(panel, origin, position + new Vector3(0f, 0.86f, 0f), r.FirstName, styles.Name, GuiStyles.PersonGlow);
+                Label(panel, origin, position + new Vector3(0f, 0.86f, 0f), string.IsNullOrEmpty(r.Role) ? r.FirstName : $"{r.FirstName} ({r.Role})", styles.Name, GuiStyles.PersonGlow);
 
                 // A bubble appears for each new line a resident says, and fades after a few seconds.
                 if (speech.TryGetValue(r.Id, out var bubble) && Time.unscaledTime < bubble.until && panel.TryScreenPoint(position + new Vector3(0f, 1.05f, 0f), out var above))

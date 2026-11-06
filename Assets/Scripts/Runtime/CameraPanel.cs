@@ -58,6 +58,21 @@ namespace TinyCity.Runtime
         /// Points the camera at the followed resident or the free position, framing small interiors whole. The camera
         /// never shows more than the whole map, and stays over it: once the map fits in the view it can't be dragged.
         /// </summary>
+        /// <summary>Stops following anyone, leaving a free camera exactly where the view is now (owner, 5 November: middle click).</summary>
+        public void Release(TownView view)
+        {
+            if (IsFree)
+            {
+                return;
+            }
+
+            var (_, halfHeight, halfWidth) = view.Bounds(MapId);
+            var wholeMap = Mathf.Max(halfHeight, halfWidth / Mathf.Max(0.1f, Camera.aspect)) * 1.05f;
+            FreeCentre = Camera.transform.position;
+            Zoom = Camera.orthographicSize / Mathf.Max(0.01f, wholeMap);
+            FollowId = null;
+        }
+
         public void Aim(TownView view)
         {
             var (centre, halfHeight, halfWidth) = view.Bounds(MapId);

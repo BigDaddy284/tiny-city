@@ -243,10 +243,14 @@ namespace TinyCity.Simulation.Economy
             _ => "crystal",
         };
 
-        /// <summary>Everything that can be handed over in a chat (Tiny City 2's barter): every material, then every tool.</summary>
+        /// <summary>The name clean water is handed over by in a chat.</summary>
+        public const string CleanWaterName = "clean water";
+
+        /// <summary>Everything that can be handed over in a chat (Tiny City 2's barter): every material, every tool, then clean water.</summary>
         public static IReadOnlyList<string> ItemNames =>
             Enum.GetValues(typeof(MaterialKind)).Cast<MaterialKind>().Select(Name)
-                .Concat(Enum.GetValues(typeof(ToolKind)).Cast<ToolKind>().Select(t => Name(t))).ToList();
+                .Concat(Enum.GetValues(typeof(ToolKind)).Cast<ToolKind>().Select(t => Name(t)))
+                .Concat(new[] { CleanWaterName }).ToList();
 
         public static bool TryMaterial(string name, out MaterialKind kind)
         {

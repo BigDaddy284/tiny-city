@@ -32,7 +32,7 @@ namespace TinyCity.Simulation.AI
             var sb = new StringBuilder();
             var map = sim.World.GetMap(r.Location.MapId);
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)} and you are starting your day in {map.Name}.");
-            sb.AppendLine($"How you feel: {PromptText.Feelings(r)}.");
+            sb.AppendLine($"How you feel: {PromptText.Feelings(r, sim)}.");
             sb.AppendLine(r.Job == null
                 ? "You have no job."
                 : $"Your job: {r.Job.Title.ToLowerInvariant()}, {Clock(r.Job.StartMinuteOfDay)} to {Clock(r.Job.EndMinuteOfDay)} on {r.Job.DaysText()}. Today is {sim.Time.Weekday}.");

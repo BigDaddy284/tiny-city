@@ -16,7 +16,8 @@ namespace TinyCity.Simulation.AI
             if (sim != null && sim.FoodMustBeMade)
             {
                 // Tiny City 2: no city and no jobs, only the open land, what the player told everyone, and the role they chose.
-                return $"You are {r.FullName}, aged {r.AgeYears}, one of the people living on the open land of {sim.World.TownName}. " +
+                // Nobody ages or dies there (owner, 5 November), so their age is left out.
+                return $"You are {r.FullName}, one of the people living on the open land of {sim.World.TownName}. " +
                     (sim.Brief.Text.Length == 0 ? string.Empty : $"What everyone here knows: {sim.Brief.Text} ") +
                     (r.Role != null ? $"You have chosen to be the {r.Role}. {sim.Brief.Find(r.Role)?.About} " : sim.Brief.Roles.Count > 0 ? "You haven't taken up any role. " : string.Empty) +
                     (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Who you are, in your own words: {r.About} ") +
@@ -35,17 +36,82 @@ namespace TinyCity.Simulation.AI
 
         public static string Clock(GameTime time) => $"{time.Weekday} {time.ClockText} (day {time.Day})";
 
-        public static string Feelings(Resident r)
+        /// <summary>
+        /// How they feel, in words rather than numbers (a need's number is how well it is met, which small models
+        /// read backwards: "thirst 0" sounded like not thirsty): the worst first, then what's fine, then their
+        /// health and whether going without is wearing it down.
+        /// </summary>
+        public static string Feelings(Resident r, TownSimulation sim = null)
         {
-            var parts = new List<string>();
+            var low = new List<(double value, string words)>();
+            var fine = new List<string>();
             for (var i = 0; i < Needs.Count; i++)
             {
                 var need = (NeedType)i;
+                if (sim != null && !sim.HasNeed(need))
+                {
+                    continue;
+                }
+
                 var value = r.Needs[need];
-                parts.Add($"{need} {value:0}/100{Word(value)}");
+                var words = FeltAs(need, value);
+                if (words == null)
+                {
+                    fine.Add(Lower(need));
+                }
+                else
+                {
+                    low.Add((value, words));
+                }
             }
 
-            return string.Join(", ", parts) + "; " + HealthText(r);
+            var parts = new List<string>();
+            if (low.Count > 0)
+            {
+                parts.Add("you are " + string.Join(", ", low.OrderBy(o => o.value).Select(o => o.words)));
+            }
+
+            if (fine.Count > 0)
+            {
+                parts.Add($"you're fine for {string.Join(", ", fine)}");
+            }
+
+            var neglected = low.Count(o => o.value < Health.HealthRules.NeglectedNeed);
+            var health = $"{HealthText(r)} ({r.Health:0} out of 100)";
+            if (neglected > 0)
+            {
+                health += $", and it is getting worse every hour you go without: {(neglected == 1 ? "one need is" : $"{neglected} needs are")} badly neglected";
+            }
+
+            parts.Add(health);
+            return string.Join("; ", parts);
+        }
+
+        private static string Lower(NeedType need) => need == NeedType.Toilet ? "the toilet" : need.ToString().ToLowerInvariant();
+
+        /// <summary>How a need that isn't well met feels, or null when it's fine.</summary>
+        private static string FeltAs(NeedType need, double value)
+        {
+            var level = value < 10 ? 0 : value < 25 ? 1 : value < 45 ? 2 : -1;
+            if (level < 0)
+            {
+                return null;
+            }
+
+            string[] words;
+            switch (need)
+            {
+                case NeedType.Hunger: words = new[] { "starving", "very hungry", "hungry" }; break;
+                case NeedType.Thirst: words = new[] { "parched with thirst", "very thirsty", "thirsty" }; break;
+                case NeedType.Energy: words = new[] { "exhausted", "very tired", "tired" }; break;
+                case NeedType.Hygiene: words = new[] { "filthy", "dirty", "grubby" }; break;
+                case NeedType.Toilet: words = new[] { "bursting for the toilet", "needing the toilet badly", "needing the toilet" }; break;
+                case NeedType.Social: words = new[] { "desperately lonely", "lonely", "wanting company" }; break;
+                case NeedType.Exercise: words = new[] { "stiff and restless", "restless", "wanting to move" }; break;
+                default: words = new[] { "miserably bored", "bored", "wanting some fun" }; break;
+            }
+
+            return words[level];
         }
 
         /// <summary>How the resident's health feels from the inside, for prompts.</summary>
@@ -165,7 +231,7 @@ namespace TinyCity.Simulation.AI
             sb.AppendLine("People in the city:");
             foreach (var o in known.Take(MaxPeopleListed))
             {
-                sb.Append("- ").Append(o.FullName).Append(", ").Append(o.AgeYears).Append(Work(o)).Append(": ").AppendLine(Relationship(sim, r, o));
+                sb.Append("- ").Append(o.FullName).Append(sim.FoodMustBeMade ? string.Empty : ", " + o.AgeYears).Append(Work(o)).Append(": ").AppendLine(Relationship(sim, r, o));
             }
 
             if (strangers.Count > 0)
@@ -213,7 +279,8 @@ namespace TinyCity.Simulation.AI
             }
 
             sb.AppendLine();
-            sb.AppendLine($"Your things: {r.Belongings.Describe()}. {Economy.CraftingRules.RecipesText()}");
+            sb.AppendLine($"Your things: {r.Belongings.Describe()}; clean water: {(r.CleanWater == 0 ? "none" : r.CleanWater + " portion" + (r.CleanWater == 1 ? string.Empty : "s"))}. {Economy.CraftingRules.RecipesText()}");
+            AppendRoleAndMeeting(sb, sim, r);
             var mine = sim.Construction.OwnedBy(r.Id).ToList();
             if (mine.Count == 0)
             {
@@ -244,6 +311,56 @@ namespace TinyCity.Simulation.AI
                 sb.AppendLine($"{owner?.FullName ?? "Someone"}'s {project.Plan.Name} at ({project.Corner.Position.X}, {project.Corner.Position.Y}): {project.Placed} of {project.Plan.Cells.Count} blocks laid, still needs {needs}; you could help build it.");
             }
         }
+
+        /// <summary>
+        /// Tiny City 2: what their role lets them do, who does each kind of work, and the weekly meeting where role
+        /// changes are voted on, so they work out together how to live.
+        /// </summary>
+        public static void AppendRoleAndMeeting(StringBuilder sb, TownSimulation sim, Resident r)
+        {
+            if (!sim.RolesLimitSkills)
+            {
+                return;
+            }
+
+            var role = sim.Brief.Find(r.Role);
+            var mine = role == null ? new List<string>() : role.Skills.Select(Name).ToList();
+            sb.Append(role == null
+                ? "You have no role, so you can only drink and wash in the dirty pond, eat raw food, catch a fish by hand and pick up fallen branches and loose stones."
+                : mine.Count == 0
+                    ? $"As the {role.Name} you do no special work with your hands: anyone can drink and wash in the dirty pond, eat raw food, catch a fish by hand and pick up branches and stones."
+                    : $"As the {role.Name} you can {string.Join(", ", mine)}; other work belongs to other roles.");
+            sb.Append(" Dirty pond water and raw food fill you less and make you a little ill; clean water and cooked meals don't.");
+            var holders = sim.Residents.Where(o => o.IsAlive && o.Role != null && o.Id != r.Id).GroupBy(o => o.Role)
+                .OrderBy(g => g.Key, System.StringComparer.Ordinal).Select(g => $"{g.Key}: {string.Join(", ", g.Select(o => o.FirstName))}").ToList();
+            var unfilled = sim.Brief.Roles.Where(o => o.Skills.Count > 0 && !sim.Residents.Any(p => p.IsAlive && p.Role == o.Name)).Select(o => o.Name).ToList();
+            if (holders.Count > 0)
+            {
+                sb.Append(" Roles taken: ").Append(string.Join("; ", holders)).Append('.');
+            }
+
+            if (unfilled.Count > 0)
+            {
+                sb.Append(" Nobody yet is the ").Append(string.Join(", ", unfilled)).Append('.');
+            }
+
+            sb.AppendLine();
+            var next = sim.NextMeetingDay(sim.Time.Day);
+            if (next > 0)
+            {
+                var when = next == sim.Time.Day ? "today at 10:00" : next == sim.Time.Day + 1 ? "tomorrow at 10:00" : $"on {GameTime.FromDayAndTime(next, 0, 0).Weekday} (day {next}) at 10:00";
+                sb.Append($"The town meeting is held at the meeting circle {when}: everyone raises the land's problems there, and a role can only be changed if more than half of those there vote for it.");
+                if (sim.RoleRequests.TryGetValue(r.Id, out var wanted))
+                {
+                    sb.Append(wanted == TownSimulation.RoleNone ? " You have asked to give up your role at it." : $" You have asked to become the {wanted} at it; be there to have it voted on.");
+                }
+
+                sb.AppendLine();
+            }
+        }
+
+        private static string Name(string activityId) =>
+            ActivityCatalog.TryGet(activityId, out var a) ? a.Name.ToLowerInvariant() : activityId;
 
         /// <summary>The most unfinished buildings of other people a prompt lists.</summary>
         public const int MaxOtherBuildingsListed = 4;
@@ -347,7 +464,6 @@ namespace TinyCity.Simulation.AI
 
         public static string Quote(string text) => "\"" + (text ?? string.Empty).Replace("\"", "'") + "\"";
 
-        private static string Word(double value) => value < 20 ? " (desperate)" : value < 40 ? " (low)" : value < 65 ? " (could be better)" : string.Empty;
 
         private static string Duration(int minutes)
         {

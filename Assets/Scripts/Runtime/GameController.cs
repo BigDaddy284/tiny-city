@@ -151,6 +151,7 @@ namespace TinyCity.Runtime
             ScreenSettings.Apply(Preferences);
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyCity] AI: {message}") };
             Ai.SetGameSpeed(Speed);
+            Ai.Queue.Answered = (request, response, check) => AiLogStore.Write(Simulation, request, response, check);
 
             SidebarHidden = PlayerPrefs.GetInt(SidebarPrefsKey, 0) == 1;
             SlotNames = SaveStore.ReadIndex();
@@ -462,6 +463,7 @@ namespace TinyCity.Runtime
             legacyWritten = false;
             simulation.AiRunsEverything = true;
             simulation.FoodMustBeMade = true;
+            simulation.RolesLimitSkills = true;
             Ai?.Attach(simulation);
             RestartCameraCycle();
             // A town with another layout (the city in Play Mode tests) needs its maps drawn afresh.

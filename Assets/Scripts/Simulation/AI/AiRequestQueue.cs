@@ -59,6 +59,9 @@ namespace TinyCity.Simulation.AI
     /// </summary>
     public sealed class AiRequestQueue
     {
+        /// <summary>Told about every answer once it has been checked (for the game's AI log); never changes anything.</summary>
+        public Action<AiRequest, string, AiReplyCheck> Answered { get; set; }
+
         /// <summary>
         /// Room for a few requests per person at the most people who can be alive: in Tiny City 2 each resident can
         /// wait on a choice, a day plan, a line and a reaction at once, and anything dropped is only asked again, so a
@@ -269,6 +272,15 @@ namespace TinyCity.Simulation.AI
             catch (Exception e)
             {
                 check = AiReplyCheck.Invalid($"the answer could not be handled: {e.Message}");
+            }
+
+            try
+            {
+                Answered?.Invoke(request, call.ResponseText ?? string.Empty, check);
+            }
+            catch (Exception)
+            {
+                // The log must never stop the game.
             }
 
             switch (check.Status)

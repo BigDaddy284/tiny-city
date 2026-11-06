@@ -65,7 +65,7 @@ namespace TinyCity.Simulation.AI
             var sb = new StringBuilder();
             var map = sim.World.GetMap(r.Location.MapId);
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are in {map.Name}.");
-            sb.AppendLine($"How you feel: {PromptText.Feelings(r)}.");
+            sb.AppendLine($"How you feel: {PromptText.Feelings(r, sim)}.");
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
             if (!sim.FoodMustBeMade || sim.MoneyInUse)
             {
@@ -248,7 +248,7 @@ namespace TinyCity.Simulation.AI
             for (var i = 0; i < Needs.Count; i++)
             {
                 var need = (NeedType)i;
-                if (r.Needs[need] < 65)
+                if (sim.HasNeed(need) && r.Needs[need] < 65)
                 {
                     cues.Add(need.ToString().ToLowerInvariant());
                 }
@@ -280,6 +280,8 @@ namespace TinyCity.Simulation.AI
             }
 
             var cost = o.PricePence > 0 ? $", costs {Economy.Money.Format(o.PricePence)}" : o.Activity == ActivityCatalog.BuyFood ? ", given away free" : string.Empty;
+            var warning = Economy.FoodRules.HealthWarning(o.Activity);
+            cost += warning == null ? string.Empty : "; " + warning;
             return $"{o.Activity.Name.ToLowerInvariant()} at the {o.Target.Name.ToLowerInvariant()} ({walk}, about {o.Activity.DurationMinutes} minutes{cost})";
         }
     }

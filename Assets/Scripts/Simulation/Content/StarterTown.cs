@@ -611,12 +611,13 @@ namespace TinyCity.Simulation.Content
         /// the residents they list start, in their order, with the profile's name, age, money, background and
         /// business; their look, home, job and hobbies come with their id. With none, everyone starts as designed.
         /// </summary>
-        public static IReadOnlyList<Resident> CreateResidents(TownWorld world, IReadOnlyList<ResidentProfile> profiles)
+        public static IReadOnlyList<Resident> CreateResidents(TownWorld world, IReadOnlyList<ResidentProfile> profiles, bool openLand = false)
         {
             var residents = new List<Resident>();
+            var pool = openLand ? Designs.Concat(OpenLandDesigns).ToArray() : Designs;
             var chosen = profiles == null || profiles.Count == 0
-                ? Designs.Select(d => (design: d, profile: (ResidentProfile)null))
-                : profiles.Select(p => (design: Designs.FirstOrDefault(d => d.id == p.Id), profile: p)).Where(x => x.design != null);
+                ? pool.Select(d => (design: d, profile: (ResidentProfile)null))
+                : profiles.Select(p => (design: pool.FirstOrDefault(d => d.id == p.Id), profile: p)).Where(x => x.design != null);
             foreach (var (d, profile) in chosen)
             {
                 var needs = new Needs(d.needsLevel);
@@ -629,7 +630,8 @@ namespace TinyCity.Simulation.Content
                 ApplyFinances(r, d);
                 r.SetHobbies(HobbiesOf(d.id));
                 r.OpenToRomance = d.openToRomance;
-                r.About = profile?.About ?? DefaultAbout(d.id);
+                // Tiny City 2 (owner, 5 November): no backstories on the open land, only what type of person they are.
+                r.About = profile?.About ?? (openLand ? string.Empty : DefaultAbout(d.id));
                 r.Outlook = profile?.Personality ?? (DefaultPersonalities.TryGetValue(d.id, out var personality) ? personality : string.Empty);
                 if (profile != null)
                 {
@@ -647,35 +649,81 @@ namespace TinyCity.Simulation.Content
         public static IReadOnlyList<string> StarterResidentIds => Designs.Select(d => d.id).ToList();
 
         /// <summary>
-        /// The profiles <c>residents.json</c> starts with: every starter resident as designed, with their background
-        /// in their own words and no business owned (someone has to choose to take one on).
+        /// Tiny City 2's open land starts with these twenty (owner, 5 November: twenty to start, and no more): the
+        /// city's fifteen plus five who only ever lived on the open land, with looks made from their ids.
+        /// </summary>
+        public static IReadOnlyList<string> OpenLandResidentIds => Designs.Concat(OpenLandDesigns).Select(d => d.id).ToList();
+
+        /// <summary>
+        /// The profiles <c>residents.json</c> starts with: every starter resident as designed, with a blunt line on
+        /// what type of person they are, no backstory and no business owned (someone has to choose to take one on).
         /// </summary>
         public static IReadOnlyList<ResidentProfile> DefaultProfiles() =>
-            Designs.Select(d => new ResidentProfile(d.id, d.first, d.last, d.age, DefaultAbout(d.id), 0, null,
+            Designs.Concat(OpenLandDesigns).Select(d => new ResidentProfile(d.id, d.first, d.last, d.age, string.Empty, 0, null,
                 DefaultPersonalities.TryGetValue(d.id, out var p) ? p : null)).ToList();
 
-        /// <summary>The one-sentence personalities the shipped residents.json gives (Tiny City 2).</summary>
+        /// <summary>What type of person each one is, bluntly: the personalities the shipped residents.json gives (Tiny City 2).</summary>
         private static readonly Dictionary<string, string> DefaultPersonalities = new Dictionary<string, string>
         {
-            ["res-0001"] = "You live to help others and always put other people first.",
-            ["res-0002"] = "You like to know what everyone is doing, and you speak your mind even when it isn't welcome.",
-            ["res-0003"] = "You like to be in control, to make sure everything runs smoothly.",
-            ["res-0004"] = "You keep careful count of everything, and you never give away what you can trade.",
-            ["res-0005"] = "You take pride in feeding people, but you expect to be paid for good work.",
-            ["res-0006"] = "You want everyone to get along, and you'll share what you have to keep the peace.",
-            ["res-0007"] = "You're out for yourself and your own survival.",
-            ["res-0008"] = "You worry about everyone's wellbeing and look after the weakest first.",
-            ["res-0009"] = "You trust people easily and believe things will work out if everyone pitches in.",
-            ["res-0010"] = "You've survived hard times by being cautious, and you keep something back for later.",
-            ["res-0011"] = "You believe the strong should lead, and you like being the one people follow.",
-            ["res-0012"] = "You live for company and fun, and you'll gamble on a risk for a good story.",
-            ["res-0013"] = "You'd rather work alone and build things well than waste time on talk.",
-            ["res-0014"] = "You look for the best deal in every exchange, and you always win in the end.",
-            ["res-0015"] = "You're patient and steady, and you share freely with anyone who works hard.",
+            ["res-0001"] = "Kind, patient and gentle. Puts everyone else first and never complains.",
+            ["res-0002"] = "Nosy, chatty and opinionated. Knows everyone's business and says what he thinks.",
+            ["res-0003"] = "Quiet, practical and controlling. Happiest fixing things, awkward with people.",
+            ["res-0004"] = "Tidy, careful and tight-fisted. Counts everything and hates waste.",
+            ["res-0005"] = "Proud, warm and a bit of a show-off. Loves feeding people and wants credit for it.",
+            ["res-0006"] = "Friendly, curious and caring. Notices when someone is struggling and keeps the peace.",
+            ["res-0007"] = "Restless, tough and selfish. Works hard but looks out for herself first.",
+            ["res-0008"] = "Calm, careful and soft-hearted. Worries about everyone and can't say no.",
+            ["res-0009"] = "Cheerful, trusting and reckless. Makes friends fast and jumps in without thinking.",
+            ["res-0010"] = "Cautious, sharp-tongued and stubborn. Full of opinions and always keeps something back.",
+            ["res-0011"] = "Strong, disciplined and bossy. Impatient with anyone who can't keep up.",
+            ["res-0012"] = "Loud, fun and easily bored. Loves a crowd and hates dull work.",
+            ["res-0013"] = "Shy, clever and stubborn. Would rather build alone than talk.",
+            ["res-0014"] = "Shrewd, competitive and tough. Always after the best deal and hates losing.",
+            ["res-0015"] = "Slow, steady and generous. Thinks before he acts and shares with hard workers.",
+            ["res-0016"] = "Fair, methodical and serious. Wants things done properly and traded honestly.",
+            ["res-0017"] = "Stubborn, proud and independent. Won't take orders from anyone.",
+            ["res-0018"] = "Eager, curious and unsettled. Keen to prove herself and tries anything once.",
+            ["res-0019"] = "Blunt, gruff and hard-working. Has no time for talk or excuses.",
+            ["res-0020"] = "Organised, encouraging and a little bossy. Gets people working together.",
         };
 
         private static string DefaultAbout(string residentId) =>
             TextRules.Clean(string.Join(" ", LifeHistory(residentId).Select(h => h.summary)), ResidentProfile.MaxAboutLength);
+
+        /// <summary>Tiny City 2's five extra residents, on the open land only: no home, job or money.</summary>
+        private static readonly Design[] OpenLandDesigns =
+        {
+            new Design
+            {
+                id = "res-0016", first = "Iris", last = "Calloway", age = 33, birthday = 61, colour = "#4FA3B8",
+                personality = new Personality(active: 0.55, sociable: 0.5, tidy: 0.8, bookish: 0.6),
+                needsLevel = 74, groceries = 3,
+            },
+            new Design
+            {
+                id = "res-0017", first = "Bram", last = "Kettle", age = 52, birthday = 140, colour = "#8A6B3E",
+                personality = new Personality(active: 0.75, sociable: 0.3, tidy: 0.45, bookish: 0.2),
+                needsLevel = 72, groceries = 3,
+            },
+            new Design
+            {
+                id = "res-0018", first = "Juno", last = "Reyes", age = 22, birthday = 233, colour = "#D46A9F",
+                personality = new Personality(active: 0.8, sociable: 0.75, tidy: 0.25, bookish: 0.35),
+                needsLevel = 72, groceries = 3,
+            },
+            new Design
+            {
+                id = "res-0019", first = "Edgar", last = "Flint", age = 61, birthday = 18, colour = "#7D7F86",
+                personality = new Personality(active: 0.5, sociable: 0.35, tidy: 0.7, bookish: 0.3),
+                needsLevel = 72, groceries = 3,
+            },
+            new Design
+            {
+                id = "res-0020", first = "Maya", last = "Quill", age = 44, birthday = 177, colour = "#6C8F4E",
+                personality = new Personality(active: 0.5, sociable: 0.85, tidy: 0.6, bookish: 0.8),
+                needsLevel = 76, groceries = 3,
+            },
+        };
 
         private sealed class Design
         {
@@ -988,8 +1036,8 @@ namespace TinyCity.Simulation.Content
 
         private static Location Bed(TownWorld world, string bedId)
         {
-            world.TryGetObject(bedId, out var bed);
-            return bed.Location;
+            // The open land's own residents have no bed in the city; FlatLand puts them at the camp.
+            return bedId != null && world.TryGetObject(bedId, out var bed) ? bed.Location : new Location(VillageMapId, 0, 0);
         }
 
         private static void AddBuilding(List<TileMap> maps, List<WorldObject> objects, List<Portal> portals, string mapId, string name, string[] rows, char doorMarker, string doorName, Dictionary<char, (string id, string name, ObjectType type)> markers)
