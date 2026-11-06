@@ -20,7 +20,7 @@ namespace TinyCity.Simulation.Residents
 
         /// <summary>
         /// Tiny City 2 (owner, 5 November): the activity ids only someone in this role may do (<c>can</c> in
-        /// residents.json). An activity no role lists is open to everyone.
+        /// residents.json). An activity no role lists is open to everyone, unless it is <see cref="WorldBrief.IsRoleWork"/>.
         /// </summary>
         public IReadOnlyList<string> Skills { get; }
 
@@ -98,8 +98,39 @@ namespace TinyCity.Simulation.Residents
         /// <summary>Activities anyone may have a go at even though a role is better at them: anyone can catch a fish by hand.</summary>
         public static readonly IReadOnlyList<string> EveryoneMayTry = new[] { "catch-fish" };
 
-        /// <summary>Whether some role lists this activity as its own.</summary>
-        public bool IsSkill(string activityId) => Roles.Any(r => r.Skills.Contains(activityId));
+        /// <summary>
+        /// Work that always belongs to a role (owner, 6 November: without a role you can only drink and wash in the
+        /// pond and eat raw fish): every gathering, including fallen branches and loose stones, every tool, cooking,
+        /// growing crops, purifying water and building. In a world with roles nobody without the right one may do
+        /// these, even if no role lists them.
+        /// </summary>
+        public static bool IsRoleWork(string activityId) =>
+            activityId != null && (activityId.StartsWith("gather-", StringComparison.Ordinal) || activityId.StartsWith("craft-", StringComparison.Ordinal) || RoleWork.Contains(activityId));
+
+        private static readonly string[] RoleWork = { "cook", "plant-crops", "water-crops", "harvest", "purify-water", "plan-building", "build" };
+
+        /// <summary>Whether some role lists this activity as its own, or it is <see cref="IsRoleWork"/> in a world with roles.</summary>
+        public bool IsSkill(string activityId) => Roles.Any(r => r.Skills.Contains(activityId)) || (Roles.Count > 0 && IsRoleWork(activityId));
+
+        /// <summary>The words towns started before 6 November were told, which said anyone could pick up branches and stones.</summary>
+        private const string OldHandGatheringWords = "eat raw fish and pick up fallen branches and loose stones";
+
+        /// <summary>
+        /// A brief saved by an older town brought up to date: a role with a shipped role's name gets that role's skills
+        /// it is missing (fallen branches went to the lumberjack and loose stones to the miner on 6 November), and the
+        /// old words saying anyone could pick them up are replaced.
+        /// </summary>
+        public WorldBrief UpgradedFromOlderSave()
+        {
+            var shipped = Default;
+            var roles = Roles.Select(r =>
+            {
+                var same = shipped.Find(r.Name);
+                var missing = same == null ? new List<string>() : same.Skills.Where(id => !r.Skills.Contains(id)).ToList();
+                return missing.Count == 0 ? r : new RoleOption(r.Name, r.About, r.CanTax, r.Skills.Concat(missing));
+            });
+            return new WorldBrief(Text.Replace(OldHandGatheringWords, "catch the odd fish by hand to eat raw"), roles);
+        }
 
         /// <summary>Whether someone with this role (or none) may do this activity.</summary>
         public bool MayDo(string role, string activityId) =>
