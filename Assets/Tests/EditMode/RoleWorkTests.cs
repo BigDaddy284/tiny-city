@@ -93,6 +93,39 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void HandGathering_NeedsARole_EvenWhenNoRoleListsIt()
+        {
+            var sim = NewGame();
+            var shipped = WorldBrief.Default;
+            sim.Brief = new WorldBrief(shipped.Text, shipped.Roles.Select(role => new RoleOption(role.Name, role.About, role.CanTax, role.Skills.Where(id => id != "gather-sticks" && id != "gather-loose-stones"))));
+            var r = sim.Residents[0];
+            Assert.That(Options(sim, r).Contains("gather-sticks") || Options(sim, r).Contains("gather-loose-stones"), Is.False, "nobody without a role picks up branches or stones (owner, 6 November)");
+            TakeRole(sim, r, "lumberjack");
+            Assert.That(Options(sim, r).Contains("gather-sticks"), Is.False, "and no role lists them here, so nobody may");
+        }
+
+        [Test]
+        public void ATownSavedBeforeBranchesWentToRoles_IsBroughtUpToDateOnLoading()
+        {
+            var sim = NewGame();
+            var shipped = WorldBrief.Default;
+            // What towns started before 6 November saved: the lumberjack and miner without the hand-gathering, and words saying anyone could.
+            sim.Brief = new WorldBrief(shipped.Text.Replace("catch the odd fish by hand to eat raw", "eat raw fish and pick up fallen branches and loose stones"),
+                shipped.Roles.Select(role => new RoleOption(role.Name, role.About, role.CanTax, role.Skills.Where(id => id != "gather-sticks" && id != "gather-loose-stones"))));
+            Assert.That(sim.Brief.Text, Does.Contain("pick up fallen branches"));
+
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
+            loaded.AiDecisionsEnabled = true;
+            Assert.That(loaded.Brief.Find("lumberjack").Skills, Does.Contain("gather-sticks"));
+            Assert.That(loaded.Brief.Find("miner").Skills, Does.Contain("gather-loose-stones"));
+            Assert.That(loaded.Brief.Text, Does.Not.Contain("pick up fallen branches").And.Contain("catch the odd fish by hand to eat raw"));
+            var r = loaded.Residents[0];
+            Assert.That(Options(loaded, r).Contains("gather-sticks"), Is.False);
+            TakeRole(loaded, r, "lumberjack");
+            Assert.That(Options(loaded, r).Contains("gather-sticks"), Is.True, "the lumberjack can again");
+        }
+
+        [Test]
         public void Brief_ListsWhatEachRoleCanDo_AndRejectsUnknownWork()
         {
             Assert.That(WorldBrief.Default.Find("lumberjack").Skills, Does.Contain("gather-wood"));
@@ -102,7 +135,9 @@ namespace TinyCity.Tests.EditMode
             Assert.That(brief.Find("digger").Skills, Is.EqualTo(new[] { "gather-stone" }));
             Assert.That(problems.Count, Is.EqualTo(1), "juggling isn't work in the game");
             Assert.That(brief.MayDo(null, "gather-stone"), Is.False);
-            Assert.That(brief.MayDo(null, "gather-wood"), Is.True, "work no role lists is open to everyone");
+            Assert.That(brief.MayDo(null, "gather-wood"), Is.False, "gathering always needs a role, even one no role lists (owner, 6 November)");
+            Assert.That(brief.MayDo("digger", "gather-wood"), Is.False);
+            Assert.That(brief.MayDo(null, "drink-pond"), Is.True, "everyday things are open to everyone");
             Assert.That(brief.MayDo(null, "catch-fish"), Is.True);
         }
 

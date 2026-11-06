@@ -347,7 +347,7 @@ namespace TinyCity.Simulation.Persistence
             }
 
             // Older saves have no brief: their world carries on with none.
-            simulation.Brief = GetObject(root, "brief") is Dictionary<string, object> brief ? WorldBrief.Parse(brief, warnings) : WorldBrief.Empty;
+            simulation.Brief = GetObject(root, "brief") is Dictionary<string, object> brief ? WorldBrief.Parse(brief, warnings).UpgradedFromOlderSave() : WorldBrief.Empty;
 
             // Older v2 saves have no meetings: their first one is a week from where they are.
             simulation.FirstMeetingDay = Math.Max(0, GetInt(root, "firstMeetingDay", 0));
