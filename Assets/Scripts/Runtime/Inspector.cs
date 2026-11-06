@@ -326,18 +326,41 @@ namespace TinyCity.Runtime
         private void DrawRoles(Resident r)
         {
             rolesScroll = BeginVerticalScroll(rolesScroll, GUILayout.Height(listHeight));
-            foreach (var role in Simulation.Brief.Roles)
+
+            // Owner, 6 November: two columns, the first half of the roles on the left and the rest on the right.
+            var roles = Simulation.Brief.Roles.ToList();
+            var perColumn = (roles.Count + 1) / 2;
+            var columnWidth = (ScrollContentWidth() - 6f) / 2f;
+            GUILayout.BeginHorizontal();
+            for (var column = 0; column < 2; column++)
             {
-                var holders = Simulation.Residents.Where(o => o.IsAlive && o.Role == role.Name).OrderBy(o => o.FirstName, StringComparer.Ordinal).ToList();
-                GUILayout.Label($"{Capital(role.Name)}{(holders.Count == 0 ? ": nobody yet" : string.Empty)}", styles.Text);
-                foreach (var holder in holders)
+                GUILayout.BeginVertical(GUILayout.Width(columnWidth));
+                foreach (var role in roles.Skip(column * perColumn).Take(perColumn))
                 {
-                    if (GUILayout.Toggle(holder == r, "   " + holder.FullName, GUI.skin.button) && holder != r)
+                    var holders = Simulation.Residents.Where(o => o.IsAlive && o.Role == role.Name).OrderBy(o => o.FirstName, StringComparer.Ordinal).ToList();
+                    GUILayout.Label(Capital(role.Name), styles.Text);
+                    if (holders.Count == 0)
                     {
-                        Pick(holder);
+                        GUILayout.Label("   nobody yet", styles.Small);
+                    }
+
+                    foreach (var holder in holders)
+                    {
+                        if (GUILayout.Toggle(holder == r, holder.FullName, GUI.skin.button, GUILayout.Width(columnWidth)) && holder != r)
+                        {
+                            Pick(holder);
+                        }
                     }
                 }
+
+                GUILayout.EndVertical();
+                if (column == 0)
+                {
+                    GUILayout.Space(6f);
+                }
             }
+
+            GUILayout.EndHorizontal();
 
             var without = Simulation.Residents.Count(o => o.IsAlive && o.Role == null);
             GUILayout.Label($"No role: {without}", styles.Small);
@@ -385,6 +408,12 @@ namespace TinyCity.Runtime
             {
                 expanded = false;
                 search = string.Empty;
+                return;
+            }
+
+            if (Simulation.AiRunsEverything)
+            {
+                DrawNames(r);
                 return;
             }
 
@@ -443,6 +472,30 @@ namespace TinyCity.Runtime
                 {
                     Pick(other);
                 }
+            }
+
+            EndVerticalScroll();
+            ListSplitter();
+        }
+
+        /// <summary>
+        /// Tiny City 2's People list (owner, 6 November: no search, filters or orders, "just the peoples names to click
+        /// on"): everyone alive by first name, two to a row.
+        /// </summary>
+        private void DrawNames(Resident r)
+        {
+            peopleScroll = BeginVerticalScroll(peopleScroll, GUILayout.Height(listHeight));
+            var shown = PeopleList.Of(Simulation.Residents, PeopleFilter.Living, PeopleOrder.FirstName);
+            if (shown.Count == 0)
+            {
+                GUILayout.Label("Nobody here.", styles.Small);
+            }
+
+            var labels = shown.Select(o => o.FullName).ToArray();
+            var picked = GUILayout.SelectionGrid(shown.IndexOf(r), labels, 2, GUILayout.Width(ScrollContentWidth()));
+            if (picked >= 0 && picked < shown.Count && shown[picked] != r)
+            {
+                Pick(shown[picked]);
             }
 
             EndVerticalScroll();
