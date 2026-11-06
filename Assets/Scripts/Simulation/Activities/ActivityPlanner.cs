@@ -2,48 +2,30 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TinyCity.Simulation.Economy;
-using TinyCity.Simulation.Health;
 using TinyCity.Simulation.Residents;
 using TinyCity.Simulation.Time;
 using TinyCity.Simulation.World;
 
 namespace TinyCity.Simulation.Activities
 {
-    /// <summary>Why the planner picked something, from most to least pressing.</summary>
-    public enum PlanPriority
-    {
-        UrgentNeed,
-        Bedtime,
-        Work,
-        Nap,
-        Comfort,
-        Leisure,
-    }
-
     public sealed class PlanChoice
     {
-        public PlanChoice(ActivityDefinition activity, WorldObject target, string reason, PlanPriority priority = PlanPriority.Leisure)
+        public PlanChoice(ActivityDefinition activity, WorldObject target, string reason)
         {
             Activity = activity;
             Target = target;
             Reason = reason;
-            Priority = priority;
         }
 
         /// <summary>A chat: walk over to <paramref name="partner"/> and talk.</summary>
-        public PlanChoice(Resident partner, string reason, PlanPriority priority)
-            : this(ActivityCatalog.Chat, null, reason, priority)
+        public PlanChoice(Resident partner, string reason)
+            : this(ActivityCatalog.Chat, null, reason)
         {
             TargetResident = partner;
         }
 
         /// <summary>The person to chat with, for <see cref="ActivityCatalog.Chat"/>; otherwise null.</summary>
         public Resident TargetResident { get; }
-
-        public PlanPriority Priority { get; }
-
-        /// <summary>Free-time choices are the ones the AI may make instead; needs, sleep and work are not up for debate.</summary>
-        public bool IsDiscretionary => Priority == PlanPriority.Comfort || Priority == PlanPriority.Leisure;
 
         public ActivityDefinition Activity { get; }
 
@@ -96,90 +78,46 @@ namespace TinyCity.Simulation.Activities
         public string ActionId => Activity?.Id ?? RelaxActionId;
 
         public string TargetId => IsGround ? GroundTargetId : Target?.Id ?? Partner?.Id ?? NoTargetId;
-
-        /// <summary>What it costs, in pence; 0 if free.</summary>
-        public long PricePence { get; internal set; }
     }
 
     /// <summary>
-    /// The built-in, rule-based decision maker. It always produces a valid choice without any AI, so it is also
-    /// the fallback when Ollama is unavailable. Priority order: urgent needs, bedtime, work, comfort, leisure.
+    /// What a resident could do right now. It decides nothing: the AI makes every choice, and this lists the
+    /// activities the world allows (reachable, with room, allowed by the resident's role and things) for it to pick from.
     /// </summary>
     public sealed class ActivityPlanner
     {
-        /// <summary>Residents leave for work this many minutes before their shift starts.</summary>
-        public const int CommuteLeadMinutes = 30;
-
         /// <summary>Energy a resident must regain before getting up outside sleeping hours.</summary>
         public const double RestedEnergy = 70;
-
-        /// <summary>Below this energy a resident goes for a nap when nothing more important is due.</summary>
-        public const double TiredEnergy = 35;
-
-        private const double TravelPenaltyPerStep = 0.15;
 
         /// <summary>Each person already using an object makes it count as this many steps further away.</summary>
         public const int CrowdedSteps = 8;
 
-        /// <summary>Free-time activities are only worth starting if their main need has at least this much room to improve.</summary>
-        private const double MinimumLeisureDeficit = 10;
-
-        /// <summary>At most this many objects are offered for each free-time activity, nearest first.</summary>
+        /// <summary>At most this many objects are offered for each activity, nearest first.</summary>
         private const int MaxTargetsPerActivity = 2;
 
-        /// <summary>At or below this many meals of groceries, residents go shopping when they have time.</summary>
-        public const int LowGroceries = 2;
-
-        /// <summary>Below this many meals, the AI may also choose to go shopping.</summary>
-        public const int ShoppingWorthwhile = 5;
-
-        /// <summary>How much a pound of cost counts against an activity when choosing.</summary>
-        private const double PricePenaltyPerPound = 1.5;
-
-        private static readonly NeedType[] UrgentNeeds = { NeedType.Toilet, NeedType.Thirst, NeedType.Hunger, NeedType.Energy };
+        private static readonly NeedType[] UrgentNeeds = { NeedType.Thirst, NeedType.Hunger, NeedType.Energy };
 
         private readonly TownWorld world;
         private readonly Pathfinder pathfinder;
         private readonly IReadOnlyList<Resident> residents;
-        private readonly TownEconomy economy;
         private readonly Func<GameTime> clock;
 
-        public ActivityPlanner(TownWorld world, Pathfinder pathfinder, IReadOnlyList<Resident> residents = null, TownEconomy economy = null, Func<GameTime> clock = null)
+        public ActivityPlanner(TownWorld world, Pathfinder pathfinder, IReadOnlyList<Resident> residents = null, Func<GameTime> clock = null)
         {
             this.world = world;
             this.pathfinder = pathfinder;
             this.residents = residents ?? new Resident[0];
-            this.economy = economy;
             this.clock = clock ?? (() => new GameTime(0));
         }
 
+        /// <summary>The food supply, crops, stalls and the rules on who may do what.</summary>
+        public FoodSupply Food { get; set; }
+
         /// <summary>
-        /// Whether a resident may use an object now: other people's homes are private (shops and the café are
-        /// public), and an object is full once as many other residents are using or heading for it as it has room for.
+        /// Whether a resident may use an object now: an object is full once as many other residents are using or
+        /// heading for it as it has room for. Nothing belongs to anyone.
         /// </summary>
-        public bool IsAvailableTo(Resident resident, WorldObject obj)
-        {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            var mapId = obj.Location.MapId;
-            var business = world.BusinessOnMap(mapId);
-            if (!world.GetMap(mapId).IsExterior && mapId != resident.HomeMapId && business == null)
-            {
-                return false;
-            }
-
-            // A family shares the bed at home: children sleep with their parent. A bed outdoors (one somebody built,
-            // Tiny City 2) is anyone's who finds it free.
-            if (obj.Type == ObjectType.Bed && mapId == resident.HomeMapId && !world.GetMap(mapId).IsExterior)
-            {
-                return true;
-            }
-
-            return UsersOf(resident, obj) < obj.Capacity;
-        }
+        public bool IsAvailableTo(Resident resident, WorldObject obj) => obj != null && UsersOf(resident, obj) < obj.Capacity;
 
         /// <summary>How many other residents are using or heading for an object.</summary>
         public int UsersOf(Resident resident, WorldObject obj)
@@ -198,24 +136,13 @@ namespace TinyCity.Simulation.Activities
         }
 
         /// <summary>
-        /// Steps to an object as the planner weighs them: somewhere already in use counts as further away, so people
-        /// spread out over the café tables and benches instead of all crowding onto the nearest one.
+        /// Steps to an object as they are weighed when choosing which to offer: somewhere already in use counts as
+        /// further away, so people spread out over the benches instead of all crowding onto the nearest one.
         /// </summary>
         private int WeighedDistance(Resident resident, WorldObject obj)
         {
             var d = pathfinder.Distance(resident.Location, obj.Location);
             return d == Pathfinder.Unreachable ? d : d + (CrowdedSteps * UsersOf(resident, obj));
-        }
-
-        public static bool IsWorkTime(Resident resident, GameTime time)
-        {
-            var job = resident.Job;
-            if (job == null || !job.WorksOn(time.Weekday))
-            {
-                return false;
-            }
-
-            return GameTime.IsWithin(time.MinuteOfDay, job.StartMinuteOfDay - CommuteLeadMinutes, job.EndMinuteOfDay);
         }
 
         /// <summary>The lowest urgent need below <see cref="NeedRules.Critical"/>, or null. Ties go to the earlier need in <see cref="UrgentNeeds"/>.</summary>
@@ -233,25 +160,13 @@ namespace TinyCity.Simulation.Activities
             return result;
         }
 
-        /// <summary>Whether the resident can use this object for this activity now: available, and affordable if it costs anything.</summary>
+        /// <summary>Whether the resident can use this object for this activity now.</summary>
         public bool CanDo(Resident resident, ActivityDefinition activity, WorldObject obj, GameTime time) =>
-            activity.CanUse(obj) && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _))
-            && SuitsHousing(resident, activity, obj) && FoodSupply.Allows(Food, resident, activity, obj, time.Day);
+            activity.CanUse(obj) && IsAvailableTo(resident, obj) && SuitsBench(resident, activity, obj) && FoodSupply.Allows(Food, resident, activity, obj, time.Day);
 
-        /// <summary>Tiny City 2's food supply, or null (v1: only v1's free food exists).</summary>
-        public FoodSupply Food { get; set; }
-
-        /// <summary>
-        /// Only someone with nowhere to live sleeps on a bench, and only on one nobody else is using; nobody joins
-        /// them there. Market leftovers are for them alone too.
-        /// </summary>
-        private bool SuitsHousing(Resident resident, ActivityDefinition activity, WorldObject obj)
+        /// <summary>Anyone may sleep on a bench nobody else is using, and nobody sits down on a bench someone is sleeping on.</summary>
+        private bool SuitsBench(Resident resident, ActivityDefinition activity, WorldObject obj)
         {
-            if (activity == ActivityCatalog.Leftovers)
-            {
-                return resident.IsHomeless;
-            }
-
             if (obj.Type != ObjectType.Bench)
             {
                 return true;
@@ -259,8 +174,7 @@ namespace TinyCity.Simulation.Activities
 
             if (activity == ActivityCatalog.Sleep)
             {
-                // In Tiny City 2 anyone may sleep on a bench nobody else is using; in v1 only someone with no home.
-                return (resident.IsHomeless || (Food != null && Food.MustBeMade)) && UsersOf(resident, obj) == 0;
+                return UsersOf(resident, obj) == 0;
             }
 
             foreach (var other in residents)
@@ -275,117 +189,31 @@ namespace TinyCity.Simulation.Activities
             return true;
         }
 
-        /// <summary>A work day and time.</summary>
-        public static bool ShouldWork(Resident resident, GameTime time) => IsWorkTime(resident, time);
-
-        public PlanChoice Choose(Resident resident, GameTime time)
-        {
-            var urgent = MostUrgentNeed(resident);
-            if (urgent != null)
-            {
-                var choice = NearestForNeed(resident, urgent.Value, time, $"{urgent.Value} is urgent ({resident.Needs[urgent.Value]:0})");
-                if (choice != null)
-                {
-                    return choice;
-                }
-            }
-
-            if (SleepSchedule.IsSleepTime(resident, time))
-            {
-                var bed = BedChoice(resident, "It's bedtime", PlanPriority.Bedtime);
-                if (bed != null)
-                {
-                    return bed;
-                }
-            }
-
-            if (ShouldWork(resident, time) && world.TryGetObject(resident.Job.WorkObjectId, out var workplace)
-                && pathfinder.Distance(resident.Location, workplace.Location) != Pathfinder.Unreachable)
-            {
-                return new PlanChoice(ActivityCatalog.Work, workplace, $"Shift as {resident.Job.Title} until {FormatMinute(resident.Job.EndMinuteOfDay)}", PlanPriority.Work);
-            }
-
-            if (resident.Needs[NeedType.Energy] < TiredEnergy)
-            {
-                var nap = BedChoice(resident, "Feeling tired", PlanPriority.Nap);
-                if (nap != null)
-                {
-                    return nap;
-                }
-            }
-
-            // Null means every need is comfortable and nothing is due; the simulation lets the resident take it easy.
-            return BestScored(resident, time, comfortOnly: true)
-                ?? ShoppingChoice(resident, time)
-                ?? BestScored(resident, time, comfortOnly: false);
-        }
-
-        /// <summary>A trip to the shop when groceries are running low and the shop can serve them.</summary>
-        private PlanChoice ShoppingChoice(Resident resident, GameTime time)
-        {
-            if (resident.Groceries > LowGroceries || resident.IsHomeless)
-            {
-                return null;
-            }
-
-            var shop = NearestDoable(resident, ActivityCatalog.BuyGroceries, time);
-            return shop == null ? null : new PlanChoice(ActivityCatalog.BuyGroceries, shop, $"Running low on food at home ({resident.Groceries} meals left)", PlanPriority.Comfort);
-        }
-
         /// <summary>
-        /// What the resident could sensibly do with free time right now, in a fixed order: activities whose main need
-        /// has room to improve, at up to <see cref="MaxTargetsPerActivity"/> reachable objects each, then relaxing.
-        /// AI decisions must pick one of these.
+        /// Every activity the resident could start right now, whatever their needs, in a fixed order: each at up to
+        /// <see cref="MaxTargetsPerActivity"/> reachable objects, plus the ones done on open ground, then relaxing.
+        /// AI decisions must pick one of these (chats are added by the simulation).
         /// </summary>
-        public IReadOnlyList<FreeTimeOption> FreeTimeOptions(Resident resident) => FreeTimeOptions(resident, everything: false);
-
-        /// <summary>
-        /// With <paramref name="everything"/> (Tiny City 2, where the AI makes every choice), every activity the
-        /// resident could start right now: eating, sleeping and their own job during its
-        /// hours too, whatever their needs. The game still checks each one is possible.
-        /// </summary>
-        public IReadOnlyList<FreeTimeOption> FreeTimeOptions(Resident resident, bool everything)
+        public IReadOnlyList<FreeTimeOption> FreeTimeOptions(Resident resident)
         {
             var time = clock();
             var options = new List<FreeTimeOption>();
             foreach (var activity in ActivityCatalog.All)
             {
-                if (everything)
+                if (activity == ActivityCatalog.Chat)
                 {
-                    if (activity == ActivityCatalog.Chat || (activity == ActivityCatalog.Work && !(resident.Job != null && ShouldWork(resident, time))))
-                    {
-                        continue;
-                    }
-
-                    if (activity == ActivityCatalog.Work)
-                    {
-                        if (world.TryGetObject(resident.Job.WorkObjectId, out var workplace) && pathfinder.Distance(resident.Location, workplace.Location) != Pathfinder.Unreachable)
-                        {
-                            options.Add(new FreeTimeOption(activity, workplace, pathfinder.Distance(resident.Location, workplace.Location)));
-                        }
-
-                        continue;
-                    }
-                }
-                else
-                {
-                    var errand = (activity == ActivityCatalog.BuyGroceries && resident.Groceries < ShoppingWorthwhile);
-                    if (!errand && (activity.PrimaryNeed == null || (activity.Kind != ActivityKind.Care && activity.Kind != ActivityKind.Leisure)
-                        || resident.Needs[activity.PrimaryNeed.Value] > Needs.Max - MinimumLeisureDeficit))
-                    {
-                        continue;
-                    }
+                    continue;
                 }
 
                 options.AddRange(world.Objects
                     .Where(obj => CanDo(resident, activity, obj, time))
-                    .Select(obj => (option: new FreeTimeOption(activity, obj, pathfinder.Distance(resident.Location, obj.Location)) { PricePence = PriceFor(activity, obj) }, weighed: WeighedDistance(resident, obj)))
+                    .Select(obj => (option: new FreeTimeOption(activity, obj, pathfinder.Distance(resident.Location, obj.Location)), weighed: WeighedDistance(resident, obj)))
                     .Where(o => o.option.Distance != Pathfinder.Unreachable)
                     .OrderBy(o => o.weighed)
                     .ThenBy(o => o.option.Target.Id, StringComparer.Ordinal)
                     .Take(MaxTargetsPerActivity)
                     .Select(o => o.option));
-                if (ActivityCatalog.IsDoneOnGround(activity) && Food != null && Food.MustBeMade && world.TryGetMap(resident.Location.MapId, out var here) && here.IsExterior
+                if (ActivityCatalog.IsDoneOnGround(activity) && world.TryGetMap(resident.Location.MapId, out var here) && here.IsExterior
                     && FoodSupply.Allows(Food, resident, activity, null, time.Day))
                 {
                     options.Add(FreeTimeOption.OnGround(activity));
@@ -396,206 +224,15 @@ namespace TinyCity.Simulation.Activities
             return options;
         }
 
-        /// <summary>What an option costs: a business's price, or what the stall-holder asks for a portion (Tiny City 2).</summary>
-        private long PriceFor(ActivityDefinition activity, WorldObject obj) =>
-            activity == ActivityCatalog.BuyFood ? 0 : economy?.PriceOf(activity, obj) ?? 0;
-
-        /// <summary>Whether something more important should stop the resident's current activity.</summary>
-        public bool ShouldInterrupt(Resident resident, ActivityDefinition current, GameTime time)
-        {
-            if (current == null)
-            {
-                return false;
-            }
-
-            var urgent = MostUrgentNeed(resident);
-            if (urgent != null && current.PrimaryNeed != urgent && NearestForNeed(resident, urgent.Value, time, string.Empty) != null)
-            {
-                return true;
-            }
-
-            if (current.Kind == ActivityKind.Leisure || current.Kind == ActivityKind.Care || current.Kind == ActivityKind.Social || current.Kind == ActivityKind.Errand)
-            {
-                // Finish looking after an urgent need first; otherwise work and bedtime come before leisure.
-                var forUrgent = current.PrimaryNeed != null && current.PrimaryNeed == urgent;
-                if (!forUrgent && current.Kind != ActivityKind.Care && (ShouldWork(resident, time) || SleepSchedule.IsSleepTime(resident, time)) && WorkOrBedIsPossible(resident, time))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Whether the planner would send the resident to work or bed right now. False when, say, the workplace can't
-        /// be reached, so leisure isn't interrupted for something that can't happen.
-        /// </summary>
-        private bool WorkOrBedIsPossible(Resident resident, GameTime time)
-        {
-            var next = Choose(resident, time);
-            return next != null && (next.Priority == PlanPriority.Work || next.Priority == PlanPriority.Bedtime);
-        }
-
         public bool IsComplete(Resident resident, ActivityDefinition activity, GameTime time)
         {
-            switch (activity.Kind)
+            if (activity.Kind == ActivityKind.Sleep)
             {
-                case ActivityKind.Sleep:
-                    return !SleepSchedule.IsSleepTime(resident, time) && resident.Needs[NeedType.Energy] >= RestedEnergy;
-                case ActivityKind.Work:
-                    return resident.MinutesRemaining <= 0 || !ShouldWork(resident, time);
-                default:
-                    return resident.MinutesRemaining <= 0
-                        || (activity.PrimaryNeed != null && resident.Needs[activity.PrimaryNeed.Value] >= Needs.Max - 0.5);
+                return !SleepSchedule.IsSleepTime(resident, time) && resident.Needs[NeedType.Energy] >= RestedEnergy;
             }
+
+            return resident.MinutesRemaining <= 0
+                || (activity.PrimaryNeed != null && resident.Needs[activity.PrimaryNeed.Value] >= Needs.Max - 0.5);
         }
-
-        /// <summary>How long an activity runs once the resident arrives.</summary>
-        public static int DurationFor(Resident resident, ActivityDefinition activity, GameTime time)
-        {
-            if (activity.Kind == ActivityKind.Work && resident.Job != null)
-            {
-                return Math.Max(1, resident.Job.EndMinuteOfDay - time.MinuteOfDay);
-            }
-
-            return activity.DurationMinutes;
-        }
-
-        private PlanChoice BedChoice(Resident resident, string reason, PlanPriority priority)
-        {
-            if (world.TryGetObject(resident.BedObjectId, out var bed)
-                && pathfinder.Distance(resident.Location, bed.Location) != Pathfinder.Unreachable)
-            {
-                return new PlanChoice(ActivityCatalog.Sleep, bed, reason, priority);
-            }
-
-            var nearest = NearestDoable(resident, ActivityCatalog.Sleep, clock());
-            return nearest == null ? null : new PlanChoice(ActivityCatalog.Sleep, nearest, reason, priority);
-        }
-
-        /// <summary>
-        /// The nearest way to deal with an urgent need. Several activities may help (cooking, a snack, the café); the
-        /// nearest doable one wins, and ties go to the earlier activity in the catalogue, so a proper meal beats a snack.
-        /// </summary>
-        private PlanChoice NearestForNeed(Resident resident, NeedType need, GameTime time, string reason)
-        {
-            PlanChoice best = null;
-            var bestDistance = int.MaxValue;
-            foreach (var activity in ActivityCatalog.ForNeed(need))
-            {
-                var obj = NearestDoable(resident, activity, time);
-                var d = obj == null ? Pathfinder.Unreachable : pathfinder.Distance(resident.Location, obj.Location);
-                if (obj != null && d < bestDistance)
-                {
-                    best = new PlanChoice(activity, obj, reason, PlanPriority.UrgentNeed);
-                    bestDistance = d;
-                }
-            }
-
-            return best;
-        }
-
-        private WorldObject NearestDoable(Resident resident, ActivityDefinition activity, GameTime time)
-        {
-            WorldObject best = null;
-            var bestDistance = int.MaxValue;
-            foreach (var obj in world.Objects.Where(o => CanDo(resident, activity, o, time)))
-            {
-                var d = WeighedDistance(resident, obj);
-                if (d != Pathfinder.Unreachable && d < bestDistance)
-                {
-                    best = obj;
-                    bestDistance = d;
-                }
-            }
-
-            return best;
-        }
-
-        /// <summary>
-        /// Scores care and leisure activities by how much they help the resident's low needs, their personality and
-        /// the walk to get there. Comfort mode only considers activities whose main need is below its comfort level.
-        /// </summary>
-        private PlanChoice BestScored(Resident resident, GameTime time, bool comfortOnly)
-        {
-            PlanChoice best = null;
-            var bestScore = double.NegativeInfinity;
-            foreach (var activity in ActivityCatalog.All)
-            {
-                if (activity.PrimaryNeed == null || activity.Kind == ActivityKind.Work || activity.Kind == ActivityKind.Sleep)
-                {
-                    continue;
-                }
-
-                if (!comfortOnly && activity.Kind != ActivityKind.Leisure)
-                {
-                    continue;
-                }
-
-                var primary = activity.PrimaryNeed.Value;
-                var threshold = comfortOnly ? NeedRules.ComfortThreshold(primary, resident.Personality) : Needs.Max;
-                var primaryDeficit = threshold - resident.Needs[primary];
-                if (primaryDeficit <= (comfortOnly ? 0 : MinimumLeisureDeficit))
-                {
-                    continue;
-                }
-
-                var secondary = 0.0;
-                for (var i = 0; i < Needs.Count; i++)
-                {
-                    var need = (NeedType)i;
-                    if (need != primary && activity.GainPerMinute(need) > 0)
-                    {
-                        secondary += Math.Max(0, NeedRules.ComfortThreshold(need, resident.Personality) - resident.Needs[need]);
-                    }
-                }
-
-                var baseScore = (primaryDeficit * Preference(resident.Personality, activity)) + (0.5 * secondary);
-                foreach (var obj in world.Objects.Where(o => CanDo(resident, activity, o, time)))
-                {
-                    var d = WeighedDistance(resident, obj);
-                    if (d == Pathfinder.Unreachable)
-                    {
-                        continue;
-                    }
-
-                    var price = economy?.PriceOf(activity, obj) ?? 0;
-                    var score = baseScore - (TravelPenaltyPerStep * d) - (PricePenaltyPerPound * price / 100.0);
-                    if (score > bestScore)
-                    {
-                        bestScore = score;
-                        var reason = comfortOnly
-                            ? $"{primary} is getting low ({resident.Needs[primary]:0})"
-                            : $"Free time: fancies {activity.Verb}";
-                        best = new PlanChoice(activity, obj, reason, comfortOnly ? PlanPriority.Comfort : PlanPriority.Leisure);
-                    }
-                }
-            }
-
-            return best;
-        }
-
-        private static double Preference(Personality p, ActivityDefinition activity)
-        {
-            if (activity == ActivityCatalog.Exercise)
-            {
-                return 0.5 + p.Active;
-            }
-
-            if (activity == ActivityCatalog.WatchTown || activity == ActivityCatalog.Coffee || activity == ActivityCatalog.CafeMeal)
-            {
-                return 0.5 + p.Sociable;
-            }
-
-            if (activity == ActivityCatalog.Read)
-            {
-                return 0.5 + p.Bookish;
-            }
-
-            return 1.0;
-        }
-
-        private static string FormatMinute(int minuteOfDay) => $"{minuteOfDay / 60:00}:{minuteOfDay % 60:00}";
     }
 }

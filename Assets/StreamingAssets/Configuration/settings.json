@@ -7,8 +7,6 @@
         "embeddingModel": "nomic-embed-text",
         "timeoutSeconds": 60,
         "maxRetries": 1,
-        "decisionWaitMinutes": 20,
-        "decisionWaitSeconds": 8,
         "parallelRequests": 1
     }
 }

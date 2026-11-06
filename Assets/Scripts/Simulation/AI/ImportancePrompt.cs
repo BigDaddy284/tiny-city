@@ -18,7 +18,7 @@ namespace TinyCity.Simulation.AI
         public const int MaxTokens = 200;
         public const double Temperature = 0.2;
 
-        public static string BuildBody(string model, Resident r, IReadOnlyList<MemoryRecord> memories)
+        public static string BuildBody(string model, TownSimulation sim, Resident r, IReadOnlyList<MemoryRecord> memories)
         {
             var sb = new StringBuilder();
             sb.AppendLine("Here are some things you remember. Rate how much each one matters to you, from 1 (everyday, like brushing your teeth) to 10 (life-changing, like a death or falling in love).");
@@ -52,7 +52,7 @@ namespace TinyCity.Simulation.AI
                 ["required"] = new List<object> { "ratings" },
             };
 
-            return OllamaProtocol.BuildChatBody(model, PromptText.Persona(r), sb.ToString(), schema, Temperature, MaxTokens);
+            return OllamaProtocol.BuildChatBody(model, PromptText.Persona(r, sim), sb.ToString(), schema, Temperature, MaxTokens);
         }
 
         /// <summary>

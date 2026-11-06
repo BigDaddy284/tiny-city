@@ -13,21 +13,18 @@ namespace TinyCity.Tests.EditMode
     /// <summary>The Phase 5 journal: what goes into the town history, searching it, timelines and exported text.</summary>
     public class JournalTests
     {
-        private const string Mia = StarterTown.ResidentId;
-        private const string Ivy = StarterTown.IvyId;
-        private const string Felix = StarterTown.FelixId;
+        private const string Mia = StarterResidents.ResidentId;
+        private const string Ivy = StarterResidents.IvyId;
+        private const string Felix = StarterResidents.FelixId;
 
         [Test]
-        public void AYearOfTownLife_RecordsFirstMeetings_AndFriendships_EachOnce()
+        public void AWeekOnTheOpenLand_RecordsFirstMeetings_AndFriendships_EachOnce()
         {
-            var sim = StarterTown.CreateNewGame();
-            for (var i = 0; i < Seasons.DaysPerYear * GameTime.MinutesPerDay; i++)
-            {
-                sim.Tick();
-            }
+            var sim = FlatLand.CreateNewGame();
+            TestTown.Run(sim, 7 * GameTime.MinutesPerDay);
 
             var met = sim.History.Events.Where(e => e.Kind == TownEventKind.Met).ToList();
-            Assert.That(met, Is.Not.Empty, "neighbours meet in a year");
+            Assert.That(met, Is.Not.Empty, "people meet in a week");
             var pairs = met.Select(e => string.Join("+", e.ResidentIds.OrderBy(id => id))).ToList();
             Assert.That(pairs.Distinct().Count(), Is.EqualTo(pairs.Count), "each pair meets for the first time only once");
             foreach (var e in met)
@@ -39,12 +36,12 @@ namespace TinyCity.Tests.EditMode
             var friends = sim.History.Events.Where(e => e.Kind == TownEventKind.Friends)
                 .Select(e => string.Join("+", e.ResidentIds.OrderBy(id => id))).ToList();
             Assert.That(friends.Distinct().Count(), Is.EqualTo(friends.Count), "becoming good friends is recorded once per pair");
-            TestContext.WriteLine($"In a year: {sim.History.Events.Count} history events, {met.Count} first meetings, {friends.Count} friendships.");
+            TestContext.WriteLine($"In a week: {sim.History.Events.Count} history events, {met.Count} first meetings, {friends.Count} friendships.");
         }
 
         private static TownSimulation TownWithHistory()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             sim.History.Add(GameTime.FromDayAndTime(1, 9, 0), TownEventKind.Met, "Mia Hart and Ivy Brook met for the first time at the café.", new[] { Mia, Ivy });
             sim.History.Add(GameTime.FromDayAndTime(2, 5, 0), TownEventKind.Built, "Felix finished building a hut.", new[] { Felix });
             sim.History.Add(GameTime.FromDayAndTime(3, 18, 0), TownEventKind.Meeting, "The town meeting by the quiz board.", new[] { Mia, Felix });
@@ -78,7 +75,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Search_ReturnsAtMostTheLimit()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             for (var i = 0; i < Journal.MaxResults + 50; i++)
             {
                 sim.History.Add(new GameTime(i), TownEventKind.Meeting, $"Meeting {i}", new[] { Mia });
@@ -153,20 +150,20 @@ namespace TinyCity.Tests.EditMode
             Assert.That(text, Does.Contain("Day 3, Wednesday"));
             Assert.That(text, Does.Contain("  18:00  The town meeting by the quiz board."));
             Assert.That(text.IndexOf("met for the first time"), Is.LessThan(text.IndexOf("became good friends")), "oldest first");
-            Assert.That(LifeStory.WriteTownHistory(StarterTown.CreateNewGame()), Does.Contain("Nothing has happened yet."));
+            Assert.That(LifeStory.WriteTownHistory(FlatLand.CreateNewGame()), Does.Contain("Nothing has happened yet."));
         }
 
         [Test]
         public void EveryKindOfEvent_SurvivesSaveAndLoad()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             sim.Tick();
             foreach (TownEventKind kind in System.Enum.GetValues(typeof(TownEventKind)))
             {
                 sim.History.Add(sim.Time, kind, $"A {kind} happened.", new[] { Mia });
             }
 
-            var result = SaveSerializer.Load(SaveSerializer.Save(sim), StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld());
             Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
             Assert.That(result.Warnings, Is.Empty, string.Join("; ", result.Warnings));
             Assert.That(result.Simulation.History.Events.Select(e => e.Kind).ToList(), Is.EqualTo(sim.History.Events.Select(e => e.Kind).ToList()));

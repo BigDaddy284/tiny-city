@@ -53,12 +53,7 @@ namespace TinyCity.Simulation.Residents
             string firstName,
             string lastName,
             int ageYears,
-            int birthdayDayOfYear,
-            string colourHex,
             Personality personality,
-            string homeMapId,
-            string bedObjectId,
-            Job job,
             Location location,
             Needs needs = null)
         {
@@ -71,12 +66,7 @@ namespace TinyCity.Simulation.Residents
             FirstName = firstName ?? string.Empty;
             LastName = lastName ?? string.Empty;
             AgeYears = Math.Max(0, ageYears);
-            BirthdayDayOfYear = Math.Max(1, Math.Min(birthdayDayOfYear, 365));
-            ColourHex = colourHex ?? "#C8643C";
             Personality = personality ?? new Personality(0.5, 0.5, 0.5, 0.5);
-            HomeMapId = homeMapId;
-            BedObjectId = bedObjectId;
-            Job = job;
             Location = location;
             Needs = needs ?? new Needs();
             Health = TinyCity.Simulation.Health.HealthRules.StartingHealth;
@@ -93,31 +83,9 @@ namespace TinyCity.Simulation.Residents
         /// <summary>Their age, from the profile. Nobody ages in Tiny City 2.</summary>
         public int AgeYears { get; internal set; }
 
-        public int BirthdayDayOfYear { get; }
-
-        public string ColourHex { get; }
-
         public Personality Personality { get; }
 
-        /// <summary>The home they live in, or null for someone with nowhere to live; see <see cref="IsHomeless"/>.</summary>
-        public string HomeMapId { get; internal set; }
-
-        /// <summary>Their bed at home, or null when homeless.</summary>
-        public string BedObjectId { get; internal set; }
-
-        /// <summary>Nowhere to live: they sleep on a park bench and get by on what's free.</summary>
-        public bool IsHomeless => string.IsNullOrEmpty(HomeMapId);
-
-        /// <summary>Null for the retired and the unemployed. Replaced only by game logic, e.g. upgrading an old save.</summary>
-        public Job Job { get; internal set; }
-
-        /// <summary>Money in pence. Can go below zero when rent is due and there isn't enough; purchases can't.</summary>
-        public long MoneyPence { get; internal set; }
-
-        /// <summary>Meals' worth of food at home. Cooking uses one; without any, a resident can only snack.</summary>
-        public int Groceries { get; internal set; }
-
-        /// <summary>Tiny City 2: the food they have, grown, caught or cooked. Empty in v1, which uses <see cref="Groceries"/>.</summary>
+        /// <summary>Tiny City 2: the food they have, grown, caught or cooked.</summary>
         public Economy.FoodStock Food { get; } = new Economy.FoodStock();
 
         /// <summary>Tiny City 2: portions of clean water, made by a water purifier (up to <see cref="Economy.FoodRules.MaxCleanWater"/>).</summary>
@@ -126,20 +94,8 @@ namespace TinyCity.Simulation.Residents
         /// <summary>Tiny City 2: the materials they have gathered and the tools they have made.</summary>
         public Economy.Belongings Belongings { get; } = new Economy.Belongings();
 
-        /// <summary>Paid every Monday morning, in pence: rent for their home.</summary>
-        public long WeeklyRentPence { get; internal set; }
-
-        /// <summary>Income every Monday morning that isn't wages, e.g. a pension, in pence.</summary>
-        public long WeeklyIncomePence { get; internal set; }
-
-        /// <summary>What <see cref="WeeklyIncomePence"/> is called, e.g. "Pension".</summary>
-        public string IncomeLabel { get; internal set; } = string.Empty;
-
         /// <summary>A few lines about who they are, from the player's profile (see <see cref="ResidentProfile"/>). Given to the AI as their background.</summary>
         public string About { get; internal set; } = string.Empty;
-
-        /// <summary>The business they own and run as its boss, or null. Comes from the profile, or the AI choosing to take one on.</summary>
-        public string OwnsBusinessId { get; internal set; }
 
         /// <summary>
         /// Tiny City 2: the role they have chosen to take up from the world's <see cref="WorldBrief.Roles"/>, or null
@@ -152,9 +108,6 @@ namespace TinyCity.Simulation.Residents
         /// others..."), given to the AI in place of the trait summary when set. Saved.
         /// </summary>
         public string Outlook { get; internal set; } = string.Empty;
-
-        /// <summary>Minutes worked since wages were last paid; paid when the shift ends.</summary>
-        public int UnpaidWorkMinutes { get; internal set; }
 
         public bool IsAlive { get; internal set; } = true;
 
@@ -196,8 +149,6 @@ namespace TinyCity.Simulation.Residents
         /// <summary>While <see cref="ResidentState.Deciding"/>, the id an AI answer must quote to be accepted.</summary>
         public long PendingDecisionId { get; internal set; }
 
-        /// <summary>While deciding, the game minute at which the built-in routine takes over.</summary>
-        public long DecisionDeadline { get; internal set; }
 
         /// <summary>
         /// The rest of the resident's AI plan for free time, in order. It lives only while the game runs: like an
@@ -261,7 +212,6 @@ namespace TinyCity.Simulation.Residents
             Goal = string.Empty;
             GoalSource = DecisionSource.Routine;
             PendingDecisionId = 0;
-            DecisionDeadline = 0;
         }
     }
 }

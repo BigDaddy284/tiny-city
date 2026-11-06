@@ -15,8 +15,8 @@ namespace TinyCity.Simulation.AI
         public const int MaxTokens = 360;
         public const double Temperature = 0.6;
 
-        public static string BuildBody(string model, Resident r, IReadOnlyList<MemoryRecord> evidence) =>
-            OllamaProtocol.BuildChatBody(model, PromptText.Persona(r), UserText(evidence), Schema(), Temperature, MaxTokens);
+        public static string BuildBody(string model, TownSimulation sim, Resident r, IReadOnlyList<MemoryRecord> evidence) =>
+            OllamaProtocol.BuildChatBody(model, PromptText.Persona(r, sim), UserText(evidence), Schema(), Temperature, MaxTokens);
 
         public static string UserText(IReadOnlyList<MemoryRecord> evidence)
         {

@@ -60,7 +60,7 @@ namespace TinyCity.Tools.ArtPreview
 
             var output = args.Length > 0 ? args[0] : "art-preview";
             Directory.CreateDirectory(output);
-            var world = StarterTown.CreateWorld();
+            var world = FlatLand.CreateWorld();
             foreach (Season season in Enum.GetValues(typeof(Season)))
             {
                 var palette = Palette.For(season);
@@ -133,8 +133,8 @@ namespace TinyCity.Tools.ArtPreview
         /// <summary>Draws the open land with a finished building of every material, by day, by night and in winter.</summary>
         private static void WriteBlocks(string path)
         {
-            var world = StarterTown.CreateWorld();
-            var residents = StarterTown.CreateResidents(world);
+            var world = FlatLand.CreateWorld();
+            var residents = FlatLand.CreateResidents();
             var sim = new TinyCity.Simulation.TownSimulation(world, residents, GameTime.FromDayAndTime(6, 12, 0));
             var plans = new[]
             {
@@ -149,10 +149,10 @@ namespace TinyCity.Tools.ArtPreview
             for (var i = 0; i < plans.Length; i++)
             {
                 var (name, height, rows) = plans[i];
-                PlaceBuilding(sim, residents[i].Id, StarterTown.OpenLandMapId, corners[i].Item1, corners[i].Item2, name, height, rows);
+                PlaceBuilding(sim, residents[i].Id, FlatLand.MapId, corners[i].Item1, corners[i].Item2, name, height, rows);
             }
 
-            var map = world.GetMap(StarterTown.OpenLandMapId);
+            var map = world.GetMap(FlatLand.MapId);
             foreach (var (season, minute, suffix) in new[] { (Season.Summer, 12 * 60, ""), (Season.Summer, 23 * 60, "-night"), (Season.Winter, 12 * 60, "-winter") })
             {
                 var palette = Palette.For(season);
@@ -198,8 +198,7 @@ namespace TinyCity.Tools.ArtPreview
         /// </summary>
         private static void WriteResidents(string path)
         {
-            var world = StarterTown.CreateWorld();
-            var residents = StarterTown.CreateResidents(world);
+            var residents = FlatLand.CreateResidents();
             var poses = new System.Collections.Generic.List<ResidentPose>();
             foreach (var facing in new[] { Facing.DownRight, Facing.DownLeft, Facing.UpLeft, Facing.UpRight })
             {
@@ -217,7 +216,7 @@ namespace TinyCity.Tools.ArtPreview
                 }
             }
 
-            foreach (var action in new[] { ResidentAction.Stand, ResidentAction.Eat, ResidentAction.Read, ResidentAction.Work, ResidentAction.Talk })
+            foreach (var action in new[] { ResidentAction.Stand, ResidentAction.Eat, ResidentAction.Work, ResidentAction.Talk })
             {
                 poses.Add(new ResidentPose(action, Stance.Sitting, Facing.DownRight, 1));
                 poses.Add(new ResidentPose(action, Stance.Sitting, Facing.UpRight, 1));
@@ -267,7 +266,7 @@ namespace TinyCity.Tools.ArtPreview
         private static void WriteScenes(string output, int minutes)
         {
             Directory.CreateDirectory(output);
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             sim.Advance(minutes);
             var world = sim.World;
             var season = Seasons.Of(sim.Time);

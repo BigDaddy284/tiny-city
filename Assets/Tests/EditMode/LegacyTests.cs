@@ -13,8 +13,6 @@ namespace TinyCity.Tests.EditMode
         private static TownSimulation NewGame()
         {
             var sim = FlatLand.CreateNewGame();
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
             return sim;
         }
 

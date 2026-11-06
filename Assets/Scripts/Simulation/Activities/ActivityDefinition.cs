@@ -11,13 +11,12 @@ namespace TinyCity.Simulation.Activities
         /// <summary>Restores a need; chosen when that need gets low.</summary>
         Care,
         Sleep,
-        Work,
         Leisure,
 
         /// <summary>Talking with another resident. Uses no object; see <see cref="ActivityCatalog.Chat"/>.</summary>
         Social,
 
-        /// <summary>A job to get done, such as buying groceries. Chosen when needed, not to restore a need.</summary>
+        /// <summary>A job to get done, such as gathering wood. Chosen when needed, not to restore a need.</summary>
         Errand,
     }
 
@@ -35,13 +34,8 @@ namespace TinyCity.Simulation.Activities
             IEnumerable<ObjectType> usableObjects,
             int durationMinutes,
             IReadOnlyDictionary<NeedType, double> gainPerMinute,
-            IReadOnlyDictionary<NeedType, double> decayMultiplier = null,
-            string itemId = null,
-            bool usesGroceries = false)
+            IReadOnlyDictionary<NeedType, double> decayMultiplier = null)
         {
-            NeedsOpenBusiness = itemId != null;
-            ItemId = itemId;
-            UsesGroceries = usesGroceries;
             Id = id;
             Name = name;
             Verb = verb;
@@ -80,15 +74,6 @@ namespace TinyCity.Simulation.Activities
         public IReadOnlyList<ObjectType> UsableObjects { get; }
 
         public int DurationMinutes { get; }
-
-        /// <summary>What must be bought from the business where it happens, e.g. "coffee"; null if it's free.</summary>
-        public string ItemId { get; }
-
-        /// <summary>Uses up one meal's worth of the resident's groceries.</summary>
-        public bool UsesGroceries { get; }
-
-        /// <summary>Only possible while the business it happens in is open, e.g. a coffee.</summary>
-        public bool NeedsOpenBusiness { get; }
 
         public double GainPerMinute(NeedType need) => gainPerMinute[(int)need];
 

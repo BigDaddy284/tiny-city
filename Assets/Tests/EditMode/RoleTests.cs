@@ -15,8 +15,6 @@ namespace TinyCity.Tests.EditMode
         private static TownSimulation NewGame(WorldBrief brief = null)
         {
             var sim = FlatLand.CreateNewGame(brief: brief);
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
             return sim;
         }
 
@@ -34,7 +32,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(none.Text, Is.EqualTo(WorldBrief.Default.Text));
             Assert.That(none.Roles.Count, Is.EqualTo(WorldBrief.Default.Roles.Count));
 
-            var written = ResidentProfiles.Write(StarterTown.DefaultProfiles(), brief);
+            var written = ResidentProfiles.Write(StarterResidents.DefaultProfiles(), brief);
             var back = ResidentProfiles.ParseBrief(written, out _);
             Assert.That((back.Text, back.Roles.Count), Is.EqualTo(("Be kind.", 2)));
         }
@@ -75,19 +73,18 @@ namespace TinyCity.Tests.EditMode
             Assert.That(other.Role, Is.Null, "a role not on offer is ignored");
             sim.Advance(24 * 60);
             Assert.That(sim.ApplyDayPlan(r.Id, DayPlan.DayFor(sim.Time), Plan(), TownSimulation.RoleNone), Is.EqualTo(DecisionOutcome.Applied));
-            Assert.That(r.Role, Is.Null, "given up");
+            Assert.That(r.Role, Is.EqualTo("farmer"), "once they have a role, giving it up waits for the meeting");
+            Assert.That(sim.RoleRequests.ContainsKey(r.Id), Is.True);
         }
 
         [Test]
         public void APersonality_IsReadFromTheProfile_SavedAndUsedInPrompts()
         {
-            var profiles = ResidentProfiles.Parse("{\"residents\":[{\"id\":\"res-0001\",\"firstName\":\"Mabel\",\"lastName\":\"T\",\"age\":30,\"personality\":\"You're out for yourself and your own survival.\"}]}", StarterTown.StarterResidentIds, new string[0], out var problems);
+            var profiles = ResidentProfiles.Parse("{\"residents\":[{\"id\":\"res-0001\",\"firstName\":\"Mabel\",\"lastName\":\"T\",\"age\":30,\"personality\":\"You're out for yourself and your own survival.\"}]}", StarterResidents.Ids, out var problems);
             Assert.That(profiles[0].Personality, Is.EqualTo("You're out for yourself and your own survival."), string.Join("; ", problems));
-            Assert.That(ResidentProfiles.Parse(ResidentProfiles.Write(profiles), StarterTown.StarterResidentIds, new string[0], out _)[0].Personality, Is.EqualTo(profiles[0].Personality));
+            Assert.That(ResidentProfiles.Parse(ResidentProfiles.Write(profiles), StarterResidents.Ids, out _)[0].Personality, Is.EqualTo(profiles[0].Personality));
 
             var sim = FlatLand.CreateNewGame(profiles);
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
             var r = sim.Residents[0];
             Assert.That(r.Outlook, Is.EqualTo(profiles[0].Personality));
             Assert.That(PromptText.Persona(r, sim), Does.Contain("out for yourself"));
@@ -106,7 +103,7 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(dir, Is.Not.Null, "residents.json not found above the test folder");
             var json = System.IO.File.ReadAllText(System.IO.Path.Combine(dir.FullName, "Assets", "StreamingAssets", "Configuration", "residents.json"));
-            var profiles = ResidentProfiles.Parse(json, StarterTown.OpenLandResidentIds, new string[0], out var problems);
+            var profiles = ResidentProfiles.Parse(json, StarterResidents.Ids, out var problems);
             Assert.That(problems, Is.Empty);
             Assert.That(profiles.All(p => p.Personality.Length > 10), Is.True);
             Assert.That(profiles.Count, Is.EqualTo(20), "twenty residents to start (owner, 5 November)");

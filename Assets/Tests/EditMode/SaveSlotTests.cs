@@ -14,13 +14,13 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Summary_ReadsTheDateAndResidents_OfARealSave()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             for (var i = 0; i < 90; i++)
             {
                 sim.Tick();
             }
 
-            sim.Die(sim.GetResident(StarterTown.FelixId), "test");
+            sim.Die(sim.GetResident(StarterResidents.FelixId), "test");
             var summary = SaveSummary.Read(SaveSerializer.Save(sim));
             Assert.That(summary.IsReadable, Is.True, summary.Error);
             Assert.That(summary.Version, Is.EqualTo(SaveSerializer.CurrentVersion));
@@ -34,7 +34,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Summary_ExplainsSavesThatCannotBeRead()
         {
-            var good = SaveSerializer.Save(StarterTown.CreateNewGame());
+            var good = SaveSerializer.Save(FlatLand.CreateNewGame());
             var cases = new Dictionary<string, string>
             {
                 ["the file is damaged"] = good.Substring(0, good.Length / 2),

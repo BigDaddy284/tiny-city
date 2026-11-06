@@ -17,7 +17,6 @@ namespace TinyCity.Art
         {
             [Mood.Happy] = new[] { ".......", "..m.m..", ".......", ".m...m.", "..mmm.." },
             [Mood.Asleep] = new[] { "....zzz", ".....z.", "zzz.zzz", ".z.....", "zzz...." },
-            [Mood.NeedsToilet] = new[] { "...r...", "...r...", "...r...", ".......", "...r..." },
             [Mood.Hungry] = new[] { ".......", "..bbb..", ".bbbbb.", ".bwbwb.", ".bbbbb." },
             [Mood.Thirsty] = new[] { "...s...", "..sss..", ".sssss.", ".sswss.", "..sss.." },
             [Mood.Tired] = new[] { ".......", ".ee.ee.", ".......", "..eee..", "......." },

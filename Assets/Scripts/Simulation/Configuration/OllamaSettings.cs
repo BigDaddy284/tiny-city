@@ -17,14 +17,10 @@ namespace TinyCity.Simulation.Configuration
         public const int MaxTimeoutSeconds = 600;
         public const int DefaultMaxRetries = 1;
         public const int MaxMaxRetries = 3;
-        public const int DefaultDecisionWaitMinutes = 20;
-        public const int MaxDecisionWaitMinutes = 240;
-        public const int DefaultDecisionWaitSeconds = 8;
-        public const int MaxDecisionWaitSeconds = 120;
         public const int DefaultParallelRequests = 1;
         public const int MaxParallelRequests = 8;
 
-        /// <summary>False keeps every resident on the built-in routine and never contacts Ollama.</summary>
+        /// <summary>False never contacts Ollama, so the city waits until it is turned on.</summary>
         public bool enabled = true;
         public string endpoint = DefaultEndpoint;
         public string model = DefaultModel;
@@ -38,15 +34,6 @@ namespace TinyCity.Simulation.Configuration
 
         /// <summary>Extra attempts after a malformed answer, timeout or connection error.</summary>
         public int maxRetries = DefaultMaxRetries;
-
-        /// <summary>Game minutes a resident waits for an AI suggestion before using the built-in routine.</summary>
-        public int decisionWaitMinutes = DefaultDecisionWaitMinutes;
-
-        /// <summary>
-        /// Real seconds a resident waits for an AI suggestion at the least, whatever the game speed: at high speeds
-        /// this is more game minutes than <see cref="decisionWaitMinutes"/>, so answers still arrive in time. 0 turns it off.
-        /// </summary>
-        public int decisionWaitSeconds = DefaultDecisionWaitSeconds;
 
         /// <summary>How many requests are sent to Ollama at once. More than 1 helps only if Ollama's OLLAMA_NUM_PARALLEL allows it.</summary>
         public int parallelRequests = DefaultParallelRequests;
@@ -74,16 +61,6 @@ namespace TinyCity.Simulation.Configuration
             if (maxRetries < 0 || maxRetries > MaxMaxRetries)
             {
                 errors.Add($"Ollama maxRetries must be between 0 and {MaxMaxRetries}, but was {maxRetries}.");
-            }
-
-            if (decisionWaitMinutes < 1 || decisionWaitMinutes > MaxDecisionWaitMinutes)
-            {
-                errors.Add($"Ollama decisionWaitMinutes must be between 1 and {MaxDecisionWaitMinutes}, but was {decisionWaitMinutes}.");
-            }
-
-            if (decisionWaitSeconds < 0 || decisionWaitSeconds > MaxDecisionWaitSeconds)
-            {
-                errors.Add($"Ollama decisionWaitSeconds must be between 0 and {MaxDecisionWaitSeconds}, but was {decisionWaitSeconds}.");
             }
 
             if (parallelRequests < 1 || parallelRequests > MaxParallelRequests)

@@ -18,8 +18,8 @@ using TinyCity.Tests.EditMode;
 namespace TinyCity.Tools.StressTest
 {
     /// <summary>
-    /// Stress runs of the whole town without Unity: a long run with the built-in decision maker, the game loop at
-    /// each speed against a slow, unreliable stand-in for Ollama, and an Ollama outage. Writes a Markdown report.
+    /// Stress runs of Tiny City 2's open land without Unity, against a slow, unreliable stand-in for each Ollama model,
+    /// at each speed. Writes a Markdown report.
     /// </summary>
     public static partial class Program
     {
@@ -32,36 +32,24 @@ namespace TinyCity.Tools.StressTest
         /// <summary>Requests the game sends at once, and the stand-in Ollama's parallel slots to match.</summary>
         private static int ParallelRequests = OllamaSettings.DefaultParallelRequests;
 
-        /// <summary>The settings' <c>decisionWaitSeconds</c> (0 = only the game-minute wait, as before).</summary>
-        private static int DecisionWaitSeconds = OllamaSettings.DefaultDecisionWaitSeconds;
-
-        private static OllamaSettings Settings() => new OllamaSettings { parallelRequests = ParallelRequests, decisionWaitSeconds = DecisionWaitSeconds };
+        private static OllamaSettings Settings() => new OllamaSettings { parallelRequests = ParallelRequests };
 
         public static int Main(string[] args)
         {
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             var path = args.Length > 0 ? args[0] : "stress-report.md";
-            var days = args.Length > 1 ? int.Parse(args[1]) : 336;
-            var aiDays = args.Length > 2 ? int.Parse(args[2]) : 3;
-            ParallelRequests = args.Length > 3 ? int.Parse(args[3]) : OllamaSettings.DefaultParallelRequests;
-            DecisionWaitSeconds = args.Length > 4 ? int.Parse(args[4]) : OllamaSettings.DefaultDecisionWaitSeconds;
-            var v2Days = args.Length > 5 ? double.Parse(args[5], CultureInfo.InvariantCulture) : 1;
+            var v2Days = args.Length > 1 ? double.Parse(args[1], CultureInfo.InvariantCulture) : 1;
+            ParallelRequests = args.Length > 2 ? int.Parse(args[2]) : OllamaSettings.DefaultParallelRequests;
 
-            Line("# Tiny City stress test");
+            Line("# Tiny City 2 stress test");
             Line();
             Line($"Run with .NET {Environment.Version} on {Environment.ProcessorCount} cores ({RuntimeInfo()}), {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC.");
-            Line("Unity's Mono runs the same simulation code roughly 2–3 times slower (the soak test takes about 2 minutes under .NET and 5 in Unity).");
+            Line("Unity's Mono runs the same simulation code roughly 2–3 times slower.");
             Line();
 
-            var ok = days == 0 || LongRun(days);
-            var section = 2;
-            foreach (var profile in AiProfile.All)
-            {
-                ok &= aiDays == 0 || AiAtEachSpeed($"## {section++}. Game loop with {profile.Name}", profile, aiDays, StarterTown.CreateNewGame);
-            }
-
-            ok &= Outage(section++);
+            var ok = true;
+            var section = 1;
             foreach (var profile in AiProfile.All)
             {
                 // The CPU-only model is so slow that half a day is plenty to see the pattern.
@@ -83,111 +71,7 @@ namespace TinyCity.Tools.StressTest
             Console.Error.WriteLine(text);
         }
 
-        // ---- 1. Long run, built-in decisions only ----
-
-        private static bool LongRun(int days)
-        {
-            Line($"## 1. {days} game days with the built-in decision maker");
-            Line();
-            Line("The town runs flat out, one tick per game minute, with an autosave every 6 game hours as in the game. Each row is 28 game days (one resident year).");
-            Line();
-            Line("| Days | Alive | ms per game day | Slowest tick (ms) | 99.9% of ticks under (ms) | Heap after GC (MB) | Save size (KB) | Save (ms) | Load (ms) | Memories | Chats | Ledger | History |");
-            Line("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
-
-            var sim = StarterTown.CreateNewGame();
-            var world = StarterTown.CreateWorld();
-            var block = new List<double>();
-            var blockMs = 0.0;
-            var saveMs = new List<double>();
-            var worstSaveMs = 0.0;
-            var firstMsPerDay = 0.0;
-            var lastMsPerDay = 0.0;
-            var firstHeap = 0.0;
-            var lastHeap = 0.0;
-            var ok = true;
-            var everything = Stopwatch.StartNew();
-
-            for (var day = 1; day <= days; day++)
-            {
-                for (var minute = 0; minute < GameTime.MinutesPerDay; minute++)
-                {
-                    var t = Stopwatch.GetTimestamp();
-                    sim.Tick();
-                    var ms = Ms(Stopwatch.GetTimestamp() - t);
-                    block.Add(ms);
-                    blockMs += ms;
-                    if (sim.Time.TotalMinutes % AutosaveEveryGameMinutes == 0)
-                    {
-                        t = Stopwatch.GetTimestamp();
-                        SaveSerializer.Save(sim);
-                        var s = Ms(Stopwatch.GetTimestamp() - t);
-                        saveMs.Add(s);
-                        worstSaveMs = Math.Max(worstSaveMs, s);
-                    }
-                }
-
-                if (day % 28 == 0 || day == days)
-                {
-                    var t = Stopwatch.GetTimestamp();
-                    var json = SaveSerializer.Save(sim);
-                    var save = Ms(Stopwatch.GetTimestamp() - t);
-                    t = Stopwatch.GetTimestamp();
-                    var loaded = SaveSerializer.Load(json, world);
-                    var load = Ms(Stopwatch.GetTimestamp() - t);
-                    if (!loaded.Success || loaded.Warnings.Count > 0 || SaveSerializer.Save(loaded.Simulation) != json)
-                    {
-                        Line($"**Day {day}: the save did not load back exactly.** {string.Join("; ", loaded.Errors.Concat(loaded.Warnings))}");
-                        ok = false;
-                    }
-
-                    var heap = GC.GetTotalMemory(true) / 1048576.0;
-                    var daysInBlock = (day - 1) % 28 + 1;
-                    var msPerDay = blockMs / daysInBlock;
-                    block.Sort();
-                    Line($"| {day} | {sim.Residents.Count(r => r.IsAlive)} | {msPerDay:0.0} | {block[block.Count - 1]:0.00} | {block[(int)(block.Count * 0.999)]:0.000} | {heap:0.0} | {json.Length / 1024.0:0} | {save:0.0} | {load:0.0} | {sim.Memories.All.Count} | {sim.Conversations.All.Count} | {sim.Economy.Ledger.All.Count} | {sim.History.Events.Count} |");
-                    if (day == 28 || day == days && days < 28)
-                    {
-                        firstMsPerDay = msPerDay;
-                    }
-
-                    if (day == 168 || day == days && days < 168)
-                    {
-                        // By now every capped record (chats, ledger) is full, so the heap should stop growing.
-                        firstHeap = heap;
-                    }
-
-                    lastMsPerDay = msPerDay;
-                    lastHeap = heap;
-                    block.Clear();
-                    blockMs = 0;
-                }
-            }
-
-            saveMs.Sort();
-            Line();
-            Line($"Whole run: {everything.Elapsed.TotalSeconds:0.0} s for {days} game days ({days * GameTime.MinutesPerDay / everything.Elapsed.TotalSeconds:0} ticks a second, with saves and checks). Autosaves: median {saveMs[saveMs.Count / 2]:0.0} ms, slowest {worstSaveMs:0.0} ms.");
-            var slowdown = firstMsPerDay > 0 ? lastMsPerDay / firstMsPerDay : 1;
-            var growth = lastHeap - firstHeap;
-            Line($"The last block took {slowdown:0.00}× as long per day as the first. From day {Math.Min(168, days)}, when the capped records are full, to the end the heap changed by {growth:+0.0;-0.0} MB.");
-            if (slowdown > 1.5)
-            {
-                Line("**Ticks got noticeably slower as the town aged.**");
-                ok = false;
-            }
-
-            if (growth > 5)
-            {
-                Line("**Memory kept growing.**");
-                ok = false;
-            }
-
-            Line();
-            return ok;
-        }
-
-        private static double Ms(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
-
-        // ---- 2. The game loop with a slow, unreliable AI ----
+        // ---- A slow, unreliable stand-in for Ollama ----
 
         private sealed class AiProfile
         {
@@ -423,248 +307,6 @@ namespace TinyCity.Tools.StressTest
             }
         }
 
-        private sealed class LoopResult
-        {
-            public int Decisions;
-            public int AiDecisions;
-
-            /// <summary>Of <see cref="AiDecisions"/>, the ones that were later steps of an AI plan, with no request of their own.</summary>
-            public int PlanSteps;
-            public int WaitingMinutes;
-            public int WorstWait;
-
-            /// <summary>The game minutes a resident may wait for a decision at this speed.</summary>
-            public int WaitLimit;
-            public double WorstFrameMs;
-            public double QueueSum;
-            public int QueueSamples;
-            public int LongestQueue;
-            public int AiLines;
-            public int Lines;
-            public Dictionary<string, int> AiPerResident = new Dictionary<string, int>();
-            public Dictionary<string, int> DecisionsPerResident = new Dictionary<string, int>();
-
-            /// <summary>The lowest and highest share of a resident's own free-time choices the AI made, in percent.</summary>
-            public (double low, double high) ShareRange()
-            {
-                var shares = DecisionsPerResident.Where(d => d.Value > 0).Select(d => 100.0 * (AiPerResident.TryGetValue(d.Key, out var n) ? n : 0) / d.Value).ToList();
-                return shares.Count == 0 ? (0, 0) : (shares.Min(), shares.Max());
-            }
-            public AiQueueStats Stats;
-            public bool Connected;
-            public double RealSeconds;
-            public double BusySeconds;
-            public double TickMs;
-            public int Ticks;
-            public double SlowestTickMs;
-            public double SlowestSaveMs;
-            public int SaveBytes;
-        }
-
-        private static bool AiAtEachSpeed(string heading, AiProfile profile, int days, Func<TownSimulation> make, string about = null)
-        {
-            Line(heading);
-            Line();
-            if (about != null)
-            {
-                Line(about);
-                Line();
-            }
-
-            var parallel = ParallelRequests == 1
-                ? "works on one request at a time"
-                : $"works on up to {ParallelRequests} requests at once (OLLAMA_NUM_PARALLEL={ParallelRequests}, the game sending {ParallelRequests} at a time; each reply takes {SlowOllama.ParallelSlowdown:0.0}× longer for every other request beside it, an assumption to check on a real PC)";
-            var wait = DecisionWaitSeconds > 0
-                ? $"decisions wait up to {OllamaSettings.DefaultDecisionWaitMinutes} game minutes or {DecisionWaitSeconds} real seconds, whichever is longer"
-                : $"decisions wait up to {OllamaSettings.DefaultDecisionWaitMinutes} game minutes";
-            Line($"The stand-in Ollama takes {profile.Description}, and {parallel}. One reply in 30 is not JSON and one in 50 never arrives (it times out). Frames run at 60 a second as in the game, with ticks, autosaves and AI updates where the game does them. Settings: {wait}, requests time out after {OllamaSettings.DefaultTimeoutSeconds} s, {OllamaSettings.DefaultMaxRetries} retry. {days} game days at each speed.");
-            Line();
-            Line("| Speed | Real time | Free-time choices | Chosen by AI (of which later plan steps) | AI lines in chats | Avg / longest queue | Avg reply (s) | Timed out | Not JSON | Stale | Dropped | Longest wait (game min) | AI share of each resident's choices (lowest / highest) | Model busy | Slowest frame (ms) |");
-            Line("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
-
-            var ok = true;
-            foreach (var speed in new[] { 1, 2, 4, 10 })
-            {
-                var result = RunLoop(profile, speed, days, make, null);
-                var share = result.Decisions == 0 ? 0 : 100.0 * result.AiDecisions / result.Decisions;
-                var lineShare = result.Lines == 0 ? 0 : 100.0 * result.AiLines / result.Lines;
-                var s = result.Stats;
-                Line($"| {speed}x | {Hours(result.RealSeconds)} | {result.Decisions} | {share:0}% ({(result.Decisions == 0 ? 0 : 100.0 * result.PlanSteps / result.Decisions):0}%) | {lineShare:0}% | {result.QueueSum / Math.Max(1, result.QueueSamples):0.0} / {result.LongestQueue} | {s.AverageLatencySeconds:0.0} | {s.TimedOut} | {s.InvalidReplies} | {s.Stale} | {s.Dropped} | {result.WorstWait} | {result.ShareRange().low:0}% / {result.ShareRange().high:0}% | {100 * result.BusySeconds / result.RealSeconds:0}% | {result.WorstFrameMs:0.0} |");
-                if (!result.Connected)
-                {
-                    Line($"**At {speed}x the AI went offline.**");
-                    ok = false;
-                }
-
-                if (result.WorstWait > result.WaitLimit + 1)
-                {
-                    Line($"**At {speed}x someone waited on the AI past the deadline.**");
-                    ok = false;
-                }
-
-                if (result.LongestQueue > AiRequestQueue.DefaultMaxPending)
-                {
-                    Line($"**At {speed}x the queue grew to {result.LongestQueue}.**");
-                    ok = false;
-                }
-            }
-
-            Line();
-            return ok;
-        }
-
         private static string Hours(double seconds) => seconds >= 3600 ? $"{seconds / 3600:0.0} h" : $"{seconds / 60:0} min";
-
-        private static LoopResult RunLoop(AiProfile profile, int speed, int days, Func<TownSimulation> make, Action<SlowOllama, AiService, LoopResult, double> each)
-        {
-            var sim = make();
-            var ollama = new SlowOllama(profile, ParallelRequests);
-            var ai = new AiService(Settings(), ollama.Transport);
-            ai.Attach(sim);
-            ai.SetGameSpeed(speed);
-            var result = new LoopResult { WaitLimit = ai.DecisionWaitMinutesAt(speed) };
-            var deciding = new Dictionary<string, int>();
-            var waiting = new HashSet<string>();
-            var planSteps = new Dictionary<string, int>();
-            var seenLines = new HashSet<string>();
-            var accumulator = 0.0;
-            var lastAutosave = sim.Time.TotalMinutes;
-            var end = sim.Time.TotalMinutes + (long)days * GameTime.MinutesPerDay;
-            var now = 0.0;
-
-            while (sim.Time.TotalMinutes < end)
-            {
-                var frameStart = Stopwatch.GetTimestamp();
-                ollama.Now = now;
-                ollama.Deliver();
-                ai.Update(now);
-                accumulator += FrameSeconds * speed;
-                var ticks = 0;
-                while (accumulator >= 1 && ticks < MaxTicksPerFrame)
-                {
-                    accumulator -= 1;
-                    var tickStart = Stopwatch.GetTimestamp();
-                    sim.Tick();
-                    var tickMs = Ms(Stopwatch.GetTimestamp() - tickStart);
-                    result.TickMs += tickMs;
-                    result.Ticks++;
-                    result.SlowestTickMs = Math.Max(result.SlowestTickMs, tickMs);
-                    ticks++;
-                    if (sim.Time.TotalMinutes - lastAutosave >= AutosaveEveryGameMinutes)
-                    {
-                        var saveStart = Stopwatch.GetTimestamp();
-                        result.SaveBytes = SaveSerializer.Save(sim).Length;
-                        result.SlowestSaveMs = Math.Max(result.SlowestSaveMs, Ms(Stopwatch.GetTimestamp() - saveStart));
-                        lastAutosave = sim.Time.TotalMinutes;
-                    }
-
-                    foreach (var r in sim.Residents)
-                    {
-                        var stepsBefore = planSteps.TryGetValue(r.Id, out var p) ? p : 0;
-                        if (r.PlanStepsTaken > stepsBefore)
-                        {
-                            var taken = r.PlanStepsTaken - stepsBefore;
-                            planSteps[r.Id] = r.PlanStepsTaken;
-                            result.PlanSteps += taken;
-                            result.Decisions += taken;
-                            result.AiDecisions += taken;
-                            result.DecisionsPerResident[r.Id] = (result.DecisionsPerResident.TryGetValue(r.Id, out var dp) ? dp : 0) + taken;
-                            result.AiPerResident[r.Id] = (result.AiPerResident.TryGetValue(r.Id, out var ap) ? ap : 0) + taken;
-                        }
-
-                        if (r.State == ResidentState.Deciding)
-                        {
-                            waiting.Add(r.Id);
-                            deciding[r.Id] = deciding.TryGetValue(r.Id, out var m) ? m + 1 : 1;
-                            result.WaitingMinutes++;
-                            result.WorstWait = Math.Max(result.WorstWait, deciding[r.Id]);
-                        }
-                        else if (waiting.Remove(r.Id))
-                        {
-                            deciding[r.Id] = 0;
-                            result.Decisions++;
-                            result.DecisionsPerResident[r.Id] = result.DecisionsPerResident.TryGetValue(r.Id, out var d) ? d + 1 : 1;
-                            if (r.GoalSource == DecisionSource.Ai)
-                            {
-                                result.AiDecisions++;
-                                result.AiPerResident[r.Id] = result.AiPerResident.TryGetValue(r.Id, out var n) ? n + 1 : 1;
-                            }
-                        }
-                    }
-                }
-
-                if (ticks > 0)
-                {
-                    foreach (var session in sim.ActiveConversations)
-                    {
-                        for (var i = 0; i < session.Lines.Count; i++)
-                        {
-                            if (seenLines.Add(session.Id + "/" + i))
-                            {
-                                result.Lines++;
-                                if (session.Lines[i].FromAi)
-                                {
-                                    result.AiLines++;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                result.WorstFrameMs = Math.Max(result.WorstFrameMs, Ms(Stopwatch.GetTimestamp() - frameStart));
-                result.QueueSum += ai.Queue.PendingCount;
-                result.QueueSamples++;
-                result.LongestQueue = Math.Max(result.LongestQueue, ai.Queue.PendingCount);
-                each?.Invoke(ollama, ai, result, now);
-                now += FrameSeconds;
-            }
-
-            foreach (var r in sim.Residents.Where(r => r.IsAlive && !result.AiPerResident.ContainsKey(r.Id)))
-            {
-                result.AiPerResident[r.Id] = 0;
-            }
-
-            result.Stats = ai.Queue.Stats;
-            result.BusySeconds = ollama.BusySeconds;
-            result.Connected = ai.Status == AiConnectionStatus.Connected;
-            result.RealSeconds = now;
-            return result;
-        }
-
-        // ---- 3. Ollama goes away and comes back ----
-
-        private static bool Outage(int section)
-        {
-            Line($"## {section}. Ollama stops for five minutes and comes back");
-            Line();
-            const int Speed = 4;
-            const int Days = 2;
-            const double DownAt = 120;
-            const double UpAt = DownAt + 300;
-            double? offlineAt = null;
-            double? backAt = null;
-
-            var result = RunLoop(AiProfile.All[0], Speed, Days, StarterTown.CreateNewGame, (ollama, ai, r, now) =>
-            {
-                ollama.Down = now >= DownAt && now < UpAt;
-                if (now >= DownAt && offlineAt == null && ai.Status == AiConnectionStatus.Offline)
-                {
-                    offlineAt = now;
-                }
-
-                if (now >= UpAt && backAt == null && ai.Status == AiConnectionStatus.Connected)
-                {
-                    backAt = now;
-                }
-            });
-
-            Line($"At {Speed}x, {Days} game days ({Days * GameTime.MinutesPerDay / Speed / 60} real minutes) with the graphics-card stand-in. Ollama stops answering after {DownAt / 60:0} real minutes and starts again {(UpAt - DownAt) / 60:0} minutes later.");
-            Line();
-            Line(offlineAt == null ? "- **The game never noticed that Ollama had gone.**" : $"- The game marked the AI offline {offlineAt - DownAt:0} s after Ollama stopped, and residents carried on with the built-in decision maker.");
-            Line(backAt == null ? "- **The AI did not come back on its own.**" : $"- It reconnected {backAt - UpAt:0} s after Ollama came back (it checks every {AiService.RecheckSeconds:0} s).");
-            Line($"- Over the run the AI made {result.AiDecisions} of {result.Decisions} free-time choices; the longest anyone waited on it was {result.WorstWait} game minutes.");
-            Line();
-            return offlineAt != null && backAt != null && result.WorstWait <= result.WaitLimit + 1;
-        }
     }
 }

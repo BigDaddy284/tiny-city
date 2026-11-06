@@ -21,23 +21,6 @@ namespace TinyCity.Tests.PlayMode
             yield return null;
             game = Object.FindAnyObjectByType<GameController>();
             Assert.That(game, Is.Not.Null, "GameController was not created.");
-
-            // These tests need the city's indoor maps and lit windows; Tiny City 2 starts on the flat map.
-            if (game.Simulation.World.TownId != StarterTown.TownId)
-            {
-                game.ShowTown(StarterTown.CreateNewGame());
-                yield return null;
-            }
-        }
-
-        [TearDown]
-        public void BackToTheGamesOwnLand()
-        {
-            // Leave the game on Tiny City 2's own land, so later tests (and its saves) see the real game.
-            if (game != null && game.Simulation.World.TownId != FlatLand.TownId)
-            {
-                game.ShowTown(FlatLand.CreateNewGame());
-            }
         }
 
         [Test]
@@ -55,21 +38,16 @@ namespace TinyCity.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Night_DarkensTheVillage_AndLightsTheWindows()
+        public IEnumerator Night_DarkensTheLand()
         {
-            var village = game.View.MapViews[StarterTown.VillageMapId];
-            var day = GameTime.FromDayAndTime(game.Simulation.Time.Day, 12, 0);
+            var land = game.View.MapViews[FlatLand.MapId];
+            var ground = land.GetComponentsInChildren<SpriteRenderer>(true).First(r => r.sortingOrder == 0);
             // The game re-applies its own clock every frame, so each check follows its ApplyTime directly.
-            game.View.ApplyTime(day);
-            var windows = village.GetComponentsInChildren<SpriteRenderer>(true).Where(r => r.name.StartsWith("Windows")).ToList();
-            Assert.That(windows.Count, Is.GreaterThan(14));
-            Assert.That(windows.All(w => !w.enabled), Is.True, "no lit windows by day");
-            Assert.That(village.CurrentLight.Value.WindowGlow, Is.EqualTo(0));
+            game.View.ApplyTime(GameTime.FromDayAndTime(game.Simulation.Time.Day, 12, 0));
+            var noon = ground.color;
 
             game.View.ApplyTime(GameTime.FromDayAndTime(game.Simulation.Time.Day, 23, 30));
-            Assert.That(windows.All(w => w.enabled), Is.True, "windows are lit at night");
-            var ground = village.GetComponentsInChildren<SpriteRenderer>(true).First(r => r.sortingOrder == 0);
-            Assert.That(ground.color.r < 0.7f && ground.color.b > ground.color.r, Is.True, $"night is dark and blue, was {ground.color}");
+            Assert.That(ground.color.r < noon.r && ground.color.b > ground.color.r, Is.True, $"night is dark and blue, was {ground.color}");
 
             // Back to the game's own time.
             game.View.ApplyTime(game.Simulation.Time);

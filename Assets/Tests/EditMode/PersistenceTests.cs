@@ -54,11 +54,11 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void SaveThenLoad_RestoresEverything()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             sim.Advance((26 * 60) + 17);
             var saved = SaveSerializer.Save(sim);
 
-            var result = SaveSerializer.Load(saved, StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(saved, FlatLand.CreateWorld());
 
             Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
             Assert.That(result.Warnings, Is.Empty);
@@ -68,7 +68,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(after.Id, Is.EqualTo(before.Id));
             Assert.That(after.FullName, Is.EqualTo(before.FullName));
             Assert.That(after.Location, Is.EqualTo(before.Location));
-            Assert.That(after.State, Is.EqualTo(before.State));
+            Assert.That(after.State, Is.EqualTo(before.State == ResidentState.Deciding ? ResidentState.Idle : before.State), "someone waiting for the AI is asked again after loading");
             Assert.That(after.ActivityId, Is.EqualTo(before.ActivityId));
             Assert.That(after.Log.Count, Is.EqualTo(before.Log.Count));
             for (var i = 0; i < Needs.Count; i++)
@@ -83,8 +83,8 @@ namespace TinyCity.Tests.EditMode
         public void LoadedGame_ContinuesExactlyAsIfNeverSaved()
         {
             // Save at many different moments (mid-walk, mid-activity, asleep) and check the future is unchanged.
-            var reference = StarterTown.CreateNewGame();
-            var world = StarterTown.CreateWorld();
+            var reference = FlatLand.CreateNewGame();
+            var world = FlatLand.CreateWorld();
             for (var checkpoint = 0; checkpoint < 24; checkpoint++)
             {
                 reference.Advance(97);
@@ -97,9 +97,9 @@ namespace TinyCity.Tests.EditMode
                 Assert.That(SaveSerializer.Save(restored), Is.EqualTo(SaveSerializer.Save(continued)));
             }
 
-            var straight = StarterTown.CreateNewGame();
+            var straight = FlatLand.CreateNewGame();
             straight.Advance((24 * 97) + 300);
-            var viaSaves = StarterTown.CreateNewGame();
+            var viaSaves = FlatLand.CreateNewGame();
             for (var i = 0; i < 24; i++)
             {
                 viaSaves.Advance(97);
@@ -121,7 +121,7 @@ namespace TinyCity.Tests.EditMode
         [TestCase("{\"format\":\"tiny-city-2-save\",\"version\":1,\"townId\":\"town-tiny-city\",\"gameMinutes\":0,\"residents\":[{\"firstName\":\"No id\"}]}")]
         public void InvalidSaves_AreRejectedWithAReason(string json)
         {
-            var result = SaveSerializer.Load(json, StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(json, FlatLand.CreateWorld());
 
             Assert.That(result.Success, Is.False);
             Assert.That(result.Errors, Is.Not.Empty);
@@ -130,11 +130,11 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void SaveFromBeforeTheFreshStart_IsNotLoaded_AndSaysWhy()
         {
-            var json = SaveSerializer.Save(StarterTown.CreateNewGame())
+            var json = SaveSerializer.Save(FlatLand.CreateNewGame())
                 .Replace(SaveSerializer.Format, SaveSerializer.FormatBeforeFreshStart)
-                .Replace(StarterTown.TownId, "town-tiny-town");
+                .Replace(FlatLand.TownId, "town-tiny-town");
 
-            var result = SaveSerializer.Load(json, StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(json, FlatLand.CreateWorld());
 
             Assert.That(result.Success, Is.False);
             Assert.That(string.Join(" ", result.Errors), Does.Contain("fresh start"));
@@ -146,24 +146,24 @@ namespace TinyCity.Tests.EditMode
             const string json = "{\"format\":\"tiny-city-2-save\",\"version\":1,\"townId\":\"town-tiny-city\",\"gameMinutes\":0," +
                 "\"residents\":[{\"id\":\"res-1\"},{\"id\":\"res-1\"}]}";
 
-            Assert.That(SaveSerializer.Load(json, StarterTown.CreateWorld()).Success, Is.False);
+            Assert.That(SaveSerializer.Load(json, FlatLand.CreateWorld()).Success, Is.False);
         }
 
         [Test]
         public void DamagedResident_IsRepaired_WithWarnings()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             var json = SaveSerializer.Save(sim)
-                .Replace("\"mapId\": \"map-cottage-1\"", "\"mapId\": \"map-demolished\"")
+                .Replace("\"mapId\": \"map-flat-land\"", "\"mapId\": \"map-demolished\"")
                 .Replace("\"hunger\":", "\"oldHunger\":")
                 .Replace("\"state\": \"Idle\"", "\"state\": \"Performing\", \"activityId\": \"teleport\"");
 
-            var result = SaveSerializer.Load(json, StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(json, FlatLand.CreateWorld());
 
             Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
             var r = result.Simulation.Residents[0];
             Assert.That(result.Simulation.World.IsWalkable(r.Location), Is.True);
-            Assert.That(r.Location, Is.EqualTo(TestTown.Object(result.Simulation, StarterTown.BedId).Location));
+            Assert.That(r.Location, Is.EqualTo(result.Simulation.World.Objects.First().Location), "the first place there is");
             Assert.That(r.State, Is.EqualTo(ResidentState.Idle));
             Assert.That(r.Needs[NeedType.Hunger], Is.InRange(0, 100));
             Assert.That(result.Warnings.Any(w => w.Contains("position")), Is.True, string.Join("; ", result.Warnings));
@@ -174,12 +174,15 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void PerformingAwayFromTarget_IsLoadedAsWalkingThere()
         {
-            var sim = TestTown.WithResident(TestTown.WorkHour);
+            var sim = TestTown.WithResident(TestTown.WeekendAfternoon);
+            sim.AiDecisionsEnabled = true;
             sim.Tick();
-            Assert.That(sim.Residents[0].ActivityId, Is.EqualTo("work"));
+            var r = sim.Residents[0];
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "catch-fish", "obj-flat-fishing-1", "Supper", null), Is.EqualTo(TinyCity.Simulation.DecisionOutcome.Applied));
+            Assert.That(r.State, Is.EqualTo(ResidentState.Travelling));
             var json = SaveSerializer.Save(sim).Replace("\"state\": \"Travelling\"", "\"state\": \"Performing\"");
 
-            var result = SaveSerializer.Load(json, StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(json, FlatLand.CreateWorld());
 
             Assert.That(result.Simulation.Residents[0].State, Is.EqualTo(ResidentState.Travelling));
             Assert.That(result.Warnings, Is.Not.Empty);
@@ -188,12 +191,12 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void OutOfRangeNeeds_AreClampedOnLoad()
         {
-            var json = SaveSerializer.Save(StarterTown.CreateNewGame());
+            var json = SaveSerializer.Save(FlatLand.CreateNewGame());
             var start = json.IndexOf("\"fun\": ", System.StringComparison.Ordinal);
             var end = json.IndexOf('\n', start);
             json = json.Substring(0, start) + "\"fun\": 5000" + json.Substring(end);
 
-            var result = SaveSerializer.Load(json, StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(json, FlatLand.CreateWorld());
 
             Assert.That(result.Simulation.Residents[0].Needs[NeedType.Fun], Is.EqualTo(100));
         }
@@ -201,7 +204,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void SaveFile_DoesNotContainRuntimePathData()
         {
-            var sim = TestTown.WithResident(TestTown.WorkHour);
+            var sim = TestTown.WithResident(TestTown.WeekendAfternoon);
             sim.Advance(5);
 
             var json = SaveSerializer.Save(sim);
@@ -213,7 +216,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void ResidentLog_IsBounded()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             sim.Advance(7 * 24 * 60);
 
             Assert.That(sim.Residents[0].Log.Count, Is.LessThanOrEqualTo(Resident.MaxLogEntries));
@@ -222,9 +225,9 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Location_IsAMapAndTile()
         {
-            var loc = new Location(StarterTown.VillageMapId, 3, 4);
+            var loc = new Location(FlatLand.MapId, 3, 4);
 
-            Assert.That(loc.ToString(), Does.Contain(StarterTown.VillageMapId));
+            Assert.That(loc.ToString(), Does.Contain(FlatLand.MapId));
         }
     }
 }

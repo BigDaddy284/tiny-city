@@ -16,6 +16,15 @@ namespace TinyCity.Tests.EditMode
 
         public int Throws { get; set; }
 
+        /// <summary>What a day plan prompt asks for, so a test that answers only choices still gets its residents' days planned.</summary>
+        public const string DayPlanMarker = "Plan the rest of your day";
+
+        public const string DayPlan = "{\"plan\":[{\"hour\":8,\"plan\":\"Find something to eat\"},{\"hour\":21,\"plan\":\"Go to sleep\"}]}";
+
+        /// <summary>
+        /// Answers each chat with <paramref name="chatContent"/>. A day plan prompt it answers with nothing, or with a choice, gets
+        /// <see cref="DayPlan"/>, since every resident plans their day before their first choice.
+        /// </summary>
         public static FakeAiTransport WorkingOllama(Func<string, string> chatContent)
         {
             return new FakeAiTransport
@@ -33,6 +42,11 @@ namespace TinyCity.Tests.EditMode
                     }
 
                     var content = chatContent(call.Body);
+                    if (call.Body.Contains(DayPlanMarker) && (content == null || content.Contains("\"action\"")))
+                    {
+                        content = DayPlan;
+                    }
+
                     return content == null ? null : call.Succeed(ChatReply(content));
                 },
             };

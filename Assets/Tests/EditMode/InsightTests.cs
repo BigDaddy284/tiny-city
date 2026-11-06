@@ -15,8 +15,7 @@ namespace TinyCity.Tests.EditMode
     {
         private static TownSimulation TownWithMemories(int count, int importance)
         {
-            var sim = TestTown.WithResident(TestTown.WorkHour);
-            sim.AiRunsEverything = true;
+            var sim = TestTown.WithResident(TestTown.WeekendAfternoon);
             var r = sim.Residents[0];
             foreach (var m in sim.Memories.ForResident(r.Id).ToList())
             {
@@ -78,7 +77,7 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = TownWithMemories(3, 7);
             var evidence = sim.InsightEvidence(sim.Residents[0].Id);
-            Assert.That(InsightPrompt.UserText(evidence), Does.Contain("1. Day 1: Something happened, number 0"));
+            Assert.That(InsightPrompt.UserText(evidence), Does.Contain("1. Day 6: Something happened, number 0"));
 
             const string content = "{\"insights\":[{\"insight\":\"I keep busy\",\"because\":[1,3,9]},{\"insight\":\"\",\"because\":[1]},{\"insight\":\"Unbacked\",\"because\":[]}]}";
             Assert.That(InsightPrompt.TryParse(content, evidence, out var insights, out _), Is.True);

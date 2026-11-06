@@ -17,14 +17,14 @@ namespace TinyCity.Tests.EditMode
         private static TownSimulation Town()
         {
             var sim = TinyCity.Simulation.Content.FlatLand.CreateNewGame();
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
+            // Anyone may do anything here: these tests are about the work, not who may do it.
+            sim.Brief = TinyCity.Simulation.Residents.WorldBrief.Empty;
             sim.AiDecisionsEnabled = true;
             return sim;
         }
 
         private static FreeTimeOption Option(TownSimulation sim, ActivityDefinition activity) =>
-            sim.Planner.FreeTimeOptions(sim.Residents[0], everything: true).FirstOrDefault(o => o.Activity == activity);
+            sim.Planner.FreeTimeOptions(sim.Residents[0]).FirstOrDefault(o => o.Activity == activity);
 
         private static void Do(TownSimulation sim, ActivityDefinition activity)
         {
@@ -44,15 +44,6 @@ namespace TinyCity.Tests.EditMode
             }
 
             Assert.That(r.State, Is.EqualTo(ResidentState.Deciding), $"{activity.Id} should have finished");
-        }
-
-        [Test]
-        public void TheOldTown_HasNoGatheringOrCrafting()
-        {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon);
-            sim.AiRunsEverything = true;
-            var options = sim.Planner.FreeTimeOptions(sim.Residents[0], everything: true);
-            Assert.That(options.Any(o => o.Activity != null && CraftingRules.IsCrafting(o.Activity)), Is.False);
         }
 
         [Test]
@@ -198,7 +189,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(r.Belongings.Describe(), Does.Contain("5 wood").And.Contain("stone axe (7 uses left)").And.Contain("iron pickaxe (25 uses left)"));
 
             sim.Tick();
-            var prompt = DecisionPrompt.UserText(sim, r, sim.Planner.FreeTimeOptions(r, everything: true), new MemoryRecord[0]);
+            var prompt = DecisionPrompt.UserText(sim, r, sim.Planner.FreeTimeOptions(r), new MemoryRecord[0]);
             Assert.That(prompt, Does.Contain("Your things: 5 wood"));
             Assert.That(prompt, Does.Contain("gather-crystal"));
         }

@@ -10,7 +10,7 @@ using TinyCity.Simulation.Time;
 namespace TinyCity.Tools.StressTest
 {
     /// <summary>
-    /// Tiny City 2's AI budget: the city runs only while nobody waits for the AI (as <c>GameController.HoldingForAi</c>),
+    /// Tiny City 2's AI budget: the clock keeps running while the AI thinks and holds only while Ollama isn't connected (as <c>GameController.HoldingForAi</c>),
     /// so this measures how many requests a game day takes, of which kinds, how long they queue, and how fast the
     /// city really runs at each speed.
     /// </summary>
@@ -25,7 +25,7 @@ namespace TinyCity.Tools.StressTest
         {
             Line($"## {section}. Tiny City 2 on the open land with {profile.Name}");
             Line();
-            Line($"The AI makes every choice and the clock waits for it, as in the v2 game, on the flat map with its {FlatLand.MaxResidents} people (nobody has a bed, so they sleep on benches or the ground). The stand-in Ollama takes {profile.Description} and works on {ParallelRequests} request{(ParallelRequests == 1 ? string.Empty : "s")} at a time; one reply in 30 is not JSON and one in 50 never arrives. It picks options in turn rather than sensibly, so needs and deaths here say nothing about how a real model plays. {days:0.#} game day{(days == 1 ? string.Empty : "s")} at each speed.");
+            Line($"The AI makes every choice, as in the game; the clock keeps running while it thinks, on the flat map with its {FlatLand.MaxResidents} people (nobody has a bed, so they sleep on benches or the ground). The stand-in Ollama takes {profile.Description} and works on {ParallelRequests} request{(ParallelRequests == 1 ? string.Empty : "s")} at a time; one reply in 30 is not JSON and one in 50 never arrives. It picks options in turn rather than sensibly, so needs and deaths here say nothing about how a real model plays. {days:0.#} game day{(days == 1 ? string.Empty : "s")} at each speed.");
             Line();
             Line("| People | Speed | Real time | Actually ran at | Clock held | Requests per game day | " + string.Join(" | ", Kinds.Select(k => k + "s")) + " | Avg wait for a choice (s) | Longest (s) | Avg reply (s) | Gave up | Deaths |");
             Line("|---|---|---|---|---|---|" + string.Concat(Kinds.Select(_ => "---|")) + "---|---|---|---|---|");
@@ -34,12 +34,9 @@ namespace TinyCity.Tools.StressTest
             foreach (var speed in new[] { 1, 2, 4 })
             {
                 var sim = FlatLand.CreateNewGame();
-                sim.AiRunsEverything = true;
-                sim.FoodMustBeMade = true;
                 var ollama = new SlowOllama(profile, ParallelRequests);
                 var ai = new AiService(Settings(), ollama.Transport);
                 ai.Attach(sim);
-                ai.SetGameSpeed(speed);
                 var start = sim.Time.TotalMinutes;
                 var end = start + (long)(days * GameTime.MinutesPerDay);
                 var now = 0.0;
@@ -52,13 +49,13 @@ namespace TinyCity.Tools.StressTest
                     ollama.Now = now;
                     ollama.Deliver();
                     ai.Update(now);
-                    var holding = ai.Status != AiConnectionStatus.Connected || sim.WaitingForAi;
+                    var holding = ai.Status != AiConnectionStatus.Connected;
                     var step = holding ? HeldStepSeconds : FrameSeconds;
                     accumulator += step * speed;
                     var ticks = 0;
                     while (accumulator >= 1 && ticks < MaxTicksPerFrame)
                     {
-                        if (ai.Status != AiConnectionStatus.Connected || sim.WaitingForAi)
+                        if (ai.Status != AiConnectionStatus.Connected)
                         {
                             accumulator = Math.Min(accumulator, 1);
                             break;
@@ -109,7 +106,7 @@ namespace TinyCity.Tools.StressTest
             }
 
             Line();
-            Line("\"Requests per game day\" and the columns by kind count every request sent to the model, retries included. \"Wait for a choice\" is real time from a resident starting to decide until they act, which is what holds the clock. \"Actually ran at\" is game minutes per real second, so 1.00x means the city never had to wait.");
+            Line("\"Requests per game day\" and the columns by kind count every request sent to the model, retries included. \"Wait for a choice\" is real time from a resident starting to decide until they act. \"Actually ran at\" is game minutes per real second, so 1.00x means the city never had to wait.");
             Line();
             return ok;
         }

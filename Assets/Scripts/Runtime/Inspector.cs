@@ -29,7 +29,6 @@ namespace TinyCity.Runtime
 
         private static bool widthLoaded;
         private bool resizing;
-        private const int SearchMatchesShown = 6;
         private const float DefaultListHeight = 180f;
         private const float DefaultFooterHeight = 150f;
         private const float MinSectionHeight = 60f;
@@ -42,16 +41,10 @@ namespace TinyCity.Runtime
         private static float footerHeight = DefaultFooterHeight;
         private static bool heightsLoaded;
         private Vector2 footerScroll;
-        private const int GridColumns = 2;
-        private const string SearchControl = "inspector-people-search";
         private const int TimelineShown = 40;
 
-        private static readonly string[] TabNames = { "Now", "People", "Memories", "Work", "Timeline" };
-        private static readonly string[] FilterNames = { "Everyone", "Living", "Died" };
-        private static readonly string[] OrderNames = { "First Name", "Surname", "Oldest", "Youngest" };
-        private static readonly string[] OrderNamesV2 = { "First Name", "Surname" };
         private const int TradesShown = 20;
-        private static readonly string[] TabNamesV2 = { "Now", "People", "Memories", "Things", "Timeline" };
+        private static readonly string[] TabNames = { "Now", "People", "Memories", "Things", "Timeline" };
 
         private readonly GameController game;
         private GuiStyles styles;
@@ -60,15 +53,9 @@ namespace TinyCity.Runtime
         private bool peopleOpen;
         private bool rolesOpen;
         private Vector2 rolesScroll;
-        private bool expanded;
-        private Vector2 gridScroll;
-        private PeopleFilter peopleFilter;
-        private PeopleOrder peopleOrder;
         private Vector2 peopleScroll;
-        private string search = string.Empty;
         private GUIStyle countStyle;
         private GUISkin countSkin;
-        private (string residentId, long minute, string text) nextPlan;
         private List<TimelineEntry> timeline = new List<TimelineEntry>();
         private (string residentId, long minute, long history, TownSimulation sim) timelineFor;
 
@@ -149,17 +136,8 @@ namespace TinyCity.Runtime
 
             GUILayout.BeginArea(new Rect(area.x + 14f, 10f, Width - 28f, Screen.height - 20f));
             DrawTownControls(r);
-            if (expanded)
-            {
-                DrawPeopleGrid(r);
-                DrawFooter();
-                GUILayout.EndArea();
-                return;
-            }
-
             GUILayout.Space(6f);
-            var tabNames = Simulation.FoodMustBeMade ? TabNamesV2 : TabNames;
-            tab = GUILayout.Toolbar(tab, tabNames, Fitted(tabNames, (Width - 28f) / tabNames.Length - GUI.skin.button.margin.horizontal));
+            tab = GUILayout.Toolbar(tab, TabNames, Fitted(TabNames, (Width - 28f) / TabNames.Length - GUI.skin.button.margin.horizontal));
             scroll = BeginVerticalScroll(scroll);
             // On the Now tab the name, who they are, where and what they're doing sit on the left, with their health
             // and needs as bars beside them (owner, 5 November).
@@ -171,7 +149,7 @@ namespace TinyCity.Runtime
                 GUILayout.BeginVertical(GUILayout.Width(leftWidth));
             }
 
-            GUILayout.Label(Simulation.AiRunsEverything ? $"{r.FullName}{RoleText(r)}" : $"{r.FullName}, {r.AgeYears}", styles.Title);
+            GUILayout.Label($"{r.FullName}{RoleText(r)}", styles.Title);
             if (columns)
             {
                 DrawNowSummary(r);
@@ -182,20 +160,11 @@ namespace TinyCity.Runtime
                 Bar("Health", r.Health, HealthRules.MaxHealth, barsWidth);
                 for (var i = 0; i < Needs.Count; i++)
                 {
-                    if (!Simulation.HasNeed((NeedType)i))
-                    {
-                        continue;
-                    }
-
                     Bar(((NeedType)i).ToString(), r.Needs[(NeedType)i], Needs.Max, barsWidth);
                 }
 
                 GUILayout.EndVertical();
                 GUILayout.EndHorizontal();
-            }
-            if (r.IsHomeless && r.IsAlive && !Simulation.FoodMustBeMade)
-            {
-                GUILayout.Label("Nowhere to live: sleeps on a park bench until a home comes free", styles.Text);
             }
 
             switch (tab)
@@ -207,7 +176,7 @@ namespace TinyCity.Runtime
                     DrawMemories(r);
                     break;
                 case 3:
-                    DrawWork(r);
+                    DrawThings(r);
                     break;
                 case 4:
                     DrawTimeline(r);
@@ -291,7 +260,7 @@ namespace TinyCity.Runtime
             GUILayout.EndHorizontal();
             if (game.Speed > 0)
             {
-                var thinking = Simulation.AiRunsEverything ? Simulation.Residents.Count(x => x.IsAlive && x.State == ResidentState.Deciding) : 0;
+                var thinking = Simulation.Residents.Count(x => x.IsAlive && x.State == ResidentState.Deciding);
                 var waiting = game.HoldingForAi
                     ? "  Paused: waiting for Ollama."
                     : thinking > 0 ? $"  {thinking} thinking." : string.Empty;
@@ -390,78 +359,10 @@ namespace TinyCity.Runtime
         /// </summary>
         private void DrawPeopleFinder(Resident r)
         {
-            if (!peopleOpen)
-            {
-                expanded = false;
-                search = string.Empty;
-                return;
-            }
-
-            if (Simulation.AiRunsEverything)
+            if (peopleOpen)
             {
                 DrawNames(r);
-                return;
             }
-
-            GUILayout.BeginHorizontal();
-            GUI.SetNextControlName(SearchControl);
-            search = GUILayout.TextField(search ?? string.Empty, 40);
-            if (string.IsNullOrEmpty(search) && GUI.GetNameOfFocusedControl() != SearchControl)
-            {
-                var box = GUILayoutUtility.GetLastRect();
-                GUI.Label(new Rect(box.x + 6f, box.y, box.width - 6f, box.height), "Find a person…", styles.Small);
-            }
-
-            GUILayout.EndHorizontal();
-
-            foreach (var match in PeopleList.Search(Simulation.Residents, search, SearchMatchesShown))
-            {
-                if (GUILayout.Button(Describe(match)))
-                {
-                    Pick(match);
-                    search = string.Empty;
-                    GUIUtility.keyboardControl = 0;
-                }
-            }
-
-            if (!peopleOpen)
-            {
-                expanded = false;
-                return;
-            }
-
-            GUILayout.BeginHorizontal();
-            peopleFilter = (PeopleFilter)GUILayout.Toolbar((int)peopleFilter, FilterNames);
-            expanded = GUILayout.Toggle(expanded, expanded ? "Back" : "Expand", GUI.skin.button, GUILayout.Width(70f));
-            GUILayout.EndHorizontal();
-            if (Simulation.AiRunsEverything && (int)peopleOrder >= OrderNamesV2.Length)
-            {
-                peopleOrder = PeopleOrder.FirstName;
-            }
-
-            peopleOrder = (PeopleOrder)GUILayout.Toolbar((int)peopleOrder, Simulation.AiRunsEverything ? OrderNamesV2 : OrderNames);
-            if (expanded)
-            {
-                return;
-            }
-
-            peopleScroll = BeginVerticalScroll(peopleScroll, GUILayout.Height(listHeight));
-            var shown = PeopleList.Of(Simulation.Residents, peopleFilter, peopleOrder);
-            if (shown.Count == 0)
-            {
-                GUILayout.Label("Nobody here.", styles.Small);
-            }
-
-            foreach (var other in shown)
-            {
-                if (GUILayout.Toggle(other == r, Describe(other), GUI.skin.button) && other != r)
-                {
-                    Pick(other);
-                }
-            }
-
-            EndVerticalScroll();
-            ListSplitter();
         }
 
         /// <summary>
@@ -486,30 +387,6 @@ namespace TinyCity.Runtime
 
             EndVerticalScroll();
             ListSplitter();
-        }
-
-        /// <summary>
-        /// The expanded people view: everyone (as filtered and sorted above, first name A–Z to start with) in a grid
-        /// that fills the rest of the side panel instead of the resident's tabs. Picking someone keeps the grid open.
-        /// </summary>
-        private void DrawPeopleGrid(Resident r)
-        {
-            GUILayout.Space(4f);
-            var shown = PeopleList.Of(Simulation.Residents, peopleFilter, peopleOrder);
-            gridScroll = BeginVerticalScroll(gridScroll);
-            if (shown.Count == 0)
-            {
-                GUILayout.Label("Nobody here.", styles.Small);
-            }
-
-            var labels = shown.Select(Describe).ToArray();
-            var picked = GUILayout.SelectionGrid(shown.IndexOf(r), labels, GridColumns, GUILayout.Height(Mathf.Ceil(labels.Length / (float)GridColumns) * 30f));
-            if (picked >= 0 && picked < shown.Count && shown[picked] != r)
-            {
-                Pick(shown[picked]);
-            }
-
-            EndVerticalScroll();
         }
 
         /// <summary>The longest words in the speed row, so it is fitted to them.</summary>
@@ -660,16 +537,14 @@ namespace TinyCity.Runtime
         /// A person's button: in Tiny City 2 nobody dies, so instead of an age it shows the role they chose, if any
         /// (owner, 5 November).
         /// </summary>
-        private string Describe(Resident other) => Simulation.AiRunsEverything
-            ? $"{other.FullName}{RoleText(other)}"
-            : $"{other.FullName}, {other.AgeYears}{(other.IsAlive ? string.Empty : " †")}";
+        private string Describe(Resident other) => $"{other.FullName}{RoleText(other)}";
 
         private static string RoleText(Resident r) => string.IsNullOrEmpty(r.Role) ? string.Empty : $" ({r.Role})";
 
         /// <summary>The Now tab's left column under the name: who they are, where they are and what they're doing.</summary>
         private void DrawNowSummary(Resident r)
         {
-            GUILayout.Label(Simulation.FoodMustBeMade ? r.Personality.Describe() : $"{DescribeLivelihood(r)} · {r.Personality.Describe()}", styles.Small);
+            GUILayout.Label(r.Personality.Describe(), styles.Small);
             GUILayout.Label($"Where: {DescribeLocation(r)}", styles.Text);
             GUILayout.Label($"Doing: {DescribeActivity(r)}", styles.Text);
         }
@@ -678,7 +553,7 @@ namespace TinyCity.Runtime
         {
             if (!r.IsAlive)
             {
-                GUILayout.Label(Simulation.FoodMustBeMade ? r.Personality.Describe() : $"{DescribeLivelihood(r)} · {r.Personality.Describe()}", styles.Small);
+                GUILayout.Label(r.Personality.Describe(), styles.Small);
                 GUILayout.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}. Remembered by the town.", styles.Text);
                 return;
             }
@@ -687,15 +562,7 @@ namespace TinyCity.Runtime
 
             if (r.State == ResidentState.Deciding)
             {
-                if (Simulation.AiRunsEverything)
-                {
-                    GUILayout.Label(Simulation.NeedsDayPlan(r) ? "Planning their day with the AI; the city waits for them." : "Choosing what to do with the AI; the city waits for them.", styles.Small);
-                }
-                else
-                {
-                    var left = Mathf.Max(0, (int)(r.DecisionDeadline - Simulation.Time.TotalMinutes));
-                    GUILayout.Label($"Waiting for the AI to suggest something; if nothing comes within {left} game minutes, their routine decides.", styles.Small);
-                }
+                GUILayout.Label(Simulation.NeedsDayPlan(r) ? "Planning their day with the AI." : "Choosing what to do with the AI.", styles.Small);
             }
             else if (!string.IsNullOrEmpty(r.Goal))
             {
@@ -711,7 +578,7 @@ namespace TinyCity.Runtime
                 }
                 else if (r.GoalSource != DecisionSource.Ai)
                 {
-                    GUILayout.Label($"Why (game routine): {r.Goal}", styles.Small);
+                    GUILayout.Label($"Why: {r.Goal}", styles.Small);
                 }
             }
 
@@ -728,11 +595,6 @@ namespace TinyCity.Runtime
                 {
                     GUILayout.Label($"{(entry == now ? "▶ " : "   ")}{entry.ClockText} {entry.Text}", styles.AiNote);
                 }
-            }
-
-            if (!Simulation.AiRunsEverything)
-            {
-                GUILayout.Label($"Next, by routine: {NextPlan(r)}", styles.Small);
             }
 
             var said = Simulation.Conversations.LastLineBy(r.Id);
@@ -815,46 +677,6 @@ namespace TinyCity.Runtime
                     var speaker = Simulation.GetResident(line.SpeakerId)?.FirstName ?? line.SpeakerId;
                     GUILayout.Label($"   {speaker}{(line.FromAi ? " (AI)" : string.Empty)}: {line.Text}", line.FromAi ? styles.AiNote : styles.Small);
                 }
-            }
-        }
-
-        private void DrawWork(Resident r)
-        {
-            if (Simulation.FoodMustBeMade)
-            {
-                DrawThings(r);
-                return;
-            }
-
-            GUILayout.Label(DescribeLivelihood(r), styles.Text);
-            GUILayout.Label(Simulation.FoodMustBeMade
-                ? $"Money: {Money.Format(r.MoneyPence)} · food: {r.Food.Describe(Simulation.Time.Day)}"
-                : $"Money: {Money.Format(r.MoneyPence)} · food at home for {r.Groceries} meal(s)", styles.Text);
-            if (Simulation.FoodMustBeMade)
-            {
-                GUILayout.Label($"Things: {r.Belongings.Describe()}", styles.Small);
-                var project = Simulation.Construction.Of(r.Id);
-                if (project != null)
-                {
-                    GUILayout.Label(project.IsFinished
-                        ? $"Built a {project.Plan.Name}"
-                        : $"Building a {project.Plan.Name}: {project.Placed}/{project.Plan.Cells.Count} blocks", styles.Small);
-                }
-                else if (r.Sketch != null)
-                {
-                    GUILayout.Label("Planning a building…", styles.Small);
-                }
-            }
-
-            var bills = r.WeeklyRentPence > 0 ? $"Rent {Money.Format(r.WeeklyRentPence)} a week, due Monday morning" : "No rent";
-            var income = r.WeeklyIncomePence > 0 ? $" · {r.IncomeLabel} {Money.Format(r.WeeklyIncomePence)} a week" : string.Empty;
-            GUILayout.Label(bills + income, styles.Small);
-            GUILayout.Space(4f);
-            GUILayout.Label("Recent payments", styles.Text);
-            foreach (var payment in Simulation.Economy.Ledger.For(r.Id).Reverse().Take(10))
-            {
-                var sign = payment.AmountPence >= 0 ? "+" : string.Empty;
-                GUILayout.Label($"Day {payment.Time.Day} {payment.Time.ClockText}  {sign}{Money.Format(payment.AmountPence)}  {payment.Description}", styles.Small);
             }
         }
 
@@ -1057,22 +879,6 @@ namespace TinyCity.Runtime
             return timeline;
         }
 
-        /// <summary>What the routine would have them do if they stopped now. Worked out at most once per game minute.</summary>
-        private string NextPlan(Resident r)
-        {
-            if (nextPlan.residentId == r.Id && nextPlan.minute == Simulation.Time.TotalMinutes)
-            {
-                return nextPlan.text;
-            }
-
-            var choice = Simulation.Planner.Choose(r, Simulation.Time);
-            var text = choice == null ? "take it easy"
-                : choice.TargetResident != null ? $"chat with {choice.TargetResident.FirstName}"
-                : $"{choice.Activity.Name.ToLowerInvariant()} at the {choice.Target?.Name.ToLowerInvariant()} ({choice.Reason})";
-            nextPlan = (r.Id, Simulation.Time.TotalMinutes, text);
-            return text;
-        }
-
         /// <summary>A labelled bar <paramref name="width"/> wide: name, a bar coloured by how full it is, and the number.</summary>
         private void Bar(string name, double value, double max, float width)
         {
@@ -1096,31 +902,7 @@ namespace TinyCity.Runtime
         {
             var map = Simulation.World.GetMap(r.Location.MapId);
             var at = Simulation.World.Objects.FirstOrDefault(o => o.Location == r.Location);
-            var business = Simulation.World.BusinessOnMap(map.Id);
-            var name = business == null ? map.Name : $"{map.Name} ({OpenText(business)}, {business.HoursText})";
-            return at != null ? $"{name}, at the {at.Name.ToLowerInvariant()}" : name;
-        }
-
-        private string OpenText(Business business)
-        {
-            if (Simulation.Economy.IsOpen(business, Simulation.Time))
-            {
-                return "open";
-            }
-
-            return business.IsOpen(Simulation.Time) ? "closed, nobody at work" : "closed";
-        }
-
-        private static string DescribeLivelihood(Resident r)
-        {
-            if (r.Job != null)
-            {
-                var hours = $"{r.Job.StartMinuteOfDay / 60:00}:{r.Job.StartMinuteOfDay % 60:00}–{r.Job.EndMinuteOfDay / 60:00}:{r.Job.EndMinuteOfDay % 60:00}";
-                var wage = r.Job.HourlyWagePence > 0 ? $", {Money.Format(r.Job.HourlyWagePence)}/hour" : string.Empty;
-                return $"{r.Job.Title}, {r.Job.DaysText()} {hours}{wage}";
-            }
-
-            return string.IsNullOrEmpty(r.IncomeLabel) ? "No job" : $"No job ({r.IncomeLabel.ToLowerInvariant()})";
+            return at != null ? $"{map.Name}, at the {at.Name.ToLowerInvariant()}" : map.Name;
         }
 
         private string DescribePlanStep(PlanStep step)

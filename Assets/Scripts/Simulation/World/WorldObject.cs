@@ -6,77 +6,33 @@ namespace TinyCity.Simulation.World
     {
         Bed,
         Kitchen,
-        Sink,
-        Toilet,
-        Shower,
-        Armchair,
         GardenPlot,
-        GardenTap,
         Bench,
-        ExerciseSpot,
         Workbench,
-
-        /// <summary>Shelves in the general store, where customers pick up groceries.</summary>
-        ShopShelf,
-
-        /// <summary>A serving counter: where shop, café, bakery and clinic staff work.</summary>
-        Counter,
-        CafeTable,
-
-        /// <summary>The bakery's display of cakes and pastries.</summary>
-        BakeryDisplay,
-        ClinicBed,
-        Easel,
-        Piano,
-        ChessTable,
         FishingSpot,
 
-        /// <summary>Where a community event is held. Holds a crowd.</summary>
+        /// <summary>Where the weekly town meeting is held. Holds a crowd.</summary>
         GatheringSpot,
 
-        /// <summary>A high table at the bar, for two.</summary>
-        BarTable,
-
-        /// <summary>A square of the bar's dance floor: open floor with room for two dancers.</summary>
-        DanceFloor,
-
-        /// <summary>A pool table at the cue club, for a game between two.</summary>
-        PoolTable,
-
-        /// <summary>The cue club's full-size snooker table, for two.</summary>
-        SnookerTable,
-
-        /// <summary>A bowling lane, for two to bowl together.</summary>
-        BowlingLane,
-
-        /// <summary>An arcade cabinet, one player at a time.</summary>
-        ArcadeMachine,
-
-        /// <summary>A treadmill or weights machine at the gym, one at a time.</summary>
-        GymMachine,
-
-        /// <summary>The park fountain, with room round its rim for four to sit.</summary>
-        Fountain,
-
-        /// <summary>A stall on the market square, browsed by two at a time.</summary>
+        /// <summary>A market stall, where one resident hands out food to others, two at a time.</summary>
         MarketStall,
 
-        /// <summary>Tiny City 2: a stand of trees where wood can be gathered, two at a time.</summary>
+        /// <summary>A stand of trees where wood can be gathered, two at a time.</summary>
         Woodland,
 
-        /// <summary>Tiny City 2: a pile of rocks where stone can be broken off with a pickaxe, two at a time.</summary>
+        /// <summary>A pile of rocks where stone can be broken off with a pickaxe, two at a time.</summary>
         RockPile,
 
-        /// <summary>Tiny City 2: a building site a resident chose, where they plan and build with blocks (where the builder stands).</summary>
+        /// <summary>A building site a resident chose, where they plan and build with blocks (where the builder stands).</summary>
         BuildPlot,
 
-        /// <summary>Tiny City 2: fallen branches under the trees, picked up by hand for a little wood, two at a time.</summary>
+        /// <summary>Fallen branches under the trees, picked up by hand for a little wood, two at a time.</summary>
         StickPile,
 
-        /// <summary>Tiny City 2: loose stones by the rocks, picked up by hand for a little stone, two at a time.</summary>
+        /// <summary>Loose stones by the rocks, picked up by hand for a little stone, two at a time.</summary>
         LooseStones,
 
-        /// <summary>Tiny City 2: bare ground someone lay down on to sleep, there only while they sleep. One at a time.</summary>
+        /// <summary>Bare ground someone lay down on to sleep, there only while they sleep. One at a time.</summary>
         SleepingSpot,
     }
 
@@ -118,10 +74,8 @@ namespace TinyCity.Simulation.World
             switch (type)
             {
                 case ObjectType.GardenPlot:
-                case ObjectType.ExerciseSpot:
                 case ObjectType.FishingSpot:
                 case ObjectType.GatheringSpot:
-                case ObjectType.DanceFloor:
                 case ObjectType.Woodland:
                 case ObjectType.RockPile:
                 case ObjectType.BuildPlot:
@@ -139,32 +93,17 @@ namespace TinyCity.Simulation.World
             switch (type)
             {
                 case ObjectType.Bench:
-                case ObjectType.ChessTable:
                 case ObjectType.FishingSpot:
-                case ObjectType.ExerciseSpot:
                 case ObjectType.Workbench:
-                case ObjectType.CafeTable:
-                case ObjectType.BarTable:
-                case ObjectType.DanceFloor:
-                case ObjectType.PoolTable:
-                case ObjectType.SnookerTable:
-                case ObjectType.BowlingLane:
                 case ObjectType.MarketStall:
                 case ObjectType.Woodland:
                 case ObjectType.RockPile:
                 case ObjectType.StickPile:
                 case ObjectType.LooseStones:
                     return 2;
-                case ObjectType.Fountain:
-                    return 4;
                 case ObjectType.GardenPlot:
                 case ObjectType.BuildPlot:
                     return 4;
-                case ObjectType.ShopShelf:
-                case ObjectType.BakeryDisplay:
-                    return 3;
-                case ObjectType.Counter:
-                    return 2;
                 case ObjectType.GatheringSpot:
                     return 12;
                 default:

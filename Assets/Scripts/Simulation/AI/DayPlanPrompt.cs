@@ -8,7 +8,7 @@ using TinyCity.Simulation.Time;
 namespace TinyCity.Simulation.AI
 {
     /// <summary>
-    /// Tiny City 2: when a resident starts their day they plan it in broad strokes, hour by hour, as the
+    /// when a resident starts their day they plan it in broad strokes, hour by hour, as the
     /// generative agents do. The plan then goes into every choice they make that day and their bedtime reflection.
     /// </summary>
     public static class DayPlanPrompt
@@ -33,28 +33,10 @@ namespace TinyCity.Simulation.AI
             var map = sim.World.GetMap(r.Location.MapId);
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)} and you are starting your day in {map.Name}.");
             sb.AppendLine($"How you feel: {PromptText.Feelings(r, sim)}.");
-            sb.AppendLine(r.Job == null
-                ? "You have no job."
-                : $"Your job: {r.Job.Title.ToLowerInvariant()}, {Clock(r.Job.StartMinuteOfDay)} to {Clock(r.Job.EndMinuteOfDay)} on {r.Job.DaysText()}. Today is {sim.Time.Weekday}.");
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
-            if (!sim.FoodMustBeMade)
-            {
-                sb.AppendLine($"Money: {PromptText.Purse(r, sim)}.");
-            }
-            else
-            {
-                sb.AppendLine(PromptText.NoMoney);
-            }
-
+            sb.AppendLine(PromptText.NoMoney);
             PromptText.AppendFood(sb, sim, r);
-            if (sim.FoodMustBeMade)
-            {
-                sb.AppendLine("Nobody has a bed of their own: you sleep wherever you choose, in any bed nobody is using, on a bench, or on the bare ground.");
-            }
-            else if (r.IsHomeless)
-            {
-                sb.AppendLine("You have nowhere to live yet, so you sleep on a park bench.");
-            }
+            sb.AppendLine("Nobody has a bed of their own: you sleep wherever you choose, in any bed nobody is using, on a bench, or on the bare ground.");
 
             var cues = new List<string> { "plan", $"day-{day - 1}", r.Location.MapId };
             PromptText.AppendMemories(sb, sim.Memories.Recall(r.Id, sim.Time, cues, MemoryCount, sim.Memories.FocusOf(r.Id)));

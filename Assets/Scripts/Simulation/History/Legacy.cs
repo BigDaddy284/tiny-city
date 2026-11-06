@@ -32,12 +32,12 @@ namespace TinyCity.Simulation.History
             var lessons = new List<string>();
             var dead = sim.Residents.Where(r => !r.IsAlive && r.DiedAt != null).OrderBy(r => r.DiedAt.Value.TotalMinutes).ToList();
             var lastDay = dead.Count > 0 ? dead.Last().DiedAt.Value.Day : sim.Time.Day;
-            lessons.Add($"Before us, {sim.Residents.Count} people lived on this land for {Days(lastDay - Content.StarterTown.StartTime.Day + 1)}, and in the end all of them died.");
+            lessons.Add($"Before us, {sim.Residents.Count} people lived on this land for {Days(lastDay - Content.FlatLand.StartTime.Day + 1)}, and in the end all of them died.");
             var causes = dead.GroupBy(r => r.CauseOfDeath).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal)
                 .Select(g => $"{g.Key} ({g.Count()})");
             if (dead.Count > 0)
             {
-                lessons.Add($"What they died of: {string.Join(", ", causes)}. The first to die was {dead[0].FullName}, of {dead[0].CauseOfDeath} on day {dead[0].DiedAt.Value.Day - Content.StarterTown.StartTime.Day + 1}.");
+                lessons.Add($"What they died of: {string.Join(", ", causes)}. The first to die was {dead[0].FullName}, of {dead[0].CauseOfDeath} on day {dead[0].DiedAt.Value.Day - Content.FlatLand.StartTime.Day + 1}.");
             }
 
             var projects = sim.Construction.Projects.Values.ToList();

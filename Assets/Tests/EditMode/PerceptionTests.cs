@@ -15,8 +15,7 @@ namespace TinyCity.Tests.EditMode
         /// <summary>Mabel and Arthur side by side on the green, each told by the "AI" to take it easy where they are.</summary>
         private static TownSimulation TwoRelaxing(double social = 10)
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon, social);
-            sim.AiRunsEverything = true;
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon, social);
             sim.AiDecisionsEnabled = true;
             sim.Tick();
             foreach (var r in sim.Residents.Where(x => x.State == ResidentState.Deciding))
@@ -133,7 +132,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void TheOldTown_HasNoReactions()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon, 10);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon, 10);
             for (var i = 0; i < 30; i++)
             {
                 sim.Tick();

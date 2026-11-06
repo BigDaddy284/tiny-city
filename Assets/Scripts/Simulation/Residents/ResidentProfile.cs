@@ -18,7 +18,7 @@ namespace TinyCity.Simulation.Residents
         public const int MinAge = 18;
         public const int MaxAge = 100;
 
-        public ResidentProfile(string id, string firstName, string lastName, int age, string about, string ownsBusinessId = null, string personality = null)
+        public ResidentProfile(string id, string firstName, string lastName, int age, string about, string personality = null)
         {
             Personality = personality ?? string.Empty;
             Id = id;
@@ -26,10 +26,9 @@ namespace TinyCity.Simulation.Residents
             LastName = lastName;
             Age = age;
             About = about ?? string.Empty;
-            OwnsBusinessId = string.IsNullOrWhiteSpace(ownsBusinessId) ? null : ownsBusinessId;
         }
 
-        /// <summary>A starter resident's id (<c>res-0001</c> to <c>res-0015</c>), which fixes their look, home and job.</summary>
+        /// <summary>A starter resident's id (<c>res-0001</c> to <c>res-0020</c>), which fixes their look and traits.</summary>
         public string Id { get; }
 
         public string FirstName { get; }
@@ -43,9 +42,6 @@ namespace TinyCity.Simulation.Residents
 
         /// <summary>A few lines of personality and background, given to the AI.</summary>
         public string About { get; }
-
-        /// <summary>The business they start as boss of, or null.</summary>
-        public string OwnsBusinessId { get; }
     }
 
     /// <summary>Reads and writes <c>residents.json</c>, checking every profile and saying what was wrong.</summary>
@@ -54,12 +50,11 @@ namespace TinyCity.Simulation.Residents
         public const string Format = "tiny-city-2-profiles";
 
         /// <summary>
-        /// Reads profiles. <paramref name="knownIds"/> are the residents the city can hold and
-        /// <paramref name="businessIds"/> the businesses that can be owned. A profile with a problem it can't
-        /// repair is left out, with a reason in <paramref name="problems"/>; a business claimed twice keeps its
-        /// first owner. Returns an empty list if the file can't be read at all.
+        /// Reads profiles. <paramref name="knownIds"/> are the residents the world can hold. A profile with a problem
+        /// it can't repair is left out, with a reason in <paramref name="problems"/>. Returns an empty list if the
+        /// file can't be read at all.
         /// </summary>
-        public static List<ResidentProfile> Parse(string json, IEnumerable<string> knownIds, IEnumerable<string> businessIds, out List<string> problems)
+        public static List<ResidentProfile> Parse(string json, IEnumerable<string> knownIds, out List<string> problems)
         {
             problems = new List<string>();
             var profiles = new List<ResidentProfile>();
@@ -81,8 +76,6 @@ namespace TinyCity.Simulation.Residents
             }
 
             var known = new HashSet<string>(knownIds ?? Enumerable.Empty<string>());
-            var businesses = new HashSet<string>(businessIds ?? Enumerable.Empty<string>());
-            var owned = new HashSet<string>();
             var seen = new HashSet<string>();
             var index = 0;
             foreach (var item in items)
@@ -99,7 +92,7 @@ namespace TinyCity.Simulation.Residents
 
                 if (!known.Contains(id))
                 {
-                    problems.Add($"{label}: isn't one of the city's residents, so it was left out.");
+                    problems.Add($"{label}: isn't one of the residents, so it was left out.");
                     continue;
                 }
 
@@ -125,22 +118,7 @@ namespace TinyCity.Simulation.Residents
                 }
 
                 var about = TextRules.Clean(Text(p, "about"), ResidentProfile.MaxAboutLength);
-                var owns = Text(p, "owns");
-                if (!string.IsNullOrEmpty(owns))
-                {
-                    if (!businesses.Contains(owns))
-                    {
-                        problems.Add($"{label}: owns '{owns}', which isn't a business in the city, so they own nothing.");
-                        owns = null;
-                    }
-                    else if (!owned.Add(owns))
-                    {
-                        problems.Add($"{label}: owns '{owns}', which someone else already owns, so they own nothing.");
-                        owns = null;
-                    }
-                }
-
-                profiles.Add(new ResidentProfile(id, first, last, (int)age, about, owns, TextRules.Clean(Text(p, "personality"), ResidentProfile.MaxPersonalityLength)));
+                profiles.Add(new ResidentProfile(id, first, last, (int)age, about, TextRules.Clean(Text(p, "personality"), ResidentProfile.MaxPersonalityLength)));
             }
 
             return profiles;
@@ -165,23 +143,14 @@ namespace TinyCity.Simulation.Residents
             ["format"] = Format,
             ["brief"] = (brief ?? WorldBrief.Default).Text,
             ["roles"] = (brief ?? WorldBrief.Default).ToJson()["roles"],
-            ["residents"] = (profiles ?? Enumerable.Empty<ResidentProfile>()).Select(p =>
+            ["residents"] = (profiles ?? Enumerable.Empty<ResidentProfile>()).Select(p => (object)new Dictionary<string, object>
             {
-                var entry = new Dictionary<string, object>
-                {
-                    ["id"] = p.Id,
-                    ["firstName"] = p.FirstName,
-                    ["lastName"] = p.LastName,
-                    ["age"] = p.Age,
-                    ["personality"] = p.Personality,
-                    ["about"] = p.About,
-                };
-                if (p.OwnsBusinessId != null)
-                {
-                    entry["owns"] = p.OwnsBusinessId;
-                }
-
-                return (object)entry;
+                ["id"] = p.Id,
+                ["firstName"] = p.FirstName,
+                ["lastName"] = p.LastName,
+                ["age"] = p.Age,
+                ["personality"] = p.Personality,
+                ["about"] = p.About,
             }).ToList(),
         });
 

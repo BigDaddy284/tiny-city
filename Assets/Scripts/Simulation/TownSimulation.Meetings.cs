@@ -38,8 +38,7 @@ namespace TinyCity.Simulation
     }
 
     /// <summary>
-    /// Tiny City 2's roles that matter and the weekly town meeting (owner, 5 November). With
-    /// <see cref="RolesLimitSkills"/>, the work a role lists (<see cref="RoleOption.Skills"/>) is only open to its
+    /// Roles that matter and the weekly town meeting (owner, 5 November). The work a role lists (<see cref="RoleOption.Skills"/>) is only open to its
     /// holders; everyone else can drink and wash in the dirty pond, eat raw food, fish by hand and pick up branches
     /// and stones. A first role is taken freely; changing it later is a request put to the next meeting, held a week
     /// after the start and every week after (<see cref="FirstMeetingDay"/>), where it passes only if more than half of
@@ -62,9 +61,6 @@ namespace TinyCity.Simulation
 
         private readonly Dictionary<string, string> roleRequests = new Dictionary<string, string>(StringComparer.Ordinal);
         private long nextMeetingTurnId = 1;
-
-        /// <summary>Tiny City 2: roles decide who can do what. The game sets it with the open land; off in tests unless set.</summary>
-        public bool RolesLimitSkills { get; set; }
 
         /// <summary>The day of the first weekly meeting (a week after the start), or 0 for a town with no meetings. Saved.</summary>
         public int FirstMeetingDay { get; set; }
@@ -116,7 +112,7 @@ namespace TinyCity.Simulation
         /// </summary>
         private bool RequestRoleChange(Resident r, RoleOption role, bool none)
         {
-            if (!RolesLimitSkills || FirstMeetingDay <= 0 || r.Role == null)
+            if (FirstMeetingDay <= 0 || r.Role == null)
             {
                 return false;
             }
@@ -281,20 +277,15 @@ namespace TinyCity.Simulation
             History.Add(Time, TownEventKind.Meeting, $"The town meeting ({present.Count} came). {votesText}", present.Select(o => o.Id).ToArray());
         }
 
-        /// <summary>Tiny City 2's open-land costs and gains as an activity finishes: dirty water and raw food hurt, cleaning water fills their flasks.</summary>
+        /// <summary>The open land's costs and gains as an activity finishes: dirty water and raw food hurt, cleaning water fills their flasks.</summary>
         private void FinishOpenLand(Resident r, ActivityDefinition activity)
         {
-            if (!FoodMustBeMade)
-            {
-                return;
-            }
-
             if (activity == ActivityCatalog.DrinkFromPond || activity == ActivityCatalog.EatRaw || activity == ActivityCatalog.WashInPond)
             {
                 var cost = activity == ActivityCatalog.EatRaw ? FoodRules.RawFoodHealthCost
                     : activity == ActivityCatalog.WashInPond ? FoodRules.PondWashHealthCost
                     : FoodRules.DirtyWaterHealthCost;
-                r.Health = Math.Max(AiRunsEverything ? LowestHealthWhenAiRuns : 0.0, r.Health - cost);
+                r.Health = Math.Max(LowestHealth, r.Health - cost);
                 var felt = activity == ActivityCatalog.EatRaw ? "The raw food made me feel sick"
                     : activity == ActivityCatalog.WashInPond ? "Washing in the dirty pond left my skin itching"
                     : "The dirty pond water made me feel sick";

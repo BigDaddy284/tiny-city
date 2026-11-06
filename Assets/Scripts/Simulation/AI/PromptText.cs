@@ -20,26 +20,17 @@ namespace TinyCity.Simulation.AI
 
         public const string PrivatePersonality = "Your personality is private, known only to you: never say it, describe it or name your traits to anyone; let it show only in what you do and how you say things. ";
 
-        public static string Persona(Resident r, TownSimulation sim = null)
+        public static string Persona(Resident r, TownSimulation sim)
         {
-            if (sim != null && sim.FoodMustBeMade)
-            {
-                // Tiny City 2: no city and no jobs, only the open land, what the player told everyone, and the role they chose.
-                // Nobody ages or dies there (owner, 5 November), so their age is left out.
-                return $"You are {r.FullName}, one of the people living on the open land of {sim.World.TownName}. " +
-                    (sim.Brief.Text.Length == 0 ? string.Empty : $"What everyone here knows: {sim.Brief.Text} ") +
-                    (r.Role != null ? $"You have chosen to be the {r.Role}. {sim.Brief.Find(r.Role)?.About} " : sim.Brief.Roles.Count > 0 ? "You haven't taken up any role. " : string.Empty) +
-                    (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Who you are, in your own words: {r.About} ") +
-                    (r.Outlook.Length > 0 ? $"Your personality: {r.Outlook} " : $"Your personality: {r.Personality.Describe().ToLowerInvariant()}. ") +
-                    PrivatePersonality +
-                    "Stay in character. Never mention being an AI. Answer with JSON only.";
-            }
-
-            var job = r.Job == null ? "a resident" : $"the {r.Job.Title.ToLowerInvariant()}";
-            return $"You are {r.FullName}, aged {r.AgeYears}, {job} in Tiny City, a small, neon-lit city. " +
-                (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Your background, in your own words: {r.About} ") +
-                $"Your personality: {r.Personality.Describe().ToLowerInvariant()}. " +
-                "Stay in character: warm, down to earth and a little playful. Never mention being an AI. Answer with JSON only.";
+            // No city and no jobs, only the open land, what the player told everyone, and the role they chose.
+            // Nobody ages or dies (owner, 5 November), so their age is left out.
+            return $"You are {r.FullName}, one of the people living on the open land of {sim.World.TownName}. " +
+                (sim.Brief.Text.Length == 0 ? string.Empty : $"What everyone here knows: {sim.Brief.Text} ") +
+                (r.Role != null ? $"You have chosen to be the {r.Role}. {sim.Brief.Find(r.Role)?.About} " : sim.Brief.Roles.Count > 0 ? "You haven't taken up any role. " : string.Empty) +
+                (string.IsNullOrWhiteSpace(r.About) ? string.Empty : $"Who you are, in your own words: {r.About} ") +
+                (r.Outlook.Length > 0 ? $"Your personality: {r.Outlook} " : $"Your personality: {r.Personality.Describe().ToLowerInvariant()}. ") +
+                PrivatePersonality +
+                "Stay in character. Never mention being an AI. Answer with JSON only.";
         }
 
         public static string Clock(GameTime time) => $"{time.Weekday} {time.ClockText} (day {time.Day})";
@@ -56,11 +47,6 @@ namespace TinyCity.Simulation.AI
             for (var i = 0; i < Needs.Count; i++)
             {
                 var need = (NeedType)i;
-                if (sim != null && !sim.HasNeed(need))
-                {
-                    continue;
-                }
-
                 var value = r.Needs[need];
                 var words = FeltAs(need, value);
                 if (words == null)
@@ -95,7 +81,7 @@ namespace TinyCity.Simulation.AI
             return string.Join("; ", parts);
         }
 
-        private static string Lower(NeedType need) => need == NeedType.Toilet ? "the toilet" : need.ToString().ToLowerInvariant();
+        private static string Lower(NeedType need) => need.ToString().ToLowerInvariant();
 
         /// <summary>How a need that isn't well met feels, or null when it's fine.</summary>
         private static string FeltAs(NeedType need, double value)
@@ -113,7 +99,6 @@ namespace TinyCity.Simulation.AI
                 case NeedType.Thirst: words = new[] { "parched with thirst", "very thirsty", "thirsty" }; break;
                 case NeedType.Energy: words = new[] { "exhausted", "very tired", "tired" }; break;
                 case NeedType.Hygiene: words = new[] { "filthy", "dirty", "grubby" }; break;
-                case NeedType.Toilet: words = new[] { "bursting for the toilet", "needing the toilet badly", "needing the toilet" }; break;
                 case NeedType.Social: words = new[] { "desperately lonely", "lonely", "wanting company" }; break;
                 case NeedType.Exercise: words = new[] { "stiff and restless", "restless", "wanting to move" }; break;
                 default: words = new[] { "miserably bored", "bored", "wanting some fun" }; break;
@@ -128,60 +113,10 @@ namespace TinyCity.Simulation.AI
             return r.Health >= 80 ? "you are in good health" : r.Health >= 50 ? "your health is fair" : "your health is poor";
         }
 
-        /// <summary>Work only gets a mention when the resident leaves within this many minutes, so evenings don't sound like work is next.</summary>
-        public const int WorkSoonMinutes = 3 * 60;
+        /// <summary>What is coming up for them: only their usual bedtime, since nothing else is fixed.</summary>
+        public static string Commitments(Resident r, GameTime now) => $"your usual bedtime is in {Duration(SleepSchedule.MinutesToBed(r, now))}";
 
-        public static string Commitments(Resident r, GameTime now)
-        {
-            var notes = new List<string>();
-            var minutesToWork = MinutesUntilLeavingForWork(r, now);
-            if (minutesToWork >= 0 && minutesToWork <= WorkSoonMinutes)
-            {
-                notes.Add($"you leave for work as {r.Job.Title.ToLowerInvariant()} in {Duration(minutesToWork)}");
-            }
-            else if (r.Job != null && ActivityPlanner.IsWorkTime(r, now))
-            {
-                notes.Add("you are on shift now");
-            }
-            else
-            {
-                notes.Add("no work until " + (minutesToWork < 0 ? "further notice" : NextWorkText(now, minutesToWork)));
-            }
-
-            var minutesToBed = SleepSchedule.MinutesToBed(r, now);
-            notes.Add($"bedtime is in {Duration(minutesToBed)}");
-            return string.Join("; ", notes);
-        }
-
-        /// <summary>Minutes until the resident next leaves for a shift (working days only), or -1 if they have no job.</summary>
-        public static int MinutesUntilLeavingForWork(Resident r, GameTime now)
-        {
-            if (r.Job == null)
-            {
-                return -1;
-            }
-
-            var leaveMinute = r.Job.StartMinuteOfDay - ActivityPlanner.CommuteLeadMinutes;
-            for (var day = now.Day; day <= now.Day + GameTime.DaysPerWeek; day++)
-            {
-                var leave = GameTime.FromDayAndTime(day, 0, 0).AddMinutes(leaveMinute);
-                if (leave.TotalMinutes > now.TotalMinutes && r.Job.WorksOn(leave.Weekday))
-                {
-                    return (int)(leave.TotalMinutes - now.TotalMinutes);
-                }
-            }
-
-            return -1;
-        }
-
-        private static string NextWorkText(GameTime now, int minutesToWork)
-        {
-            var leave = now.AddMinutes(minutesToWork);
-            var when = leave.Day == now.Day ? "later today" : leave.Day == now.Day + 1 ? "tomorrow" : leave.Weekday.ToString();
-            return $"{when} at {leave.ClockText}";
-        }
-
-        /// <summary>Tiny City 2: today's plan, and which part of it is for now, if the resident has one.</summary>
+        /// <summary>today's plan, and which part of it is for now, if the resident has one.</summary>
         public static void AppendDayPlan(StringBuilder sb, Resident r, GameTime now)
         {
             var plan = r.DayPlan;
@@ -231,7 +166,7 @@ namespace TinyCity.Simulation.AI
             sb.AppendLine("People in the city:");
             foreach (var o in known.Take(MaxPeopleListed))
             {
-                sb.Append("- ").Append(o.FullName).Append(sim.FoodMustBeMade ? string.Empty : ", " + o.AgeYears).Append(Work(o)).Append(": ").AppendLine(Relationship(sim, r, o));
+                sb.Append("- ").Append(o.FullName).Append(Work(o)).Append(": ").AppendLine(Relationship(sim, r, o));
             }
 
             if (strangers.Count > 0)
@@ -243,26 +178,14 @@ namespace TinyCity.Simulation.AI
         /// <summary>At most this many people the resident knows are described in a prompt.</summary>
         public const int MaxPeopleListed = 6;
 
-        private static string Work(Resident o) =>
-            o.Job != null ? $" ({o.Job.Title.ToLowerInvariant()})" : o.Role != null ? $" (the {o.Role})" : string.Empty;
-
-        /// <summary>Money and food at home, so the AI can weigh paid treats against what's in the cupboard.</summary>
-        public static string Purse(Resident r, TownSimulation sim = null) =>
-            $"you have {Economy.Money.Format(r.MoneyPence)}"
-            + (sim?.FoodMustBeMade == true ? string.Empty : $", and food at home for {r.Groceries} meal{(r.Groceries == 1 ? string.Empty : "s")}")
-            + (r.MoneyPence < r.WeeklyRentPence ? $"; money is tight, rent of {Economy.Money.Format(r.WeeklyRentPence)} is due on Monday" : string.Empty);
+        private static string Work(Resident o) => o.Role != null ? $" (the {o.Role})" : string.Empty;
 
         /// <summary>
-        /// Tiny City 2: what food the resident has and how the town's garden plots are doing, because nothing is
+        /// what food the resident has and how the town's garden plots are doing, because nothing is
         /// free and someone has to choose to grow, catch and cook it.
         /// </summary>
         public static void AppendFood(StringBuilder sb, TownSimulation sim, Resident r)
         {
-            if (!sim.FoodMustBeMade)
-            {
-                return;
-            }
-
             sb.AppendLine($"Your food: {r.Food.Describe(sim.Time.Day)}.");
             sb.Append("Nobody hands out food in this city: every meal is grown or caught by someone, and raw food can be cooked into meals that fill you up more. People can sell food at a market stall or give or sell it to each other in a chat, if they choose to. Food goes off after a few days.");
             var plots = sim.World.Objects.Where(o => o.Type == World.ObjectType.GardenPlot).ToList();
@@ -313,16 +236,11 @@ namespace TinyCity.Simulation.AI
         }
 
         /// <summary>
-        /// Tiny City 2: what their role lets them do, who does each kind of work, and the weekly meeting where role
+        /// what their role lets them do, who does each kind of work, and the weekly meeting where role
         /// changes are voted on, so they work out together how to live.
         /// </summary>
         public static void AppendRoleAndMeeting(StringBuilder sb, TownSimulation sim, Resident r)
         {
-            if (!sim.RolesLimitSkills)
-            {
-                return;
-            }
-
             var role = sim.Brief.Find(r.Role);
             var mine = role == null ? new List<string>() : role.Skills.Select(Name).ToList();
             sb.Append(role == null
@@ -374,7 +292,7 @@ namespace TinyCity.Simulation.AI
         public const int FreeSpotSearch = 12;
 
         /// <summary>
-        /// Tiny City 2: the land around them in squares, for choosing a spot to plant or build: where they are, where
+        /// the land around them in squares, for choosing a spot to plant or build: where they are, where
         /// things are, and some free ground nearby. It only describes; any free spot they can reach will do.
         /// </summary>
         public static void AppendLand(StringBuilder sb, TownSimulation sim, Resident r)

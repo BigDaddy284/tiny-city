@@ -22,9 +22,6 @@ namespace TinyCity.Tests.EditMode
         private static TownSimulation NewGame()
         {
             var sim = FlatLand.CreateNewGame();
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
-            sim.RolesLimitSkills = true;
             sim.AiDecisionsEnabled = true;
             return sim;
         }
@@ -35,7 +32,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.ApplyDayPlan(r.Id, DayPlan.DayFor(sim.Time), Plan(), role), Is.EqualTo(DecisionOutcome.Applied));
 
         private static HashSet<string> Options(TownSimulation sim, Resident r) =>
-            new HashSet<string>(sim.Planner.FreeTimeOptions(r, everything: true).Select(o => o.ActionId));
+            new HashSet<string>(sim.Planner.FreeTimeOptions(r).Select(o => o.ActionId));
 
         private static void WaitUntilDeciding(TownSimulation sim, Resident r)
         {
@@ -51,7 +48,7 @@ namespace TinyCity.Tests.EditMode
         private static void Do(TownSimulation sim, Resident r, ActivityDefinition activity)
         {
             WaitUntilDeciding(sim, r);
-            var option = sim.Planner.FreeTimeOptions(r, everything: true).FirstOrDefault(o => o.Activity == activity);
+            var option = sim.Planner.FreeTimeOptions(r).FirstOrDefault(o => o.Activity == activity);
             Assert.That(option, Is.Not.Null, $"{activity.Id} should be an option");
             Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Work", "Right then"), Is.EqualTo(DecisionOutcome.Applied));
             for (var i = 0; i < 600 && (r.State != ResidentState.Deciding || i == 0); i++)
@@ -193,7 +190,7 @@ namespace TinyCity.Tests.EditMode
             foreach (var r in new[] { asker, second, third })
             {
                 WaitUntilDeciding(sim, r);
-                var option = sim.Planner.FreeTimeOptions(r, everything: true).FirstOrDefault(o => o.Activity == ActivityCatalog.AttendMeeting);
+                var option = sim.Planner.FreeTimeOptions(r).FirstOrDefault(o => o.Activity == ActivityCatalog.AttendMeeting);
                 Assert.That(option, Is.Not.Null, "the meeting is on");
                 Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Meeting", "Let's go"), Is.EqualTo(DecisionOutcome.Applied));
             }
@@ -233,7 +230,7 @@ namespace TinyCity.Tests.EditMode
             sim.FirstMeetingDay = sim.Time.Day;
             sim.Advance(TownSimulation.MeetingStartMinute - sim.Time.MinuteOfDay);
             WaitUntilDeciding(sim, other);
-            var option = sim.Planner.FreeTimeOptions(other, everything: true).First(o => o.Activity == ActivityCatalog.AttendMeeting);
+            var option = sim.Planner.FreeTimeOptions(other).First(o => o.Activity == ActivityCatalog.AttendMeeting);
             sim.ApplyDecision(other.Id, other.PendingDecisionId, option.ActionId, option.TargetId, "Meeting", "Let's go");
             sim.Advance(TownSimulation.MeetingCloseMinute - sim.Time.MinuteOfDay + 1);
             Assert.That(asker.Role, Is.EqualTo("farmer"));
@@ -242,15 +239,12 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void NoToiletNeed_InTinyCityTwo()
+        public void Feelings_AreWords_WorstFirst()
         {
             var sim = NewGame();
             var r = sim.Residents[0];
             r.Needs[NeedType.Thirst] = 5;
-            r.Needs[NeedType.Toilet] = 0;
             sim.Tick();
-            Assert.That(r.Needs[NeedType.Toilet], Is.EqualTo(Needs.Max));
-            Assert.That(sim.HasNeed(NeedType.Toilet), Is.False);
             var feelings = PromptText.Feelings(r, sim);
             Assert.That(feelings.Contains("toilet"), Is.False, feelings);
             Assert.That(feelings.Contains("parched with thirst"), Is.True, feelings);
@@ -263,7 +257,7 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = NewGame();
             sim.Tick();
-            Assert.That(sim.Residents.All(o => o.Groceries == 0 && o.Food.Count(FoodKind.Meal) == 0), Is.True);
+            Assert.That(sim.Residents.All(o => o.Food.IsEmpty && o.Food.Count(FoodKind.Meal) == 0), Is.True);
         }
 
         [Test]

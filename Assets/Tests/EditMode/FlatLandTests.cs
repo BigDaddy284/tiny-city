@@ -17,8 +17,6 @@ namespace TinyCity.Tests.EditMode
         private static TownSimulation NewGame()
         {
             var sim = FlatLand.CreateNewGame();
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
             sim.AiDecisionsEnabled = true;
             return sim;
         }
@@ -29,7 +27,6 @@ namespace TinyCity.Tests.EditMode
             var sim = NewGame();
             var world = sim.World;
             Assert.That(world.Maps.Count(), Is.EqualTo(1));
-            Assert.That(world.Businesses, Is.Empty, "no shops: someone has to open a stall");
             foreach (var type in new[] { ObjectType.Kitchen, ObjectType.Bench, ObjectType.FishingSpot, ObjectType.Woodland, ObjectType.StickPile, ObjectType.RockPile, ObjectType.LooseStones, ObjectType.Workbench })
             {
                 Assert.That(world.ObjectsOfType(type).Any(), Is.True, type.ToString());
@@ -64,17 +61,14 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void EveryResident_StartsAtTheCamp_WithNoBedJobOrRent()
+        public void EveryResident_StartsAtTheCamp()
         {
             var sim = NewGame();
-            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.OpenLandResidentIds.Count));
+            Assert.That(sim.Residents.Count, Is.EqualTo(StarterResidents.Ids.Count));
             Assert.That(sim.Residents.Select(r => r.Location).Distinct().Count(), Is.EqualTo(sim.Residents.Count));
             foreach (var r in sim.Residents)
             {
-                Assert.That((r.HomeMapId, r.BedObjectId), Is.EqualTo(((string)null, (string)null)), r.Id);
                 Assert.That(r.Location.MapId, Is.EqualTo(FlatLand.MapId));
-                Assert.That(r.Job, Is.Null, r.Id);
-                Assert.That((r.WeeklyRentPence, r.WeeklyIncomePence, r.OwnsBusinessId), Is.EqualTo((0L, 0L, (string)null)), r.Id);
                 Assert.That(sim.Memories.ForResident(r.Id).Any(m => m.Summary.Contains("open land")), Is.True);
             }
         }
@@ -84,7 +78,7 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = NewGame();
             var r = sim.Residents[0];
-            var options = sim.Planner.FreeTimeOptions(r, everything: true);
+            var options = sim.Planner.FreeTimeOptions(r);
             Assert.That(options.Any(o => o.ActionId == "sleep" && o.IsGround), Is.True, "sleep on the bare ground");
             Assert.That(options.Any(o => o.ActionId == "sleep" && o.Target?.Type == ObjectType.Bench), Is.True, "or on a bench, home or not");
 
@@ -111,15 +105,13 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = NewGame();
             sim.Advance(3 * 24 * 60);
-            Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.OpenLandResidentIds.Count));
+            Assert.That(sim.Residents.Count, Is.EqualTo(StarterResidents.Ids.Count));
         }
 
         [Test]
         public void NobodyDies_AndHungerAndThirstFallAtHalfSpeed_InTinyCity2()
         {
             var sim = FlatLand.CreateNewGame();
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
             var r = sim.Residents[0];
             var old = sim.Residents[1];
             old.AgeYears = 99;
@@ -131,12 +123,12 @@ namespace TinyCity.Tests.EditMode
             r.Health = 2;
             sim.Advance(3 * 24 * 60);
             Assert.That(sim.Residents.All(o => o.IsAlive), Is.True, "nobody dies of neglect or old age");
-            Assert.That(r.Health, Is.GreaterThanOrEqualTo(TownSimulation.LowestHealthWhenAiRuns));
+            Assert.That(r.Health, Is.GreaterThanOrEqualTo(TownSimulation.LowestHealth));
             Assert.That(sim.Memories.ForResident(r.Id).Any(m => m.Summary.StartsWith("I collapsed")), Is.True);
 
             var needs = new Needs();
             var before = needs[NeedType.Hunger];
-            NeedRules.ApplyMinute(needs, new Personality(0.5, 0.5, 0.5, 0.5), null, TownSimulation.HungerThirstRateWhenAiRuns);
+            NeedRules.ApplyMinute(needs, new Personality(0.5, 0.5, 0.5, 0.5), null, TownSimulation.HungerThirstRate);
             Assert.That(before - needs[NeedType.Hunger], Is.EqualTo(NeedRules.DecayPerHour(NeedType.Hunger, new Personality(0.5, 0.5, 0.5, 0.5)) / 120.0).Within(1e-9));
         }
 
@@ -144,16 +136,14 @@ namespace TinyCity.Tests.EditMode
         public void EverythingTheyNeed_IsAnOption()
         {
             var sim = NewGame();
+            sim.Brief = WorldBrief.Empty;
             var r = sim.Residents[0];
-            var ids = new HashSet<string>(sim.Planner.FreeTimeOptions(r, everything: true).Select(o => o.ActionId));
+            var ids = new HashSet<string>(sim.Planner.FreeTimeOptions(r).Select(o => o.ActionId));
             Assert.That(ids.Contains("gather-wood"), Is.False, "trees need an axe");
             foreach (var id in new[] { "gather-sticks", "gather-loose-stones", "plant-crops", "catch-fish", "plan-building", "drink-pond", "wash-pond", "sleep" })
             {
                 Assert.That(ids.Contains(id), Is.True, id + ": " + string.Join(",", ids));
             }
-
-            Assert.That(TestTown.WithResident(TestTown.WeekendAfternoon).Planner.FreeTimeOptions(sim.Residents[0], everything: true)
-                .Any(o => o.Activity != null && ActivityCatalog.IsInTheWild(o.Activity)), Is.False, "v1 towns have taps and toilets");
 
             sim.Advance(24 * 60);
             Assert.That(sim.Residents.All(o => o.IsAlive), Is.True);
@@ -168,9 +158,7 @@ namespace TinyCity.Tests.EditMode
             var result = SaveSerializer.Load(json, FlatLand.CreateWorld());
             Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
             Assert.That(result.Warnings, Is.Empty);
-            Assert.That(result.Simulation.Residents.Select(r => (r.Id, r.BedObjectId, r.Location)), Is.EqualTo(sim.Residents.Select(r => (r.Id, r.BedObjectId, r.Location))));
-
-            Assert.That(SaveSerializer.Load(SaveSerializer.Save(StarterTown.CreateNewGame()), FlatLand.CreateWorld()).Success, Is.False, "a city save is for a different town");
+            Assert.That(result.Simulation.Residents.Select(r => (r.Id, r.Location)), Is.EqualTo(sim.Residents.Select(r => (r.Id, r.Location))));
         }
 
         [Test]

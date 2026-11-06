@@ -17,14 +17,12 @@ sound.
 | --- | --- |
 | `music-day.wav` | the daytime music (loops) |
 | `music-night.wav` | the evening and night music (loops), from dusk to dawn |
-| `ambience-day.wav`, `ambience-night.wav` | the city outdoors by day and by night (loops) |
-| `ambience-indoors.wav` | the room tone inside any building (loops) |
+| `ambience-day.wav`, `ambience-night.wav` | the open land by day and by night (loops) |
 | `sfx-footstep-0.wav` … `sfx-footstep-3.wav` | footsteps, taken in turn |
-| `sfx-door.wav` | going in or out of a building |
-| `sfx-typing.wav` | desk and workbench work |
-| `sfx-till.wav` | shop, café and bakery counters, buying groceries and pastries |
-| `sfx-cooking.wav` | cooking, snacks and baking |
-| `sfx-drink.wav` | drinks and coffee |
+| `sfx-typing.wav` | crafting at a workbench |
+| `sfx-till.wav` | running a market stall and taking food from one |
+| `sfx-cooking.wav` | cooking |
+| `sfx-drink.wav` | drinking from the pond or clean water |
 | `sfx-splash.wav`, `sfx-digging.wav` | fishing, gathering, farming and building |
 | `sfx-chime.wav` | a city news pop-up |
 

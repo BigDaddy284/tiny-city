@@ -26,7 +26,7 @@ namespace TinyCity.Sound
             Loops = loops;
         }
 
-        /// <summary>The name it is played and replaced by, such as <c>music-day</c> or <c>sfx-door</c>.</summary>
+        /// <summary>The name it is played and replaced by, such as <c>music-day</c> or <c>sfx-chime</c>.</summary>
         public string Key { get; }
 
         public float[] Samples { get; }

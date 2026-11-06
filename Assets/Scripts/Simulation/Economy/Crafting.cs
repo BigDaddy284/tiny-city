@@ -308,7 +308,7 @@ namespace TinyCity.Simulation.Economy
 
         public static bool IsGathering(ActivityDefinition a) => GatheringFor(a) != null;
 
-        /// <summary>Tiny City 2's gathering and crafting activities, which don't exist in v1.</summary>
+        /// <summary>The gathering and crafting activities.</summary>
         public static bool IsCrafting(ActivityDefinition a) => IsGathering(a) || RecipeFor(a) != null;
 
         public static bool IsCrafting(string activityId) => activityId != null && ActivityCatalog.TryGet(activityId, out var a) && IsCrafting(a);

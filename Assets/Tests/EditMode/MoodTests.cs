@@ -19,7 +19,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void ContentResident_IsHappy_AndAnOrdinaryOneShowsNothing()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             var r = sim.Residents[0];
             AllNeeds(r, 90);
             Assert.That(Moods.Of(sim, r), Is.EqualTo(Mood.Happy));
@@ -34,10 +34,9 @@ namespace TinyCity.Tests.EditMode
         [TestCase(NeedType.Hygiene, Mood.Grubby)]
         [TestCase(NeedType.Social, Mood.Lonely)]
         [TestCase(NeedType.Fun, Mood.Bored)]
-        [TestCase(NeedType.Toilet, Mood.NeedsToilet)]
         public void LowNeed_ShowsItsWorry(NeedType need, Mood expected)
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             var r = sim.Residents[0];
             AllNeeds(r, 60);
             r.Needs[need] = 10;
@@ -45,18 +44,18 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void MostPressingWorry_Wins_AndIllnessComesFirst()
+        public void MostPressingWorry_Wins()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             var r = sim.Residents[0];
             AllNeeds(r, 10);
-            Assert.That(Moods.Of(sim, r), Is.EqualTo(Mood.NeedsToilet));
+            Assert.That(Moods.Of(sim, r), Is.EqualTo(Mood.Hungry));
         }
 
         [Test]
         public void Sleeping_ShowsAsleep_AndTheDeadShowNothing()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             var r = sim.Residents[0];
             r.State = ResidentState.Performing;
             r.ActivityId = ActivityCatalog.Sleep.Id;
@@ -71,12 +70,15 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void ADayInTheVillage_EveryoneSleepsAtNight_AndMoodsNeverChangeTheGame()
         {
-            var watched = StarterTown.CreateNewGame();
-            var control = StarterTown.CreateNewGame();
+            var watched = FlatLand.CreateNewGame();
+            var control = FlatLand.CreateNewGame();
+            watched.AiDecisionsEnabled = control.AiDecisionsEnabled = true;
             var asleep = 0;
             for (var minute = 0; minute < 24 * 60; minute++)
             {
+                TestTown.Answer(watched);
                 watched.Tick();
+                TestTown.Answer(control);
                 control.Tick();
                 foreach (var r in watched.Residents)
                 {

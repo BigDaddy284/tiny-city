@@ -10,24 +10,13 @@ using TinyCity.Simulation.World;
 
 namespace TinyCity.Simulation
 {
-    /// <summary>Tiny City 2's food: nothing is free, so every meal is grown or caught, cooked or eaten raw, and food goes off.</summary>
+    /// <summary>Food: nothing is free, so every meal is grown or caught, cooked or eaten raw, and food goes off.</summary>
     public sealed partial class TownSimulation
     {
-        /// <summary>The crops and food rules. Its <see cref="FoodSupply.MustBeMade"/> is <see cref="FoodMustBeMade"/>.</summary>
+        /// <summary>The crops and food rules: residents eat only what they grow, catch and cook.</summary>
         public FoodSupply Food { get; } = new FoodSupply();
 
-        /// <summary>
-        /// Tiny City 2 (the game sets it with <see cref="AiRunsEverything"/>): v1's free food (snacks, leftovers,
-        /// groceries and the café's and bakery's endless stock) is gone, and residents eat only what they grow,
-        /// catch and cook. Off by default, so test towns and v1 keep v1's food.
-        /// </summary>
-        public bool FoodMustBeMade
-        {
-            get => Food.MustBeMade;
-            set => Food.MustBeMade = value;
-        }
-
-        /// <summary>Tiny City 2: the spots on bare ground where people sleep, each gone once its sleeper gets up.</summary>
+        /// <summary>the spots on bare ground where people sleep, each gone once its sleeper gets up.</summary>
         public SleepingGround Sleeping { get; } = new SleepingGround();
 
         private void StepSleepingGround()
@@ -38,24 +27,12 @@ namespace TinyCity.Simulation
 
         private void StepFood()
         {
-            if (!FoodMustBeMade)
-            {
-                return;
-            }
-
             var spoilNow = Time.MinuteOfDay == FoodRules.SpoilMinute;
             foreach (var r in residents)
             {
                 if (!r.IsAlive)
                 {
                     continue;
-                }
-
-                if (r.Groceries > 0)
-                {
-                    // What they had in the cupboard when the town started (or they arrived) becomes cooked meals.
-                    r.Food.Add(FoodKind.Meal, r.Groceries, Time.Day + FoodRules.MealDays);
-                    r.Groceries = 0;
                 }
 
                 if (spoilNow)
@@ -120,16 +97,11 @@ namespace TinyCity.Simulation
         }
 
         /// <summary>
-        /// Tiny City 2: what a chat line did with food. A speaker may offer some of their food, and the other person's
+        /// what a chat line did with food. A speaker may offer some of their food, and the other person's
         /// next line may accept it; the game moves the food only if the giver still has it. There is no money.
         /// </summary>
         private void ApplyFoodInChat(ConversationSession session, Resident speaker, int giveFood, bool acceptOffer)
         {
-            if (!FoodMustBeMade)
-            {
-                return;
-            }
-
             var offer = session.FoodOffer;
             if (offer != null && offer.ToId == speaker.Id)
             {
@@ -168,11 +140,11 @@ namespace TinyCity.Simulation
         }
 
         /// <summary>
-        /// Tiny City 2: money handed over in a chat (a gift, a wage, a payment: whatever they say it is), and a tax
+        /// money handed over in a chat (a gift, a wage, a payment: whatever they say it is), and a tax
         /// man's demand for a share of the other person's food and materials, which that person's next line pays or
         /// refuses. Only someone whose role <see cref="WorldBrief.CanTax"/> can ask; whether anyone pays is up to them.
         /// </summary>
-        /// <summary>Tiny City 2: the memory tag on every trade (food or money changing hands, tax), which the inspector lists.</summary>
+        /// <summary>the memory tag on every trade (food or money changing hands, tax), which the inspector lists.</summary>
         public const string TradeTag = "trade";
 
         /// <summary>
@@ -182,7 +154,7 @@ namespace TinyCity.Simulation
         /// </summary>
         private void ApplyGoodsInChat(ConversationSession session, Resident speaker, string item, int amount)
         {
-            if (!FoodMustBeMade || string.IsNullOrWhiteSpace(item))
+            if (string.IsNullOrWhiteSpace(item))
             {
                 return;
             }
@@ -233,17 +205,12 @@ namespace TinyCity.Simulation
             Memories.Add(other.Id, Time, MemoryType.Event, 4, $"{speaker.FullName} gave me {what}.", new[] { speaker.Id }, new[] { speaker.Id, "goods", TradeTag });
         }
 
-        /// <summary>Tiny City 2: a resident's trades, newest first.</summary>
+        /// <summary>a resident's trades, newest first.</summary>
         public IEnumerable<MemoryRecord> TradesOf(string residentId) =>
             Memories.ForResident(residentId).Where(m => m.Tags.Contains(TradeTag)).OrderByDescending(m => m.Time.TotalMinutes).ThenByDescending(m => m.Id, StringComparer.Ordinal);
 
         private void ApplyTaxInChat(ConversationSession session, Resident speaker, int taxPercent, bool payTax)
         {
-            if (!FoodMustBeMade)
-            {
-                return;
-            }
-
             var other = GetResident(session.ParticipantIds.FirstOrDefault(id => id != speaker.Id));
             var demand = session.TaxDemand;
             if (demand != null && demand.ToId == speaker.Id)
@@ -314,7 +281,7 @@ namespace TinyCity.Simulation
 
         private void FinishFood(Resident r, ActivityDefinition activity)
         {
-            if (FoodMustBeMade && activity == ActivityCatalog.RunStall)
+            if (activity == ActivityCatalog.RunStall)
             {
                 stallSales.TryGetValue(r.Id, out var handed);
                 stallSales.Remove(r.Id);
@@ -326,7 +293,7 @@ namespace TinyCity.Simulation
                 return;
             }
 
-            if (!FoodMustBeMade || !FoodRules.IsMadeFood(activity) || FoodRules.EatsFood(activity) || activity == ActivityCatalog.BuyFood)
+            if (!FoodRules.IsMadeFood(activity) || FoodRules.EatsFood(activity) || activity == ActivityCatalog.BuyFood)
             {
                 return;
             }

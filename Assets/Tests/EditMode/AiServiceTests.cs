@@ -13,7 +13,7 @@ namespace TinyCity.Tests.EditMode
     /// <summary>The whole AI loop against a scripted Ollama: connection, decisions, fallbacks and reflections.</summary>
     public class AiServiceTests
     {
-        private const string ReadAtArmchair = "{\"action\":\"read\",\"target_id\":\"obj-cottage1-armchair\",\"reason\":\"A good book is calling\",\"say\":\"Chapter three, here I come!\"}";
+        private const string FishAtThePond = "{\"action\":\"catch-fish\",\"target_id\":\"obj-flat-fishing-1\",\"reason\":\"Fish for supper\",\"say\":\"Supper is in that pond!\"}";
 
         private double now;
 
@@ -55,33 +55,31 @@ namespace TinyCity.Tests.EditMode
         public void WorkingOllama_ResidentFollowsTheAiChoice()
         {
             var sim = FreeAfternoon();
-            var transport = FakeAiTransport.WorkingOllama(_ => ReadAtArmchair);
+            var transport = FakeAiTransport.WorkingOllama(_ => FishAtThePond);
             var ai = Connected(sim, transport, new OllamaSettings());
 
             Run(ai, sim, 5);
             var r = sim.Residents[0];
 
             Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Connected));
-            Assert.That(r.ActivityId, Is.EqualTo("read"));
+            Assert.That(r.ActivityId, Is.EqualTo("catch-fish"));
             Assert.That(r.GoalSource, Is.EqualTo(DecisionSource.Ai));
-            Assert.That(r.Goal, Is.EqualTo("A good book is calling"));
-            Assert.That(sim.Conversations.LastLineBy(r.Id).Text, Is.EqualTo("Chapter three, here I come!"));
-            Assert.That(ai.Queue.Stats.Accepted, Is.EqualTo(1));
+            Assert.That(r.Goal, Is.EqualTo("Fish for supper"));
+            Assert.That(sim.Conversations.LastLineBy(r.Id).Text, Is.EqualTo("Supper is in that pond!"));
+            Assert.That(ai.Queue.Stats.Accepted, Is.EqualTo(2), "the day plan, then the choice");
 
-            var prompt = transport.Calls.Last(c => c.Body.Contains("free time")).Body;
+            var prompt = transport.Calls.Last(c => c.Body.Contains("Choose one option")).Body;
             Assert.That(prompt, Does.Contain("Mabel Thornbury"));
-            Assert.That(prompt, Does.Contain("obj-cottage1-armchair"));
+            Assert.That(prompt, Does.Contain("obj-flat-fishing-1"));
             Assert.That(prompt, Does.Contain("\"stream\": false"));
             Assert.That(prompt, Does.Contain("\"format\""));
         }
 
         [TestCase("I think I'll read a book!")]
         [TestCase("{\"action\":")]
-        [TestCase("{\"target_id\":\"obj-cottage1-armchair\"}")]
-        [TestCase("{\"action\":\"work\",\"target_id\":\"obj-village-garden-plot\",\"reason\":\"x\",\"say\":\"x\"}")]
-        [TestCase("{\"action\":\"read\",\"target_id\":\"obj-cottage1-bed\",\"reason\":\"x\",\"say\":\"x\"}")]
+        [TestCase("{\"action\":\"fly-to-the-moon\",\"target_id\":\"obj-nowhere\",\"reason\":\"x\",\"say\":\"x\"}")]
         [TestCase("")]
-        public void UnusableAnswers_AreRetriedOnce_ThenTheRoutineTakesOver(string answer)
+        public void UnusableAnswers_AreRetriedOnce_ThenTheyAreAskedAgain(string answer)
         {
             var sim = FreeAfternoon();
             var ai = Connected(sim, FakeAiTransport.WorkingOllama(_ => answer), new OllamaSettings { maxRetries = 1 });
@@ -89,12 +87,10 @@ namespace TinyCity.Tests.EditMode
             Run(ai, sim, 10);
             var r = sim.Residents[0];
 
-            Assert.That(ai.Queue.Stats.InvalidReplies, Is.EqualTo(2));
-            Assert.That(ai.Queue.Stats.GaveUp, Is.EqualTo(1));
-            Assert.That(r.State, Is.Not.EqualTo(ResidentState.Deciding));
-            Assert.That(r.ActivityId, Is.Not.Null);
-            Assert.That(r.GoalSource, Is.EqualTo(DecisionSource.Routine));
-            Assert.That(r.Log.Any(e => e.Text.Contains("usual routine")), Is.True);
+            Assert.That(ai.Queue.Stats.InvalidReplies, Is.GreaterThanOrEqualTo(2));
+            Assert.That(ai.Queue.Stats.GaveUp, Is.GreaterThanOrEqualTo(1));
+            Assert.That(r.State, Is.EqualTo(ResidentState.Deciding), "nothing chooses for them");
+            Assert.That(r.PendingDecisionId, Is.GreaterThan(1), "they are asked again");
             Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Connected), "bad answers are not a lost connection");
         }
 
@@ -102,7 +98,7 @@ namespace TinyCity.Tests.EditMode
         public void AnswerWrappedInProseAndCodeFences_IsStillUnderstood()
         {
             var sim = FreeAfternoon();
-            var ai = Connected(sim, FakeAiTransport.WorkingOllama(_ => "Sure!\n```json\n" + ReadAtArmchair + "\n```"), new OllamaSettings());
+            var ai = Connected(sim, FakeAiTransport.WorkingOllama(_ => "Sure!\n```json\n" + FishAtThePond + "\n```"), new OllamaSettings());
 
             Run(ai, sim, 5);
 
@@ -110,63 +106,37 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void AtHighSpeed_ResidentsWaitLongerInGameTime_SoTheAiStillHasTimeToAnswer()
-        {
-            var sim = FreeAfternoon();
-            var ai = new AiService(new OllamaSettings { decisionWaitMinutes = 20, decisionWaitSeconds = 8 }, new FakeAiTransport());
-            ai.Attach(sim);
-
-            Assert.That(sim.DecisionWaitMinutes, Is.EqualTo(20), "at 1x the game-minute wait is the longer one");
-            ai.SetGameSpeed(2);
-            Assert.That(sim.DecisionWaitMinutes, Is.EqualTo(20));
-            ai.SetGameSpeed(4);
-            Assert.That(sim.DecisionWaitMinutes, Is.EqualTo(32), "8 real seconds at 4x");
-            ai.SetGameSpeed(10);
-            Assert.That(sim.DecisionWaitMinutes, Is.EqualTo(80));
-            ai.SetGameSpeed(0);
-            Assert.That(sim.DecisionWaitMinutes, Is.EqualTo(80), "pausing keeps the last wait");
-
-            var off = new AiService(new OllamaSettings { decisionWaitSeconds = 0 }, new FakeAiTransport());
-            Assert.That(off.DecisionWaitMinutesAt(10), Is.EqualTo(OllamaSettings.DefaultDecisionWaitMinutes), "0 seconds keeps the old game-minute wait");
-        }
-
-        [Test]
-        public void SlowAi_TheRoutineDecidesAtTheDeadline_AndTheRequestIsDropped()
+        public void SlowAi_TheyWaitForTheAnswer()
         {
             var sim = FreeAfternoon();
             var transport = FakeAiTransport.WorkingOllama(_ => null);
-            var ai = Connected(sim, transport, new OllamaSettings { decisionWaitMinutes = 10 });
+            var ai = Connected(sim, transport, new OllamaSettings());
 
             Run(ai, sim, 15);
             var r = sim.Residents[0];
 
-            Assert.That(r.Log.Any(e => e.Text.Contains("no AI answer in time")), Is.True);
-            Assert.That(r.GoalSource, Is.EqualTo(DecisionSource.Routine));
-            Assert.That(transport.Calls.Single(c => c.Body.Contains("free time")).Cancelled, Is.True);
+            Assert.That(r.State, Is.EqualTo(ResidentState.Deciding));
+            Assert.That(transport.Calls.Count(c => c.Body.Contains("Choose one option") && !c.IsDone), Is.EqualTo(1), "the question is still out");
         }
 
         [Test]
-        public void OllamaNotRunning_TheTownLivesAFullDayOnItsRoutine()
+        public void OllamaNotRunning_TheyWait_AndItIsCheckedNowAndThen()
         {
             var sim = TestTown.WithResident(GameTime.FromDayAndTime(2, 6, 0));
             var transport = new FakeAiTransport { Responder = call => call.Fail("Cannot connect to destination host (HTTP 0)") };
             var ai = new AiService(new OllamaSettings(), transport);
             ai.Attach(sim);
 
-            for (var i = 0; i < 24 * 60; i++)
-            {
-                Run(ai, sim, 1);
-                Assert.That(sim.Residents[0].State, Is.Not.EqualTo(ResidentState.Deciding));
-            }
+            Run(ai, sim, 24 * 60);
 
             Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Offline));
             Assert.That(ai.StatusDetail, Does.Contain("Cannot connect"));
-            Assert.That(sim.Residents[0].Log.Any(e => e.Text.Contains("work")), Is.True);
+            Assert.That(sim.Residents[0].State, Is.EqualTo(ResidentState.Deciding));
             Assert.That(transport.Calls.Count, Is.LessThanOrEqualTo((24 * 60 / (int)AiService.RecheckSeconds) + 2), "rechecks are spaced out");
         }
 
         [Test]
-        public void ModelNotInstalled_ReportsHowToFixIt_AndUsesTheRoutine()
+        public void ModelNotInstalled_ReportsHowToFixIt()
         {
             var sim = FreeAfternoon();
             var transport = new FakeAiTransport { Responder = call => call.Succeed("{\"models\":[{\"name\":\"llama3:latest\"}]}") };
@@ -197,7 +167,6 @@ namespace TinyCity.Tests.EditMode
             Run(ai, sim, 120);
             Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Offline));
             Assert.That(sim.AiDecisionsEnabled, Is.False);
-            Assert.That(sim.Residents[0].State, Is.Not.EqualTo(ResidentState.Deciding));
 
             up = true;
             Run(ai, sim, (int)AiService.RecheckSeconds + 5);
@@ -208,7 +177,7 @@ namespace TinyCity.Tests.EditMode
         public void TurnedOffInSettings_NeverContactsOllama()
         {
             var sim = FreeAfternoon();
-            var transport = FakeAiTransport.WorkingOllama(_ => ReadAtArmchair);
+            var transport = FakeAiTransport.WorkingOllama(_ => FishAtThePond);
             var ai = new AiService(new OllamaSettings { enabled = false }, transport);
             ai.Attach(sim);
 
@@ -216,7 +185,7 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(transport.Calls, Is.Empty);
             Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Disabled));
-            Assert.That(sim.Residents[0].GoalSource, Is.EqualTo(DecisionSource.Routine));
+            Assert.That(sim.Residents[0].State, Is.EqualTo(ResidentState.Deciding));
         }
 
         [Test]
@@ -225,7 +194,7 @@ namespace TinyCity.Tests.EditMode
             var sim = TestTown.WithResident(GameTime.FromDayAndTime(3, 21, 50));
             var transport = FakeAiTransport.WorkingOllama(body => body.Contains("diary-style")
                 ? "{\"summary\":\"I planted the last of the tulips and felt proud.\",\"importance\":9}"
-                : "{\"action\":\"relax\",\"target_id\":\"none\",\"reason\":\"Winding down\",\"say\":\"What a day.\"}");
+                : "{\"action\":\"sleep\",\"target_id\":\"obj-flat-bench-1\",\"reason\":\"Bedtime\",\"say\":\"What a day.\"}");
             var ai = Connected(sim, transport, new OllamaSettings());
 
             Run(ai, sim, 3 * 60);
@@ -271,7 +240,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void ModelList_IsReadEvenWhileTheAiIsOff()
         {
-            var transport = FakeAiTransport.WorkingOllama(_ => ReadAtArmchair);
+            var transport = FakeAiTransport.WorkingOllama(_ => FishAtThePond);
             var ai = new AiService(new OllamaSettings { enabled = false }, transport);
 
             ai.RefreshModelList();
@@ -329,7 +298,7 @@ namespace TinyCity.Tests.EditMode
         public void UsingAnotherModel_ChecksAndLoadsIt()
         {
             var sim = FreeAfternoon();
-            var transport = FakeAiTransport.WorkingOllama(_ => ReadAtArmchair);
+            var transport = FakeAiTransport.WorkingOllama(_ => FishAtThePond);
             var ai = Connected(sim, transport);
             var loadsBefore = transport.Calls.Count(c => c.Body.Contains("\"messages\": []"));
 
@@ -351,7 +320,7 @@ namespace TinyCity.Tests.EditMode
         public void UsingAModelThatIsNotInstalled_SaysSo()
         {
             var sim = FreeAfternoon();
-            var ai = Connected(sim, FakeAiTransport.WorkingOllama(_ => ReadAtArmchair));
+            var ai = Connected(sim, FakeAiTransport.WorkingOllama(_ => FishAtThePond));
 
             ai.UseModel("not-a-model:1b");
             ai.Update(now);

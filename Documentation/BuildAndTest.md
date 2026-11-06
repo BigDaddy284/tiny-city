@@ -68,15 +68,13 @@ The .NET SDK may need installing first (`sudo apt-get install -y dotnet-sdk-8.0`
 
 ```bash
 cd Tools/StressTest
-dotnet run -c Release -- report.md          # 336 game days, then 3 game days at each speed for each AI profile
-dotnet run -c Release -- report.md 56 1     # a shorter run
-dotnet run -c Release -- report.md 0 0 2 9  # only the big city: 2 game days per speed, 9 districts (90 residents)
-dotnet run -c Release -- report.md 0 0 0 10 1 0 1  # only Tiny City 2: 1 game day at 1x, 2x and 4x for each AI profile
+dotnet run -c Release -- report.md          # 1 game day at 1x, 2x and 4x for each AI profile
+dotnet run -c Release -- report.md 0.5 2    # half a day each, with 2 requests at once
 ```
 
-The fourth argument is the big city's game days per speed (0 skips it) and the fifth how many copies of the starter town it has, ten residents each (10 by default). The sixth is how many requests are sent at once, with the stand-in Ollama given that many parallel slots (1 by default), and the seventh the settings' `decisionWaitSeconds` (8 by default; 0 gives the old game-minute wait only). The eighth is the game days of Tiny City 2 (the AI makes every choice and the clock waits for it) at each speed for each AI profile (1 by default, at most half a day on the CPU profile; 0 skips it).
+It runs Tiny City 2's open land with its twenty people, the AI making every choice, against a slow, unreliable stand-in for each Ollama profile. The first argument after the report is the game days at each speed (1 by default, at most half a day on the CPU profile), and the second how many requests are sent at once, with the stand-in Ollama given that many parallel slots (1 by default).
 
-It takes about 15 minutes in the cloud container and exits with 1 if a check fails. The latest results are in `Documentation/StressTest.md`. The numbers come from .NET; Unity's Mono is roughly 2–3 times slower.
+It takes a few minutes in the cloud container and exits with 1 if a check fails. The latest results are in `Documentation/StressTest.md`. The numbers come from .NET; Unity's Mono is roughly 2–3 times slower.
 
 ## Building locally (optional)
 

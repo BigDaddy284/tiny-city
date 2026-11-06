@@ -28,7 +28,7 @@ namespace TinyCity.Tests.PlayMode
             Assert.That(fresh, Is.Not.EqualTo(original));
             Assert.That(game.CurrentSlot, Is.EqualTo(fresh));
             Assert.That(game.CurrentTownName, Is.EqualTo("Test town"));
-            Assert.That(game.Simulation.Time.TotalMinutes, Is.EqualTo(StarterTown.StartTime.TotalMinutes), "a new town starts at the beginning");
+            Assert.That(game.Simulation.Time.TotalMinutes, Is.EqualTo(FlatLand.StartTime.TotalMinutes), "a new town starts at the beginning");
             Assert.That(File.Exists(SaveStore.PathFor(fresh)), Is.True, game.Status);
             Assert.That(SaveStore.ListSlots(), Does.Contain(original).And.Contain(fresh));
 
@@ -51,7 +51,7 @@ namespace TinyCity.Tests.PlayMode
             Assert.That(game.DeleteSlot(fresh), Is.False, "the town being played can't be deleted");
             Assert.That(game.LoadSlot(copy), Is.True, game.Status);
             Assert.That(game.CurrentSlot, Is.EqualTo(copy));
-            Assert.That(game.Simulation.Time.TotalMinutes, Is.EqualTo(StarterTown.StartTime.TotalMinutes + 30));
+            Assert.That(game.Simulation.Time.TotalMinutes, Is.EqualTo(FlatLand.StartTime.TotalMinutes + 30));
 
             Assert.That(game.LoadSlot(original), Is.True, game.Status);
             Assert.That(game.CurrentSlot, Is.EqualTo(original));

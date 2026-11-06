@@ -53,11 +53,11 @@ namespace TinyCity.Simulation.Persistence
         /// residents, memories and history survive.
         /// </summary>
         /// <remarks>
-        /// Version 1 of Tiny City 2 (4 November 2026) is v1's layout plus each resident's profile text and the
-        /// business they own, and whether each memory's importance was rated by the AI. Embeddings aren't saved:
-        /// they are made again by Ollama after loading. Before that, v1's version 1 was the fresh start of 30 October 2026: residents (with money, health, hobbies, the day they moved
-        /// in or were born, and their parents), memories, conversation history and conversations in progress,
-        /// relationships and couples, the economy and the town history. Saves made before it used the format
+        /// Version 1 of Tiny City 2 (4 November 2026): residents (needs, health, profile text, role, food, things),
+        /// memories (with whether the AI rated their importance; embeddings aren't saved, they are made again after
+        /// loading), conversation history and conversations in progress, relationships, buildings, crops, sleeping
+        /// spots, role requests and the town history. Fields from v1 and from earlier v2 saves (money, jobs, homes,
+        /// shops, illness, couples) are ignored. Saves made before the fresh start used the format
         /// <see cref="FormatBeforeFreshStart"/> and aren't loaded.
         /// </remarks>
         public const int CurrentVersion = 1;
@@ -83,7 +83,6 @@ namespace TinyCity.Simulation.Persistence
                 },
                 ["relationships"] = simulation.Relationships.All.Select(WriteRelationship).ToList(),
                 ["activeConversations"] = simulation.ActiveConversations.Select(WriteSession).ToList(),
-                ["economy"] = WriteEconomy(simulation.Economy),
                 ["crops"] = simulation.Food.Crops.OrderBy(c => c.Key, StringComparer.Ordinal).Select(c => (object)new Dictionary<string, object>
                 {
                     ["objectId"] = c.Key,
@@ -104,6 +103,7 @@ namespace TinyCity.Simulation.Persistence
                 ["brief"] = simulation.Brief.ToJson(),
                 ["firstMeetingDay"] = simulation.FirstMeetingDay,
                 ["roleRequests"] = simulation.RoleRequests.OrderBy(p => p.Key, StringComparer.Ordinal).ToDictionary(p => p.Key, p => (object)p.Value),
+                ["noticed"] = simulation.RecentlyNoticed().ToDictionary(p => p.Key, p => (object)p.Value),
                 ["nextSleepSpotNumber"] = simulation.Sleeping.NextSpotNumber,
                 ["sleepSpots"] = simulation.Sleeping.Spots.Select(o => (object)new Dictionary<string, object>
                 {
@@ -329,7 +329,6 @@ namespace TinyCity.Simulation.Persistence
             ReadConversations(GetObject(root, "conversations"), simulation, warnings);
             ReadRelationships(GetList(root, "relationships"), simulation, warnings);
             ReadSessions(GetList(root, "activeConversations"), simulation, warnings);
-            ReadEconomy(GetObject(root, "economy"), simulation, warnings);
             foreach (var (site, plan, placed, startedDay, builders) in sites)
             {
                 if (simulation.GetResident(site.OwnerId) == null)
@@ -365,6 +364,18 @@ namespace TinyCity.Simulation.Persistence
                     }
 
                     simulation.SetRoleRequest(pair.Key, wanted == TownSimulation.RoleNone ? wanted : simulation.Brief.Find(wanted).Name);
+                }
+            }
+
+            // Who noticed whom lately (absent in older v2 saves, where everyone is noticed afresh).
+            if (GetObject(root, "noticed") is Dictionary<string, object> noticed)
+            {
+                foreach (var pair in noticed.OrderBy(p => p.Key, StringComparer.Ordinal))
+                {
+                    if (!(pair.Value is double minute) || !simulation.RestoreNoticed(pair.Key, (long)minute))
+                    {
+                        warnings.Add($"A saved sighting ({pair.Key}) was dropped: it no longer makes sense.");
+                    }
                 }
             }
 
@@ -416,8 +427,6 @@ namespace TinyCity.Simulation.Persistence
                 ["firstName"] = r.FirstName,
                 ["lastName"] = r.LastName,
                 ["ageYears"] = r.AgeYears,
-                ["birthdayDayOfYear"] = r.BirthdayDayOfYear,
-                ["colour"] = r.ColourHex,
                 ["personality"] = new Dictionary<string, object>
                 {
                     ["active"] = r.Personality.Active,
@@ -425,20 +434,6 @@ namespace TinyCity.Simulation.Persistence
                     ["tidy"] = r.Personality.Tidy,
                     ["bookish"] = r.Personality.Bookish,
                 },
-                ["homeMapId"] = r.HomeMapId,
-                ["bedObjectId"] = r.BedObjectId,
-                ["job"] = r.Job == null ? null : new Dictionary<string, object>
-                {
-                    ["title"] = r.Job.Title,
-                    ["workObjectId"] = r.Job.WorkObjectId,
-                    ["startMinute"] = r.Job.StartMinuteOfDay,
-                    ["endMinute"] = r.Job.EndMinuteOfDay,
-                    ["worksWeekends"] = r.Job.WorksWeekends,
-                    ["workDays"] = r.Job.WorkDays,
-                    ["hourlyWage"] = r.Job.HourlyWagePence,
-                },
-                ["money"] = r.MoneyPence,
-                ["groceries"] = r.Groceries,
                 ["food"] = r.Food.Batches.Select(b => (object)new Dictionary<string, object>
                 {
                     ["kind"] = b.Kind.ToString(),
@@ -456,15 +451,10 @@ namespace TinyCity.Simulation.Persistence
                     ["tier"] = t.tier,
                     ["usesLeft"] = t.usesLeft,
                 }).ToList(),
-                ["weeklyRent"] = r.WeeklyRentPence,
-                ["weeklyIncome"] = r.WeeklyIncomePence,
-                ["incomeLabel"] = r.IncomeLabel,
                 ["about"] = r.About,
-                ["ownsBusinessId"] = r.OwnsBusinessId,
                 ["role"] = r.Role,
                 ["cleanWater"] = r.CleanWater,
                 ["outlook"] = r.Outlook,
-                ["unpaidWorkMinutes"] = r.UnpaidWorkMinutes,
                 ["health"] = r.Health,
                 ["death"] = r.DiedAt == null ? null : new Dictionary<string, object>
                 {
@@ -522,32 +512,6 @@ namespace TinyCity.Simulation.Persistence
                 warnings.Add($"{label}: personality was missing, so average traits were used.");
             }
 
-            Job job = null;
-            var jobData = GetObject(data, "job");
-            if (jobData != null)
-            {
-                var start = GetInt(jobData, "startMinute", -1);
-                var end = GetInt(jobData, "endMinute", -1);
-                if (start >= 0 && end > start && end <= GameTime.MinutesPerDay)
-                {
-                    var days = GetInt(jobData, "workDays", -1);
-                    if (days <= 0 || days > Job.EveryDay)
-                    {
-                        days = GetBool(jobData, "worksWeekends", false) ? Job.EveryDay : Job.Weekdays;
-                    }
-
-                    job = new Job(GetString(jobData, "title") ?? "Worker", GetString(jobData, "workObjectId"), start, end, days, Math.Max(0, GetLong(jobData, "hourlyWage", 0)));
-                    if (!world.TryGetObject(job.WorkObjectId, out _))
-                    {
-                        warnings.Add($"{label}: workplace '{job.WorkObjectId}' no longer exists, so they can't go to work.");
-                    }
-                }
-                else
-                {
-                    warnings.Add($"{label}: job hours were invalid, so the job was dropped.");
-                }
-            }
-
             var needs = new Needs(75);
             var needsData = GetObject(data, "needs");
             if (needsData == null)
@@ -568,26 +532,17 @@ namespace TinyCity.Simulation.Persistence
                 }
             }
 
-            var homeMapId = GetString(data, "homeMapId");
-            var bedObjectId = GetString(data, "bedObjectId");
             var resident = new Resident(
                 id,
                 GetString(data, "firstName"),
                 GetString(data, "lastName"),
                 GetInt(data, "ageYears", 30),
-                GetInt(data, "birthdayDayOfYear", 1),
-                GetString(data, "colour"),
                 personality,
-                homeMapId,
-                bedObjectId,
-                job,
-                RecoverLocation(data, world, bedObjectId, label, warnings),
+                RecoverLocation(data, world, label, warnings),
                 needs);
 
             resident.IsAlive = GetBool(data, "alive", true);
             resident.LastReflectionDay = Math.Max(0, GetInt(data, "lastReflectionDay", 0));
-            resident.MoneyPence = GetLong(data, "money", 0);
-            resident.Groceries = Math.Max(0, Math.Min(GetInt(data, "groceries", 0), 1000));
             foreach (var batch in GetList(data, "food").OfType<Dictionary<string, object>>())
             {
                 if (Enum.TryParse<FoodKind>(GetString(batch, "kind"), out var kind) && Enum.IsDefined(typeof(FoodKind), kind))
@@ -623,28 +578,13 @@ namespace TinyCity.Simulation.Persistence
                     warnings.Add($"{label}: unknown tool \"{GetString(item, "kind")}\" was dropped.");
                 }
             }
-            resident.WeeklyRentPence = Math.Max(0, GetLong(data, "weeklyRent", 0));
-            resident.WeeklyIncomePence = Math.Max(0, GetLong(data, "weeklyIncome", 0));
-            resident.IncomeLabel = TextRules.Clean(GetString(data, "incomeLabel"), 40);
+
             resident.About = TextRules.Clean(GetString(data, "about"), ResidentProfile.MaxAboutLength);
             var role = TextRules.Clean(GetString(data, "role"), WorldBrief.MaxRoleNameLength);
             resident.Role = role.Length == 0 ? null : role;
             resident.CleanWater = Math.Min(FoodRules.MaxCleanWater, Math.Max(0, GetInt(data, "cleanWater", 0)));
             resident.Outlook = TextRules.Clean(GetString(data, "outlook"), ResidentProfile.MaxPersonalityLength);
-            var owns = GetString(data, "ownsBusinessId");
-            if (!string.IsNullOrEmpty(owns))
-            {
-                if (world.Businesses.Any(b => b.Id == owns))
-                {
-                    resident.OwnsBusinessId = owns;
-                }
-                else
-                {
-                    warnings.Add($"{label}: owned a business that isn't in the city, so they no longer own one.");
-                }
-            }
             ReadHealth(resident, data, label, warnings);
-            resident.UnpaidWorkMinutes = job == null ? 0 : Math.Max(0, Math.Min(GetInt(data, "unpaidWorkMinutes", 0), GameTime.MinutesPerDay));
             foreach (var entry in GetList(data, "log").OfType<Dictionary<string, object>>().Take(Resident.MaxLogEntries))
             {
                 var minute = GetDouble(entry, "gameMinutes", -1);
@@ -663,7 +603,7 @@ namespace TinyCity.Simulation.Persistence
             return resident;
         }
 
-        private static Location RecoverLocation(Dictionary<string, object> data, TownWorld world, string bedObjectId, string label, List<string> warnings)
+        private static Location RecoverLocation(Dictionary<string, object> data, TownWorld world, string label, List<string> warnings)
         {
             var loc = GetObject(data, "location");
             var mapId = loc == null ? null : GetString(loc, "mapId");
@@ -677,14 +617,8 @@ namespace TinyCity.Simulation.Persistence
             }
 
             // Logged recovery: the only time a resident is moved without walking.
-            if (world.TryGetObject(bedObjectId, out var bed))
-            {
-                warnings.Add($"{label}: saved position was invalid, so they were moved home to bed.");
-                return bed.Location;
-            }
-
             var fallback = world.Objects.First().Location;
-            warnings.Add($"{label}: saved position was invalid and they have no bed, so they were moved to {world.Objects.First().Name}.");
+            warnings.Add($"{label}: saved position was invalid, so they were moved to {world.Objects.First().Name}.");
             return fallback;
         }
 
@@ -710,6 +644,7 @@ namespace TinyCity.Simulation.Persistence
                 resident.ActivityId = ActivityCatalog.Chat.Id;
                 resident.ConversationId = GetString(data, "conversationId");
                 resident.Goal = GetString(data, "goal") ?? string.Empty;
+                ReadGoalSource(resident, data);
                 return;
             }
 
@@ -731,6 +666,7 @@ namespace TinyCity.Simulation.Persistence
                 resident.State = ResidentState.Waiting;
                 resident.MinutesRemaining = Math.Min(minutes, TownSimulation.UnreachableWaitMinutes);
                 resident.Goal = GetString(data, "goal") ?? string.Empty;
+                ReadGoalSource(resident, data);
                 return;
             }
 
@@ -1054,88 +990,6 @@ namespace TinyCity.Simulation.Persistence
                 {
                     resident.CauseOfDeath = "unknown causes";
                 }
-            }
-        }
-
-        private static object WriteEconomy(TownEconomy economy) => new Dictionary<string, object>
-        {
-            ["businesses"] = economy.Businesses.Select(b => (object)new Dictionary<string, object>
-            {
-                ["id"] = b.Business.Id,
-                ["takings"] = b.TakingsPence,
-                ["stock"] = b.Business.Items.ToDictionary(i => i.Id, i => (object)b.Stock(i.Id)),
-            }).ToList(),
-            ["ledger"] = new Dictionary<string, object>
-            {
-                ["nextNumber"] = economy.Ledger.NextNumber,
-                ["records"] = economy.Ledger.All.Select(t => (object)new Dictionary<string, object>
-                {
-                    ["id"] = t.Id,
-                    ["gameMinutes"] = t.Time.TotalMinutes,
-                    ["residentId"] = t.ResidentId,
-                    ["amount"] = t.AmountPence,
-                    ["kind"] = t.Kind.ToString(),
-                    ["description"] = t.Description,
-                    ["businessId"] = t.BusinessId,
-                }).ToList(),
-            },
-        };
-
-        private static void ReadEconomy(Dictionary<string, object> data, TownSimulation simulation, List<string> warnings)
-        {
-            if (data == null)
-            {
-                warnings.Add("Shop stock and the money records were missing, so shops were restocked and the records start afresh.");
-                return;
-            }
-
-            foreach (var b in GetList(data, "businesses").OfType<Dictionary<string, object>>())
-            {
-                var shop = simulation.Economy.GetBusiness(GetString(b, "id"));
-                if (shop == null)
-                {
-                    continue;
-                }
-
-                shop.TakingsPence = Math.Max(0, GetLong(b, "takings", 0));
-                var stock = GetObject(b, "stock");
-                foreach (var item in shop.Business.Items)
-                {
-                    var amount = stock == null ? item.MaxStock : GetInt(stock, item.Id, item.MaxStock);
-                    shop.SetStock(item.Id, Math.Max(0, Math.Min(amount, item.MaxStock)));
-                }
-            }
-
-            var ledger = GetObject(data, "ledger");
-            if (ledger == null)
-            {
-                return;
-            }
-
-            var next = Math.Max(1, GetLong(ledger, "nextNumber", 1));
-            var skipped = 0;
-            var seen = new HashSet<string>();
-            foreach (var t in GetList(ledger, "records").Take(Ledger.MaxRecords))
-            {
-                var record = t as Dictionary<string, object>;
-                var id = record == null ? null : GetString(record, "id");
-                var minute = record == null ? -1 : GetDouble(record, "gameMinutes", -1);
-                if (id == null || !id.StartsWith("txn-") || !seen.Add(id) || minute < 0 || minute > simulation.Time.TotalMinutes
-                    || simulation.GetResident(GetString(record, "residentId")) == null
-                    || !Enum.TryParse(GetString(record, "kind"), out TransactionKind kind) || !Enum.IsDefined(typeof(TransactionKind), kind))
-                {
-                    skipped++;
-                    continue;
-                }
-
-                var transaction = new Transaction(id, new GameTime((long)minute), GetString(record, "residentId"), GetLong(record, "amount", 0), kind, TextRules.Clean(GetString(record, "description"), 80), GetString(record, "businessId"));
-                simulation.Economy.Ledger.Restore(transaction, Math.Max(next, NumberAfter(id)));
-            }
-
-            simulation.Economy.Ledger.RestoreNextNumber(next);
-            if (skipped > 0)
-            {
-                warnings.Add($"{skipped} damaged money record(s) were skipped.");
             }
         }
 

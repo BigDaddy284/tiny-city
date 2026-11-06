@@ -218,44 +218,6 @@ namespace TinyCity.Runtime
             return null;
         }
 
-        /// <summary>
-        /// The building drawn at <paramref name="world"/> on map <paramref name="mapId"/>, with every place inside
-        /// it (one per door), or null when the point isn't over a building.
-        /// </summary>
-        public (BuildingPlan plan, IReadOnlyList<string> inside)? BuildingAt(string mapId, Vector3 world)
-        {
-            if (World == null || mapId == null || !maps.TryGetValue(mapId, out var view) || view.Art == null)
-            {
-                return null;
-            }
-
-            var local = world - Origin(mapId);
-            var plan = view.Art.BuildingAt(local.x * SpriteFactory.PixelsPerUnit, -local.y * SpriteFactory.PixelsPerUnit);
-            if (plan == null)
-            {
-                return null;
-            }
-
-            var inside = new List<string>();
-            foreach (var door in plan.Doors)
-            {
-                foreach (var portal in World.Portals)
-                {
-                    if (portal.From.MapId == mapId && portal.From.Position.Equals(door) && !inside.Contains(portal.To.MapId))
-                    {
-                        inside.Add(portal.To.MapId);
-                    }
-                }
-            }
-
-            if (plan.InteriorMapId != null && !inside.Contains(plan.InteriorMapId))
-            {
-                inside.Insert(0, plan.InteriorMapId);
-            }
-
-            return (plan, inside);
-        }
-
         /// <summary>Remembers where everyone stands before a tick, so the figures can glide to their new tile.</summary>
         public void RememberPositions(TownSimulation simulation)
         {
@@ -332,7 +294,7 @@ namespace TinyCity.Runtime
                 return Mathf.FloorToInt(tickProgress * 4f) % 4;
             }
 
-            var rate = action == ResidentAction.Read ? 0.3f : action == ResidentAction.Exercise ? 3f : 2f;
+            const float rate = 2f;
 
             // Each resident is a little out of step with the others.
             return Mathf.FloorToInt((Time.time + (index * 0.37f)) * rate);

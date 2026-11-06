@@ -17,14 +17,12 @@ namespace TinyCity.Tests.EditMode
         private static TownSimulation Town(double hunger = 90)
         {
             var sim = TestTown.WithResident(TestTown.WeekendAfternoon, adjust: n => n[NeedType.Hunger] = hunger);
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
             sim.AiDecisionsEnabled = true;
             return sim;
         }
 
         private static FreeTimeOption Option(TownSimulation sim, ActivityDefinition activity) =>
-            sim.Planner.FreeTimeOptions(sim.Residents[0], everything: true).FirstOrDefault(o => o.Activity == activity);
+            sim.Planner.FreeTimeOptions(sim.Residents[0]).FirstOrDefault(o => o.Activity == activity);
 
         /// <summary>Waits for the resident to decide, chooses this activity, and runs until they are deciding again.</summary>
         private static void Do(TownSimulation sim, ActivityDefinition activity)
@@ -37,7 +35,9 @@ namespace TinyCity.Tests.EditMode
 
             var option = Option(sim, activity);
             Assert.That(option, Is.Not.Null, $"{activity.Id} should be an option");
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Food", "Right then"), Is.EqualTo(DecisionOutcome.Applied));
+            var x = option.IsGround ? r.Location.Position.X + 2 : (int?)null;
+            var y = option.IsGround ? r.Location.Position.Y : (int?)null;
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Food", "Right then", null, x, y, option.IsGround ? "carrots" : null), Is.EqualTo(DecisionOutcome.Applied));
             for (var i = 0; i < 600 && r.State != ResidentState.Deciding; i++)
             {
                 sim.Tick();
@@ -47,35 +47,20 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void TheOldTown_KeepsItsFreeFood_AndHasNoneOfTheNew()
-        {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon, adjust: n => n[NeedType.Hunger] = 30);
-            sim.AiRunsEverything = true;
-            var options = sim.Planner.FreeTimeOptions(sim.Residents[0], everything: true);
-            Assert.That(options.Any(o => o.Activity == ActivityCatalog.Snack), Is.True);
-            Assert.That(options.Any(o => o.Activity != null && FoodRules.IsMadeFood(o.Activity)), Is.False);
-        }
-
-        [Test]
-        public void NothingIsFree_AndTheCupboardBecomesCookedMeals()
+        public void NothingIsFree_AndFoodMustBeMade()
         {
             var sim = Town(hunger: 30);
             var r = sim.Residents[0];
-            var groceries = r.Groceries;
-            Assert.That(groceries, Is.GreaterThan(0));
             sim.Tick();
-
-            Assert.That(r.Groceries, Is.EqualTo(0));
-            Assert.That(r.Food.Count(FoodKind.Meal), Is.EqualTo(groceries));
-            var options = sim.Planner.FreeTimeOptions(r, everything: true);
-            Assert.That(options.Any(o => o.Activity != null && FoodRules.IsFreeFood(o.Activity)), Is.False);
-            Assert.That(options.Any(o => o.Activity == ActivityCatalog.EatMeal), Is.True);
-            Assert.That(options.Any(o => o.Activity == ActivityCatalog.EatRaw), Is.False, "nothing raw yet");
+            var options = sim.Planner.FreeTimeOptions(r);
+            Assert.That(options.Any(o => o.Activity == ActivityCatalog.EatMeal), Is.False, "nothing to eat yet");
+            Assert.That(options.Any(o => o.Activity == ActivityCatalog.EatRaw), Is.False);
             Assert.That(options.Any(o => o.Activity == ActivityCatalog.PlantCrops), Is.True);
             Assert.That(options.Any(o => o.Activity == ActivityCatalog.CatchFish), Is.True);
 
+            r.Food.Add(FoodKind.Meal, 3, sim.Time.Day + 3);
             Do(sim, ActivityCatalog.EatMeal);
-            Assert.That(r.Food.Count(FoodKind.Meal), Is.EqualTo(groceries - 1));
+            Assert.That(r.Food.Count(FoodKind.Meal), Is.EqualTo(2));
         }
 
         [Test]
@@ -84,9 +69,8 @@ namespace TinyCity.Tests.EditMode
             var sim = Town();
             var r = sim.Residents[0];
             Do(sim, ActivityCatalog.PlantCrops);
-            var plot = StarterTown.GardenPlotId;
+            var plot = sim.Food.Patches.Single().Id;
             Assert.That(sim.Food.CropAt(plot), Is.Not.Null);
-            Assert.That(sim.Planner.FreeTimeOptions(r, everything: true).Any(o => o.Activity == ActivityCatalog.PlantCrops && o.TargetId == plot), Is.False, "the plot is taken");
             Assert.That(Option(sim, ActivityCatalog.Harvest), Is.Null, "not ready yet");
 
             Do(sim, ActivityCatalog.WaterCrops);
@@ -108,8 +92,7 @@ namespace TinyCity.Tests.EditMode
         public void Crops_ArePlanted_WhereverTheyChoose_AsWhateverTheyLike()
         {
             var sim = FlatLand.CreateNewGame();
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
+            sim.Brief = WorldBrief.Empty;
             sim.AiDecisionsEnabled = true;
             var r = sim.Residents[0];
             sim.Tick();
@@ -154,8 +137,7 @@ namespace TinyCity.Tests.EditMode
         public void CropPatches_SurviveASave()
         {
             var sim = FlatLand.CreateNewGame();
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
+            sim.Brief = WorldBrief.Empty;
             sim.AiDecisionsEnabled = true;
             var r = sim.Residents[0];
             sim.Tick();
@@ -236,14 +218,14 @@ namespace TinyCity.Tests.EditMode
             r.Food.Add(FoodKind.Fish, 2, sim.Time.Day + 2);
 
             var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), sim.World).Simulation;
-            loaded.FoodMustBeMade = true;
             var lr = loaded.Residents[0];
             Assert.That(lr.Food.Batches.Select(b => (b.Kind, b.Count, b.GoesOffDay)), Is.EqualTo(r.Food.Batches.Select(b => (b.Kind, b.Count, b.GoesOffDay))));
-            var crop = loaded.Food.CropAt(StarterTown.GardenPlotId);
+            var plot = sim.Food.Patches.Single().Id;
+            var crop = loaded.Food.CropAt(plot);
             Assert.That(crop, Is.Not.Null);
-            Assert.That((crop.PlantedDay, crop.WateredDays, crop.LastWateredDay), Is.EqualTo((sim.Food.CropAt(StarterTown.GardenPlotId).PlantedDay, 1, sim.Time.Day)));
+            Assert.That((crop.PlantedDay, crop.WateredDays, crop.LastWateredDay), Is.EqualTo((sim.Food.CropAt(plot).PlantedDay, 1, sim.Time.Day)));
 
-            var prompt = DecisionPrompt.UserText(loaded, lr, loaded.Planner.FreeTimeOptions(lr, everything: true), new TinyCity.Simulation.Memory.MemoryRecord[0]);
+            var prompt = DecisionPrompt.UserText(loaded, lr, loaded.Planner.FreeTimeOptions(lr), new TinyCity.Simulation.Memory.MemoryRecord[0]);
             Assert.That(prompt, Does.Contain("Your food:").And.Contain("2 fish").And.Contain("Crops:").And.Contain("watered today"));
             Assert.That(prompt, Does.Not.Contain("food at home for"));
         }
@@ -252,8 +234,6 @@ namespace TinyCity.Tests.EditMode
         public void ThereAreNoPrices_ForAStall_OrAnywhereInTinyCity2()
         {
             var sim = TestTown.WithResidents(TestTown.WeekendAfternoon);
-            sim.FoodMustBeMade = true;
-            sim.AiRunsEverything = true;
             sim.AiDecisionsEnabled = true;
             sim.Tick();
             var r = sim.Residents[0];
@@ -261,9 +241,9 @@ namespace TinyCity.Tests.EditMode
             r.ResetActivity();
             r.State = ResidentState.Deciding;
             r.PendingDecisionId = 41;
-            var prompt = DecisionPrompt.UserText(sim, r, sim.Planner.FreeTimeOptions(r, everything: true), new TinyCity.Simulation.Memory.MemoryRecord[0]);
+            var prompt = DecisionPrompt.UserText(sim, r, sim.Planner.FreeTimeOptions(r), new TinyCity.Simulation.Memory.MemoryRecord[0]);
             Assert.That(prompt, Does.Not.Contain("\"price\"").And.Not.Contain("Money:").And.Contain(PromptText.NoMoney));
-            Assert.That(OllamaProtocol.BuildChatBody("m", "s", "u", DecisionPrompt.Schema(sim.Planner.FreeTimeOptions(r, everything: true), 3), 0.5, 100), Does.Not.Contain("price"));
+            Assert.That(OllamaProtocol.BuildChatBody("m", "s", "u", DecisionPrompt.Schema(sim.Planner.FreeTimeOptions(r), 3), 0.5, 100), Does.Not.Contain("price"));
             Assert.That(DialoguePrompt.Schema().ContainsKey("properties") && !((System.Collections.Generic.Dictionary<string, object>)DialoguePrompt.Schema()["properties"]).ContainsKey("give_money"), Is.True);
         }
 
@@ -271,13 +251,13 @@ namespace TinyCity.Tests.EditMode
         public void AStallHolder_HandsOutFood_AndRemembersTheDay()
         {
             var sim = TestTown.WithResidents(TestTown.WeekendAfternoon);
-            sim.FoodMustBeMade = true;
             sim.Tick();
             var seller = sim.Residents[0];
             var buyer = sim.Residents[1];
             seller.Food.Clear();
             seller.Food.Add(FoodKind.Meal, 2, sim.Time.Day + 3);
-            var stall = sim.World.Objects.First(o => o.Type == TinyCity.Simulation.World.ObjectType.MarketStall);
+            var stall = new TinyCity.Simulation.World.WorldObject("obj-test-stall", "Market stall", TinyCity.Simulation.World.ObjectType.MarketStall, TestTown.At(35, 15));
+            sim.World.SetPlaced("test", new[] { stall });
 
             Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.BuyFood, stall, sim.Time), Is.False, "nobody is at the stall yet");
             Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.RunStall, stall, sim.Time), Is.EqualTo(buyer.Food.Total > 0));
@@ -288,7 +268,6 @@ namespace TinyCity.Tests.EditMode
             seller.State = ResidentState.Performing;
             seller.MinutesRemaining = 30;
             seller.Location = stall.Location;
-            buyer.MoneyPence = 0;
             Assert.That(sim.Planner.CanDo(buyer, ActivityCatalog.BuyFood, stall, sim.Time), Is.True, "no money needed");
             Assert.That(sim.Planner.CanDo(seller, ActivityCatalog.BuyFood, stall, sim.Time), Is.False, "not from yourself");
 
@@ -302,8 +281,6 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(buyer.Food.Count(FoodKind.Meal), Is.EqualTo(meals + 1));
             Assert.That(seller.Food.Count(FoodKind.Meal), Is.EqualTo(1));
-            Assert.That(buyer.MoneyPence, Is.EqualTo(0));
-            Assert.That(sim.Economy.Ledger.All.Any(), Is.False, "nothing is paid");
 
             for (var i = 0; i < 40 && seller.ActivityId == ActivityCatalog.RunStall.Id; i++)
             {
@@ -316,9 +293,8 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void FoodOfferedInAChat_MovesOnlyIfTheOtherAccepts()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             sim.AiDecisionsEnabled = true;
-            sim.FoodMustBeMade = true;
             ConversationSessionFor(sim, out var session);
             var first = sim.GetResident(session.SpeakerId);
             var second = sim.GetResident(session.ListenerId);
@@ -349,8 +325,7 @@ namespace TinyCity.Tests.EditMode
         public void ASmallModelsSlips_AreMended_InsteadOfAskingAgain()
         {
             var sim = FlatLand.CreateNewGame();
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
+            sim.Brief = WorldBrief.Empty;
             sim.AiDecisionsEnabled = true;
             var r = sim.Residents[0];
             sim.Tick();
@@ -374,9 +349,8 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void ATaxMan_CanAskForAShare_WhichTheOtherMayRefuse()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             sim.AiDecisionsEnabled = true;
-            sim.FoodMustBeMade = true;
             sim.Brief = WorldBrief.Default;
             ConversationSessionFor(sim, out var session);
             var taxer = sim.GetResident(session.SpeakerId);
@@ -415,9 +389,8 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void MaterialsAndTools_CanBeHandedOverInAChat_AndPromptsHaveNoMoney()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             sim.AiDecisionsEnabled = true;
-            sim.FoodMustBeMade = true;
             sim.Brief = WorldBrief.Default;
             ConversationSessionFor(sim, out var session);
             var giver = sim.GetResident(session.SpeakerId);
@@ -454,18 +427,8 @@ namespace TinyCity.Tests.EditMode
 
         private static void ConversationSessionFor(TownSimulation sim, out TinyCity.Simulation.Social.ConversationSession session)
         {
-            foreach (var r in sim.Residents)
-            {
-                r.Needs[NeedType.Social] = 10;
-            }
-
-            for (var i = 0; i < 10 && sim.ActiveConversations.Count == 0; i++)
-            {
-                sim.Tick();
-            }
-
+            session = TestTown.StartChat(sim);
             Assert.That(sim.ActiveConversations.Count, Is.EqualTo(1));
-            session = sim.ActiveConversations[0];
             WaitForLine(sim, session);
         }
 

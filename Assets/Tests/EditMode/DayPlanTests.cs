@@ -12,12 +12,11 @@ namespace TinyCity.Tests.EditMode
     /// <summary>Tiny City 2: residents plan their day with the AI before their first choice, and the plan guides them.</summary>
     public class DayPlanTests
     {
-        private const string PlanJson = "{\"plan\":[{\"hour\":9,\"plan\":\"Work my shift\"},{\"hour\":13,\"plan\":\"Lunch at home\"},{\"hour\":19,\"plan\":\"Read a book\"}]}";
+        private const string PlanJson = "{\"plan\":[{\"hour\":9,\"plan\":\"Gather wood\"},{\"hour\":13,\"plan\":\"Cook lunch\"},{\"hour\":19,\"plan\":\"Sit by the pond\"}]}";
 
         private static TownSimulation Town()
         {
-            var sim = TestTown.WithResident(TestTown.WorkHour);
-            sim.AiRunsEverything = true;
+            var sim = TestTown.WithResident(TinyCity.Simulation.Time.GameTime.FromDayAndTime(1, 10, 0));
             sim.AiDecisionsEnabled = true;
             sim.Tick();
             return sim;
@@ -102,8 +101,8 @@ namespace TinyCity.Tests.EditMode
             sim.ApplyDayPlan(r.Id, DayPlan.DayFor(sim.Time), entries);
 
             var decision = DecisionPrompt.UserText(sim, r, sim.FreeTimeOptionsFor(r), new List<TinyCity.Simulation.Memory.MemoryRecord>());
-            Assert.That(decision, Does.Contain("Your plan for today: 09:00 Work my shift; 13:00 Lunch at home; 19:00 Read a book."));
-            Assert.That(decision, Does.Contain("Right now your plan says: Work my shift."));
+            Assert.That(decision, Does.Contain("Your plan for today: 09:00 Gather wood; 13:00 Cook lunch; 19:00 Sit by the pond."));
+            Assert.That(decision, Does.Contain("Right now your plan says: Gather wood."));
             Assert.That(ReflectionPrompt.BuildBody("m", sim, r, sim.Time.Day), Does.Contain("What you planned this morning"));
         }
 
@@ -141,22 +140,6 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.Residents[0].DayPlan, Is.Null);
             Assert.That(transport.Calls.Count(c => c.Body != null && c.Body.Contains("Plan the rest of your day")), Is.LessThanOrEqualTo(new OllamaSettings().maxRetries + 1));
             Assert.That(transport.Calls.Any(c => c.Body != null && c.Body.Contains("Choose one option")), Is.True);
-        }
-
-        [Test]
-        public void TheOldTown_NeverAsksForPlans()
-        {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon);
-            var transport = FakeAiTransport.WorkingOllama(_ => null);
-            var ai = new AiService(new OllamaSettings(), transport);
-            ai.Attach(sim);
-            for (var i = 0; i < 300 && !transport.Calls.Any(c => c.Body != null && c.Body.Contains("Choose one option")); i++)
-            {
-                sim.Tick();
-                ai.Update(i * 0.1);
-            }
-
-            Assert.That(transport.Calls.Any(c => c.Body != null && c.Body.Contains("Plan the rest of your day")), Is.False);
         }
     }
 }

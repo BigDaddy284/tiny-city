@@ -16,7 +16,7 @@ namespace TinyCity.Simulation
         private void StepHealth(Resident r, ActivityDefinition activity)
         {
             var resting = r.State == ResidentState.Performing && activity == ActivityCatalog.Sleep;
-            if (!HealthRules.ApplyMinute(r, resting, LowestHealthWhenAiRuns))
+            if (!HealthRules.ApplyMinute(r, resting, LowestHealth))
             {
                 return;
             }
@@ -62,12 +62,11 @@ namespace TinyCity.Simulation
             r.IsAlive = false;
             r.DiedAt = Time;
             r.CauseOfDeath = cause;
-            r.UnpaidWorkMinutes = 0;
             r.AddLog(Time, $"Died of {cause}");
             History.Add(Time, TownEventKind.Death, $"{r.FullName} died of {cause}, aged {r.AgeYears}.", new[] { r.Id });
-            if (AiRunsEverything && LivingCount == 0)
+            if (LivingCount == 0)
             {
-                History.Add(Time, TownEventKind.WorldEnded, $"Everyone has died: the last was {r.FullName}. {World.TownName} lasted {Legacy.Days(Time.Day - Content.StarterTown.StartTime.Day + 1)}. What they lived through is written down for the next world.", residents.Select(o => o.Id).ToArray());
+                History.Add(Time, TownEventKind.WorldEnded, $"Everyone has died: the last was {r.FullName}. {World.TownName} lasted {Legacy.Days(Time.Day - Content.FlatLand.StartTime.Day + 1)}. What they lived through is written down for the next world.", residents.Select(o => o.Id).ToArray());
             }
 
             foreach (var other in residents.Where(o => o.IsAlive && o != r))

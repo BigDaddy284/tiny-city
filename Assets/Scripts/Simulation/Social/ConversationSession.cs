@@ -92,9 +92,6 @@ namespace TinyCity.Simulation.Social
         /// <summary>Game minutes spent waiting for AI lines; they don't count towards <see cref="SocialRules.MaxConversationMinutes"/>.</summary>
         public long WaitedMinutes { get; internal set; }
 
-        /// <summary>Game minute at which built-in small talk is used instead of the AI.</summary>
-        public long LineDeadline { get; internal set; }
-
         public string SpeakerId => ParticipantIds[Lines.Count % 2];
 
         public string ListenerId => ParticipantIds[(Lines.Count + 1) % 2];

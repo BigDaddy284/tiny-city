@@ -41,9 +41,6 @@ namespace TinyCity.Runtime
         private JournalWindow journal;
         private SavesWindow saves;
         private SettingsWindow settingsWindow;
-        private CameraWindow cameraWindow;
-        private readonly CameraCycle cameraCycle = new CameraCycle();
-        private int cycledPanels;
         private int placeMenuPanel = -1;
         private Rect placeMenuButton;
         private Rect placeMenuArea;
@@ -68,8 +65,6 @@ namespace TinyCity.Runtime
         public bool SavesOpen => saves != null && saves.IsOpen;
 
         public bool SettingsOpen => settingsWindow != null && settingsWindow.IsOpen;
-
-        public bool CamerasOpen => cameraWindow != null && cameraWindow.IsOpen;
 
         /// <summary>Whether the side panel is put away so the city fills the window (H, or the button in its top row).</summary>
         public bool SidebarHidden { get; private set; }
@@ -101,7 +96,7 @@ namespace TinyCity.Runtime
         /// While it is connected the clock keeps running (owner, 5 November): someone waiting for a choice or a line
         /// just stands there thinking.
         /// </summary>
-        public bool HoldingForAi => Simulation != null && Simulation.AiRunsEverything
+        public bool HoldingForAi => Simulation != null
             && (Ai == null || Ai.Status != TinyCity.Simulation.AI.AiConnectionStatus.Connected);
 
         /// <summary>Game minutes actually passing per real second, averaged over the last few seconds.</summary>
@@ -137,7 +132,6 @@ namespace TinyCity.Runtime
             journal = new JournalWindow(this);
             saves = new SavesWindow(this);
             settingsWindow = new SettingsWindow(this);
-            cameraWindow = new CameraWindow(this);
             Notifications = new Notifications();
             Preferences = PlayerSettingsStore.Load(out var preferenceProblems);
             foreach (var problem in preferenceProblems)
@@ -150,7 +144,6 @@ namespace TinyCity.Runtime
             UiTheme.Changed += ApplyThemeToCameras;
             ScreenSettings.Apply(Preferences);
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyCity] AI: {message}") };
-            Ai.SetGameSpeed(Speed);
             Ai.Queue.Answered = (request, response, check) => AiLogStore.Write(Simulation, request, response, check);
 
             SidebarHidden = PlayerPrefs.GetInt(SidebarPrefsKey, 0) == 1;
@@ -243,76 +236,6 @@ namespace TinyCity.Runtime
             settingsWindow?.Update();
         }
 
-        /// <summary>A line for the Cameras window: whether the cycle is running and when it next turns.</summary>
-        public string CameraCycleStatus
-        {
-            get
-            {
-                if (!Preferences.CycleCameras)
-                {
-                    return "The cycle is off.";
-                }
-
-                if (Panels.InTownView)
-                {
-                    return "Paused while Town View is showing.";
-                }
-
-                var left = cameraCycle.MinutesLeft(Simulation.Time.TotalMinutes, Preferences.CycleMinutes);
-                return left >= 60 ? $"Next turn in {left / 60} h {left % 60} min of game time." : $"Next turn in {left} min of game time.";
-            }
-        }
-
-        /// <summary>Starts the cycle again from its first turn, as when its settings change.</summary>
-        public void RestartCameraCycle()
-        {
-            cameraCycle.Restart(Simulation.Time.TotalMinutes);
-            cycledPanels = 0;
-        }
-
-        public void NextCameraTurn()
-        {
-            cameraCycle.Skip(Simulation.Time.TotalMinutes);
-            cycledPanels = 0;
-        }
-
-        /// <summary>
-        /// Turns the camera panels over when the cycle is on and a turn is due, or straight away when the number of
-        /// panels has changed. Town View pauses it.
-        /// </summary>
-        private void StepCameraCycle()
-        {
-            if (!Preferences.CycleCameras || Panels.InTownView || Simulation == null)
-            {
-                cycledPanels = 0;
-                return;
-            }
-
-            var now = Simulation.Time.TotalMinutes;
-            if (!cameraCycle.Due(now, Preferences.CycleMinutes) && cycledPanels == Panels.Count)
-            {
-                return;
-            }
-
-            cycledPanels = Panels.Count;
-            var (residents, buildings) = CameraCycle.Targets(Simulation, CameraPanels.Places(Simulation.World), Preferences.CycleBusyOnly);
-            var targets = CameraCycle.Assign(Preferences.CycleMode, residents, buildings, Panels.Count, cameraCycle.Turn);
-            for (var i = 0; i < targets.Length; i++)
-            {
-                if (targets[i] is CameraTarget target)
-                {
-                    if (target.IsResident)
-                    {
-                        Panels.Follow(i, target.ResidentId, Simulation);
-                    }
-                    else
-                    {
-                        Panels.ShowPlace(i, target.MapId, view);
-                    }
-                }
-            }
-        }
-
         private void OnApplicationQuit()
         {
             if (Simulation != null)
@@ -374,11 +297,7 @@ namespace TinyCity.Runtime
         {
             Simulation = simulation;
             legacyWritten = false;
-            simulation.AiRunsEverything = true;
-            simulation.FoodMustBeMade = true;
-            simulation.RolesLimitSkills = true;
             Ai?.Attach(simulation);
-            RestartCameraCycle();
             // A town with another layout (the city in Play Mode tests) needs its maps drawn afresh.
             if (view.World == null || view.World.TownId != simulation.World.TownId)
             {
@@ -637,9 +556,6 @@ namespace TinyCity.Runtime
             {
                 lastSpeedIndex = SpeedIndex;
             }
-
-            // At 1x the clock runs one game minute per real second, so the speed is game minutes per second.
-            Ai?.SetGameSpeed(Speed);
         }
 
         /// <summary>Shows <paramref name="r"/> in the inspector, and optionally points the active panel at them.</summary>
@@ -679,16 +595,6 @@ namespace TinyCity.Runtime
             saves.Toggle();
         }
 
-        public void ToggleCameras()
-        {
-            if (!cameraWindow.IsOpen)
-            {
-                CloseWindows();
-            }
-
-            cameraWindow.Toggle();
-        }
-
         public void ToggleSettings()
         {
             if (!settingsWindow.IsOpen)
@@ -716,14 +622,9 @@ namespace TinyCity.Runtime
             {
                 settingsWindow.Toggle();
             }
-
-            if (cameraWindow.IsOpen)
-            {
-                cameraWindow.Toggle();
-            }
         }
 
-        private bool OverWindow(Vector2 point) => journal.Area.Contains(point) || saves.Area.Contains(point) || settingsWindow.Area.Contains(point) || cameraWindow.Area.Contains(point);
+        private bool OverWindow(Vector2 point) => journal.Area.Contains(point) || saves.Area.Contains(point) || settingsWindow.Area.Contains(point);
 
         /// <summary>Opens the journal with only the inspector's resident's entries.</summary>
         public void ShowJournalFor(Resident r)
@@ -789,7 +690,6 @@ namespace TinyCity.Runtime
             journal.Draw(CameraArea(), styles);
             saves.Draw(CameraArea(), styles);
             settingsWindow.Draw(CameraArea(), styles);
-            cameraWindow.Draw(CameraArea(), styles);
             Notifications.Draw(CameraArea(), styles, GoTo);
             if (!SidebarHidden)
             {
@@ -1004,9 +904,6 @@ namespace TinyCity.Runtime
                     break;
                 case KeyCode.Escape when SettingsOpen:
                     ToggleSettings();
-                    break;
-                case KeyCode.Escape when CamerasOpen:
-                    ToggleCameras();
                     break;
                 default:
                     return;

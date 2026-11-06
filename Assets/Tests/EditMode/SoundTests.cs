@@ -35,7 +35,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Sounds_AreTheSameEveryTime()
         {
-            foreach (var key in new[] { "music-day", "ambience-night", "sfx-footstep-2", "sfx-door" })
+            foreach (var key in new[] { "music-day", "ambience-night", "sfx-footstep-2", "sfx-chime" })
             {
                 Assert.That(SoundLibrary.Generate(key).Samples, Is.EqualTo(SoundLibrary.Generate(key).Samples), key);
             }
@@ -94,7 +94,7 @@ namespace TinyCity.Tests.EditMode
         public void ReplacementFiles_AreUsed_AndBadOnesFallBack()
         {
             var replacement = Wav.Write(new[] { 0.1f, -0.1f, 0.2f }, 16000);
-            var used = SoundLibrary.Load("sfx-door", key => key == "sfx-door" ? replacement : null);
+            var used = SoundLibrary.Load("sfx-chime", key => key == "sfx-chime" ? replacement : null);
             Assert.That(used.Samples.Length, Is.EqualTo(3));
             Assert.That(used.SampleRate, Is.EqualTo(16000));
             Assert.That(used.Loops, Is.False);
@@ -107,23 +107,25 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Director_SoundsSteps_Doors_AndActivities()
+        public void Director_SoundsSteps_AndActivities()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             var director = new SoundDirector();
             Assert.That(director.Update(sim).Count, Is.EqualTo(0), "the first look only notes where everyone is");
 
             var cues = new List<SoundCue>();
+            sim.AiDecisionsEnabled = true;
             for (var minute = 0; minute < 3 * 24 * 60; minute++)
             {
+                TestTown.Answer(sim);
                 sim.Tick();
                 cues.AddRange(director.Update(sim));
             }
 
             var effects = new HashSet<SoundEffect>(cues.Select(c => c.Effect));
-            foreach (var expected in new[] { SoundEffect.Footstep, SoundEffect.Door, SoundEffect.Cooking, SoundEffect.Drink })
+            foreach (var expected in new[] { SoundEffect.Footstep, SoundEffect.Splash, SoundEffect.Drink })
             {
-                Assert.That(effects.Contains(expected), Is.True, $"three days in the city include {expected}");
+                Assert.That(effects.Contains(expected), Is.True, $"three days on the open land include {expected}");
             }
 
             Assert.That(cues.Where(c => c.Effect == SoundEffect.Footstep).Select(c => c.Variant).Distinct().Count(), Is.EqualTo(SoundEffects.FootstepVariants));
@@ -137,10 +139,10 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Director_IsQuietForTheDead_AndAfterAReset()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             var director = new SoundDirector();
             director.Update(sim);
-            var mabel = sim.GetResident(StarterTown.ResidentId);
+            var mabel = sim.GetResident(StarterResidents.ResidentId);
             mabel.IsAlive = false;
             for (var i = 0; i < 600; i++)
             {
@@ -153,19 +155,22 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Work_SoundsLikeTheWorkplace()
+        public void EachKindOfWork_HasItsSound()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             var r = sim.Residents[0];
             r.State = ResidentState.Performing;
-            r.ActivityId = ActivityCatalog.Work.Id;
+            r.TargetObjectId = "obj-flat-stove-1";
 
-            r.TargetObjectId = "obj-cafe-counter";
-            Assert.That(SoundDirector.EffectFor(sim.World, r), Is.EqualTo(SoundEffect.Till));
-            r.TargetObjectId = "obj-clinic-desk";
-            Assert.That(SoundDirector.EffectFor(sim.World, r), Is.EqualTo(SoundEffect.Typing));
-            r.TargetObjectId = sim.World.Objects.First(o => o.Type == ObjectType.GardenPlot).Id;
-            Assert.That(SoundDirector.EffectFor(sim.World, r), Is.EqualTo(SoundEffect.Digging));
+            foreach (var (activity, effect) in new[]
+            {
+                (ActivityCatalog.Cook, SoundEffect.Cooking), (ActivityCatalog.CatchFish, SoundEffect.Splash), (ActivityCatalog.DrinkFromPond, SoundEffect.Drink),
+                (ActivityCatalog.GatherWood, SoundEffect.Digging), (ActivityCatalog.CraftAxe, SoundEffect.Typing), (ActivityCatalog.RunStall, SoundEffect.Till),
+            })
+            {
+                r.ActivityId = activity.Id;
+                Assert.That(SoundDirector.EffectFor(sim.World, r), Is.EqualTo(effect), activity.Id);
+            }
 
             r.ActivityId = ActivityCatalog.Sleep.Id;
             Assert.That(SoundDirector.EffectFor(sim.World, r), Is.Null, "sleeping is quiet");

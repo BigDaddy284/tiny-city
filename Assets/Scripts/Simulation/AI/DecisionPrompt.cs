@@ -22,7 +22,7 @@ namespace TinyCity.Simulation.AI
             What = what;
         }
 
-        /// <summary>The spot on open ground, for something done wherever they choose (Tiny City 2), or null.</summary>
+        /// <summary>The spot on open ground, for something done wherever they choose , or null.</summary>
         public int? X { get; }
 
         public int? Y { get; }
@@ -53,7 +53,7 @@ namespace TinyCity.Simulation.AI
         public static string BuildBody(string model, TownSimulation sim, Resident r, IReadOnlyList<FreeTimeOption> options)
         {
             var memories = sim.Memories.Recall(r.Id, sim.Time, Cues(sim, r, options), MemoryCount, sim.Memories.FocusOf(r.Id));
-            return OllamaProtocol.BuildChatBody(model, PromptText.Persona(r, sim), UserText(sim, r, options, memories), Schema(options, sim.PlanStepLimit), Temperature, MaxTokens);
+            return OllamaProtocol.BuildChatBody(model, PromptText.Persona(r, sim), UserText(sim, r, options, memories), Schema(options, TownSimulation.MaxPlanSteps), Temperature, MaxTokens);
         }
 
         public static string UserText(TownSimulation sim, Resident r, IReadOnlyList<FreeTimeOption> options, IReadOnlyList<MemoryRecord> memories)
@@ -63,24 +63,9 @@ namespace TinyCity.Simulation.AI
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are in {map.Name}.");
             sb.AppendLine($"How you feel: {PromptText.Feelings(r, sim)}.");
             sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
-            if (!sim.FoodMustBeMade)
-            {
-                sb.AppendLine($"Money: {PromptText.Purse(r, sim)}.");
-            }
-            else
-            {
-                sb.AppendLine(PromptText.NoMoney);
-            }
-
+            sb.AppendLine(PromptText.NoMoney);
             PromptText.AppendFood(sb, sim, r);
-            if (sim.FoodMustBeMade)
-            {
-                sb.AppendLine("Nobody has a bed of their own: you sleep wherever you choose, in any bed nobody is using, on a bench, or on the bare ground.");
-            }
-            else if (r.IsHomeless)
-            {
-                sb.AppendLine("You have nowhere to live yet, so you sleep on a park bench.");
-            }
+            sb.AppendLine("Nobody has a bed of their own: you sleep wherever you choose, in any bed nobody is using, on a bench, or on the bare ground.");
 
             PromptText.AppendDayPlan(sb, r, sim.Time);
             PromptText.AppendMemories(sb, memories);
@@ -96,11 +81,7 @@ namespace TinyCity.Simulation.AI
                 }
             }
 
-            sb.AppendLine(sim.AiRunsEverything
-                ? (sim.FoodMustBeMade
-                    ? "Nobody decides for you. If you don't eat, drink, sleep, wash or use the toilet, nobody will do it for you, and your health suffers. Choose one option to do now:"
-                    : "Nobody decides for you. If you don't eat, drink, sleep, wash or go to work, nobody will do it for you, and hunger, tiredness and lost wages hurt. Choose one option to do now:")
-                : "You have some free time. Choose one option to do now:");
+            sb.AppendLine("Nobody decides for you. If you don't eat, drink, sleep or wash, nobody will do it for you, and your health suffers. Choose one option to do now:");
             foreach (var o in options)
             {
                 sb.AppendLine($"- action {PromptText.Quote(o.ActionId)}, target_id {PromptText.Quote(o.TargetId)}: {Describe(o)}");
@@ -114,7 +95,7 @@ namespace TinyCity.Simulation.AI
 
             sb.Append("Reply as JSON with \"action\" and \"target_id\" copied from one option, \"reason\" (why, in your own words, under 15 words), ")
               .Append("\"say\" (something you say or think out loud, under 15 words) ")
-              .Append($"and \"then\": up to {sim.PlanStepLimit - 1} more options from the list to do afterwards, in order, each with \"action\" and \"target_id\".");
+              .Append($"and \"then\": up to {TownSimulation.MaxPlanSteps - 1} more options from the list to do afterwards, in order, each with \"action\" and \"target_id\".");
             if (ground)
             {
                 sb.Append($" For target_id {PromptText.Quote(FreeTimeOption.GroundTargetId)}, also give \"x\" and \"y\": the spot you choose, and when planting, \"what\" you plant.");
@@ -180,7 +161,7 @@ namespace TinyCity.Simulation.AI
             if (string.IsNullOrEmpty(target))
             {
                 var candidates = options.Where(o => o.ActionId == action).ToList();
-                // With several possible targets the game picks the nearest (Tiny City 2) or rejects it (Tiny City).
+                // With several possible targets the game picks the nearest.
                 target = candidates.Count == 1 ? candidates[0].TargetId : string.Empty;
             }
 
@@ -242,7 +223,7 @@ namespace TinyCity.Simulation.AI
             for (var i = 0; i < Needs.Count; i++)
             {
                 var need = (NeedType)i;
-                if (sim.HasNeed(need) && r.Needs[need] < 65)
+                if (r.Needs[need] < 65)
                 {
                     cues.Add(need.ToString().ToLowerInvariant());
                 }
@@ -273,7 +254,7 @@ namespace TinyCity.Simulation.AI
                     : $"choose a spot anywhere on open ground and plan a building there; it is its back corner, and it reaches towards bigger x and y (about {o.Activity.DurationMinutes} minutes)";
             }
 
-            var cost = o.PricePence > 0 ? $", costs {Economy.Money.Format(o.PricePence)}" : o.Activity == ActivityCatalog.BuyFood ? ", handed out free" : string.Empty;
+            var cost = o.Activity == ActivityCatalog.BuyFood ? ", handed out free" : string.Empty;
             var warning = Economy.FoodRules.HealthWarning(o.Activity);
             cost += warning == null ? string.Empty : "; " + warning;
             return $"{o.Activity.Name.ToLowerInvariant()} at the {o.Target.Name.ToLowerInvariant()} ({walk}, about {o.Activity.DurationMinutes} minutes{cost})";

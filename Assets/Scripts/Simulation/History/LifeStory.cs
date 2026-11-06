@@ -88,7 +88,7 @@ namespace TinyCity.Simulation.History
                 ? $"{r.FullName} is {r.AgeYears}."
                 : $"{r.FullName} died on {Journal.DateText(r.DiedAt.Value)}, of {r.CauseOfDeath}, aged {r.AgeYears}.");
             text.AppendLine($"Personality: {r.Personality.Describe()}.");
-            text.AppendLine(r.Job != null ? $"Work: {r.Job.Title}, {r.Job.DaysText()}." : $"Work: none{(string.IsNullOrEmpty(r.IncomeLabel) ? string.Empty : $" ({r.IncomeLabel.ToLowerInvariant()})")}.");
+            text.AppendLine(r.Role != null ? $"Role: {r.Role}." : "Role: none.");
 
             var friends = sim.Residents
                 .Where(o => o != r && sim.Relationships.TryGet(r.Id, o.Id, out var rel) && rel.HaveMet && rel.Friendship >= SocialRules.GoodFriendsAt)
@@ -128,7 +128,7 @@ namespace TinyCity.Simulation.History
             foreach (var r in sim.Residents)
             {
                 text.AppendLine(r.IsAlive
-                    ? $"{r.FullName}, {r.AgeYears}{(r.Job != null ? ", " + r.Job.Title.ToLowerInvariant() : string.Empty)}"
+                    ? $"{r.FullName}, {r.AgeYears}{(r.Role != null ? ", the " + r.Role : string.Empty)}"
                     : $"{r.FullName}, died on day {r.DiedAt?.Day} aged {r.AgeYears}");
             }
 

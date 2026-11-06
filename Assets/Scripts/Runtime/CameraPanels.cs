@@ -265,10 +265,6 @@ namespace TinyCity.Runtime
                     {
                         ResidentClicked?.Invoke(clicked);
                     }
-                    else if (e.clickCount == 2 && BuildingUnder(panel, e.mousePosition, view, simulation) is PlaceInfo place)
-                    {
-                        ShowPlace(index, place.EnterMapId, view);
-                    }
 
                     e.Use();
                     break;
@@ -281,20 +277,6 @@ namespace TinyCity.Runtime
                     e.Use();
                     break;
             }
-        }
-
-        /// <summary>The building drawn under a point of a panel (GUI coordinates), described, or null.</summary>
-        private static PlaceInfo BuildingUnder(CameraPanel panel, Vector2 gui, TownView view, TownSimulation simulation)
-        {
-            var world = panel.Camera.ScreenToWorldPoint(new Vector3(gui.x, Screen.height - gui.y, 0f));
-            var mapId = view.MapAt(world);
-            if (mapId == null || !simulation.World.TryGetMap(mapId, out var map) || !map.IsExterior)
-            {
-                return null;
-            }
-
-            var building = view.BuildingAt(mapId, world);
-            return building == null ? null : PlaceInfo.Of(simulation, building.Value.inside);
         }
 
         private static string ResidentAt(CameraPanel panel, Vector2 gui, TownView view)
@@ -320,8 +302,8 @@ namespace TinyCity.Runtime
         }
 
         /// <summary>
-        /// Draws names, door signs and speech bubbles inside each panel, then each panel's header bar, then the card
-        /// about the building under the pointer unless <paramref name="pointerFree"/> is false (it's over a window).
+        /// Draws names, door signs and speech bubbles inside each panel, then each panel's header bar.
+        /// <paramref name="pointerFree"/> is false while the pointer is over a window.
         /// </summary>
         public void DrawOverlays(TownView view, TownSimulation simulation, GuiStyles styles, Action<int> headerButtons, bool pointerFree)
         {
@@ -340,34 +322,6 @@ namespace TinyCity.Runtime
                 DrawFrame(panel, i == ActiveIndex && panels.Count > 1);
                 headerButtons(i);
             }
-
-            if (pointerFree && Event.current.type == EventType.Repaint)
-            {
-                DrawBuildingCard(Event.current.mousePosition, view, simulation, styles);
-            }
-        }
-
-        private void DrawBuildingCard(Vector2 mouse, TownView view, TownSimulation simulation, GuiStyles styles)
-        {
-            var panel = panels.FirstOrDefault(p => p.ScreenRect.Contains(mouse));
-            if (panel == null || mouse.y - panel.ScreenRect.y < HeaderHeight || ResidentAt(panel, mouse, view) != null)
-            {
-                return;
-            }
-
-            var place = BuildingUnder(panel, mouse, view, simulation);
-            if (place == null)
-            {
-                return;
-            }
-
-            var content = new GUIContent($"<b>{place.Title}</b>\n{string.Join("\n", place.Lines)}\n<size=11><i>Double-click to look inside</i></size>");
-            var width = Mathf.Min(260f, panel.ScreenRect.width - 16f);
-            var height = styles.Card.CalcHeight(content, width);
-            var bounds = panel.ScreenRect;
-            var x = Mathf.Clamp(mouse.x + 16f, bounds.x + 4f, bounds.xMax - width - 4f);
-            var y = mouse.y + 18f + height <= bounds.yMax - 4f ? mouse.y + 18f : Mathf.Max(bounds.y + HeaderHeight, mouse.y - height - 8f);
-            GUI.Box(new Rect(x, y, width, height), content, styles.Card);
         }
 
         public string Describe(int index, TownSimulation simulation)

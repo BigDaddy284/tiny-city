@@ -12,7 +12,7 @@ Approved changes:
   stay clean.
 
 The lock is enforced by `Assets/Tests/EditMode/ArtStyleTests.cs`. It fingerprints the palette, the style rules and
-the drawn ground, buildings, rooms, trees and furniture. Any change to them makes a test fail. Once the owner
+the drawn ground, trees, furniture and residents. Any change to them makes a test fail. Once the owner
 approves a change, update this guide and the fingerprint in the same commit.
 
 ![The locked palette](Images/palette.png)
@@ -31,11 +31,10 @@ approves a change, update this guide and the fingerprint in the same commit.
 
 - **Isometric 2:1.** One tile is a 64 × 32 pixel diamond (`IsoPainter.HalfTileWidth` 32, `HalfTileHeight` 16),
   shown at 64 pixels per world unit. A map's x runs down to the right and its y runs down to the left.
-- **Heights are in screen pixels.** Homes are 58 pixels tall (two floors) and shops 66, both with flat roofs and a
-  4-pixel parapet. Room back walls are 64 pixels tall, front walls 12 and inner walls 40. Each map sits on a
-  10-pixel block (wooden boards for rooms), like a diorama.
+- **Heights are in screen pixels.** The map sits on a 10-pixel block, like a diorama. Residents' buildings are
+  stacks of half-size cubes 12 pixels tall (`BlockArt.BlockHeight`), up to six high.
 - **Things stand on their tile.** A picture's anchor is the centre of the tile it stands on. Furniture and trees
-  fit within a 72 × 104 canvas. Buildings fill their footprint, inset slightly, and nothing hangs off their walls.
+  fit within a 72 × 104 canvas.
 
 ## Light and shade
 
@@ -43,13 +42,11 @@ approves a change, update this guide and the fingerprint in the same commit.
   0.68 for the right face (facing +x) (`IsoPainter.TopLight`, `LeftLight`, `RightLight`).
 - **Shadows fall down and to the right.** They are soft and see-through: `Shadow` ellipses under trees and outdoor
   objects, and a `ShadowTint` wash on the ground beside buildings.
-- **Outlines.** Trees, furniture and room walls have a one-pixel outline: the edge pixel is mixed 65% towards
+- **Outlines.** Trees and furniture have a one-pixel outline: the edge pixel is mixed 65% towards
   `Outline` (#140f2b), a deep navy.
 - **Day and night.** Sprites are multiplied by `Daylight` by day, `GoldenHour` (a pink dusk) at dawn and dusk
-  (90-minute twilight) and `Moonlight` (violet) at night. Neon (roof edges, wall plinths, door frames, shop tubes
-  and signs, antenna lights) and lit windows (`WindowGlow` amber or `GlassLight` cyan) are on the glow layer: they
-  fade in after dusk and are never darkened. Rooms turn to `Lamplight` instead of going dark. Sunrise and sunset
-  move with the season (`Lighting.SunTimes`).
+  (90-minute twilight) and `Moonlight` (violet) at night. Anything on the glow layer fades in after dusk and is
+  never darkened. Sunrise and sunset move with the season (`Lighting.SunTimes`).
 
 ## Seasons
 
@@ -62,28 +59,16 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
 
 ## Places
 
-- **Streets and paving:** smooth tarmac streets with a neon kerb in the season's colour, and square paving plates
-  everywhere else, with the odd light set into them.
-- **Homes:** two-floor blocks with panel seams and a line between floors. Ground-floor windows, a long strip window
-  upstairs, sliding glass doors with a neon frame, a dark plinth with a neon strip, neon corners and a neon roof
-  edge in the home's door colour. On the roof: an air unit, a vent and an antenna with a red light.
-- **Shops:** taller blocks with large display windows (goods behind the glass), a neon tube along the shopfront and
-  a neon sign flat above the door with a picture: an apple (store), a cup (café), a loaf (bakery), a red cross
-  (clinic) or a cocktail glass (the violet neon bar). Each shop has its own neon colour.
-- **Apartment towers:** six floors (three times a home's height, `BuildingArt.TowerHeight`) of navy or charcoal
-  panels with a line between floors and a window for each room on every floor, lit one by one at night. A glass
-  door to each ground-floor flat along the front and up the right side, in cyan or violet neon, and no sign.
-- **Venues:** shop-style blocks with their own neon and sign: an eight ball on olive (the lime cue club), a red-banded
-  skittle on wine (amber Strike Lanes), a lime space invader on plum (the pink Pixel Arcade) and a dumbbell on slate
-  (the mint Pulse Gym). Inside: olive walls and dark boards with teal pool tables and a moss snooker table; wine
-  walls and pale boards with three lanes ending in pins and a ball return; navy walls, a plum checker floor and four
-  cabinets with glowing screens and neon marquees; a slate gym with treadmills.
-- **Outdoors:** striped market stalls laid out with goods, and a stone fountain with water in the season's colour
-  (snow in winter).
-- **Rooms:** doll's-house cutaways. The two back walls are tall and the same height, meeting in a clean inside
-  corner, with dark wall panels, a pink neon rail at waist height, a cyan LED skirting, windows showing the lit
-  city outside, and pictures. The front walls are low with a cyan top edge, and walls inside the room are half
-  height. Floors are dark boards in homes and the café, and tiles in the store, bakery and clinic; the bar has dark slate tiles, a light-up dance floor and a DJ booth.
+Tiny City 2 has one map, the open land (`FlatLand`); the old city's buildings, rooms and venues and their pictures
+were removed (owner, 6 November).
+
+- **Ground:** square paving plates with the odd light set into them, crossed by two paths with a neon kerb in the
+  season's colour, a soil crop field and a pond in the season's water colour (frozen in winter).
+- **Nature:** trees and pines along the edges and in the woods, rock piles, fallen branches and loose stones.
+- **The camp:** a camp stove, benches, crafting benches and the meeting circle (a ring of stones around a pole
+  with bunting). Striped market stalls and camp beds appear only when residents build them.
+- **Residents' buildings:** each tile's blocks are drawn as up to four stacked columns of half-size cubes in the
+  material's palette colours (wood, stone, hardwood, iron ore, heartwood, crystal), with their furniture inside.
 
 ## Residents
 
@@ -106,13 +91,12 @@ A year is 28 days, with four 7-day seasons, spring first. Only the outdoors chan
   long plum coat, white bun and glasses. Anyone new gets a look put together from their id (piping always, a visor,
   dyed tips under 40 or a coat from 50 now and then), going grey at 65 and white at 75 (`ResidentLook`).
 - **Animation.** Four walking frames (a stride, a lifted foot, the other stride, the other foot) with a one-pixel
-  bob, and two frames each for talking (mouth and a hand gesture), eating, reading, working, cheering and star
-  jumps. Sitting puts the hips on the seat with the legs hanging down; sleeping shows the head on the pillow and the
-  shoulders above the quilt (someone with nowhere to live lies along a park bench). People use furniture where it is used: sitting in chairs and on benches, standing at
-  the front of cookers, sinks, counters and workbenches, facing them.
+  bob, and two frames each for talking (mouth and a hand gesture), eating, working and cheering. Sitting puts the hips on the seat with the legs hanging down; sleeping shows the head on the pillow and the
+  shoulders above the quilt (or lies along a bench, or on the bare ground). People use furniture where it is used: sitting on benches, standing at
+  the front of stoves, stalls and workbenches, facing them.
 - **Mood icons.** A small pale bubble with a tail over the head, outlined, holding a 7 × 5 symbol: a smile
-  (happy), "z" (asleep), "!" (needs the toilet), bread (hungry), a drop (thirsty), heavy eyes (tired), wavy
-  lines (grubby), a rain cloud (lonely) and "..." (bored). Tiny City 2 has no illness, children or couples, so their
+  (happy), "z" (asleep), bread (hungry), a drop (thirsty), heavy eyes (tired), wavy
+  lines (grubby), a rain cloud (lonely) and "..." (bored). Tiny City 2 has no illness, toilets, children or couples, so their
   icons and pictures were removed (owner, 6 November).
   Icons are never darkened by night.
 

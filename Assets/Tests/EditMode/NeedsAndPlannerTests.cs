@@ -69,114 +69,14 @@ namespace TinyCity.Tests.EditMode
             var b = new Needs(70);
             for (var i = 0; i < 1000; i++)
             {
-                NeedRules.ApplyMinute(a, Average, i % 3 == 0 ? ActivityCatalog.Read : null);
-                NeedRules.ApplyMinute(b, Average, i % 3 == 0 ? ActivityCatalog.Read : null);
+                NeedRules.ApplyMinute(a, Average, i % 3 == 0 ? ActivityCatalog.Chat : null);
+                NeedRules.ApplyMinute(b, Average, i % 3 == 0 ? ActivityCatalog.Chat : null);
             }
 
             for (var i = 0; i < Needs.Count; i++)
             {
                 Assert.That(a[(NeedType)i], Is.EqualTo(b[(NeedType)i]));
             }
-        }
-
-        [TestCase(NeedType.Toilet, "toilet")]
-        [TestCase(NeedType.Thirst, "drink")]
-        [TestCase(NeedType.Hunger, "eat")]
-        [TestCase(NeedType.Energy, "sleep")]
-        public void UrgentNeed_BeatsWork(NeedType need, string expectedActivity)
-        {
-            var sim = TestTown.WithResident(TestTown.WorkHour, adjust: n => n[need] = 5);
-
-            var choice = sim.Planner.Choose(sim.Residents[0], sim.Time);
-
-            Assert.That(choice.Activity.Id, Is.EqualTo(expectedActivity));
-        }
-
-        [Test]
-        public void TheMostUrgentNeedWins()
-        {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon, adjust: n =>
-            {
-                n[NeedType.Hunger] = 15;
-                n[NeedType.Toilet] = 8;
-            });
-
-            Assert.That(sim.Planner.Choose(sim.Residents[0], sim.Time).Activity, Is.SameAs(ActivityCatalog.UseToilet));
-        }
-
-        [Test]
-        public void DuringShift_WithNeedsMet_GoesToWork()
-        {
-            var sim = TestTown.WithResident(TestTown.WorkHour);
-
-            var choice = sim.Planner.Choose(sim.Residents[0], sim.Time);
-
-            Assert.That(choice.Activity, Is.SameAs(ActivityCatalog.Work));
-            Assert.That(choice.Target.Id, Is.EqualTo(StarterTown.GardenPlotId));
-        }
-
-        [Test]
-        public void OnWeekends_DoesNotWork()
-        {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon, needsLevel: 50);
-
-            Assert.That(sim.Planner.Choose(sim.Residents[0], sim.Time).Activity, Is.Not.SameAs(ActivityCatalog.Work));
-        }
-
-        [Test]
-        public void AtBedtime_GoesToOwnBed()
-        {
-            var sim = TestTown.WithResident(GameTime.FromDayAndTime(2, 23, 0));
-
-            var choice = sim.Planner.Choose(sim.Residents[0], sim.Time);
-
-            Assert.That(choice.Activity, Is.SameAs(ActivityCatalog.Sleep));
-            Assert.That(choice.Target.Id, Is.EqualTo(StarterTown.BedId));
-        }
-
-        [Test]
-        public void LowHunger_InFreeTime_Eats()
-        {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon, adjust: n => n[NeedType.Hunger] = 40);
-
-            Assert.That(sim.Planner.Choose(sim.Residents[0], sim.Time).Activity, Is.SameAs(ActivityCatalog.Eat));
-        }
-
-        [Test]
-        public void Personality_ChangesLeisureChoice()
-        {
-            var bookish = TestTown.WithResident(TestTown.WeekendAfternoon, needsLevel: 70, personality: new Personality(0, 0, 0.5, 1));
-            var sporty = TestTown.WithResident(TestTown.WeekendAfternoon, needsLevel: 70, personality: new Personality(1, 0, 0.5, 0));
-
-            Assert.That(bookish.Planner.Choose(bookish.Residents[0], bookish.Time).Activity, Is.SameAs(ActivityCatalog.Read));
-            Assert.That(sporty.Planner.Choose(sporty.Residents[0], sporty.Time).Activity, Is.SameAs(ActivityCatalog.Exercise));
-        }
-
-        [Test]
-        public void WhenEverythingIsFull_TakesItEasy()
-        {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon, needsLevel: 100);
-
-            Assert.That(sim.Planner.Choose(sim.Residents[0], sim.Time), Is.Null);
-        }
-
-        [Test]
-        public void UrgentNeed_InterruptsWork_ButWorkDoesNotInterruptUrgentCare()
-        {
-            var sim = TestTown.WithResident(TestTown.WorkHour);
-            var r = sim.Residents[0];
-
-            r.Needs[NeedType.Thirst] = 10;
-            Assert.That(sim.Planner.ShouldInterrupt(r, ActivityCatalog.Work, sim.Time), Is.True);
-            Assert.That(sim.Planner.ShouldInterrupt(r, ActivityCatalog.Drink, sim.Time), Is.False);
-        }
-
-        [Test]
-        public void ShiftStart_InterruptsLeisure()
-        {
-            var sim = TestTown.WithResident(TestTown.WorkHour);
-
-            Assert.That(sim.Planner.ShouldInterrupt(sim.Residents[0], ActivityCatalog.Read, sim.Time), Is.True);
         }
     }
 }

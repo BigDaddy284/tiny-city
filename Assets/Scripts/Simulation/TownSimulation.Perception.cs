@@ -15,15 +15,43 @@ namespace TinyCity.Simulation
     /// </summary>
     public sealed partial class TownSimulation
     {
-        /// <summary>When each (noticer, noticed) pair was last offered a reaction; not saved, so after loading people are noticed afresh.</summary>
+        /// <summary>When each (noticer, noticed) pair was last offered a reaction. Saved while it still matters, so a loaded town notices people just as it would have.</summary>
         private readonly Dictionary<string, long> lastNoticed = new Dictionary<string, long>(StringComparer.Ordinal);
+
+        /// <summary>The pairs (noticer + ">" + noticed) still within <see cref="PerceptionRules.ReactCooldownMinutes"/> of being noticed, in id order, for saving.</summary>
+        internal IEnumerable<KeyValuePair<string, long>> RecentlyNoticed()
+        {
+            var list = new List<KeyValuePair<string, long>>();
+            foreach (var pair in lastNoticed)
+            {
+                if (Time.TotalMinutes - pair.Value < PerceptionRules.ReactCooldownMinutes)
+                {
+                    list.Add(pair);
+                }
+            }
+
+            list.Sort((a, b) => StringComparer.Ordinal.Compare(a.Key, b.Key));
+            return list;
+        }
+
+        /// <summary>Puts back a saved "noticed" time, if both people are in this town and it isn't in the future.</summary>
+        internal bool RestoreNoticed(string pair, long minute)
+        {
+            var ids = pair?.Split('>');
+            if (ids == null || ids.Length != 2 || GetResident(ids[0]) == null || GetResident(ids[1]) == null || minute > Time.TotalMinutes || minute < 0)
+            {
+                return false;
+            }
+
+            lastNoticed[pair] = minute;
+            return true;
+        }
 
         private long nextReactionId = 1;
 
-        /// <summary>Someone who can be walked up to and talked to: alive, not a baby, not already chatting, asleep or at work.</summary>
+        /// <summary>Someone who can be walked up to and talked to: alive, not already chatting or asleep.</summary>
         public static bool FreeToTalk(Resident r) =>
-            r != null && r.IsAlive && r.State != ResidentState.Talking
-            && r.ActivityId != ActivityCatalog.Sleep.Id && r.ActivityId != ActivityCatalog.Work.Id;
+            r != null && r.IsAlive && r.State != ResidentState.Talking && r.ActivityId != ActivityCatalog.Sleep.Id;
 
         /// <summary>Up and about and free to notice someone and change what they're doing.</summary>
         public static bool CanReact(Resident r) =>
@@ -137,7 +165,7 @@ namespace TinyCity.Simulation
             var why = TextRules.Clean(reason, SocialRules.MaxTopicLength * 2);
             r.ClearPlan();
             r.ResetActivity();
-            StartChoice(r, new PlanChoice(other, why.Length > 0 ? why : $"Saw {other.FirstName} nearby", PlanPriority.Leisure), "(noticed them)");
+            StartChoice(r, new PlanChoice(other, why.Length > 0 ? why : $"Saw {other.FirstName} nearby"), "(noticed them)");
             r.GoalSource = DecisionSource.Ai;
             return DecisionOutcome.Applied;
         }

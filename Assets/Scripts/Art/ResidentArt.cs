@@ -105,16 +105,8 @@ namespace TinyCity.Art
                 Arms();
             }
 
-            /// <summary>Walking and jumping bob the body up a pixel on alternate frames.</summary>
-            private int Bob()
-            {
-                switch (pose.Action)
-                {
-                    case ResidentAction.Walk: return pose.Frame % 2 == 1 ? -1 : 0;
-                    case ResidentAction.Exercise: return pose.Frame == 0 ? -2 : 0;
-                    default: return 0;
-                }
-            }
+            /// <summary>Walking bobs the body up a pixel on alternate frames.</summary>
+            private int Bob() => pose.Action == ResidentAction.Walk && pose.Frame % 2 == 1 ? -1 : 0;
 
             /// <summary>A row of the body above the legs.</summary>
             private int Row(int standingRow) => standingRow + shift;
@@ -162,11 +154,10 @@ namespace TinyCity.Art
                     return;
                 }
 
-                // Two legs, a stride apart on walking frames 0 and 2, and wide on the jump of a star jump.
+                // Two legs, a stride apart on walking frames 0 and 2.
                 var walk = pose.Action == ResidentAction.Walk ? (pose.Frame == 0 ? 1 : pose.Frame == 2 ? -1 : 0) : 0;
-                var jump = pose.Action == ResidentAction.Exercise && pose.Frame == 0 ? 1 : 0;
-                var back = walk != 0 ? -walk : -jump;
-                var front = walk != 0 ? walk : jump;
+                var back = -walk;
+                var front = walk;
                 // Between strides one foot is lifted as it passes the other: the back one, then the front one.
                 var liftBack = pose.Action == ResidentAction.Walk && pose.Frame == 1 ? 1 : 0;
                 var liftFront = pose.Action == ResidentAction.Walk && pose.Frame == 3 ? 1 : 0;
@@ -459,15 +450,6 @@ namespace TinyCity.Art
 
                         return;
 
-                    case ResidentAction.Read:
-                        // Holding a book in front, the pages turning.
-                        Rect(-5, top, -4, top + 4, sleeve);
-                        Rect(4, top, 5, top + 4, sleeve);
-                        Rect(1, top + 3, 6, top + 6, Palette.Red);
-                        Rect(2, top + 3, 5, top + 5, pose.Frame == 1 ? Palette.White.Shade(0.94) : Palette.White);
-                        Put(-3, top + 5, hand);
-                        return;
-
                     case ResidentAction.Work:
                     {
                         // Both hands busy in front, going up and down.
@@ -480,16 +462,8 @@ namespace TinyCity.Art
                     }
 
                     case ResidentAction.Cheer:
-                    case ResidentAction.Exercise:
                     {
                         var high = pose.Frame == 0;
-                        if (pose.Action == ResidentAction.Exercise && !high)
-                        {
-                            Arm(-6, top, 7);
-                            Arm(4, top, 7);
-                            return;
-                        }
-
                         // Arms up: right up high, or a wave at half height.
                         var reach = high ? 7 : 4;
                         Rect(-6, top - reach + 1, -5, top + 1, sleeve);

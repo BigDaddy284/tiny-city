@@ -11,8 +11,8 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void List_FiltersByLivingOrDied_AndSorts()
         {
-            var sim = StarterTown.CreateNewGame();
-            var arthur = sim.GetResident(StarterTown.ArthurId);
+            var sim = FlatLand.CreateNewGame();
+            var arthur = sim.GetResident(StarterResidents.ArthurId);
             arthur.IsAlive = false;
 
             var everyone = PeopleList.Of(sim.Residents, PeopleFilter.Everyone, PeopleOrder.FirstName);
@@ -34,8 +34,8 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Search_ShowsMatchesAsYouType_BestFirst()
         {
-            var sim = StarterTown.CreateNewGame();
-            var arthur = sim.GetResident(StarterTown.ArthurId);
+            var sim = FlatLand.CreateNewGame();
+            var arthur = sim.GetResident(StarterResidents.ArthurId);
 
             Assert.That(PeopleList.Search(sim.Residents, "", 6).Count, Is.EqualTo(0), "nothing typed, nothing shown");
             Assert.That(PeopleList.Search(sim.Residents, "zzqq", 6).Count, Is.EqualTo(0));

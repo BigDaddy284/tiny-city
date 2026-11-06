@@ -12,7 +12,7 @@ using UnityEngine;
 namespace TinyCity.Runtime
 {
     /// <summary>
-    /// Plays the music, the ambience of the place the active panel shows, and the sounds of residents near its
+    /// Plays the music, the day or night ambience, and the sounds of residents near its
     /// camera. Every sound is generated in the background at start-up (or read from a WAV in
     /// <c>StreamingAssets/Audio</c>), and volumes follow the Settings window.
     /// </summary>
@@ -134,8 +134,7 @@ namespace TinyCity.Runtime
 
             var night = Lighting.At(simulation.Time, outdoors: true).WindowGlow > 0.5;
             var mapId = active?.MapId;
-            var indoors = mapId != null && simulation.World.TryGetMap(mapId, out var map) && !map.IsExterior;
-            var place = indoors ? AmbienceKind.Indoors : night ? AmbienceKind.CityNight : AmbienceKind.CityDay;
+            var place = night ? AmbienceKind.CityNight : AmbienceKind.CityDay;
 
             musicFade = Crossfade(music, Music.KeyOf(night ? MusicPiece.Night : MusicPiece.Day), musicFade, (float)prefs.Volume(prefs.MusicVolume));
             ambienceFade = Crossfade(ambience, Ambience.KeyOf(place), ambienceFade, (float)prefs.Volume(prefs.AmbienceVolume));

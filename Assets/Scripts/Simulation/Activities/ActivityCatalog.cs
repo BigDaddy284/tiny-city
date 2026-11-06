@@ -16,52 +16,13 @@ namespace TinyCity.Simulation.Activities
                 [NeedType.Energy] = 0,
                 [NeedType.Hunger] = 0.4,
                 [NeedType.Thirst] = 0.4,
-                [NeedType.Toilet] = 0.4,
                 [NeedType.Hygiene] = 0.5,
                 [NeedType.Social] = 0,
                 [NeedType.Exercise] = 0,
                 [NeedType.Fun] = 0,
             });
 
-        /// <summary>A proper meal at home. Uses one meal's worth of groceries.</summary>
-        public static readonly ActivityDefinition Eat = new ActivityDefinition(
-            "eat", "Cook and eat", "cooking and eating", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.Kitchen }, 30,
-            new Dictionary<NeedType, double> { [NeedType.Hunger] = 2.6, [NeedType.Thirst] = 0.4 },
-            usesGroceries: true);
-
-        /// <summary>Odds and ends from the cupboard: always possible, so hunger can never be blocked by an empty larder or purse.</summary>
-        public static readonly ActivityDefinition Snack = new ActivityDefinition(
-            "snack", "Make do with a snack", "eating whatever's in the cupboard", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.Kitchen }, 15,
-            new Dictionary<NeedType, double> { [NeedType.Hunger] = 2.0 });
-
-        /// <summary>What the market stalls give away at the end of the day. Only for the homeless, who have no kitchen for a snack.</summary>
-        public static readonly ActivityDefinition Leftovers = new ActivityDefinition(
-            "leftovers", "Ask for leftovers", "getting by on leftovers from the market stalls", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.MarketStall }, 15,
-            new Dictionary<NeedType, double> { [NeedType.Hunger] = 2.0 });
-
-        public static readonly ActivityDefinition CafeMeal = new ActivityDefinition(
-            "cafe-meal", "Eat at the café", "having a meal at the café", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.CafeTable }, 40,
-            new Dictionary<NeedType, double> { [NeedType.Hunger] = 2.4, [NeedType.Thirst] = 0.6, [NeedType.Social] = 0.5, [NeedType.Fun] = 0.6 },
-            itemId: "cafe-meal");
-
-        public static readonly ActivityDefinition Pastry = new ActivityDefinition(
-            "pastry", "Buy a pastry", "enjoying a pastry", ActivityKind.Care, NeedType.Hunger, new[] { ObjectType.BakeryDisplay }, 10,
-            new Dictionary<NeedType, double> { [NeedType.Hunger] = 3.0, [NeedType.Fun] = 0.8 },
-            itemId: "pastry");
-
-        public static readonly ActivityDefinition Drink = new ActivityDefinition(
-            "drink", "Drink water", "having a drink", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.Sink, ObjectType.GardenTap }, 5,
-            new Dictionary<NeedType, double> { [NeedType.Thirst] = 14 });
-
-        public static readonly ActivityDefinition UseToilet = new ActivityDefinition(
-            "toilet", "Use the toilet", "using the toilet", ActivityKind.Care, NeedType.Toilet, new[] { ObjectType.Toilet }, 5,
-            new Dictionary<NeedType, double> { [NeedType.Toilet] = 20 });
-
-        public static readonly ActivityDefinition Shower = new ActivityDefinition(
-            "shower", "Shower", "showering", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.Shower }, 15,
-            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 6.5 });
-
-        /// <summary>Tiny City 2: the open land has no taps, toilets or showers, so people drink and wash at the pond and go among the trees.</summary>
+        /// <summary>The open land has no taps or showers, so people drink and wash at the pond.</summary>
         public static readonly ActivityDefinition DrinkFromPond = new ActivityDefinition(
             "drink-pond", "Drink from the pond", "drinking from the pond", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.FishingSpot }, 5,
             new Dictionary<NeedType, double> { [NeedType.Thirst] = 10 });
@@ -70,62 +31,30 @@ namespace TinyCity.Simulation.Activities
             "wash-pond", "Wash in the pond", "washing in the pond", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.FishingSpot }, 20,
             new Dictionary<NeedType, double> { [NeedType.Hygiene] = 5 });
 
-        /// <summary>Tiny City 2: cleaning pond water to drink, which only the water purifier can do.</summary>
+        /// <summary>cleaning pond water to drink, which only the water purifier can do.</summary>
         public static readonly ActivityDefinition PurifyWater = new ActivityDefinition(
             "purify-water", "Clean pond water", "cleaning water", ActivityKind.Errand, null, new[] { ObjectType.FishingSpot }, 45,
             new Dictionary<NeedType, double> { [NeedType.Fun] = 0.2 });
 
-        /// <summary>Tiny City 2: drinking a portion of clean water, which quenches thirst properly and does no harm.</summary>
+        /// <summary>drinking a portion of clean water, which quenches thirst properly and does no harm.</summary>
         public static readonly ActivityDefinition DrinkCleanWater = new ActivityDefinition(
             "drink-clean", "Drink clean water", "drinking clean water", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.Kitchen, ObjectType.Bench, ObjectType.FishingSpot }, 5,
             new Dictionary<NeedType, double> { [NeedType.Thirst] = 14 });
 
-        /// <summary>Tiny City 2: the weekly town meeting, where issues are raised and role changes are voted on.</summary>
+        /// <summary>the weekly town meeting, where issues are raised and role changes are voted on.</summary>
         public static readonly ActivityDefinition AttendMeeting = new ActivityDefinition(
             "attend-meeting", "Go to the town meeting", "at the town meeting", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.GatheringSpot }, 90,
             new Dictionary<NeedType, double> { [NeedType.Social] = 1.0 });
 
-        /// <summary>Activities that exist only on Tiny City 2's open land (never in v1).</summary>
-        public static bool IsOpenLandOnly(ActivityDefinition a) => IsInTheWild(a) || a == PurifyWater || a == DrinkCleanWater || a == AttendMeeting;
-
-        /// <summary>Drinking, washing and the toilet out in the open: Tiny City 2 only, where nothing is laid on.</summary>
+        /// <summary>Drinking and washing out in the open, where nothing is laid on.</summary>
         public static bool IsInTheWild(ActivityDefinition a) => a == DrinkFromPond || a == WashInPond;
-
-        public static readonly ActivityDefinition Work = new ActivityDefinition(
-            "work", "Work", "working", ActivityKind.Work, null, new[] { ObjectType.GardenPlot, ObjectType.Workbench, ObjectType.Counter }, 8 * 60,
-            new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.03 },
-            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 1.5, [NeedType.Thirst] = 1.2, [NeedType.Energy] = 1.1, [NeedType.Fun] = 0.8 });
-
-        public static readonly ActivityDefinition Exercise = new ActivityDefinition(
-            "exercise", "Exercise", "exercising", ActivityKind.Leisure, NeedType.Exercise, new[] { ObjectType.ExerciseSpot }, 45,
-            new Dictionary<NeedType, double> { [NeedType.Exercise] = 2.2, [NeedType.Fun] = 0.3 },
-            new Dictionary<NeedType, double> { [NeedType.Energy] = 2.0, [NeedType.Hygiene] = 3.0, [NeedType.Thirst] = 1.5 });
-
-        public static readonly ActivityDefinition Read = new ActivityDefinition(
-            "read", "Read a book", "reading", ActivityKind.Leisure, NeedType.Fun, new[] { ObjectType.Armchair }, 60,
-            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.0 });
-
-        public static readonly ActivityDefinition WatchTown = new ActivityDefinition(
-            "watch-town", "Sit in the park", "sitting in the park watching the town", ActivityKind.Leisure, NeedType.Social, new[] { ObjectType.Bench, ObjectType.Fountain }, 45,
-            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.6, [NeedType.Social] = 0.7 });
-
-        public static readonly ActivityDefinition Coffee = new ActivityDefinition(
-            "coffee", "Have a coffee", "having a coffee at the café", ActivityKind.Leisure, NeedType.Fun, new[] { ObjectType.CafeTable }, 25,
-            new Dictionary<NeedType, double> { [NeedType.Fun] = 1.0, [NeedType.Thirst] = 1.5, [NeedType.Social] = 0.5, [NeedType.Energy] = 0.1 },
-            itemId: "coffee");
-
-        /// <summary>Stocking up the kitchen at home. An errand: chosen when groceries run low, not to restore a need.</summary>
-        public static readonly ActivityDefinition BuyGroceries = new ActivityDefinition(
-            "buy-groceries", "Buy groceries", "shopping for groceries", ActivityKind.Errand, null, new[] { ObjectType.ShopShelf }, 15,
-            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.1 },
-            itemId: "groceries");
 
         /// <summary>Walking over to someone and talking with them. The duration is set by the conversation, not here.</summary>
         public static readonly ActivityDefinition Chat = new ActivityDefinition(
             "chat", "Chat", "chatting", ActivityKind.Social, NeedType.Social, new ObjectType[0], 20,
             new Dictionary<NeedType, double> { [NeedType.Social] = 2.2, [NeedType.Fun] = 0.4 });
 
-        // Tiny City 2's food (see Economy.FoodRules): nothing here exists in v1, and v1's free food doesn't exist here.
+        // Food (see Economy.FoodRules): nothing is free.
 
         /// <summary>Sowing a crop on an empty garden plot, or on open ground the resident chooses. It still has to be watered before it can be picked.</summary>
         public static readonly ActivityDefinition PlantCrops = new ActivityDefinition(
@@ -174,7 +103,7 @@ namespace TinyCity.Simulation.Activities
             "buy-food", "Buy food at a stall", "buying food at a stall", ActivityKind.Errand, null, new[] { ObjectType.MarketStall }, 5,
             new Dictionary<NeedType, double> { [NeedType.Social] = 0.5 });
 
-        // Tiny City 2's gathering and crafting (see Economy.CraftingRules).
+        // Gathering and crafting (see Economy.CraftingRules).
 
         /// <summary>Picking up fallen branches by hand: a little wood, no tool needed.</summary>
         public static readonly ActivityDefinition GatherSticks = Gather("gather-sticks", "Pick up fallen branches", "picking up fallen branches", ObjectType.StickPile, 1.2);
@@ -222,24 +151,24 @@ namespace TinyCity.Simulation.Activities
 
         public static readonly ActivityDefinition CraftRod = Craft("craft-rod", "Make a fishing rod", "making a fishing rod");
 
-        /// <summary>Tiny City 2: sketching a building on open ground the resident chooses; the plan itself comes from the AI.</summary>
+        /// <summary>sketching a building on open ground the resident chooses; the plan itself comes from the AI.</summary>
         public static readonly ActivityDefinition PlanBuilding = new ActivityDefinition(
             "plan-building", "Plan a building", "planning a building", ActivityKind.Errand, null, new[] { ObjectType.BuildPlot }, 30,
             new Dictionary<NeedType, double> { [NeedType.Fun] = 0.5 });
 
-        /// <summary>Tiny City 2: laying the next blocks of their own building, at its site.</summary>
+        /// <summary>laying the next blocks of their own building, at its site.</summary>
         public static readonly ActivityDefinition Build = new ActivityDefinition(
             "build", "Build", "building", ActivityKind.Errand, null, new[] { ObjectType.BuildPlot }, 60,
             new Dictionary<NeedType, double> { [NeedType.Fun] = 0.3, [NeedType.Exercise] = 0.6 },
             new Dictionary<NeedType, double> { [NeedType.Energy] = 1.5, [NeedType.Hygiene] = 1.8, [NeedType.Thirst] = 1.4 });
 
-        /// <summary>Tiny City 2: activities done on open ground wherever the resident chooses, rather than at a thing.</summary>
+        /// <summary>activities done on open ground wherever the resident chooses, rather than at a thing.</summary>
         public static bool IsDoneOnGround(ActivityDefinition a) => a == PlantCrops || a == PlanBuilding || a == Sleep;
 
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
-            Sleep, Eat, Snack, CafeMeal, Pastry, Drink, UseToilet, Shower, Work, Exercise, Read, WatchTown, Coffee, BuyGroceries, Chat, Leftovers,
+            Sleep, Chat,
             PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw, RunStall, BuyFood,
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
             GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
@@ -260,12 +189,6 @@ namespace TinyCity.Simulation.Activities
         {
             activity = All.FirstOrDefault(a => a.Id == id);
             return activity != null;
-        }
-
-        /// <summary>The activities that can restore a need when it is urgent, in preference order.</summary>
-        public static IEnumerable<ActivityDefinition> ForNeed(NeedType need)
-        {
-            return All.Where(a => a.PrimaryNeed == need && (a.Kind == ActivityKind.Care || a.Kind == ActivityKind.Sleep || a.Kind == ActivityKind.Leisure));
         }
     }
 }

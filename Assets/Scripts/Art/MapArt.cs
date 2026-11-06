@@ -69,11 +69,10 @@ namespace TinyCity.Art
     /// <summary>Everything drawn for one map: its ground, and the pieces that stand on it.</summary>
     public sealed class MapArt
     {
-        private MapArt(PixelCanvas ground, List<ArtPiece> pieces, List<(BuildingPlan plan, PixelCanvas body)> buildings)
+        private MapArt(PixelCanvas ground, List<ArtPiece> pieces)
         {
             Ground = ground;
             Pieces = pieces;
-            Buildings = buildings;
         }
 
         /// <summary>The flat ground, anchored on the centre of tile (0, 0).</summary>
@@ -81,56 +80,20 @@ namespace TinyCity.Art
 
         public IReadOnlyList<ArtPiece> Pieces { get; }
 
-        /// <summary>Each building on the map with its whole picture (before it is cut into strips), for <see cref="BuildingAt"/>.</summary>
-        public IReadOnlyList<(BuildingPlan plan, PixelCanvas body)> Buildings { get; }
-
-        /// <summary>
-        /// The building drawn at a point, <paramref name="px"/> pixels right of and <paramref name="py"/> pixels below
-        /// the centre of tile (0, 0), or null. A point counts only where the picture isn't clear, and where two
-        /// buildings overlap the one in front wins.
-        /// </summary>
-        public BuildingPlan BuildingAt(double px, double py)
-        {
-            BuildingPlan best = null;
-            var bestFront = int.MinValue;
-            foreach (var (plan, body) in Buildings)
-            {
-                var x = (int)Math.Floor(body.AnchorX + px - ((plan.X - plan.Y) * IsoPainter.HalfTileWidth));
-                var y = (int)Math.Floor(body.AnchorY + py - ((plan.X + plan.Y) * IsoPainter.HalfTileHeight));
-                if (x < 0 || y < 0 || x >= body.Width || y >= body.Height || body.Get(x, y).IsClear)
-                {
-                    continue;
-                }
-
-                // The same order the strips are drawn in: by the front-most footprint tile under that column.
-                var (i, j) = BuildingArt.FrontTile(plan, (int)Math.Floor((x - body.AnchorX) / IsoPainter.HalfTileWidth));
-                var front = plan.X + i + plan.Y + j;
-                if (front > bestFront)
-                {
-                    best = plan;
-                    bestFront = front;
-                }
-            }
-
-            return best;
-        }
-
         /// <summary>
         /// Draws a map. <paramref name="replacement"/> may supply a picture to use instead of a generated one (return
-        /// null to keep the generated one); building replacements are cut into strips like the generated buildings.
+        /// null to keep the generated one).
         /// </summary>
         public static MapArt Build(TownWorld world, TileMap map, Palette palette, Func<ArtRequest, PixelCanvas> replacement = null)
         {
-            var kind = PlaceStyle.Of(world, map);
             var season = palette.Season.ToString().ToLowerInvariant();
             PixelCanvas Pick(string key, int w, int d, Func<PixelCanvas> make)
             {
                 return replacement?.Invoke(new ArtRequest($"{key}-{season}", w, d)) ?? replacement?.Invoke(new ArtRequest(key, w, d)) ?? make();
             }
 
-            var ground = Pick($"ground-{map.Id}", map.Width, map.Height, () => GroundArt.Render(map, kind, palette));
+            var ground = Pick($"ground-{map.Id}", map.Width, map.Height, () => GroundArt.Render(map, palette));
             var pieces = new List<ArtPiece>();
-            var buildings = new List<(BuildingPlan, PixelCanvas)>();
 
             for (var y = 0; y < map.Height; y++)
             {
@@ -142,37 +105,6 @@ namespace TinyCity.Art
                         var variant = (int)(Noise.Hash(x, y, Noise.Of(map.Id)) & 0x7fffffff);
                         var key = NatureArt.IsPine(variant) ? "pine" : "tree";
                         pieces.Add(new ArtPiece($"Tree {x},{y}", Pick(key, 1, 1, () => NatureArt.Tree(palette, variant)), x, y, x, y, ArtLayer.Solid));
-                    }
-                    else if (!map.IsExterior && (type == TileType.Wall || type == TileType.Door))
-                    {
-                        var wall = InteriorArt.Render(map, kind, x, y);
-                        if (wall != null)
-                        {
-                            pieces.Add(new ArtPiece($"Wall {x},{y}", wall, x, y, x, y, ArtLayer.Solid));
-                        }
-                    }
-                }
-            }
-
-            if (map.IsExterior)
-            {
-                foreach (var plan in BuildingArt.Find(world, map))
-                {
-                    var key = $"building-{plan.InteriorMapId ?? "house"}";
-                    var custom = replacement?.Invoke(new ArtRequest($"{key}-{season}", plan.Width, plan.Depth)) ?? replacement?.Invoke(new ArtRequest(key, plan.Width, plan.Depth));
-                    var (body, glow) = custom != null ? (custom, null) : BuildingArt.Render(plan, palette);
-                    buildings.Add((plan, body));
-                    foreach (var (strip, sx, sy) in BuildingArt.Strips(body, plan))
-                    {
-                        pieces.Add(new ArtPiece($"Building {plan.InteriorMapId} {sx},{sy}", strip, plan.X, plan.Y, sx, sy, ArtLayer.Solid));
-                    }
-
-                    if (glow != null)
-                    {
-                        foreach (var (strip, sx, sy) in BuildingArt.Strips(glow, plan))
-                        {
-                            pieces.Add(new ArtPiece($"Windows {plan.InteriorMapId} {sx},{sy}", strip, plan.X, plan.Y, sx, sy, ArtLayer.Glow));
-                        }
                     }
                 }
             }
@@ -187,10 +119,10 @@ namespace TinyCity.Art
                 var p = obj.Location.Position;
                 var variant = Noise.Of(obj.Id);
                 var key = $"object-{obj.Type.ToString().ToLowerInvariant()}";
-                pieces.Add(new ArtPiece(obj.Name, Pick(key, 1, 1, () => FurnitureArt.Render(obj.Type, variant, palette, map.IsExterior, PlaceStyle.Of(world, map))), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));
+                pieces.Add(new ArtPiece(obj.Name, Pick(key, 1, 1, () => FurnitureArt.Render(obj.Type, variant, palette, map.IsExterior)), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));
             }
 
-            return new MapArt(ground, pieces, buildings);
+            return new MapArt(ground, pieces);
         }
 
         /// <summary>

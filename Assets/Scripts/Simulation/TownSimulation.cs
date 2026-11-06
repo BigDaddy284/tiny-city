@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using TinyCity.Simulation.Activities;
 using TinyCity.Simulation.Economy;
-using TinyCity.Simulation.Health;
 using TinyCity.Simulation.History;
 using TinyCity.Simulation.Memory;
 using TinyCity.Simulation.Residents;
@@ -45,35 +44,20 @@ namespace TinyCity.Simulation
         /// <summary>How long a resident with nothing to do relaxes before checking again.</summary>
         public const int RelaxMinutes = 15;
 
-        public const int DefaultDecisionWaitMinutes = 20;
-
         /// <summary>AI-suggested reflections can matter, but only game events may become the most important memories.</summary>
         public const int MaxReflectionImportance = 6;
 
         public const int MaxReasonLength = 100;
 
         /// <summary>
-        /// One AI answer plans up to this many free-time activities: the one to do now and the rest afterwards, so the
-        /// model is asked less often. Each later step is checked again when it is due (see <see cref="PlanStep"/>).
+        /// One AI answer plans up to this many activities: the one to do now and the rest afterwards, so each resident
+        /// asks the model less often (owner, 5 November: ask less, never pause). Each later step is checked again when
+        /// it is due (see <see cref="PlanStep"/>).
         /// </summary>
-        public const int MaxPlanSteps = 3;
+        public const int MaxPlanSteps = 6;
 
         /// <summary>A plan's later steps are dropped this many game minutes after it was made.</summary>
-        public const int PlanMinutes = 180;
-
-        /// <summary>
-        /// Tiny City 2 (owner, 5 November: ask less, never pause): one answer plans this many activities, kept for
-        /// <see cref="PlanMinutesWhenAiRuns"/>, so each resident asks the AI less often.
-        /// </summary>
-        public const int MaxPlanStepsWhenAiRuns = 6;
-
-        public const int PlanMinutesWhenAiRuns = 360;
-
-        /// <summary>How many activities one answer may plan in this town.</summary>
-        public int PlanStepLimit => AiRunsEverything ? MaxPlanStepsWhenAiRuns : MaxPlanSteps;
-
-        /// <summary>Tiny City 2's chats are at most this many lines, since each line is one AI request.</summary>
-        public const int MaxLinesWhenAiRuns = 6;
+        public const int PlanMinutes = 360;
 
         /// <summary>
         /// A resident's day for reflection purposes runs from noon to noon, so going to bed after midnight, or still
@@ -83,7 +67,6 @@ namespace TinyCity.Simulation
 
         private readonly List<Resident> residents;
         private readonly List<ConversationSession> sessions = new List<ConversationSession>();
-        private int decisionWaitMinutes = DefaultDecisionWaitMinutes;
         private long nextDecisionId = 1;
         private long nextLineRequestId = 1;
 
@@ -101,12 +84,12 @@ namespace TinyCity.Simulation
             Food.Attach(world);
             Sleeping.Attach(world);
             Pathfinder = new Pathfinder(world, Construction.IsBlocked);
-            Economy = new TownEconomy(world, this.residents);
-            Planner = new ActivityPlanner(world, Pathfinder, this.residents, Economy, () => Time) { Food = Food };
+            Planner = new ActivityPlanner(world, Pathfinder, this.residents, () => Time) { Food = Food };
             Food.SellerAt = SellerAt;
             Food.BuildingAllows = BuildingAllows;
-            Food.RoleAllows = (r, a) => !RolesLimitSkills || Brief.MayDo(r.Role, a.Id);
-            Food.Skilled = (r, a) => !RolesLimitSkills || Brief.IsSkilledAt(r.Role, a.Id);
+            Food.RoleAllows = (r, a) => Brief.MayDo(r.Role, a.Id);
+            // A world with no roles limits nobody, so everyone works as well as a role holder would.
+            Food.Skilled = (r, a) => !Brief.IsSkill(a.Id) || Brief.IsSkilledAt(r.Role, a.Id);
             Food.MeetingAllows = MeetingAllows;
         }
 
@@ -129,49 +112,28 @@ namespace TinyCity.Simulation
 
         public RelationshipBook Relationships { get; } = new RelationshipBook();
 
-        /// <summary>Money, businesses and the ledger.</summary>
-        public TownEconomy Economy { get; }
-
         /// <summary>Conversations happening right now.</summary>
         public IReadOnlyList<ConversationSession> ActiveConversations => sessions;
 
         /// <summary>
-        /// Whether residents pause briefly for an AI suggestion before free-time activities. Set by the AI service
-        /// while Ollama is reachable; not saved. When false the town behaves exactly as the built-in routine.
+        /// Whether the AI is connected. Set by the AI service while Ollama is reachable; not saved. The AI makes every
+        /// choice: each time a resident is free they wait for it (there is no routine to fall back on), and
+        /// conversations wait for its lines. While it is off, nobody follows the rest of an AI plan.
         /// </summary>
         public bool AiDecisionsEnabled { get; set; }
 
         /// <summary>
-        /// Tiny City 2: the AI makes every choice. Each time a resident is free they wait for the AI (with no
-        /// deadline and no routine to fall back on), their options include eating, sleeping and work, nothing the
-        /// routine wants interrupts them, and conversations wait for AI lines instead of using small talk. The
-        /// world's rules (needs, health, money, opening hours) still apply. Off by default, so test towns and v1
-        /// behaviour keep the routine.
+        /// Owner, 5 November: hunger and thirst fall at this share of the usual rate, so food and drink matter as
+        /// things to trade without everyone starving within days.
         /// </summary>
-        public bool AiRunsEverything { get; set; }
+        public const double HungerThirstRate = 0.5;
 
-        /// <summary>
-        /// True while a living resident is waiting for an AI choice or a conversation for an AI line. In Tiny City 2
-        /// the game holds its clock while this is true, so nobody acts on stale thinking.
-        /// </summary>
-        /// <summary>
-        /// Tiny City 2 (owner, 5 November): hunger and thirst fall at this share of the usual rate, so food and drink
-        /// matter as things to trade without everyone starving within days.
-        /// </summary>
-        public const double HungerThirstRateWhenAiRuns = 0.5;
+        /// <summary>Owner, 5 November: nobody dies; neglect wears health down to this and no further.</summary>
+        public const double LowestHealth = 1;
 
-        /// <summary>Tiny City 2 (owner, 5 November): nobody dies; neglect wears health down to this and no further.</summary>
-        public const double LowestHealthWhenAiRuns = 1;
-
+        /// <summary>True while a living resident is waiting for an AI choice or a conversation for an AI line.</summary>
         public bool WaitingForAi =>
             Residents.Any(r => r.IsAlive && r.State == ResidentState.Deciding) || ActiveConversations.Any(c => c.AwaitingLine);
-
-        /// <summary>Game minutes a resident waits for an AI suggestion before the built-in routine decides.</summary>
-        public int DecisionWaitMinutes
-        {
-            get => decisionWaitMinutes;
-            set => decisionWaitMinutes = Math.Max(1, Math.Min(240, value));
-        }
 
         /// <summary>What has happened in the town, for the journal and life stories.</summary>
         public TownHistory History { get; } = new TownHistory();
@@ -181,22 +143,6 @@ namespace TinyCity.Simulation
         public Resident GetResident(string id) => residents.FirstOrDefault(r => r.Id == id);
 
         public ConversationSession GetConversation(string id) => sessions.FirstOrDefault(c => c.Id == id);
-
-        /// <summary>Adds a resident to a running town, e.g. a newcomer missing from an older save.</summary>
-        public void AddResident(Resident resident)
-        {
-            if (resident == null || GetResident(resident.Id) != null)
-            {
-                throw new ArgumentException("Residents need a unique id.");
-            }
-
-            if (!World.IsWalkable(resident.Location))
-            {
-                throw new ArgumentException($"Resident '{resident.Id}' is not on a walkable tile.");
-            }
-
-            residents.Add(resident);
-        }
 
         /// <summary>Puts back a conversation from a save. Used only by the save loader.</summary>
         internal void RestoreConversation(ConversationSession session, long nextConversationNumber)
@@ -246,12 +192,6 @@ namespace TinyCity.Simulation
 
         public void Tick()
         {
-            Economy.RestockOpening(Time);
-            if (Time.Weekday == Weekday.Monday && Time.MinuteOfDay == TownEconomy.WeeklyBillsMinute)
-            {
-                SettleWeek();
-            }
-
             StepFood();
             StepSketches();
             StepSleepingGround();
@@ -267,42 +207,14 @@ namespace TinyCity.Simulation
             }
 
             StepConversations();
-            if (AiRunsEverything)
-            {
-                Perceive();
-            }
-            else
-            {
-                StartChanceMeetings();
-            }
+            Perceive();
             Time = Time.AddMinutes(1);
         }
 
         private void Step(Resident r)
         {
             ActivityCatalog.TryGet(r.ActivityId, out var activity);
-            var working = r.State == ResidentState.Performing && activity?.Kind == ActivityKind.Work;
-            if (working)
-            {
-                r.UnpaidWorkMinutes++;
-            }
-            else if (r.UnpaidWorkMinutes > 0)
-            {
-                // The shift has ended, however it ended: pay for the time worked.
-                var paid = Economy.PayWages(r, Time);
-                if (paid > 0)
-                {
-                    r.AddLog(Time, $"Was paid {Money.Format(paid)} in wages");
-                }
-            }
-
-            NeedRules.ApplyMinute(r.Needs, r.Personality, r.State == ResidentState.Performing || r.State == ResidentState.Talking ? activity : null,
-                AiRunsEverything ? HungerThirstRateWhenAiRuns : 1.0);
-            if (!HasNeed(NeedType.Toilet))
-            {
-                r.Needs[NeedType.Toilet] = Needs.Max;
-            }
-
+            NeedRules.ApplyMinute(r.Needs, r.Personality, r.State == ResidentState.Performing || r.State == ResidentState.Talking ? activity : null, HungerThirstRate);
             StepHealth(r, activity);
 
             switch (r.State)
@@ -327,11 +239,6 @@ namespace TinyCity.Simulation
                         FinishActivity(r, activity);
                         r.ResetActivity();
                     }
-                    else if (!AiRunsEverything && Planner.ShouldInterrupt(r, activity, Time))
-                    {
-                        r.AddLog(Time, $"Stopped {activity.Verb}: something more important came up");
-                        r.ResetActivity();
-                    }
 
                     break;
 
@@ -352,44 +259,14 @@ namespace TinyCity.Simulation
                     break;
 
                 case ResidentState.Travelling when r.TargetResidentId != null:
-                    if (!AiRunsEverything && Planner.ShouldInterrupt(r, activity, Time))
-                    {
-                        r.AddLog(Time, "Changed plans on the way to a chat");
-                        r.ResetActivity();
-                        break;
-                    }
-
                     SeekPartner(r);
                     break;
 
                 case ResidentState.Travelling:
-                    if (!AiRunsEverything && Planner.ShouldInterrupt(r, activity, Time))
-                    {
-                        r.AddLog(Time, $"Changed plans on the way to {activity.Name.ToLowerInvariant()}");
-                        r.ResetActivity();
-                        break;
-                    }
-
                     Move(r, activity);
                     break;
 
-                case ResidentState.Deciding when AiRunsEverything:
-                    break;
-
                 case ResidentState.Deciding:
-                    var routine = Planner.Choose(r, Time);
-                    if (!AiDecisionsEnabled || (routine != null && !routine.IsDiscretionary))
-                    {
-                        r.ResetActivity();
-                        StartChoice(r, routine);
-                    }
-                    else if (Time.TotalMinutes >= r.DecisionDeadline)
-                    {
-                        r.AddLog(Time, "Went with the usual routine (no AI answer in time)");
-                        r.ResetActivity();
-                        StartChoice(r, routine);
-                    }
-
                     break;
 
                 default:
@@ -426,10 +303,10 @@ namespace TinyCity.Simulation
             var sameAction = options.Where(o => o.ActionId == actionId).ToList();
             if (sameAction.Count == 0)
             {
-                // Tiny City 2: small models often get the action's name wrong but the target right. If only one option
-                // uses that target, that is what they meant; otherwise asking again would only hold the clock.
-                var byTarget = AiRunsEverything ? options.Where(o => o.TargetId == targetId).ToList() : null;
-                if (byTarget == null || byTarget.Count != 1)
+                // Small models often get the action's name wrong but the target right. If only one option uses that
+                // target, that is what they meant; otherwise asking again would only hold the clock.
+                var byTarget = options.Where(o => o.TargetId == targetId).ToList();
+                if (byTarget.Count != 1)
                 {
                     return DecisionOutcome.InvalidAction;
                 }
@@ -441,12 +318,7 @@ namespace TinyCity.Simulation
             var option = sameAction.FirstOrDefault(o => o.TargetId == targetId);
             if (option == null)
             {
-                if (!AiRunsEverything)
-                {
-                    return DecisionOutcome.InvalidTarget;
-                }
-
-                // Tiny City 2: a target that doesn't go with the action means they want to do it but named the wrong
+                // A target that doesn't go with the action means they want to do it but named the wrong
                 // place, so they go to the nearest place it can be done.
                 option = sameAction.OrderBy(o => o.Distance).First();
             }
@@ -458,7 +330,7 @@ namespace TinyCity.Simulation
                 var problem = x == null || y == null ? "no spot was given" : GroundProblem(r, spot);
                 if (problem != null)
                 {
-                    var near = AiRunsEverything ? FreeGroundNear(r, 1, AI.PromptText.FreeSpotSearch) : new List<Location>();
+                    var near = FreeGroundNear(r, 1, AI.PromptText.FreeSpotSearch);
                     if (near.Count == 0)
                     {
                         r.AddLog(Time, $"Couldn't go {option.Activity.Verb} at ({x}, {y}): {problem}");
@@ -490,7 +362,7 @@ namespace TinyCity.Simulation
             r.ResetActivity();
             StartOption(r, option, why, "(AI)");
             var actions = new HashSet<string>(options.Select(o => o.ActionId));
-            r.SetPlan((then ?? Array.Empty<PlanStep>()).Where(step => step != null && actions.Contains(step.ActionId)).Take(PlanStepLimit - 1), Time.TotalMinutes + (AiRunsEverything ? PlanMinutesWhenAiRuns : PlanMinutes));
+            r.SetPlan((then ?? Array.Empty<PlanStep>()).Where(step => step != null && actions.Contains(step.ActionId)).Take(MaxPlanSteps - 1), Time.TotalMinutes + PlanMinutes);
             Conversations.AddRemark(r.Id, Time, say, option.ActionId);
             return DecisionOutcome.Applied;
         }
@@ -504,7 +376,7 @@ namespace TinyCity.Simulation
             }
             else if (option.Partner != null)
             {
-                StartChoice(r, new PlanChoice(option.Partner, why, PlanPriority.Leisure), sourceNote);
+                StartChoice(r, new PlanChoice(option.Partner, why), sourceNote);
             }
             else
             {
@@ -607,7 +479,10 @@ namespace TinyCity.Simulation
             return free;
         }
 
-        /// <summary>Gives up on an AI suggestion, for example after failed retries, and lets the routine decide now.</summary>
+        /// <summary>
+        /// Gives up on an AI answer, for example after failed retries. There is no routine to fall back on, so the
+        /// resident asks again with a fresh decision id.
+        /// </summary>
         public bool AbandonDecision(string residentId, long decisionId, string why)
         {
             var r = GetResident(residentId);
@@ -616,17 +491,8 @@ namespace TinyCity.Simulation
                 return false;
             }
 
-            if (AiRunsEverything)
-            {
-                // No routine to fall back on: ask again with a fresh decision id.
-                r.PendingDecisionId = nextDecisionId++;
-                r.AddLog(Time, $"Thought again ({TextRules.Clean(why, 60)})");
-                return true;
-            }
-
-            r.AddLog(Time, $"Went with the usual routine ({TextRules.Clean(why, 60)})");
-            r.ResetActivity();
-            StartChoice(r, Planner.Choose(r, Time));
+            r.PendingDecisionId = nextDecisionId++;
+            r.AddLog(Time, $"Thought again ({TextRules.Clean(why, 60)})");
             return true;
         }
 
@@ -761,7 +627,7 @@ namespace TinyCity.Simulation
         /// </summary>
         public IReadOnlyList<FreeTimeOption> FreeTimeOptionsFor(Resident r)
         {
-            var options = Planner.FreeTimeOptions(r, everything: AiRunsEverything).ToList();
+            var options = Planner.FreeTimeOptions(r).ToList();
             var relax = options[options.Count - 1];
             options.RemoveAt(options.Count - 1);
             options.AddRange(ChatPartners(r).Take(SocialRules.MaxChatOptions).Select(p => new FreeTimeOption(p.partner, p.distance)));
@@ -805,10 +671,10 @@ namespace TinyCity.Simulation
         }
 
         /// <summary>
-        /// Gives up on the AI for this line and uses built-in small talk now. Called by the AI service when an answer
-        /// is late in real time or unusable. Returns false if the line was already said or the request is stale.
+        /// Gives up on an AI line that was late in real time or unusable, and asks for it again with a fresh request
+        /// id (there is no built-in small talk). Returns false if the line was already said or the request is stale.
         /// </summary>
-        public bool UseSmallTalk(string conversationId, long lineRequestId)
+        public bool AskForLineAgain(string conversationId, long lineRequestId)
         {
             var session = GetConversation(conversationId);
             if (session == null || !session.AwaitingLine || session.LineRequestId != lineRequestId || lineRequestId <= 0)
@@ -816,70 +682,22 @@ namespace TinyCity.Simulation
                 return false;
             }
 
-            if (AiRunsEverything)
-            {
-                // Tiny City 2 has no built-in small talk: ask the AI for the line again.
-                session.LineRequestId = nextLineRequestId++;
-                return false;
-            }
-
-            AddSmallTalk(session);
+            session.LineRequestId = nextLineRequestId++;
             return true;
         }
 
         private void StartNextActivity(Resident r)
         {
-            if (AiRunsEverything)
-            {
-                if (AiDecisionsEnabled && TryFollowPlan(r))
-                {
-                    return;
-                }
-
-                // Wait for the AI, however long it takes; the game holds its clock meanwhile.
-                r.ResetActivity();
-                r.State = ResidentState.Deciding;
-                r.PendingDecisionId = nextDecisionId++;
-                r.DecisionDeadline = long.MaxValue;
-                r.Goal = "Thinking about what to do";
-                return;
-            }
-
-            var choice = Planner.Choose(r, Time);
-            var lonely = r.Needs[NeedType.Social] < NeedRules.ComfortThreshold(NeedType.Social, r.Personality);
-            var chatty = r.Personality.Sociable >= SocialRules.ChattyPersonality && choice?.Priority == PlanPriority.Leisure;
-            if ((choice == null || (choice.IsDiscretionary && choice.Activity.PrimaryNeed == NeedType.Social) || chatty)
-                && (lonely || chatty || choice == null))
-            {
-                var partner = ChatPartners(r).FirstOrDefault();
-                if (partner.partner != null)
-                {
-                    choice = lonely
-                        ? new PlanChoice(partner.partner, $"Social is getting low ({r.Needs[NeedType.Social]:0})", PlanPriority.Comfort)
-                        : new PlanChoice(partner.partner, $"Free time: fancies a chat with {partner.partner.FirstName}", PlanPriority.Leisure);
-                }
-            }
-
-            if (!AiDecisionsEnabled)
-            {
-                r.ClearPlan();
-            }
-            else if ((choice == null || choice.IsDiscretionary) && TryFollowPlan(r))
+            if (AiDecisionsEnabled && TryFollowPlan(r))
             {
                 return;
             }
 
-            if (AiDecisionsEnabled && (choice == null || choice.IsDiscretionary) && FreeTimeOptionsFor(r).Count >= 2)
-            {
-                r.ResetActivity();
-                r.State = ResidentState.Deciding;
-                r.PendingDecisionId = nextDecisionId++;
-                r.DecisionDeadline = Time.TotalMinutes + DecisionWaitMinutes;
-                r.Goal = "Thinking about what to do";
-                return;
-            }
-
-            StartChoice(r, choice);
+            // Wait for the AI, however long it takes.
+            r.ResetActivity();
+            r.State = ResidentState.Deciding;
+            r.PendingDecisionId = nextDecisionId++;
+            r.Goal = "Thinking about what to do";
         }
 
         internal void StartChoice(Resident r, PlanChoice choice, string sourceNote = null)
@@ -889,16 +707,6 @@ namespace TinyCity.Simulation
                 r.ResetActivity();
                 Relax(r, "Taking it easy");
                 return;
-            }
-
-            if (choice.Priority == PlanPriority.Bedtime || choice.Priority == PlanPriority.Work || choice.Priority == PlanPriority.Nap)
-            {
-                r.ClearPlan();
-            }
-
-            if (choice.Priority == PlanPriority.UrgentNeed && choice.Activity.PrimaryNeed != null)
-            {
-                RememberUrgentNeed(r, choice.Activity.PrimaryNeed.Value);
             }
 
             if (choice.TargetResident != null)
@@ -934,26 +742,14 @@ namespace TinyCity.Simulation
         /// <summary>People this resident could walk over to for a chat now: nearest first (ties by id).</summary>
         private IEnumerable<(Resident partner, int distance)> ChatPartners(Resident r)
         {
-            if (!SocialRules.CanJoinConversation(r, Time) && r.State != ResidentState.Idle && r.State != ResidentState.Deciding)
-            {
-                return Enumerable.Empty<(Resident, int)>();
-            }
-
             return residents
-                .Where(o => o != r && SocialRules.CanBeApproached(o, Time, IsOutdoors(o)) && !IsHeadingIndoors(o) && SocialRules.CooldownOver(Relationships, r.Id, o.Id, Time))
+                .Where(o => o != r && FreeToTalk(o) && SocialRules.CooldownOver(Relationships, r.Id, o.Id, Time))
                 .Select(o => (partner: o, distance: Pathfinder.Distance(r.Location, o.Location)))
                 .Where(p => p.distance != Pathfinder.Unreachable && p.distance <= SocialRules.MaxSeekDistance)
                 .OrderBy(p => p.distance)
                 .ThenBy(p => p.partner.Id, StringComparer.Ordinal)
                 .ToList();
         }
-
-        /// <summary>Someone walking to a place indoors will be gone before they can be caught, so nobody sets off after them.</summary>
-        private bool IsHeadingIndoors(Resident r) =>
-            r.State == ResidentState.Travelling && World.TryGetObject(r.TargetObjectId, out var target)
-            && World.TryGetMap(target.Location.MapId, out var map) && !map.IsExterior;
-
-        private bool IsOutdoors(Resident r) => World.TryGetMap(r.Location.MapId, out var map) && map.IsExterior;
 
         private static bool Near(Location a, Location b, int tiles) =>
             a.MapId == b.MapId && Math.Abs(a.Position.X - b.Position.X) + Math.Abs(a.Position.Y - b.Position.Y) <= tiles;
@@ -963,8 +759,7 @@ namespace TinyCity.Simulation
         {
             var other = GetResident(r.TargetResidentId);
             r.MinutesRemaining--;
-            var reachable = AiRunsEverything ? FreeToTalk(other) : SocialRules.CanBeApproached(other, Time, IsOutdoors(other));
-            if (other == null || !reachable || r.MinutesRemaining <= 0)
+            if (other == null || !FreeToTalk(other) || r.MinutesRemaining <= 0)
             {
                 r.AddLog(Time, other != null && other.State == ResidentState.Talking
                     ? $"Went to find {other.FirstName}, but they'd got talking with someone else"
@@ -975,10 +770,7 @@ namespace TinyCity.Simulation
 
             if (Near(r.Location, other.Location, 1))
             {
-                if (AiRunsEverything ? FreeToTalk(other) : SocialRules.CanJoinConversation(other, Time))
-                {
-                    StartConversation(r, other);
-                }
+                StartConversation(r, other);
 
                 return;
             }
@@ -998,34 +790,13 @@ namespace TinyCity.Simulation
             r.ResetActivity();
         }
 
-        /// <summary>Residents who pass close by while both are free may stop for a chat, if either could do with company.</summary>
-        private void StartChanceMeetings()
-        {
-            for (var i = 0; i < residents.Count; i++)
-            {
-                for (var j = i + 1; j < residents.Count; j++)
-                {
-                    var a = residents[i];
-                    var b = residents[j];
-                    if (Near(a.Location, b.Location, SocialRules.MeetingDistance)
-                        && (a.Needs[NeedType.Social] < SocialRules.MeetingSocialThreshold || b.Needs[NeedType.Social] < SocialRules.MeetingSocialThreshold)
-                        && SocialRules.CanJoinConversation(a, Time) && SocialRules.CanJoinConversation(b, Time)
-                        && SocialRules.CooldownOver(Relationships, a.Id, b.Id, Time))
-                    {
-                        var lonelier = a.Needs[NeedType.Social] <= b.Needs[NeedType.Social] ? a : b;
-                        StartConversation(lonelier, lonelier == a ? b : a);
-                    }
-                }
-            }
-        }
-
-        private void StartConversation(Resident initiator, Resident partner)
+        internal void StartConversation(Resident initiator, Resident partner)
         {
             var ab = Relationships.Get(initiator.Id, partner.Id);
             var ba = Relationships.Get(partner.Id, initiator.Id);
             var map = World.GetMap(initiator.Location.MapId);
-            var place = World.Objects.FirstOrDefault(o => Near(o.Location, initiator.Location, 1))?.Name ?? (map.IsExterior ? "city plaza" : map.Name);
-            var session = new ConversationSession(Conversations.ReserveId(), initiator.Id, partner.Id, Time, AiRunsEverything ? Math.Min(MaxLinesWhenAiRuns, SocialRules.LinesFor(initiator, partner, ab, ba)) : SocialRules.LinesFor(initiator, partner, ab, ba), place);
+            var place = World.Objects.FirstOrDefault(o => Near(o.Location, initiator.Location, 1))?.Name ?? "open land";
+            var session = new ConversationSession(Conversations.ReserveId(), initiator.Id, partner.Id, Time, SocialRules.LinesFor(initiator, partner, ab, ba), place);
             sessions.Add(session);
             foreach (var (me, other) in new[] { (initiator, partner), (partner, initiator) })
             {
@@ -1038,7 +809,7 @@ namespace TinyCity.Simulation
             }
         }
 
-        /// <summary>Moves each conversation along: asks for the next line, or uses small talk when the AI is off or late.</summary>
+        /// <summary>Moves each conversation along: asks the AI for the next line when it is due.</summary>
         private void StepConversations()
         {
             foreach (var session in sessions.ToList())
@@ -1052,11 +823,6 @@ namespace TinyCity.Simulation
                 if (session.AwaitingLine)
                 {
                     session.WaitedMinutes++;
-                    if (!AiRunsEverything && (!AiDecisionsEnabled || Time.TotalMinutes >= session.LineDeadline))
-                    {
-                        AddSmallTalk(session);
-                    }
-
                     continue;
                 }
 
@@ -1065,27 +831,9 @@ namespace TinyCity.Simulation
                     continue;
                 }
 
-                if (AiDecisionsEnabled || AiRunsEverything)
-                {
-                    session.AwaitingLine = true;
-                    session.LineRequestId = nextLineRequestId++;
-                    session.LineDeadline = Time.TotalMinutes + SocialRules.LineWaitMinutes;
-                }
-                else
-                {
-                    AddSmallTalk(session);
-                }
+                session.AwaitingLine = true;
+                session.LineRequestId = nextLineRequestId++;
             }
-        }
-
-        private void AddSmallTalk(ConversationSession session)
-        {
-            var speaker = GetResident(session.SpeakerId);
-            var listener = GetResident(session.ListenerId);
-            var firstMeeting = !Relationships.Get(speaker.Id, listener.Id).HaveMet;
-            var number = int.TryParse(session.Id.Substring(session.Id.LastIndexOf('-') + 1), out var n) ? n : 0;
-            var (text, tone) = SmallTalk.Line(speaker, listener, firstMeeting, number, session.Lines.Count, session.MaxLines, Time);
-            AddLine(session, text, tone, fromAi: false, topic: null, wantsToEnd: false);
         }
 
         private void AddLine(ConversationSession session, string text, ConversationTone tone, bool fromAi, string topic, bool wantsToEnd)
@@ -1177,60 +925,6 @@ namespace TinyCity.Simulation
             }
         }
 
-        /// <summary>Monday morning: pensions and other income arrive, rent goes out. Falling behind is remembered.</summary>
-        private void SettleWeek()
-        {
-            foreach (var r in residents.Where(r => r.IsAlive))
-            {
-                Economy.SettleWeek(r, Time);
-                if (r.WeeklyRentPence > 0)
-                {
-                    r.AddLog(Time, $"Paid the weekly rent ({Money.Format(r.WeeklyRentPence)})");
-                }
-
-                if (r.MoneyPence < 0)
-                {
-                    Memories.Add(r.Id, Time, MemoryType.Event, 5, $"I couldn't cover this week's rent; I owe {Money.Format(-r.MoneyPence)}.", tags: new[] { "money", "rent" });
-                }
-            }
-        }
-
-        /// <summary>Running desperately low on something is worth remembering, once per need per day.</summary>
-        private void RememberUrgentNeed(Resident r, NeedType need)
-        {
-            var tag = $"urgent-{need.ToString().ToLowerInvariant()}";
-            var dayStart = GameTime.FromDayAndTime(Time.Day, 0, 0);
-            if (Memories.HasMemoryWithTag(r.Id, tag, dayStart))
-            {
-                return;
-            }
-
-            Memories.Add(r.Id, Time, MemoryType.Event, 3, UrgentNeedSummary(need), tags: new[] { tag, need.ToString().ToLowerInvariant() });
-        }
-
-        /// <summary>
-        /// Whether residents have this need. With <see cref="AiRunsEverything"/> there is no toilet need (owner,
-        /// 6 November: removed from v2 entirely): it is kept full and never shown.
-        /// </summary>
-        public bool HasNeed(NeedType need) => !(AiRunsEverything && need == NeedType.Toilet);
-
-        private static string UrgentNeedSummary(NeedType need)
-        {
-            switch (need)
-            {
-                case NeedType.Hunger:
-                    return "I got so hungry I had to drop everything and eat.";
-                case NeedType.Thirst:
-                    return "I was parched and had to stop for a drink.";
-                case NeedType.Energy:
-                    return "I was so exhausted I could barely keep my eyes open.";
-                case NeedType.Toilet:
-                    return "I had to rush off to the toilet.";
-                default:
-                    return $"My {need.ToString().ToLowerInvariant()} got desperately low.";
-            }
-        }
-
         private void Move(Resident r, ActivityDefinition activity)
         {
             if (activity == null || !World.TryGetObject(r.TargetObjectId, out var target))
@@ -1271,7 +965,7 @@ namespace TinyCity.Simulation
 
         private void BeginPerforming(Resident r, ActivityDefinition activity)
         {
-            if (FoodMustBeMade && FoodRules.IsMadeFood(activity) && !StartFood(r, activity, out var noFood))
+            if (FoodRules.IsMadeFood(activity) && !StartFood(r, activity, out var noFood))
             {
                 r.AddLog(Time, $"Couldn't {activity.Name.ToLowerInvariant()}: {noFood}");
                 r.ResetActivity();
@@ -1290,30 +984,13 @@ namespace TinyCity.Simulation
                 r.CleanWater--;
             }
 
-            if (activity.ItemId != null || activity.UsesGroceries || activity.NeedsOpenBusiness)
-            {
-                World.TryGetObject(r.TargetObjectId, out var target);
-                var price = Economy.PriceOf(activity, target);
-                if (!Economy.Pay(r, activity, target, Time, out var reason))
-                {
-                    r.AddLog(Time, $"Couldn't {activity.Name.ToLowerInvariant()}: {reason}");
-                    r.ResetActivity();
-                    return;
-                }
-
-                if (price > 0)
-                {
-                    r.AddLog(Time, $"Paid {Money.Format(price)} ({activity.Name.ToLowerInvariant()})");
-                }
-            }
-
-            if (FoodMustBeMade && activity == ActivityCatalog.PlanBuilding)
+            if (activity == ActivityCatalog.PlanBuilding)
             {
                 StartSketch(r);
             }
 
             r.State = ResidentState.Performing;
-            r.MinutesRemaining = ActivityPlanner.DurationFor(r, activity, Time);
+            r.MinutesRemaining = activity.DurationMinutes;
             r.AddLog(Time, $"Started {activity.Verb}");
         }
     }

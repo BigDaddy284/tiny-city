@@ -5,12 +5,12 @@ using TinyCity.Simulation.Residents;
 
 namespace TinyCity.Simulation
 {
-    /// <summary>Tiny City 2's gathering and crafting: three tiers of wood and stone from the resource area, tools in three tiers made at a workbench.</summary>
+    /// <summary>Gathering and crafting: three tiers of wood and stone from the resource area, tools in three tiers made at a workbench.</summary>
     public sealed partial class TownSimulation
     {
         private void FinishCrafting(Resident r, ActivityDefinition activity)
         {
-            if (!FoodMustBeMade || !CraftingRules.IsCrafting(activity))
+            if (!CraftingRules.IsCrafting(activity))
             {
                 return;
             }

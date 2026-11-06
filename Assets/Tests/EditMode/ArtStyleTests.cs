@@ -18,7 +18,7 @@ namespace TinyCity.Tests.EditMode
     {
         private const string Locked = "The art style is locked (see Documentation/ArtStyle.md). Change it only with the owner's approval, then update this fingerprint.";
 
-        private static readonly TownWorld World = StarterTown.CreateWorld();
+        private static readonly TownWorld World = FlatLand.CreateWorld();
 
         [Test]
         public void Palette_IsLocked()
@@ -45,9 +45,6 @@ namespace TinyCity.Tests.EditMode
             Assert.That(IsoPainter.LeftLight, Is.EqualTo(0.84), Locked);
             Assert.That(IsoPainter.RightLight, Is.EqualTo(0.68), Locked);
             Assert.That(GroundArt.BaseDepth, Is.EqualTo(10), Locked);
-            Assert.That(InteriorArt.BackHeight, Is.EqualTo(64), Locked);
-            Assert.That(InteriorArt.FrontHeight, Is.EqualTo(12), Locked);
-            Assert.That(InteriorArt.InnerHeight, Is.EqualTo(40), Locked);
             Assert.That(Lighting.Twilight, Is.EqualTo(90), Locked);
         }
 
@@ -59,51 +56,11 @@ namespace TinyCity.Tests.EditMode
             {
                 foreach (var map in World.Maps)
                 {
-                    hash.Add(GroundArt.Render(map, PlaceStyle.Of(World, map), Palette.For(season)));
+                    hash.Add(GroundArt.Render(map, Palette.For(season)));
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(11728537815116734236UL), Locked);
-        }
-
-        [Test]
-        public void Buildings_AreLocked()
-        {
-            World.TryGetMap(StarterTown.VillageMapId, out var village);
-            var hash = new Fingerprint();
-            foreach (var season in Seasons())
-            {
-                foreach (var plan in BuildingArt.Find(World, village))
-                {
-                    var (body, glow) = BuildingArt.Render(plan, Palette.For(season));
-                    hash.Add(body);
-                    hash.Add(glow);
-                }
-            }
-
-            Assert.That(hash.Value, Is.EqualTo(16310498509764112866UL), Locked);
-        }
-
-        [Test]
-        public void RoomWalls_AreLocked()
-        {
-            var hash = new Fingerprint();
-            foreach (var map in World.Maps.Where(m => !m.IsExterior))
-            {
-                for (var y = 0; y < map.Height; y++)
-                {
-                    for (var x = 0; x < map.Width; x++)
-                    {
-                        var wall = InteriorArt.Render(map, PlaceStyle.Of(World, map), x, y);
-                        if (wall != null)
-                        {
-                            hash.Add(wall);
-                        }
-                    }
-                }
-            }
-
-            Assert.That(hash.Value, Is.EqualTo(8329114492580399452UL), Locked);
+            Assert.That(hash.Value, Is.EqualTo(12194793777946346977UL), Locked);
         }
 
         [Test]
@@ -124,12 +81,10 @@ namespace TinyCity.Tests.EditMode
                     furniture.Add(FurnitureArt.Render(type, 1, palette, outdoors: true));
                     furniture.Add(FurnitureArt.Render(type, 2, palette, outdoors: false));
                 }
-
-                furniture.Add(FurnitureArt.Render(ObjectType.GatheringSpot, 2, palette, outdoors: false, PlaceKind.Bar));
             }
 
             Assert.That(trees.Value, Is.EqualTo(16681692374567243500UL), "Trees. " + Locked);
-            Assert.That(furniture.Value, Is.EqualTo(13123440249165353721UL), "Furniture. " + Locked);
+            Assert.That(furniture.Value, Is.EqualTo(9574322580321607293UL), "Furniture. " + Locked);
         }
 
         [Test]
@@ -137,7 +92,7 @@ namespace TinyCity.Tests.EditMode
         {
             // The first ten; the five who came when the city grew have a fingerprint of their own below.
             var hash = new Fingerprint();
-            foreach (var resident in StarterTown.CreateResidents(World).Take(10))
+            foreach (var resident in FlatLand.CreateResidents().Take(10))
             {
                 var look = ResidentLook.For(resident.Id, resident.AgeYears);
                 foreach (var pose in ResidentArtTests.AllPoses())
@@ -151,14 +106,14 @@ namespace TinyCity.Tests.EditMode
                 hash.Add(MoodArt.Icon(mood));
             }
 
-            Assert.That(hash.Value, Is.EqualTo(14105420834406874446UL), "Residents. " + Locked);
+            Assert.That(hash.Value, Is.EqualTo(2633782041813708967UL), "Residents. " + Locked);
         }
 
         [Test]
         public void TheFiveNewerResidents_AreLocked()
         {
             var hash = new Fingerprint();
-            foreach (var resident in StarterTown.CreateResidents(World).Skip(10))
+            foreach (var resident in FlatLand.CreateResidents().Skip(10).Take(5))
             {
                 var look = ResidentLook.For(resident.Id, resident.AgeYears);
                 foreach (var pose in ResidentArtTests.AllPoses())
@@ -167,7 +122,7 @@ namespace TinyCity.Tests.EditMode
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(12305934255016278853UL), "Marcus, Lola, Danny, Ruby and Walter. " + Locked);
+            Assert.That(hash.Value, Is.EqualTo(15752147328595194006UL), "Marcus, Lola, Danny, Ruby and Walter. " + Locked);
         }
 
         [Test]
