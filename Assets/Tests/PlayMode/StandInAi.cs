@@ -30,7 +30,7 @@ namespace TinyCity.Tests.PlayMode
                 var urgent = ActivityPlanner.MostUrgentNeed(r);
                 var pick = urgent == null ? null : options.FirstOrDefault(o => o.Activity?.PrimaryNeed == urgent);
                 pick = pick ?? options[(int)(Chance.Roll(r.Id, sim.Time.TotalMinutes, 7) * options.Count) % options.Count];
-                sim.ApplyDecision(r.Id, r.PendingDecisionId, pick.ActionId, pick.TargetId, "a stand-in choice", null);
+                sim.ApplyDecision(r.Id, r.PendingDecisionId, pick.ActionId, pick.TargetId, "a stand-in choice");
             }
         }
     }

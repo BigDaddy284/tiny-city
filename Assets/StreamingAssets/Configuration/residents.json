@@ -4,7 +4,7 @@
   "roles": [
     {
       "name": "farmer",
-      "about": "You grow the food everyone depends on, and only a farmer can. You choose where to dig a patch, plant it, water it on different days until it is ready and pick it, and you plan ahead so there is always something growing. A hoe makes each harvest bigger.",
+      "about": "You grow the food everyone depends on, and only a farmer can. You plant squares of the farming patch, the only soil where crops grow, water them on different days until they are ready and pick them, and you plan ahead so there is always something growing. A hoe makes each harvest bigger.",
       "can": [
         "plant-crops",
         "water-crops",

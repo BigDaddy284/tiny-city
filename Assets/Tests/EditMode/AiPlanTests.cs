@@ -27,7 +27,7 @@ namespace TinyCity.Tests.EditMode
         }
 
         private static void Relax(TownSimulation sim, Resident r, params PlanStep[] then) =>
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "Feet up", string.Empty, then), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "Feet up", then), Is.EqualTo(DecisionOutcome.Applied));
 
         [Test]
         public void LaterSteps_StartWithoutAskingAgain()

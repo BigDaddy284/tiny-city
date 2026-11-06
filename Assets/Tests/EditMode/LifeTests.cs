@@ -47,7 +47,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(edith.Needs[NeedType.Hunger], Is.EqualTo(needs));
             Assert.That(edith.Location, Is.EqualTo(location));
             Assert.That(sim.Conversations.All.Any(c => c.Participants.Contains(edith.Id) && c.Started.TotalMinutes > edith.DiedAt.Value.TotalMinutes), Is.False);
-            Assert.That(sim.ApplyDecision(edith.Id, 1, "relax", "none", "x", null), Is.EqualTo(DecisionOutcome.NotAlive));
+            Assert.That(sim.ApplyDecision(edith.Id, 1, "relax", "none", "x"), Is.EqualTo(DecisionOutcome.NotAlive));
         }
 
         [Test]

@@ -200,7 +200,7 @@ namespace TinyCity.Simulation
             }
 
             Meeting.Turns.Remove(residentId);
-            var clean = TextRules.Clean(said, MeetingSayLength);
+            var clean = Social.PrivateTraits.WithoutTraitTalk(TextRules.Clean(said, MeetingSayLength), residents);
             if (clean.Length > 0)
             {
                 Meeting.Said.Add((residentId, clean));

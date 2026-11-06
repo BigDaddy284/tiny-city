@@ -23,6 +23,9 @@ namespace TinyCity.Simulation.Health
 
         private static readonly NeedType[] VitalNeeds = { NeedType.Hunger, NeedType.Thirst, NeedType.Hygiene };
 
+        /// <summary>Whether going without this need wears health down.</summary>
+        public static bool IsVital(NeedType need) => Array.IndexOf(VitalNeeds, need) >= 0;
+
         /// <summary>
         /// One minute of health: neglected needs wear it down, and otherwise it slowly recovers. Returns true when it has fallen to <paramref name="lowest"/>, where it stops.
         /// </summary>

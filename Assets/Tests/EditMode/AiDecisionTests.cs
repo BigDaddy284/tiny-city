@@ -22,18 +22,18 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void ValidSuggestion_IsApplied_WithReasonAndSpeech()
+        public void ValidSuggestion_IsApplied_WithItsReason_AndNothingSaid()
         {
             var sim = DecidingTown(out var r);
 
-            var outcome = sim.ApplyDecision(r.Id, r.PendingDecisionId, "catch-fish", Fishing, "  Fish for supper\n", "\"Supper is in that pond!\"");
+            var outcome = sim.ApplyDecision(r.Id, r.PendingDecisionId, "catch-fish", Fishing, "  Fish for supper\n");
 
             Assert.That(outcome, Is.EqualTo(DecisionOutcome.Applied));
             Assert.That(r.ActivityId, Is.EqualTo("catch-fish"));
             Assert.That(r.TargetObjectId, Is.EqualTo(Fishing));
             Assert.That(r.Goal, Is.EqualTo("Fish for supper"));
             Assert.That(r.GoalSource, Is.EqualTo(DecisionSource.Ai));
-            Assert.That(sim.Conversations.LastLineBy(r.Id).Text, Is.EqualTo("Supper is in that pond!"));
+            Assert.That(sim.Conversations.All, Is.Empty, "a choice says nothing out loud: bubbles are only for chats");
             Assert.That(r.Log.Last().Text, Does.EndWith("(AI)"));
         }
 
@@ -42,7 +42,7 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = DecidingTown(out var r);
 
-            var outcome = sim.ApplyDecision(r.Id, r.PendingDecisionId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "Just resting my feet", string.Empty);
+            var outcome = sim.ApplyDecision(r.Id, r.PendingDecisionId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "Just resting my feet");
 
             Assert.That(outcome, Is.EqualTo(DecisionOutcome.Applied));
             Assert.That(r.State, Is.EqualTo(ResidentState.Waiting));
@@ -64,7 +64,7 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = DecidingTown(out var r);
 
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, action, target, "why not", "hi"), Is.Not.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, action, target, "why not"), Is.Not.EqualTo(DecisionOutcome.Applied));
             Assert.That(r.State, Is.EqualTo(ResidentState.Deciding), "a rejected suggestion changes nothing");
             Assert.That(sim.Conversations.All, Is.Empty);
         }
@@ -74,10 +74,10 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = DecidingTown(out var r);
             var oldId = r.PendingDecisionId;
-            sim.ApplyDecision(r.Id, oldId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "first answer", string.Empty);
+            sim.ApplyDecision(r.Id, oldId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "first answer");
 
-            Assert.That(sim.ApplyDecision(r.Id, oldId, "catch-fish", Fishing, "late", string.Empty), Is.EqualTo(DecisionOutcome.Stale));
-            Assert.That(sim.ApplyDecision("res-nobody", 1, "catch-fish", Fishing, "?", string.Empty), Is.EqualTo(DecisionOutcome.UnknownResident));
+            Assert.That(sim.ApplyDecision(r.Id, oldId, "catch-fish", Fishing, "late"), Is.EqualTo(DecisionOutcome.Stale));
+            Assert.That(sim.ApplyDecision("res-nobody", 1, "catch-fish", Fishing, "?"), Is.EqualTo(DecisionOutcome.UnknownResident));
         }
 
         [Test]
@@ -87,17 +87,16 @@ namespace TinyCity.Tests.EditMode
             var id = r.PendingDecisionId;
             r.IsAlive = false;
 
-            Assert.That(sim.ApplyDecision(r.Id, id, "catch-fish", Fishing, "?", string.Empty), Is.EqualTo(DecisionOutcome.NotAlive));
+            Assert.That(sim.ApplyDecision(r.Id, id, "catch-fish", Fishing, "?"), Is.EqualTo(DecisionOutcome.NotAlive));
         }
 
         [Test]
         public void LongReasons_AreShortened()
         {
             var sim = DecidingTown(out var r);
-            sim.ApplyDecision(r.Id, r.PendingDecisionId, "catch-fish", Fishing, string.Concat(Enumerable.Repeat("very ", 100)), new string('a', 500));
+            sim.ApplyDecision(r.Id, r.PendingDecisionId, "catch-fish", Fishing, string.Concat(Enumerable.Repeat("very ", 100)));
 
             Assert.That(r.Goal.Length, Is.LessThanOrEqualTo(TownSimulation.MaxReasonLength));
-            Assert.That(sim.Conversations.LastLineBy(r.Id).Text.Length, Is.LessThanOrEqualTo(160));
         }
     }
 }

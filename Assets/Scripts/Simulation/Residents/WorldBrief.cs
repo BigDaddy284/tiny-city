@@ -64,7 +64,7 @@ namespace TinyCity.Simulation.Residents
             "You and the others have come to an empty stretch of open land to start a life together from nothing. There are no shops, no houses and no one in charge, and no money: nobody has any, so to get what you need from others you trade, swapping food, materials, tools and help. Each of you can only do the work of the role you take up; without one you can only drink and wash in the dirty pond and catch the odd fish by hand to eat raw, so you need each other. A role can only be changed by a majority vote at the weekly meeting. Look after yourself first: hunger, thirst, tiredness and dirt wear your health down and leave you weak and miserable, so see to them before anything else. Nothing lasts: food goes off within days, tools wear out and break, and crops only grow if someone plants and waters them, so take what you need, keep some back and replace what you use up. Things change: seasons turn, supplies run low and others make their own choices, so what worked yesterday may not work today. Other people matter: working with them, trading with them or competing with them all cost something and can gain something, and how you treat each other decides whether you all last. When something isn't working, don't keep repeating it: try another way until you find one that does.",
             new[]
             {
-                new RoleOption("farmer", "You grow the food everyone depends on, and only a farmer can. You choose where to dig a patch, plant it, water it on different days until it is ready and pick it, and you plan ahead so there is always something growing. A hoe makes each harvest bigger.",
+                new RoleOption("farmer", "You grow the food everyone depends on, and only a farmer can. You plant squares of the farming patch, the only soil where crops grow, water them on different days until they are ready and pick them, and you plan ahead so there is always something growing. A hoe makes each harvest bigger.",
                     skills: new[] { "plant-crops", "water-crops", "harvest" }),
                 new RoleOption("fisher", "You bring in fish from the pond. Anyone can catch the odd fish by hand, but you catch far more, and a rod means more still. Fish keep only a couple of days, so you catch what is needed and share or trade the rest.",
                     skills: new[] { "catch-fish" }),
@@ -115,10 +115,14 @@ namespace TinyCity.Simulation.Residents
         /// <summary>The words towns started before 6 November were told, which said anyone could pick up branches and stones.</summary>
         private const string OldHandGatheringWords = "eat raw fish and pick up fallen branches and loose stones";
 
+        // Owner, 6 November: crops grow only in the farming patch, so an older farmer no longer chooses where to dig.
+        private const string OldFarmerWords = "You choose where to dig a patch, plant it, water it on different days until it is ready and pick it,";
+        private const string NewFarmerWords = "You plant squares of the farming patch, the only soil where crops grow, water them on different days until they are ready and pick them,";
+
         /// <summary>
         /// A brief saved by an older town brought up to date: a role with a shipped role's name gets that role's skills
         /// it is missing (fallen branches went to the lumberjack and loose stones to the miner on 6 November), and the
-        /// old words saying anyone could pick them up are replaced.
+        /// old words saying anyone could pick them up, and the farmer's old words about digging anywhere, are replaced.
         /// </summary>
         public WorldBrief UpgradedFromOlderSave()
         {
@@ -127,7 +131,8 @@ namespace TinyCity.Simulation.Residents
             {
                 var same = shipped.Find(r.Name);
                 var missing = same == null ? new List<string>() : same.Skills.Where(id => !r.Skills.Contains(id)).ToList();
-                return missing.Count == 0 ? r : new RoleOption(r.Name, r.About, r.CanTax, r.Skills.Concat(missing));
+                var about = r.About.Replace(OldFarmerWords, NewFarmerWords);
+                return missing.Count == 0 && about == r.About ? r : new RoleOption(r.Name, about, r.CanTax, r.Skills.Concat(missing));
             });
             return new WorldBrief(Text.Replace(OldHandGatheringWords, "catch the odd fish by hand to eat raw"), roles);
         }

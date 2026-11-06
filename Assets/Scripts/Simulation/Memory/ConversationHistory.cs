@@ -28,7 +28,8 @@ namespace TinyCity.Simulation.Memory
         {
             for (var i = records.Count - 1; i >= 0; i--)
             {
-                var line = records[i].Lines.LastOrDefault(l => l.SpeakerId == residentId);
+                // Remarks (thoughts muttered alone, from older saves) are never shown as speech: only chats are.
+                var line = records[i].Kind == ConversationKind.Remark ? null : records[i].Lines.LastOrDefault(l => l.SpeakerId == residentId);
                 if (line != null)
                 {
                     return line;

@@ -65,7 +65,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(r.ActivityId, Is.EqualTo("catch-fish"));
             Assert.That(r.GoalSource, Is.EqualTo(DecisionSource.Ai));
             Assert.That(r.Goal, Is.EqualTo("Fish for supper"));
-            Assert.That(sim.Conversations.LastLineBy(r.Id).Text, Is.EqualTo("Supper is in that pond!"));
+            Assert.That(sim.Conversations.All, Is.Empty, "nothing said out loud");
             Assert.That(ai.Queue.Stats.Accepted, Is.EqualTo(2), "the day plan, then the choice");
 
             var prompt = transport.Calls.Last(c => c.Body.Contains("Choose one option")).Body;

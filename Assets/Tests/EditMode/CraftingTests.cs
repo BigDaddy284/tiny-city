@@ -37,7 +37,7 @@ namespace TinyCity.Tests.EditMode
             var option = Option(sim, activity);
             Assert.That(option, Is.Not.Null, $"{activity.Id} should be an option");
             // Planting is done on open ground: the crop field by the cross path.
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Crafting", "Right then", null, 20, 23), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Crafting", null, 20, 23), Is.EqualTo(DecisionOutcome.Applied));
             for (var i = 0; i < 600 && r.State != ResidentState.Deciding; i++)
             {
                 sim.Tick();
