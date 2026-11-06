@@ -84,7 +84,7 @@ namespace TinyCity.Tests.EditMode
 
             for (var i = 0; i < 60; i++)
             {
-                HealthRules.ApplyMinute(r, resting: false, lowest: 0);
+                HealthRules.ApplyMinute(r, lowest: 0);
             }
 
             Assert.That(r.Health, Is.EqualTo(80 - (2 * HealthRules.NeglectDrainPerHour)).Within(0.01));
@@ -93,10 +93,10 @@ namespace TinyCity.Tests.EditMode
             r.Needs[NeedType.Thirst] = 90;
             for (var i = 0; i < 60; i++)
             {
-                HealthRules.ApplyMinute(r, resting: true, lowest: 0);
+                HealthRules.ApplyMinute(r, lowest: 0);
             }
 
-            Assert.That(r.Health, Is.EqualTo(80 - (2 * HealthRules.NeglectDrainPerHour) + HealthRules.RestingRecoveryPerHour).Within(0.01));
+            Assert.That(r.Health, Is.EqualTo(80 - (2 * HealthRules.NeglectDrainPerHour) + HealthRules.RecoveryPerHour).Within(0.01));
         }
 
         [Test]

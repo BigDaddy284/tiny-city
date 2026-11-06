@@ -49,9 +49,9 @@ namespace TinyCity.Simulation
 
         private long nextReactionId = 1;
 
-        /// <summary>Someone who can be walked up to and talked to: alive, not already chatting or asleep.</summary>
+        /// <summary>Someone who can be walked up to and talked to: alive, not already chatting.</summary>
         public static bool FreeToTalk(Resident r) =>
-            r != null && r.IsAlive && r.State != ResidentState.Talking && r.ActivityId != ActivityCatalog.Sleep.Id;
+            r != null && r.IsAlive && r.State != ResidentState.Talking;
 
         /// <summary>Up and about and free to notice someone and change what they're doing.</summary>
         public static bool CanReact(Resident r) =>

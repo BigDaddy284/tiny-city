@@ -16,15 +16,6 @@ namespace TinyCity.Simulation
         /// <summary>The crops and food rules: residents eat only what they grow, catch and cook.</summary>
         public FoodSupply Food { get; } = new FoodSupply();
 
-        /// <summary>the spots on bare ground where people sleep, each gone once its sleeper gets up.</summary>
-        public SleepingGround Sleeping { get; } = new SleepingGround();
-
-        private void StepSleepingGround()
-        {
-            Sleeping.Prune(spot => residents.Any(o => o.Id == spot.SleeperId && o.IsAlive && o.TargetObjectId == spot.Id
-                && (o.State == ResidentState.Travelling || o.State == ResidentState.Performing)));
-        }
-
         private void StepFood()
         {
             var spoilNow = Time.MinuteOfDay == FoodRules.SpoilMinute;

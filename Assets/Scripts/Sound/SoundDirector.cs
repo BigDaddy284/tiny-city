@@ -99,7 +99,7 @@ namespace TinyCity.Sound
             return cues;
         }
 
-        /// <summary>The sound of what a resident is doing, or null for quiet things like sleeping and reading.</summary>
+        /// <summary>The sound of what a resident is doing, or null for quiet things.</summary>
         public static SoundEffect? EffectFor(TownWorld world, Resident r)
         {
             var id = r.ActivityId;

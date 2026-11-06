@@ -24,7 +24,7 @@ namespace TinyCity.Simulation.Residents
 
     /// <summary>
     /// Tiny City 2: the broad strokes of a resident's day, written by the AI when they start their day, as the
-    /// generative agents do. It only guides their choices (it goes into each decision and their bedtime
+    /// generative agents do. It only guides their choices (it goes into each decision and their evening
     /// reflection); every action is still chosen and checked one at a time. Like an unanswered decision it is not
     /// saved: after loading, the resident plans the rest of the day again.
     /// </summary>

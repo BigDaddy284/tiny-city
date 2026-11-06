@@ -61,7 +61,7 @@
     },
     {
       "name": "builder",
-      "about": "Only you know masonry and building. You plan and build what the group needs: shelters with beds, stoves, stalls, benches and crafting benches. You can ask others to bring materials, and you think about where things should go.",
+      "about": "Only you know masonry and building. You plan and build what the group needs: shelters, stoves, stalls, benches and crafting benches. You can ask others to bring materials, and you think about where things should go.",
       "can": [
         "plan-building",
         "build"

@@ -20,24 +20,6 @@ namespace TinyCity.Art
             var accent = Palette.Accents[variant % Palette.Accents.Length];
             switch (type)
             {
-                case ObjectType.Bed when outdoors:
-                    // A camp bed (Tiny City 2's starter camp): a mat and bedroll under an awning on two poles.
-                    p.Box(0.04, 0.06, 0, 0.92, 0.88, 2, Palette.Ebony);
-                    p.Box(0.18, 0.2, 2, 0.66, 0.66, 5, accent);
-                    p.Top(0.18, 0.2, 7, 0.66, 0.66, (s, t) => ((int)(s * 4) + (int)(t * 4)) % 2 == 0 ? accent : accent.Mix(Palette.White, 0.35));
-                    p.Box(0.22, 0.22, 7, 0.16, 0.6, 3, Palette.White);
-                    p.Post(0.08, 0.1, 0, 0.03, 30, Palette.WoodDark);
-                    p.Post(0.08, 0.9, 0, 0.03, 30, Palette.WoodDark);
-                    p.Box(0.02, 0.04, 28, 0.36, 0.92, 3, accent.Shade(0.7));
-                    break;
-                case ObjectType.Bed:
-                    p.Box(0.08, 0.12, 0, 0.84, 0.76, 9, Palette.Wood);
-                    p.Box(0.04, 0.1, 0, 0.12, 0.8, 24, Palette.WoodDark);
-                    p.Box(0.16, 0.16, 9, 0.74, 0.68, 4, Palette.White);
-                    p.Box(0.2, 0.22, 13, 0.18, 0.56, 4, Palette.White.Shade(1.02));
-                    p.Box(0.42, 0.14, 9, 0.52, 0.72, 6, accent);
-                    p.Top(0.42, 0.14, 15, 0.52, 0.72, (s, t) => ((int)(s * 4) + (int)(t * 4)) % 2 == 0 ? accent : accent.Mix(Palette.White, 0.45));
-                    break;
                 case ObjectType.Kitchen:
                     p.Box(0.08, 0.2, 0, 0.84, 0.7, 20, Palette.White);
                     p.LeftWall(0.2, 0.9, 3, 0.6, 12, (s, t) => s < 0.05 || s > 0.95 || t < 0.08 || t > 0.92 ? Palette.Metal : Palette.Iron);
@@ -163,12 +145,6 @@ namespace TinyCity.Art
                     }
 
                     SnowOn(p, palette, outdoors, 0.62, 0.46, 6, 0.18, 0.18);
-                    break;
-                case ObjectType.SleepingSpot:
-                    // Tiny City 2's sleeping spot: a coat spread on the bare ground with a rolled-up bundle for a pillow.
-                    p.Box(0.16, 0.14, 0, 0.7, 0.72, 1.5, accent.Shade(0.8));
-                    p.Top(0.16, 0.14, 1.5, 0.7, 0.72, (s, t) => s < 0.06 || s > 0.94 || t < 0.06 || t > 0.94 ? accent.Shade(0.6) : accent.Shade(0.8));
-                    p.Box(0.2, 0.22, 1.5, 0.16, 0.56, 4, Palette.Ebony.Mix(Palette.White, 0.25));
                     break;
                 case ObjectType.BuildPlot:
                     // Tiny City 2's plot marker: a post with a sign board and a neon strip, and two corner stakes.

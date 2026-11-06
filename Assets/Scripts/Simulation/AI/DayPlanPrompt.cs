@@ -9,7 +9,7 @@ namespace TinyCity.Simulation.AI
 {
     /// <summary>
     /// when a resident starts their day they plan it in broad strokes, hour by hour, as the
-    /// generative agents do. The plan then goes into every choice they make that day and their bedtime reflection.
+    /// generative agents do. The plan then goes into every choice they make that day and their evening reflection.
     /// </summary>
     public static class DayPlanPrompt
     {
@@ -33,10 +33,8 @@ namespace TinyCity.Simulation.AI
             var map = sim.World.GetMap(r.Location.MapId);
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)} and you are starting your day in {map.Name}.");
             sb.AppendLine($"How you feel: {PromptText.Feelings(r, sim)}.");
-            sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
             sb.AppendLine(PromptText.NoMoney);
             PromptText.AppendFood(sb, sim, r);
-            sb.AppendLine("Nobody has a bed of their own: you sleep wherever you choose, in any bed nobody is using, on a bench, or on the bare ground.");
 
             var cues = new List<string> { "plan", $"day-{day - 1}", r.Location.MapId };
             PromptText.AppendMemories(sb, sim.Memories.Recall(r.Id, sim.Time, cues, MemoryCount, sim.Memories.FocusOf(r.Id)));
@@ -61,7 +59,7 @@ namespace TinyCity.Simulation.AI
                 sb.AppendLine("Things you can do in the city: " + string.Join("; ", places) + ".");
             }
 
-            sb.AppendLine("Nobody decides for you: if you don't eat, sleep, wash or go to work, nobody will do it for you.");
+            sb.AppendLine("Nobody decides for you: if you don't eat, drink or wash, nobody will do it for you.");
             var roles = sim.Brief.Roles;
             if (roles.Count > 0)
             {
@@ -70,7 +68,7 @@ namespace TinyCity.Simulation.AI
                 sb.AppendLine(r.Role == null ? "You haven't taken up a role." : $"You have chosen to be the {r.Role}.");
             }
 
-            sb.Append($"Plan the rest of your day, from now until you go to bed, in broad strokes: up to {AskedEntries} entries in \"plan\", ")
+            sb.Append($"Plan the rest of your day, from now until late evening, in broad strokes: up to {AskedEntries} entries in \"plan\", ")
               .Append("each with \"hour\" (the hour it starts, 0 to 23 on a 24-hour clock) and \"plan\" (what you mean to do, under 12 words), in order.");
             if (roles.Count > 0)
             {

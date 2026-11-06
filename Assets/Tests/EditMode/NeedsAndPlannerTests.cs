@@ -40,29 +40,6 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Sleeping_RestoresEnergy_AndSlowsHunger()
-        {
-            var asleep = new Needs(40);
-            var awake = new Needs(40);
-            for (var i = 0; i < 60; i++)
-            {
-                NeedRules.ApplyMinute(asleep, Average, ActivityCatalog.Sleep);
-                NeedRules.ApplyMinute(awake, Average, null);
-            }
-
-            Assert.That(asleep[NeedType.Energy], Is.EqualTo(52.5).Within(1e-9));
-            Assert.That(asleep[NeedType.Hunger], Is.GreaterThan(awake[NeedType.Hunger]));
-        }
-
-        [Test]
-        public void ActivePeople_NeedExerciseSooner()
-        {
-            Assert.That(
-                NeedRules.DecayPerHour(NeedType.Exercise, new Personality(1, 0.5, 0.5, 0.5)),
-                Is.GreaterThan(NeedRules.DecayPerHour(NeedType.Exercise, new Personality(0, 0.5, 0.5, 0.5))));
-        }
-
-        [Test]
         public void SameStartingNeeds_GiveIdenticalResults()
         {
             var a = new Needs(70);

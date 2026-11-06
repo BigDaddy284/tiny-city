@@ -86,16 +86,13 @@ namespace TinyCity.Simulation.Activities
     /// </summary>
     public sealed class ActivityPlanner
     {
-        /// <summary>Energy a resident must regain before getting up outside sleeping hours.</summary>
-        public const double RestedEnergy = 70;
-
         /// <summary>Each person already using an object makes it count as this many steps further away.</summary>
         public const int CrowdedSteps = 8;
 
         /// <summary>At most this many objects are offered for each activity, nearest first.</summary>
         private const int MaxTargetsPerActivity = 2;
 
-        private static readonly NeedType[] UrgentNeeds = { NeedType.Thirst, NeedType.Hunger, NeedType.Energy };
+        private static readonly NeedType[] UrgentNeeds = { NeedType.Thirst, NeedType.Hunger };
 
         private readonly TownWorld world;
         private readonly Pathfinder pathfinder;
@@ -162,32 +159,7 @@ namespace TinyCity.Simulation.Activities
 
         /// <summary>Whether the resident can use this object for this activity now.</summary>
         public bool CanDo(Resident resident, ActivityDefinition activity, WorldObject obj, GameTime time) =>
-            activity.CanUse(obj) && IsAvailableTo(resident, obj) && SuitsBench(resident, activity, obj) && FoodSupply.Allows(Food, resident, activity, obj, time.Day);
-
-        /// <summary>Anyone may sleep on a bench nobody else is using, and nobody sits down on a bench someone is sleeping on.</summary>
-        private bool SuitsBench(Resident resident, ActivityDefinition activity, WorldObject obj)
-        {
-            if (obj.Type != ObjectType.Bench)
-            {
-                return true;
-            }
-
-            if (activity == ActivityCatalog.Sleep)
-            {
-                return UsersOf(resident, obj) == 0;
-            }
-
-            foreach (var other in residents)
-            {
-                if (other != resident && other.IsAlive && other.TargetObjectId == obj.Id && other.ActivityId == ActivityCatalog.Sleep.Id
-                    && (other.State == ResidentState.Travelling || other.State == ResidentState.Performing))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
+            activity.CanUse(obj) && IsAvailableTo(resident, obj) && FoodSupply.Allows(Food, resident, activity, obj, time.Day);
 
         /// <summary>
         /// Every activity the resident could start right now, whatever their needs, in a fixed order: each at up to
@@ -226,11 +198,6 @@ namespace TinyCity.Simulation.Activities
 
         public bool IsComplete(Resident resident, ActivityDefinition activity, GameTime time)
         {
-            if (activity.Kind == ActivityKind.Sleep)
-            {
-                return !SleepSchedule.IsSleepTime(resident, time) && resident.Needs[NeedType.Energy] >= RestedEnergy;
-            }
-
             return resident.MinutesRemaining <= 0
                 || (activity.PrimaryNeed != null && resident.Needs[activity.PrimaryNeed.Value] >= Needs.Max - 0.5);
         }

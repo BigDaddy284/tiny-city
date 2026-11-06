@@ -47,7 +47,7 @@ namespace TinyCity.Art
 
     /// <summary>
     /// A request for a replacement picture, e.g. a PNG the player dropped into the art folder.
-    /// <see cref="Key"/> names the picture (such as <c>tree-winter</c> or <c>object-bed</c>); the footprint says how many
+    /// <see cref="Key"/> names the picture (such as <c>tree-winter</c> or <c>object-bench</c>); the footprint says how many
     /// tiles it covers, which fixes where it stands (see <see cref="MapArt.AnchorFor"/>).
     /// </summary>
     public readonly struct ArtRequest

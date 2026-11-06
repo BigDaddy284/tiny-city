@@ -97,14 +97,8 @@ namespace TinyCity.Simulation.Building
         /// <summary>How long a plan question waits for an answer before it is dropped.</summary>
         public const int SketchWaitMinutes = 240;
 
-        /// <summary>The letter for a bed.</summary>
-        public const char BedLetter = 'B';
-
-        /// <summary>Ids of the furniture a finished building adds to the world: the site's id plus this, then the first bed's <see cref="BedSuffix"/> or a number.</summary>
+        /// <summary>Ids of the furniture a finished building adds to the world: the site's id plus this, then a number.</summary>
         public const string BuiltInfix = "-built-";
-
-        /// <summary>The first bed of a finished building: the site's id plus this.</summary>
-        public const string BedSuffix = BuiltInfix + "bed";
 
         /// <summary>
         /// Furniture a plan can put in (Tiny City 2): each takes the whole tile its letter falls in, and appears once the
@@ -112,7 +106,6 @@ namespace TinyCity.Simulation.Building
         /// </summary>
         public static readonly IReadOnlyDictionary<char, (ObjectType type, string name)> Furniture = new Dictionary<char, (ObjectType, string)>
         {
-            [BedLetter] = (ObjectType.Bed, "bed"),
             ['K'] = (ObjectType.Kitchen, "stove"),
             ['M'] = (ObjectType.MarketStall, "stall"),
             ['X'] = (ObjectType.Workbench, "crafting bench"),
@@ -122,7 +115,7 @@ namespace TinyCity.Simulation.Building
         /// <summary>Ids of building sites: this plus a number.</summary>
         public const string SitePrefix = "obj-site-";
 
-        /// <summary>Letters a plan uses: one per material, '.' for floor, 'D' for a doorway and 'B' for a bed (all open).</summary>
+        /// <summary>Letters a plan uses: one per material, '.' for floor, and 'D' for a doorway (both open).</summary>
         public static readonly IReadOnlyDictionary<char, MaterialKind> Letters = new Dictionary<char, MaterialKind>
         {
             ['W'] = MaterialKind.Wood,
@@ -167,20 +160,17 @@ namespace TinyCity.Simulation.Building
     /// <summary>
     /// A building plan the game has checked: a name, a wall height, and <see cref="BuildingRules.GridSize"/> rows of letters,
     /// one per block-sized square of the plot. People stand on whole tiles (2 × 2 letters), so a doorway clears its whole
-    /// tile up to <see cref="BuildingRules.DoorHeight"/>, and a bed clears its tile.
+    /// tile up to <see cref="BuildingRules.DoorHeight"/>, and a piece of furniture its tile.
     /// </summary>
     public sealed class BuildPlan
     {
         private BuildPlan(string name, int height, IReadOnlyList<string> rows, List<BlockCell> cells, List<PlanFurniture> furniture, (int x, int y)? doorTile, int width, int depth)
         {
             Furniture = furniture;
-            var bed = furniture.FirstOrDefault(f => f.Letter == BuildingRules.BedLetter);
-            var bedTile = furniture.Any(f => f.Letter == BuildingRules.BedLetter) ? (bed.X, bed.Y) : ((int, int)?)null;
             Name = name;
             Height = height;
             Rows = rows;
             Cells = cells;
-            BedTile = bedTile;
             DoorTile = doorTile;
             Width = width;
             Depth = depth;
@@ -206,11 +196,6 @@ namespace TinyCity.Simulation.Building
 
         /// <summary>Every piece of furniture, in plan order (back row first); each has a tile of its own.</summary>
         public IReadOnlyList<PlanFurniture> Furniture { get; }
-
-        /// <summary>The tile (not letter), from the back-left corner, the first bed stands on, or null for a building with no bed.</summary>
-        public (int x, int y)? BedTile { get; }
-
-        public bool IsHome => BedTile.HasValue;
 
         /// <summary>How many of each material the whole plan takes.</summary>
         public IEnumerable<(MaterialKind material, int count)> Needs() =>
@@ -497,7 +482,7 @@ namespace TinyCity.Simulation.Building
 
         public int Version { get; private set; }
 
-        /// <summary>The world the buildings stand in, which holds the site markers and a finished home's bed.</summary>
+        /// <summary>The world the buildings stand in, which holds the site markers and finished buildings' furniture.</summary>
         public TownWorld World => world;
 
         /// <summary>The number the next site's id gets. Saved, so ids are never reused.</summary>
@@ -721,20 +706,8 @@ namespace TinyCity.Simulation.Building
             return laid;
         }
 
-        /// <summary>The bed of a finished home on this site: in the world while the building stands finished.</summary>
-        public static string BedIdOf(string siteId) => siteId + BuildingRules.BedSuffix;
-
-        /// <summary>The id of a finished building's furniture: the first bed keeps <see cref="BedIdOf"/>, the rest are numbered in plan order.</summary>
-        public static string FurnitureIdOf(string siteId, BuildPlan plan, int index)
-        {
-            var firstBed = -1;
-            for (var i = 0; i < plan.Furniture.Count && firstBed < 0; i++)
-            {
-                firstBed = plan.Furniture[i].Letter == BuildingRules.BedLetter ? i : -1;
-            }
-
-            return index == firstBed ? BedIdOf(siteId) : $"{siteId}{BuildingRules.BuiltInfix}{index + 1}";
-        }
+        /// <summary>The id of a finished building's furniture, numbered in plan order.</summary>
+        public static string FurnitureIdOf(string siteId, BuildPlan plan, int index) => $"{siteId}{BuildingRules.BuiltInfix}{index + 1}";
 
         /// <summary>What a finished building's furniture is called: "Stove in the cabin", or the plan's own name for furniture standing alone.</summary>
         public static string FurnitureNameOf(BuildPlan plan, PlanFurniture f)

@@ -22,7 +22,7 @@ namespace TinyCity.Tests.EditMode
             var objects = new[]
             {
                 new WorldObject("a-start", "Start", ObjectType.Bench, new Location("a", 0, 0)),
-                new WorldObject("b-bed", "Bed", ObjectType.Bed, new Location("b", 0, 2)),
+                new WorldObject("b-stove", "Stove", ObjectType.Kitchen, new Location("b", 0, 2)),
             };
             var portals = new[]
             {
@@ -179,11 +179,11 @@ namespace TinyCity.Tests.EditMode
         {
             var world = FlatLand.CreateWorld();
             var pf = new Pathfinder(world);
-            world.TryGetObject("obj-flat-stove-1", out var bed);
+            world.TryGetObject("obj-flat-stove-1", out var stove);
 
             foreach (var obj in world.Objects)
             {
-                Assert.That(pf.Distance(bed.Location, obj.Location), Is.Not.EqualTo(Pathfinder.Unreachable), obj.Id);
+                Assert.That(pf.Distance(stove.Location, obj.Location), Is.Not.EqualTo(Pathfinder.Unreachable), obj.Id);
             }
         }
 

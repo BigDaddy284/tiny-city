@@ -82,7 +82,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void LoadedGame_ContinuesExactlyAsIfNeverSaved()
         {
-            // Save at many different moments (mid-walk, mid-activity, asleep) and check the future is unchanged.
+            // Save at many different moments (mid-walk, mid-activity, mid-chat) and check the future is unchanged.
             var reference = FlatLand.CreateNewGame();
             var world = FlatLand.CreateWorld();
             for (var checkpoint = 0; checkpoint < 24; checkpoint++)

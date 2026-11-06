@@ -101,16 +101,15 @@ namespace TinyCity.Tools.ArtPreview
             sim.Construction.Add(new TinyCity.Simulation.Building.Project(site.Id, ownerId, site.Corner, plan, finished ? plan.Cells.Count : plan.Cells.Count / 3, 0), stand);
         }
 
-        /// <summary>Tiny City 2's open land by day and by night, with two homes, one half built, a stall and two beds standing alone, a new building site, a sleeping spot and some crops, all where residents chose.</summary>
+        /// <summary>Tiny City 2's open land by day and by night, with two buildings, one half built, a stall and two benches standing alone, a new building site and some crops, all where residents chose.</summary>
         private static void WriteFlat(string path)
         {
             var sim = FlatLand.CreateNewGame();
             var world = sim.World;
-            PlaceBuilding(sim, sim.Residents[0].Id, FlatLand.MapId, 6, 4, "wooden cabin", 4, new[] { "WWWWWWWWWW", "W........W", "W.B...K..W", "W........W", "W........W", "W.B......W", "W........W", "WWWWDWWWWW" });
+            PlaceBuilding(sim, sim.Residents[0].Id, FlatLand.MapId, 6, 4, "wooden cabin", 4, new[] { "WWWWWWWWWW", "W........W", "W.....K..W", "W........W", "W........W", "W.N......W", "W........W", "WWWWDWWWWW" });
             PlaceBuilding(sim, sim.Residents[4].Id, FlatLand.MapId, 44, 36, "fish stall", 1, new[] { "M" });
-            PlaceBuilding(sim, sim.Residents[5].Id, FlatLand.MapId, 48, 36, "camp beds", 1, new[] { "B.B" });
-            sim.Sleeping.Add(new TinyCity.Simulation.World.Location(FlatLand.MapId, 40, 30), sim.Residents[6].Id);
-            PlaceBuilding(sim, sim.Residents[1].Id, FlatLand.MapId, 36, 6, "stone cottage", 5, new[] { "SSSSSSSSSSSS", "S..........S", "C..........C", "S.....B....S", "S..........S", "C..........C", "S..........S", "SSSSDSSSSSSS" });
+            PlaceBuilding(sim, sim.Residents[5].Id, FlatLand.MapId, 48, 36, "camp benches", 1, new[] { "N.N" });
+            PlaceBuilding(sim, sim.Residents[1].Id, FlatLand.MapId, 36, 6, "stone cottage", 5, new[] { "SSSSSSSSSSSS", "S..........S", "C..........C", "S.....X....S", "S..........S", "C..........C", "S..........S", "SSSSDSSSSSSS" });
             PlaceBuilding(sim, sim.Residents[2].Id, FlatLand.MapId, 12, 12, "sawmill", 4, new[] { "HHHHHHHHHHHH", "H..........H", "H..........H", "H..........H", "HHHHHDDHHHHH" }, finished: false);
             sim.Construction.AddSite(sim.Residents[3].Id, new TinyCity.Simulation.World.Location(FlatLand.MapId, 44, 12));
             foreach (var (x, y, what, i) in new[] { (19, 23, "potatoes", 4), (21, 23, "carrots", 5), (23, 24, "beans", 6), (34, 16, "tomatoes", 7) })
@@ -138,12 +137,12 @@ namespace TinyCity.Tools.ArtPreview
             var sim = new TinyCity.Simulation.TownSimulation(world, residents, GameTime.FromDayAndTime(6, 12, 0));
             var plans = new[]
             {
-                ("wooden cabin", 4, new[] { "", "..WWWWWWWWWW", "..W........W", "..W.B......W", "..W........W", "..W........W", "..W........W", "..WWWWDWWWWW" }),
-                ("stone cottage", 5, new[] { "SSSSSSSSSSSS", "S..........S", "C..........C", "S.....B....S", "S..........S", "C..........C", "S..........S", "SSSSDSSSSSSS" }),
-                ("hardwood house", 5, new[] { "HHHHHHHHHHHHHH", "H......H.....H", "H......H.....H", "H.B....D.....H", "H......H.....H", "H......H.....H", "H......H.....H", "H......H.....H", "H......H.....H", "HHHHHHHHHHDHHH" }),
+                ("wooden cabin", 4, new[] { "", "..WWWWWWWWWW", "..W........W", "..W........W", "..W........W", "..W........W", "..W........W", "..WWWWDWWWWW" }),
+                ("stone cottage", 5, new[] { "SSSSSSSSSSSS", "S..........S", "C..........C", "S.....X....S", "S..........S", "C..........C", "S..........S", "SSSSDSSSSSSS" }),
+                ("hardwood house", 5, new[] { "HHHHHHHHHHHHHH", "H......H.....H", "H......H.....H", "H......D.....H", "H......H.....H", "H......H.....H", "H......H.....H", "H......H.....H", "H......H.....H", "HHHHHHHHHHDHHH" }),
                 ("iron workshop", 3, new[] { "", "", "IIIIIIII", "I......I", "I......I", "I......I", "I......I", "IIDDIIII" }),
-                ("heartwood hall", 5, new[] { "TTTTCTTTTTTCTTTT", "T..............T", "C..............C", "T......B.......T", "T..............T", "C..............C", "T..............T", "TTTTTTDTTTTTTTTT" }),
-                ("crystal tower", 6, new[] { "..CCCC..", ".C....C.", "C......C", "C..B...C", "C......C", "C......C", ".C....C.", "..CDDC.." }),
+                ("heartwood hall", 5, new[] { "TTTTCTTTTTTCTTTT", "T..............T", "C..............C", "T..............T", "T..............T", "C..............C", "T..............T", "TTTTTTDTTTTTTTTT" }),
+                ("crystal tower", 6, new[] { "..CCCC..", ".C....C.", "C......C", "C......C", "C......C", "C......C", ".C....C.", "..CDDC.." }),
             };
             var corners = new[] { (2, 2), (11, 2), (20, 2), (2, 13), (11, 13), (20, 13) };
             for (var i = 0; i < plans.Length; i++)

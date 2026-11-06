@@ -11,7 +11,7 @@ namespace TinyCity.Simulation.Content
     /// <summary>
     /// Tiny City 2's world (owner, 5 November): no city, one flat stretch of open land, laid out as the owner drew it.
     /// Seen from above, the cross of paths splits it into four. The bottom quarter is the starter camp (owner, 5 November:
-    /// no beds and no trading stalls, one stove, four benches and two crafting benches; anything more, residents build). The left quarter has trees with fallen branches under
+    /// no trading stalls, one stove, four benches and two crafting benches; anything more, residents build). The left quarter has trees with fallen branches under
     /// them along its far edge, rocks with loose stones in its corner, a patch of good soil for crops by the cross
     /// path and a pond for fishing; the ground between them is left open where a sawmill or a stone mason's could go,
     /// if anyone builds one. The top and right quarters are open land. Residents plant and build wherever they
@@ -142,7 +142,7 @@ namespace TinyCity.Simulation.Content
 
         /// <summary>
         /// The starter residents (or those <paramref name="profiles"/> list), standing at the camp a few paces apart
-        /// with nothing: no bed, no food and no money (there is none).
+        /// with nothing: no home, no food and no money (there is none).
         /// </summary>
         public static IReadOnlyList<Resident> CreateResidents(IReadOnlyList<ResidentProfile> profiles = null)
         {
@@ -167,7 +167,7 @@ namespace TinyCity.Simulation.Content
             foreach (var r in simulation.Residents)
             {
                 simulation.Memories.Add(r.Id, simulation.Time, MemoryType.LifeHistory, 8,
-                    $"I came to this open land with the others to start over. There are no houses, beds or shops here, only a camp stove, a few benches and two crafting benches. We sleep wherever we can, grow, catch and cook our own food, gather wood and stone, make tools and build whatever we like, wherever we like.",
+                    $"I came to this open land with the others to start over. There are no houses or shops here, only a camp stove, a few benches and two crafting benches. We grow, catch and cook our own food, gather wood and stone, make tools and build whatever we like, wherever we like.",
                     tags: new[] { "home", "camp", "building" });
                 if (!string.IsNullOrWhiteSpace(r.About))
                 {

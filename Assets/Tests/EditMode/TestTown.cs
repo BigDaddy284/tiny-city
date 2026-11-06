@@ -80,7 +80,7 @@ namespace TinyCity.Tests.EditMode
 
         /// <summary>
         /// A stand-in for the AI: answers every waiting choice with an option picked by <see cref="Chance"/> (nothing done
-        /// on open ground, which needs a spot), the first that meets an urgent need, or sleep at bedtime, goes over to say hello to someone they notice now and then, and writes every awaited chat line.
+        /// on open ground, which needs a spot), the first that meets an urgent need, goes over to say hello to someone they notice now and then, and writes every awaited chat line.
         /// The same town always gets the same answers, so runs replay exactly.
         /// </summary>
         public static void Answer(TownSimulation sim)
@@ -95,11 +95,6 @@ namespace TinyCity.Tests.EditMode
                 var options = sim.FreeTimeOptionsFor(r).Where(o => !o.IsGround).ToList();
                 var urgent = ActivityPlanner.MostUrgentNeed(r);
                 var pick = urgent == null ? null : options.FirstOrDefault(o => o.Activity?.PrimaryNeed == urgent);
-                if (pick == null && SleepSchedule.IsSleepTime(r, sim.Time))
-                {
-                    pick = options.FirstOrDefault(o => o.Activity == ActivityCatalog.Sleep);
-                }
-
                 pick = pick ?? options[(int)(Chance.Roll(r.Id, sim.Time.TotalMinutes, 7) * options.Count) % options.Count];
                 sim.ApplyDecision(r.Id, r.PendingDecisionId, pick.ActionId, pick.TargetId, "a stand-in choice", null);
             }

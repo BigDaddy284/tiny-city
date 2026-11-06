@@ -12,11 +12,10 @@ namespace TinyCity.Simulation
     /// <summary>Health and death. All of it follows <see cref="HealthRules"/>; nothing here is up to the AI.</summary>
     public sealed partial class TownSimulation
     {
-        /// <summary>One minute of health after needs have changed. Sleeping and resting in bed help recovery.</summary>
+        /// <summary>One minute of health after needs have changed.</summary>
         private void StepHealth(Resident r, ActivityDefinition activity)
         {
-            var resting = r.State == ResidentState.Performing && activity == ActivityCatalog.Sleep;
-            if (!HealthRules.ApplyMinute(r, resting, LowestHealth))
+            if (!HealthRules.ApplyMinute(r, LowestHealth))
             {
                 return;
             }
@@ -25,7 +24,7 @@ namespace TinyCity.Simulation
             if (!r.Log.Any(e => e.Time.Day == Time.Day && e.Text.StartsWith("Collapsed")))
             {
                 r.AddLog(Time, "Collapsed from neglect, too weak to go on like this");
-                Memories.Add(r.Id, Time, MemoryType.Event, 8, "I collapsed, as weak as I have ever been. I must eat, drink and rest.", tags: new[] { "health" });
+                Memories.Add(r.Id, Time, MemoryType.Event, 8, "I collapsed, as weak as I have ever been. I must eat, drink and look after myself.", tags: new[] { "health" });
             }
         }
 

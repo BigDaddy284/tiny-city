@@ -276,7 +276,7 @@ namespace TinyCity.Simulation.Economy
         /// (owner, 5 November: push them to want the clean, better things): health lost to a drink of
         /// pond water or a raw meal, and (owner, 6 November: "way too happy to continue drinking and washing in dirty
         /// water") a wash in the pond. Clean water and cooked meals cost nothing. Health comes back at only
-        /// <see cref="Health.HealthRules.RecoveryPerHour"/> (more asleep), so a few pond drinks a day wear it down.
+        /// <see cref="Health.HealthRules.RecoveryPerHour"/>, so a few pond drinks a day wear it down.
         /// </summary>
         public const double DirtyWaterHealthCost = 4;
 

@@ -171,9 +171,6 @@ namespace TinyCity.Tests.EditMode
                 r.ActivityId = activity.Id;
                 Assert.That(SoundDirector.EffectFor(sim.World, r), Is.EqualTo(effect), activity.Id);
             }
-
-            r.ActivityId = ActivityCatalog.Sleep.Id;
-            Assert.That(SoundDirector.EffectFor(sim.World, r), Is.Null, "sleeping is quiet");
         }
     }
 }

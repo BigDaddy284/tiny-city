@@ -76,7 +76,7 @@ namespace TinyCity.Simulation.Residents
                     skills: new[] { "craft-axe", "craft-pickaxe", "craft-stone-axe", "craft-stone-pickaxe", "craft-iron-axe", "craft-iron-pickaxe", "craft-hoe", "craft-rod" }),
                 new RoleOption("cook", "Only you can cook. You turn raw vegetables and fish into proper meals at a stove, which fill people up far better than raw food and don't make them ill. You keep an eye on what is running low and make sure nobody goes hungry.",
                     skills: new[] { "cook" }),
-                new RoleOption("builder", "Only you know masonry and building. You plan and build what the group needs: shelters with beds, stoves, stalls, benches and crafting benches. You can ask others to bring materials, and you think about where things should go.",
+                new RoleOption("builder", "Only you know masonry and building. You plan and build what the group needs: shelters, stoves, stalls, benches and crafting benches. You can ask others to bring materials, and you think about where things should go.",
                     skills: new[] { "plan-building", "build" }),
                 new RoleOption("water purifier", "Only you can clean water. Pond water is dirty and makes people unwell; you turn it into clean water at the pond, which quenches thirst properly, and you can share it or trade it.",
                     skills: new[] { "purify-water" }),

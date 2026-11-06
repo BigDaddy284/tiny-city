@@ -72,7 +72,6 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = TestTown.WithResident(GameTime.FromDayAndTime(1, 7, 0));
 
-            Assert.That(PromptText.Commitments(sim.Residents[0], sim.Time), Does.StartWith("your usual bedtime is in"));
         }
 
         [Test]

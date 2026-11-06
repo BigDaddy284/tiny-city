@@ -5,7 +5,7 @@ namespace TinyCity.Art
     /// <summary>
     /// Draws the residents: a figure about 33 pixels tall (doors are about 30), in three-quarter view facing one of
     /// the four walking directions, with the same light, outline and shadow as everything else. The anchor is the
-    /// point the figure stands on, or the seat for someone sitting; someone lying down is drawn on the bed's tile.
+    /// point the figure stands on, or the seat for someone sitting.
     /// </summary>
     public static class ResidentArt
     {
@@ -21,7 +21,6 @@ namespace TinyCity.Art
             switch (pose.Stance)
             {
                 case Stance.Sitting: return 22 + extra;
-                case Stance.Lying: return 22;
                 default: return 32 + extra;
             }
         }
@@ -29,13 +28,6 @@ namespace TinyCity.Art
         public static PixelCanvas Render(ResidentLook look, ResidentPose pose)
         {
             var canvas = new PixelCanvas(Width, Height, AnchorX, AnchorY);
-            if (pose.Stance == Stance.Lying)
-            {
-                Lying(canvas, look);
-                canvas.Outline(Palette.Outline);
-                return canvas;
-            }
-
             var f = new Figure(canvas, look, pose);
             f.Draw();
             canvas.Outline(Palette.Outline);
@@ -45,24 +37,6 @@ namespace TinyCity.Art
             }
 
             return canvas;
-        }
-
-        /// <summary>Tucked up in bed: the head on the pillow and the shoulders above the quilt (the bed draws itself).</summary>
-        private static void Lying(PixelCanvas canvas, ResidentLook look)
-        {
-            var p = new IsoPainter(canvas);
-            var (sx, sy) = p.Project(0.47, 0.5, 16);
-            canvas.Ellipse(sx, sy, 4.5, 2.5, look.Top);
-            var (hx, hy) = p.Project(0.3, 0.5, 17);
-            canvas.Disc(hx, hy, 3.4, look.Skin);
-            var hair = look.Style == HairStyle.Bald ? look.Skin : look.Hair;
-            canvas.Disc(hx - 1.6, hy - 1.4, 2.6, hair);
-
-            // Closed eyes.
-            var ex = (int)Math.Round(hx + 0.5);
-            var ey = (int)Math.Round(hy + 0.5);
-            canvas.Set(ex, ey, Palette.Ebony);
-            canvas.Set(ex + 2, ey - 1, Palette.Ebony);
         }
 
         /// <summary>

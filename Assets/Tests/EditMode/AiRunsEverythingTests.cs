@@ -41,7 +41,7 @@ namespace TinyCity.Tests.EditMode
             var r = sim.Residents[0];
             var actions = sim.FreeTimeOptionsFor(r).Select(o => o.ActionId).ToList();
 
-            Assert.That(actions, Does.Contain(ActivityCatalog.Sleep.Id));
+            Assert.That(actions, Does.Not.Contain("sleep"), "nobody sleeps");
             Assert.That(actions, Does.Contain(ActivityCatalog.DrinkFromPond.Id), "even though they aren't thirsty");
             Assert.That(actions, Does.Contain(ActivityCatalog.CatchFish.Id));
         }

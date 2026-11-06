@@ -8,20 +8,6 @@ namespace TinyCity.Simulation.Activities
     /// <summary>Every activity a resident can choose. Ids are stable because save files store them.</summary>
     public static class ActivityCatalog
     {
-        public static readonly ActivityDefinition Sleep = new ActivityDefinition(
-            "sleep", "Sleep", "sleeping", ActivityKind.Sleep, NeedType.Energy, new[] { ObjectType.Bed, ObjectType.Bench, ObjectType.SleepingSpot }, 10 * 60,
-            new Dictionary<NeedType, double> { [NeedType.Energy] = 12.5 / 60 },
-            new Dictionary<NeedType, double>
-            {
-                [NeedType.Energy] = 0,
-                [NeedType.Hunger] = 0.4,
-                [NeedType.Thirst] = 0.4,
-                [NeedType.Hygiene] = 0.5,
-                [NeedType.Social] = 0,
-                [NeedType.Exercise] = 0,
-                [NeedType.Fun] = 0,
-            });
-
         /// <summary>The open land has no taps or showers, so people drink and wash at the pond.</summary>
         public static readonly ActivityDefinition DrinkFromPond = new ActivityDefinition(
             "drink-pond", "Drink from the pond", "drinking from the pond", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.FishingSpot }, 5,
@@ -59,18 +45,18 @@ namespace TinyCity.Simulation.Activities
         /// <summary>Sowing a crop on an empty garden plot, or on open ground the resident chooses. It still has to be watered before it can be picked.</summary>
         public static readonly ActivityDefinition PlantCrops = new ActivityDefinition(
             "plant-crops", "Plant crops", "planting crops", ActivityKind.Errand, null, new[] { ObjectType.GardenPlot }, 45,
-            new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.5 },
+            new Dictionary<NeedType, double>(),
             new Dictionary<NeedType, double> { [NeedType.Hygiene] = 2.0, [NeedType.Thirst] = 1.3 });
 
         /// <summary>Watering a growing crop, once a day.</summary>
         public static readonly ActivityDefinition WaterCrops = new ActivityDefinition(
             "water-crops", "Water the crops", "watering the crops", ActivityKind.Errand, null, new[] { ObjectType.GardenPlot }, 15,
-            new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.3 });
+            new Dictionary<NeedType, double>());
 
         /// <summary>Picking a ready crop: vegetables for whoever picks it.</summary>
         public static readonly ActivityDefinition Harvest = new ActivityDefinition(
             "harvest", "Pick the crops", "picking vegetables", ActivityKind.Errand, null, new[] { ObjectType.GardenPlot }, 30,
-            new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.4 },
+            new Dictionary<NeedType, double>(),
             new Dictionary<NeedType, double> { [NeedType.Hygiene] = 1.5 });
 
         /// <summary>Fishing for food rather than fun: anyone can, and it gives fish.</summary>
@@ -106,34 +92,34 @@ namespace TinyCity.Simulation.Activities
         // Gathering and crafting (see Economy.CraftingRules).
 
         /// <summary>Picking up fallen branches by hand: a little wood, no tool needed.</summary>
-        public static readonly ActivityDefinition GatherSticks = Gather("gather-sticks", "Pick up fallen branches", "picking up fallen branches", ObjectType.StickPile, 1.2);
+        public static readonly ActivityDefinition GatherSticks = Gather("gather-sticks", "Pick up fallen branches", "picking up fallen branches", ObjectType.StickPile);
 
         /// <summary>Picking up loose stones by hand: a little stone, no tool needed.</summary>
-        public static readonly ActivityDefinition GatherLooseStones = Gather("gather-loose-stones", "Pick up loose stones", "picking up loose stones", ObjectType.LooseStones, 1.3);
+        public static readonly ActivityDefinition GatherLooseStones = Gather("gather-loose-stones", "Pick up loose stones", "picking up loose stones", ObjectType.LooseStones);
 
         /// <summary>Chopping wood from the trees, which needs an axe.</summary>
         public static readonly ActivityDefinition GatherWood = new ActivityDefinition(
             "gather-wood", "Gather wood", "gathering wood", ActivityKind.Errand, null, new[] { ObjectType.Woodland }, 60,
-            new Dictionary<NeedType, double> { [NeedType.Exercise] = 0.8 },
-            new Dictionary<NeedType, double> { [NeedType.Energy] = 1.5, [NeedType.Hygiene] = 2.0, [NeedType.Thirst] = 1.4 });
+            new Dictionary<NeedType, double>(),
+            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 2.0, [NeedType.Thirst] = 1.4 });
 
         /// <summary>Breaking stone off the rocks, which needs a pickaxe.</summary>
         public static readonly ActivityDefinition GatherStone = new ActivityDefinition(
             "gather-stone", "Break stone", "breaking stone", ActivityKind.Errand, null, new[] { ObjectType.RockPile }, 60,
-            new Dictionary<NeedType, double> { [NeedType.Exercise] = 1.0 },
-            new Dictionary<NeedType, double> { [NeedType.Energy] = 1.7, [NeedType.Hygiene] = 2.2, [NeedType.Thirst] = 1.5 });
+            new Dictionary<NeedType, double>(),
+            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 2.2, [NeedType.Thirst] = 1.5 });
 
         /// <summary>Hardwood: needs a stone axe or better.</summary>
-        public static readonly ActivityDefinition GatherHardwood = Gather("gather-hardwood", "Cut hardwood", "cutting hardwood", ObjectType.Woodland, 1.6);
+        public static readonly ActivityDefinition GatherHardwood = Gather("gather-hardwood", "Cut hardwood", "cutting hardwood", ObjectType.Woodland);
 
         /// <summary>Heartwood: needs an iron axe.</summary>
-        public static readonly ActivityDefinition GatherHeartwood = Gather("gather-heartwood", "Cut heartwood", "cutting heartwood", ObjectType.Woodland, 1.7);
+        public static readonly ActivityDefinition GatherHeartwood = Gather("gather-heartwood", "Cut heartwood", "cutting heartwood", ObjectType.Woodland);
 
         /// <summary>Iron ore: needs a stone pickaxe or better.</summary>
-        public static readonly ActivityDefinition GatherIron = Gather("gather-iron", "Mine iron ore", "mining iron ore", ObjectType.RockPile, 1.8);
+        public static readonly ActivityDefinition GatherIron = Gather("gather-iron", "Mine iron ore", "mining iron ore", ObjectType.RockPile);
 
         /// <summary>Crystal: needs an iron pickaxe.</summary>
-        public static readonly ActivityDefinition GatherCrystal = Gather("gather-crystal", "Mine crystal", "mining crystal", ObjectType.RockPile, 1.9);
+        public static readonly ActivityDefinition GatherCrystal = Gather("gather-crystal", "Mine crystal", "mining crystal", ObjectType.RockPile);
 
         public static readonly ActivityDefinition CraftAxe = Craft("craft-axe", "Make a wooden axe", "making a wooden axe");
 
@@ -159,16 +145,16 @@ namespace TinyCity.Simulation.Activities
         /// <summary>laying the next blocks of their own building, at its site.</summary>
         public static readonly ActivityDefinition Build = new ActivityDefinition(
             "build", "Build", "building", ActivityKind.Errand, null, new[] { ObjectType.BuildPlot }, 60,
-            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.3, [NeedType.Exercise] = 0.6 },
-            new Dictionary<NeedType, double> { [NeedType.Energy] = 1.5, [NeedType.Hygiene] = 1.8, [NeedType.Thirst] = 1.4 });
+            new Dictionary<NeedType, double> { [NeedType.Fun] = 0.3 },
+            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 1.8, [NeedType.Thirst] = 1.4 });
 
         /// <summary>activities done on open ground wherever the resident chooses, rather than at a thing.</summary>
-        public static bool IsDoneOnGround(ActivityDefinition a) => a == PlantCrops || a == PlanBuilding || a == Sleep;
+        public static bool IsDoneOnGround(ActivityDefinition a) => a == PlantCrops || a == PlanBuilding;
 
         /// <summary>In a fixed order; the planner uses it to break ties deterministically.</summary>
         public static readonly IReadOnlyList<ActivityDefinition> All = new[]
         {
-            Sleep, Chat,
+            Chat,
             PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw, RunStall, BuyFood,
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
             GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
@@ -176,10 +162,10 @@ namespace TinyCity.Simulation.Activities
             PurifyWater, DrinkCleanWater, AttendMeeting,
         };
 
-        private static ActivityDefinition Gather(string id, string name, string verb, ObjectType where, double effort) => new ActivityDefinition(
+        private static ActivityDefinition Gather(string id, string name, string verb, ObjectType where) => new ActivityDefinition(
             id, name, verb, ActivityKind.Errand, null, new[] { where }, 60,
-            new Dictionary<NeedType, double> { [NeedType.Exercise] = 1.0 },
-            new Dictionary<NeedType, double> { [NeedType.Energy] = effort, [NeedType.Hygiene] = 2.2, [NeedType.Thirst] = 1.5 });
+            new Dictionary<NeedType, double>(),
+            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 2.2, [NeedType.Thirst] = 1.5 });
 
         private static ActivityDefinition Craft(string id, string name, string verb) => new ActivityDefinition(
             id, name, verb, ActivityKind.Errand, null, new[] { ObjectType.Workbench }, 30,

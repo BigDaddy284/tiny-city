@@ -8,7 +8,7 @@ namespace TinyCity.Art
 {
     /// <summary>
     /// Tiny City 2's building blocks: each block is a quarter of a tile (a square of the ground), so each tile's picture
-    /// holds up to four columns of cubes. A finished home's bed is drawn here too.
+    /// holds up to four columns of cubes. A finished building's furniture is drawn here too.
     /// </summary>
     public static class BlockArt
     {
@@ -18,7 +18,7 @@ namespace TinyCity.Art
         public const int CanvasWidth = 72;
         public const int CanvasHeight = 40 + (BlockHeight * BuildingRules.MaxHeight);
 
-        /// <summary>The blocks standing on a map, one picture per tile, and what residents have put there: beds of finished homes, crop patches and building sites (until the first block is down).</summary>
+        /// <summary>The blocks standing on a map, one picture per tile, and what residents have put there: furniture of finished buildings, crop patches and building sites (until the first block is down).</summary>
         public static List<ArtPiece> Pieces(TownWorld world, Construction construction, TileMap map, Palette palette)
         {
             var pieces = new List<ArtPiece>();
@@ -38,14 +38,14 @@ namespace TinyCity.Art
                 }
             }
 
-            // What residents put in the world: a finished home's bed (indoors, in its building), crop patches and building sites.
+            // What residents put in the world: a finished building's furniture, crop patches and building sites.
             foreach (var obj in world.Placed.Where(o => o.Location.MapId == map.Id))
             {
                 var p = obj.Location.Position;
                 var started = obj.Type == ObjectType.BuildPlot && construction.At(obj.Id) is Project project && (project.Placed > 0 || project.IsFinished);
                 if (!started)
                 {
-                    pieces.Add(new ArtPiece(obj.Name, FurnitureArt.Render(obj.Type, Noise.Of(obj.Id), palette, obj.Type != ObjectType.Bed), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));
+                    pieces.Add(new ArtPiece(obj.Name, FurnitureArt.Render(obj.Type, Noise.Of(obj.Id), palette, true), p.X, p.Y, p.X, p.Y, ArtLayer.Solid));
                 }
             }
 
