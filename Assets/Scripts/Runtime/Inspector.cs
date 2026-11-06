@@ -123,6 +123,7 @@ namespace TinyCity.Runtime
         {
             styles = guiStyles;
             var r = game.SelectedResident;
+            SelectableText.BlockEditing(Event.current);
             HandleResize();
             var area = new Rect(Screen.width - Width, 0f, Width, Screen.height);
             GUI.color = UiTheme.ToColor(UiTheme.Palette.Panel);
@@ -147,7 +148,7 @@ namespace TinyCity.Runtime
                 GUILayout.BeginVertical(GUILayout.Width(leftWidth));
             }
 
-            GUILayout.Label($"{r.FullName}{RoleText(r)}", styles.Title);
+            SelectableText.Label($"{r.FullName}{RoleText(r)}", styles.Title);
             if (columns)
             {
                 DrawNowSummary(r);
@@ -194,7 +195,7 @@ namespace TinyCity.Runtime
             // The title, then the journal, settings and hide buttons (owner, 5 November: no Town View button; a
             // middle click lets go of whoever the camera follows).
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Tiny City 2", styles.Title);
+            SelectableText.Label("Tiny City 2", styles.Title);
             GUILayout.FlexibleSpace();
             if (GUILayout.Toggle(game.JournalOpen, "Journal", GUI.skin.button, FitWidth("Journal"), GUILayout.Height(28f)) != game.JournalOpen)
             {
@@ -212,9 +213,9 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label($"Town: {game.CurrentTownName} · {Simulation.LivingCount} people", styles.Small);
-            GUILayout.Label($"{Simulation.Time.Weekday}, Day {Simulation.Time.Day}   {Simulation.Time.ClockText}", styles.Text);
-            GUILayout.Label(DescribeMeeting(), styles.Small);
+            SelectableText.Label($"Town: {game.CurrentTownName} · {Simulation.LivingCount} people", styles.Small);
+            SelectableText.Label($"{Simulation.Time.Weekday}, Day {Simulation.Time.Day}   {Simulation.Time.ClockText}", styles.Text);
+            SelectableText.Label(DescribeMeeting(), styles.Small);
 
             // The speeds, then the People and Roles drop-downs, all the same width on one line.
             var hasRoles = Simulation.Brief.Roles.Count > 0;
@@ -262,7 +263,7 @@ namespace TinyCity.Runtime
                 var waiting = game.HoldingForAi
                     ? "  Paused: waiting for Ollama."
                     : thinking > 0 ? $"  {thinking} thinking." : string.Empty;
-                GUILayout.Label($"Running at {game.ActualSpeed:0.0}x of {game.Speed}x.{waiting}", styles.Small);
+                SelectableText.Label($"Running at {game.ActualSpeed:0.0}x of {game.Speed}x.{waiting}", styles.Small);
             }
 
             DrawPeopleFinder(r);
@@ -291,10 +292,10 @@ namespace TinyCity.Runtime
                 foreach (var role in roles.Skip(column * perColumn).Take(perColumn))
                 {
                     var holders = Simulation.Residents.Where(o => o.IsAlive && o.Role == role.Name).OrderBy(o => o.FirstName, StringComparer.Ordinal).ToList();
-                    GUILayout.Label(Capital(role.Name), styles.Text);
+                    SelectableText.Label(Capital(role.Name), styles.Text);
                     if (holders.Count == 0)
                     {
-                        GUILayout.Label("   nobody yet", styles.Small);
+                        SelectableText.Label("   nobody yet", styles.Small);
                     }
 
                     foreach (var holder in holders)
@@ -316,16 +317,16 @@ namespace TinyCity.Runtime
             GUILayout.EndHorizontal();
 
             var without = Simulation.Residents.Count(o => o.IsAlive && o.Role == null);
-            GUILayout.Label($"No role: {without}", styles.Small);
+            SelectableText.Label($"No role: {without}", styles.Small);
             if (Simulation.RoleRequests.Count > 0)
             {
-                GUILayout.Label("Asked to change at the next meeting:", styles.Small);
+                SelectableText.Label("Asked to change at the next meeting:", styles.Small);
                 foreach (var request in Simulation.RoleRequests.OrderBy(o => o.Key, StringComparer.Ordinal))
                 {
                     var who = Simulation.GetResident(request.Key);
                     if (who != null)
                     {
-                        GUILayout.Label(request.Value == TownSimulation.RoleNone ? $"   {who.FullName}: give up being the {who.Role}" : $"   {who.FullName}: {who.Role ?? "no role"} to {request.Value}", styles.Small);
+                        SelectableText.Label(request.Value == TownSimulation.RoleNone ? $"   {who.FullName}: give up being the {who.Role}" : $"   {who.FullName}: {who.Role ?? "no role"} to {request.Value}", styles.Small);
                     }
                 }
             }
@@ -373,7 +374,7 @@ namespace TinyCity.Runtime
             var shown = PeopleList.Of(Simulation.Residents, PeopleFilter.Living, PeopleOrder.FirstName);
             if (shown.Count == 0)
             {
-                GUILayout.Label("Nobody here.", styles.Small);
+                SelectableText.Label("Nobody here.", styles.Small);
             }
 
             var labels = shown.Select(o => o.FullName).ToArray();
@@ -530,17 +531,17 @@ namespace TinyCity.Runtime
         /// <summary>The Now tab's left column under the name: who they are, where they are and what they're doing.</summary>
         private void DrawNowSummary(Resident r)
         {
-            GUILayout.Label(r.Personality.Describe(), styles.Small);
-            GUILayout.Label($"Where: {DescribeLocation(r)}", styles.Text);
-            GUILayout.Label($"Doing: {DescribeActivity(r)}", styles.Text);
+            SelectableText.Label(r.Personality.Describe(), styles.Small);
+            SelectableText.Label($"Where: {DescribeLocation(r)}", styles.Text);
+            SelectableText.Label($"Doing: {DescribeActivity(r)}", styles.Text);
         }
 
         private void DrawNow(Resident r)
         {
             if (!r.IsAlive)
             {
-                GUILayout.Label(r.Personality.Describe(), styles.Small);
-                GUILayout.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}. Remembered by the town.", styles.Text);
+                SelectableText.Label(r.Personality.Describe(), styles.Small);
+                SelectableText.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}. Remembered by the town.", styles.Text);
                 return;
             }
 
@@ -548,38 +549,38 @@ namespace TinyCity.Runtime
 
             if (r.State == ResidentState.Deciding)
             {
-                GUILayout.Label(Simulation.NeedsDayPlan(r) ? "Planning their day with the AI." : "Choosing what to do with the AI.", styles.Small);
+                SelectableText.Label(Simulation.NeedsDayPlan(r) ? "Planning their day with the AI." : "Choosing what to do with the AI.", styles.Small);
             }
             else if (!string.IsNullOrEmpty(r.Goal))
             {
                 if (r.GoalSource == DecisionSource.Ai)
                 {
-                    GUILayout.Label("Why: chosen with the AI. In their own words (the AI's explanation, not a game fact):", styles.Small);
-                    GUILayout.Label(r.Goal, styles.AiNote);
+                    SelectableText.Label("Why: chosen with the AI. In their own words (the AI's explanation, not a game fact):", styles.Small);
+                    SelectableText.Label(r.Goal, styles.AiNote);
                 }
 
                 if (r.PlannedSteps.Count > 0)
                 {
-                    GUILayout.Label($"Planned next (checked again when it's time): {string.Join(", then ", r.PlannedSteps.Select(DescribePlanStep))}", styles.Small);
+                    SelectableText.Label($"Planned next (checked again when it's time): {string.Join(", then ", r.PlannedSteps.Select(DescribePlanStep))}", styles.Small);
                 }
                 else if (r.GoalSource != DecisionSource.Ai)
                 {
-                    GUILayout.Label($"Why: {r.Goal}", styles.Small);
+                    SelectableText.Label($"Why: {r.Goal}", styles.Small);
                 }
             }
 
             if (r.Reaction != null)
             {
-                GUILayout.Label($"Noticed {r.Reaction.Seen}; asking the AI whether to go over and talk.", styles.Small);
+                SelectableText.Label($"Noticed {r.Reaction.Seen}; asking the AI whether to go over and talk.", styles.Small);
             }
 
             if (r.DayPlan != null && r.DayPlan.Day == DayPlan.DayFor(Simulation.Time))
             {
-                GUILayout.Label("Today's plan, written by the AI (a guide, not a game fact):", styles.Small);
+                SelectableText.Label("Today's plan, written by the AI (a guide, not a game fact):", styles.Small);
                 var now = r.DayPlan.Now(Simulation.Time);
                 foreach (var entry in r.DayPlan.Entries)
                 {
-                    GUILayout.Label($"{(entry == now ? "▶ " : "   ")}{entry.ClockText} {entry.Text}", styles.AiNote);
+                    SelectableText.Label($"{(entry == now ? "▶ " : "   ")}{entry.ClockText} {entry.Text}", styles.AiNote);
                 }
             }
 
@@ -588,21 +589,21 @@ namespace TinyCity.Runtime
             {
                 if (said.FromAi)
                 {
-                    GUILayout.Label($"Last said ({said.Time.ClockText}), written by the AI:", styles.Small);
-                    GUILayout.Label($"“{said.Text}”", styles.AiNote);
+                    SelectableText.Label($"Last said ({said.Time.ClockText}), written by the AI:", styles.Small);
+                    SelectableText.Label($"“{said.Text}”", styles.AiNote);
                 }
                 else
                 {
-                    GUILayout.Label($"Last said ({said.Time.ClockText}): “{said.Text}”", styles.Small);
+                    SelectableText.Label($"Last said ({said.Time.ClockText}): “{said.Text}”", styles.Small);
                 }
             }
 
             GUILayout.Space(6f);
-            GUILayout.Label("City news", styles.Text);
+            SelectableText.Label("City news", styles.Text);
             var history = Simulation.History.Events;
             for (var i = history.Count - 1; i >= Math.Max(0, history.Count - 3); i--)
             {
-                GUILayout.Label($"Day {history[i].Time.Day}: {history[i].Summary}", styles.Small);
+                SelectableText.Label($"Day {history[i].Time.Day}: {history[i].Summary}", styles.Small);
             }
         }
 
@@ -617,7 +618,7 @@ namespace TinyCity.Runtime
             {
                 if (Simulation.Relationships.TryGet(r.Id, other.Id, out var rel) && rel.HaveMet)
                 {
-                    GUILayout.Label(DescribeRelationship(r, other), styles.Small);
+                    SelectableText.Label(DescribeRelationship(r, other), styles.Small);
                 }
                 else
                 {
@@ -627,41 +628,41 @@ namespace TinyCity.Runtime
 
             if (strangers.Count > 0)
             {
-                GUILayout.Label($"Hasn't met yet: {string.Join(", ", strangers)}", styles.Small);
+                SelectableText.Label($"Hasn't met yet: {string.Join(", ", strangers)}", styles.Small);
             }
         }
 
         private void DrawMemories(Resident r)
         {
             var memories = Simulation.Memories.ForResident(r.Id).ToList();
-            GUILayout.Label($"Remembers ({memories.Count})", styles.Text);
+            SelectableText.Label($"Remembers ({memories.Count})", styles.Text);
             foreach (var memory in memories.OrderByDescending(m => m.Time.TotalMinutes).ThenByDescending(m => m.Id).Take(12))
             {
                 var text = $"Day {memory.Time.Day}: {memory.Summary} (importance {memory.Importance})";
                 if (memory.Type == MemoryType.Reflection)
                 {
-                    GUILayout.Label("Reflection written by the AI: " + text, styles.AiNote);
+                    SelectableText.Label("Reflection written by the AI: " + text, styles.AiNote);
                 }
                 else if (memory.Type == MemoryType.Insight)
                 {
-                    GUILayout.Label("Insight written by the AI: " + text, styles.AiNote);
+                    SelectableText.Label("Insight written by the AI: " + text, styles.AiNote);
                 }
                 else
                 {
-                    GUILayout.Label(text, styles.Small);
+                    SelectableText.Label(text, styles.Small);
                 }
             }
 
             GUILayout.Space(6f);
-            GUILayout.Label("Recent conversations", styles.Text);
+            SelectableText.Label("Recent conversations", styles.Text);
             foreach (var chat in Simulation.Conversations.Involving(r.Id).Where(c => c.Kind == ConversationKind.Chat).Reverse().Take(3))
             {
                 var others = string.Join(", ", chat.Participants.Where(p => p != r.Id).Select(p => Simulation.GetResident(p)?.FirstName ?? p));
-                GUILayout.Label($"Day {chat.Started.Day} {chat.Started.ClockText} with {others}: {chat.Context}", styles.Small);
+                SelectableText.Label($"Day {chat.Started.Day} {chat.Started.ClockText} with {others}: {chat.Context}", styles.Small);
                 foreach (var line in chat.Lines)
                 {
                     var speaker = Simulation.GetResident(line.SpeakerId)?.FirstName ?? line.SpeakerId;
-                    GUILayout.Label($"   {speaker}{(line.FromAi ? " (AI)" : string.Empty)}: {line.Text}", line.FromAi ? styles.AiNote : styles.Small);
+                    SelectableText.Label($"   {speaker}{(line.FromAi ? " (AI)" : string.Empty)}: {line.Text}", line.FromAi ? styles.AiNote : styles.Small);
                 }
             }
         }
@@ -673,23 +674,23 @@ namespace TinyCity.Runtime
         private void DrawThings(Resident r)
         {
             var day = Simulation.Time.Day;
-            GUILayout.Label(string.IsNullOrEmpty(r.Role) ? "No role chosen" : $"Role: {r.Role}", styles.Text);
+            SelectableText.Label(string.IsNullOrEmpty(r.Role) ? "No role chosen" : $"Role: {r.Role}", styles.Text);
             if (Simulation.RoleRequests.TryGetValue(r.Id, out var wanted))
             {
-                GUILayout.Label(wanted == TownSimulation.RoleNone ? "Asked to give up their role at the next meeting" : $"Asked to become the {wanted} at the next meeting", styles.Small);
+                SelectableText.Label(wanted == TownSimulation.RoleNone ? "Asked to give up their role at the next meeting" : $"Asked to become the {wanted} at the next meeting", styles.Small);
             }
             GUILayout.Space(4f);
-            GUILayout.Label("CARRYING", styles.Section);
+            SelectableText.Label("CARRYING", styles.Section);
             if (r.Food.Total == 0)
             {
-                GUILayout.Label("Food: none", styles.Small);
+                SelectableText.Label("Food: none", styles.Small);
             }
 
             foreach (var batch in r.Food.Batches)
             {
                 var off = batch.GoesOffDay - day;
                 var when = off <= 0 ? "goes off today" : off == 1 ? "goes off tomorrow" : $"goes off in {off} days (day {batch.GoesOffDay})";
-                GUILayout.Label($"{FoodRules.Portions(batch.Kind, batch.Count)}, {when}", styles.Small);
+                SelectableText.Label($"{FoodRules.Portions(batch.Kind, batch.Count)}, {when}", styles.Small);
             }
 
             var anyMaterial = false;
@@ -699,52 +700,52 @@ namespace TinyCity.Runtime
                 if (n > 0)
                 {
                     anyMaterial = true;
-                    GUILayout.Label($"{Capital(CraftingRules.Name(kind))}: {n}", styles.Small);
+                    SelectableText.Label($"{Capital(CraftingRules.Name(kind))}: {n}", styles.Small);
                 }
             }
 
             if (!anyMaterial)
             {
-                GUILayout.Label("Materials: none", styles.Small);
+                SelectableText.Label("Materials: none", styles.Small);
             }
 
-            GUILayout.Label($"Clean water: {(r.CleanWater == 0 ? "none" : r.CleanWater.ToString())}", styles.Small);
+            SelectableText.Label($"Clean water: {(r.CleanWater == 0 ? "none" : r.CleanWater.ToString())}", styles.Small);
 
             var anyTool = false;
             foreach (var (tool, tier, usesLeft) in r.Belongings.Tools)
             {
                 anyTool = true;
-                GUILayout.Label($"{Capital(CraftingRules.Name(tool, tier))}: {usesLeft} use{(usesLeft == 1 ? string.Empty : "s")} left", styles.Small);
+                SelectableText.Label($"{Capital(CraftingRules.Name(tool, tier))}: {usesLeft} use{(usesLeft == 1 ? string.Empty : "s")} left", styles.Small);
             }
 
             if (!anyTool)
             {
-                GUILayout.Label("Tools: none", styles.Small);
+                SelectableText.Label("Tools: none", styles.Small);
             }
 
             var project = Simulation.Construction.Of(r.Id);
             if (project != null)
             {
-                GUILayout.Label(project.IsFinished
+                SelectableText.Label(project.IsFinished
                     ? $"Built a {project.Plan.Name}"
                     : $"Building a {project.Plan.Name}: {project.Placed}/{project.Plan.Cells.Count} blocks", styles.Small);
             }
             else if (r.Sketch != null)
             {
-                GUILayout.Label("Planning a building…", styles.Small);
+                SelectableText.Label("Planning a building…", styles.Small);
             }
 
             GUILayout.Space(4f);
-            GUILayout.Label("TRADES", styles.Section);
+            SelectableText.Label("TRADES", styles.Section);
             var trades = Simulation.TradesOf(r.Id).Take(TradesShown).ToList();
             if (trades.Count == 0)
             {
-                GUILayout.Label("No trades yet.", styles.Small);
+                SelectableText.Label("No trades yet.", styles.Small);
             }
 
             foreach (var trade in trades)
             {
-                GUILayout.Label($"Day {trade.Time.Day} {trade.Time.ClockText}  {trade.Summary}", styles.Small);
+                SelectableText.Label($"Day {trade.Time.Day} {trade.Time.ClockText}  {trade.Summary}", styles.Small);
             }
         }
 
@@ -752,7 +753,7 @@ namespace TinyCity.Runtime
         {
             if (!r.IsAlive)
             {
-                GUILayout.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}.", styles.Text);
+                SelectableText.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}.", styles.Text);
             }
 
             GUILayout.BeginHorizontal();
@@ -769,11 +770,11 @@ namespace TinyCity.Runtime
             GUILayout.EndHorizontal();
 
             GUILayout.Space(4f);
-            GUILayout.Label("Timeline, newest first", styles.Text);
+            SelectableText.Label("Timeline, newest first", styles.Text);
             var timeline = Timeline(r);
             if (timeline.Count == 0)
             {
-                GUILayout.Label("Nothing in the city records yet.", styles.Small);
+                SelectableText.Label("Nothing in the city records yet.", styles.Small);
             }
 
             foreach (var e in Enumerable.Reverse(timeline).Take(TimelineShown))
@@ -782,27 +783,27 @@ namespace TinyCity.Runtime
                 switch (e.Source)
                 {
                     case TimelineSource.AiReflection:
-                        GUILayout.Label("Reflection written by the AI. " + line, styles.AiNote);
+                        SelectableText.Label("Reflection written by the AI. " + line, styles.AiNote);
                         break;
                     case TimelineSource.Memory:
-                        GUILayout.Label(line + " (their memory)", styles.Small);
+                        SelectableText.Label(line + " (their memory)", styles.Small);
                         break;
                     default:
-                        GUILayout.Label(line, styles.Small);
+                        SelectableText.Label(line, styles.Small);
                         break;
                 }
             }
 
             if (timeline.Count > TimelineShown)
             {
-                GUILayout.Label($"{timeline.Count - TimelineShown} older entries are in the exported life story.", styles.Small);
+                SelectableText.Label($"{timeline.Count - TimelineShown} older entries are in the exported life story.", styles.Small);
             }
 
             GUILayout.Space(4f);
-            GUILayout.Label("Recently", styles.Text);
+            SelectableText.Label("Recently", styles.Text);
             foreach (var entry in r.Log.Reverse().Take(10))
             {
-                GUILayout.Label($"{entry.Time.ClockText}  {entry.Text}", styles.Small);
+                SelectableText.Label($"{entry.Time.ClockText}  {entry.Text}", styles.Small);
             }
         }
 
@@ -838,17 +839,17 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label("Click someone to follow them and see who they are · middle click: stop following · F: follow again · N/B: next/previous resident · drag and wheel: pan and zoom · J: journal · S: saved towns · H: hide this panel · Settings: top right", styles.Small);
-            GUILayout.Label(game.Ai.Summary(), styles.Small);
+            SelectableText.Label("Click someone to follow them and see who they are · middle click: stop following · F: follow again · N/B: next/previous resident · drag and wheel: pan and zoom · J: journal · S: saved towns · H: hide this panel · drag over any text here and press Ctrl+C to copy it (click the map or press Escape to use the keys again) · Settings: top right", styles.Small);
+            SelectableText.Label(game.Ai.Summary(), styles.Small);
             var lastEvent = game.Ai.RecentEvents.LastOrDefault();
             if (lastEvent != null)
             {
-                GUILayout.Label(lastEvent, styles.Small);
+                SelectableText.Label(lastEvent, styles.Small);
             }
 
             if (!string.IsNullOrEmpty(game.Status))
             {
-                GUILayout.Label(game.Status, styles.Small);
+                SelectableText.Label(game.Status, styles.Small);
             }
         }
 
