@@ -54,8 +54,6 @@ namespace TinyCity.Runtime
         private bool rolesOpen;
         private Vector2 rolesScroll;
         private Vector2 peopleScroll;
-        private GUIStyle countStyle;
-        private GUISkin countSkin;
         private List<TimelineEntry> timeline = new List<TimelineEntry>();
         private (string residentId, long minute, long history, TownSimulation sim) timelineFor;
 
@@ -355,7 +353,7 @@ namespace TinyCity.Runtime
         /// <summary>
         /// How many people live in the city (in a small box), a button that opens a list of everyone
         /// (filtered and sorted), and a box to find someone by name, whose matches appear underneath as you type.
-        /// Picking someone shows them here and in the active panel.
+        /// Picking someone shows them here and points the camera at them.
         /// </summary>
         private void DrawPeopleFinder(Resident r)
         {
@@ -516,22 +514,10 @@ namespace TinyCity.Runtime
             GUILayout.EndScrollView();
         }
 
-        /// <summary>A box the same size as the − and + buttons, for the number of camera panels.</summary>
+        /// <summary>A button exactly as wide as its words.</summary>
         private static GUILayoutOption FitWidth(string text) => GUILayout.Width(GUI.skin.button.CalcSize(new GUIContent(text)).x);
 
-        private GUIStyle CountStyle()
-        {
-            if (countStyle == null || countSkin != GUI.skin)
-            {
-                var button = GUI.skin.button;
-                countStyle = new GUIStyle(GUI.skin.box) { alignment = TextAnchor.MiddleCenter, margin = button.margin, padding = button.padding, fontSize = button.fontSize, fixedHeight = button.fixedHeight };
-                countSkin = GUI.skin;
-            }
-
-            return countStyle;
-        }
-
-        private void Pick(Resident other) => game.Select(other, followInActivePanel: true);
+        private void Pick(Resident other) => game.Select(other, follow: true);
 
         /// <summary>
         /// A person's button: in Tiny City 2 nobody dies, so instead of an age it shows the role they chose, if any
@@ -852,7 +838,7 @@ namespace TinyCity.Runtime
             }
 
             GUILayout.EndHorizontal();
-            GUILayout.Label("Click someone to follow them and see who they are · middle click: stop following · N/B: next/previous resident · drag and wheel: pan and zoom · J: journal · S: saved towns · H: hide this panel · Settings: top right", styles.Small);
+            GUILayout.Label("Click someone to follow them and see who they are · middle click: stop following · F: follow again · N/B: next/previous resident · drag and wheel: pan and zoom · J: journal · S: saved towns · H: hide this panel · Settings: top right", styles.Small);
             GUILayout.Label(game.Ai.Summary(), styles.Small);
             var lastEvent = game.Ai.RecentEvents.LastOrDefault();
             if (lastEvent != null)

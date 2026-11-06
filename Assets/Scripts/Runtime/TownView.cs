@@ -12,7 +12,7 @@ namespace TinyCity.Runtime
 {
     /// <summary>
     /// The whole town on screen at once: every map is drawn side by side at its own origin, and every living
-    /// resident stands on whichever map they are on. Camera panels then simply look at different places.
+    /// resident stands on whichever map they are on. The camera then simply looks at one place.
     /// The maps are redrawn when the season changes, and tinted by the time of day.
     /// </summary>
     public sealed class TownView : MonoBehaviour

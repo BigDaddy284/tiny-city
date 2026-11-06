@@ -57,7 +57,7 @@ namespace TinyCity.Runtime
         /// <summary>Draws the pop-ups down from the top left of <paramref name="area"/>; a click calls <paramref name="clicked"/> and dismisses it.</summary>
         public void Draw(Rect area, GuiStyles styles, Action<TownEvent> clicked)
         {
-            var y = area.y + CameraPanels.HeaderHeight + 8f;
+            var y = area.y + 30f;
             foreach (var (entry, _) in shown.ToList())
             {
                 var content = new GUIContent($"{Journal.DateText(entry.Time)}\n{entry.Summary}");

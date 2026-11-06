@@ -41,7 +41,7 @@ namespace TinyCity.Tests.PlayMode
                 UiTheme.Choose(ThemeChoice.Dark);
                 yield return null;
                 Assert.That(Camera.main.backgroundColor, Is.EqualTo(UiTheme.ToColor(UiPalette.DarkPalette.Canvas)));
-                Assert.That(game.Panels.All[0].Camera, Is.SameAs(Camera.main));
+                Assert.That(game.TownCamera.Camera, Is.SameAs(Camera.main));
             }
             finally
             {
