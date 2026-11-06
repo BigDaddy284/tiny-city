@@ -113,7 +113,7 @@ namespace TinyCity.Sound
                 return SoundEffect.Drink;
             }
 
-            if (id == ActivityCatalog.BuyFood.Id || id == ActivityCatalog.RunStall.Id)
+            if (id == ActivityCatalog.BuyFood.Id || id == ActivityCatalog.RunStall.Id || id == ActivityCatalog.KeepStore.Id || id == ActivityCatalog.BringToStore.Id)
             {
                 return SoundEffect.Till;
             }

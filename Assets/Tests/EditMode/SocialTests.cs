@@ -149,13 +149,19 @@ namespace TinyCity.Tests.EditMode
         public void FullObjects_AreNotOffered()
         {
             var sim = FlatLand.CreateNewGame();
-            var tap = sim.World.Objects.First(o => o.Location.MapId == FlatLand.MapId && o.Capacity == 1);
+            Assert.That(sim.World.TryGetObject(TinyCity.Simulation.Economy.CampStore.StoveId, out var stove), Is.True);
             var bench = sim.World.Objects.First(o => o.Type == ObjectType.Bench);
-            Arthur(sim).State = ResidentState.Travelling;
-            Arthur(sim).TargetObjectId = tap.Id;
+            Assert.That(stove.Capacity, Is.EqualTo(WorldObject.CampStoveCapacity), "the camp stove has room for the merchant and others");
+            var users = sim.Residents.Where(o => o.Id != Mabel(sim).Id).Take(WorldObject.CampStoveCapacity).ToList();
+            foreach (var user in users)
+            {
+                user.State = ResidentState.Travelling;
+                user.TargetObjectId = stove.Id;
+            }
 
-            Assert.That(sim.Planner.IsAvailableTo(Mabel(sim), tap), Is.False, "one at a time");
-            Assert.That(sim.Planner.IsAvailableTo(Arthur(sim), tap), Is.True, "you don't block yourself");
+            Assert.That(sim.Planner.IsAvailableTo(Mabel(sim), stove), Is.False, "full");
+            Assert.That(sim.Planner.IsAvailableTo(users[0], stove), Is.True, "you don't block yourself");
+            Arthur(sim).State = ResidentState.Travelling;
 
             Arthur(sim).TargetObjectId = bench.Id;
             Assert.That(sim.Planner.IsAvailableTo(Mabel(sim), bench), Is.True, "benches seat two");

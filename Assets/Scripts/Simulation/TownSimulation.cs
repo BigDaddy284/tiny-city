@@ -99,6 +99,8 @@ namespace TinyCity.Simulation
             // A world with no roles limits nobody, so everyone works as well as a role holder would.
             Food.Skilled = (r, a) => !Brief.IsSkill(a.Id) || Brief.IsSkilledAt(r.Role, a.Id);
             Food.MeetingAllows = MeetingAllows;
+            Food.StoreOpen = () => StoreIsOpen;
+            Food.KeepsStore = r => Brief.IsSkilledAt(r.Role, ActivityCatalog.KeepStore.Id);
         }
 
         public TownWorld World { get; }
@@ -1056,7 +1058,7 @@ namespace TinyCity.Simulation
                 {
                     r.CleanWater--;
                 }
-                else if (Food.Store.Water > 0)
+                else if (Food.MayTakeFromStore(r) && Food.Store.Water > 0)
                 {
                     Food.Store.Water--;
                 }

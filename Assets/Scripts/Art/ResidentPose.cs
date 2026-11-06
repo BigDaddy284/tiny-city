@@ -149,6 +149,8 @@ namespace TinyCity.Art
                 case ObjectType.FishingSpot when seat == 2: return new Placement(0.45, 0.62, 4, Stance.Standing, Facing.DownRight);
                 case ObjectType.FishingSpot when seat == 3: return new Placement(0.45, 0.38, 4, Stance.Standing, Facing.DownRight);
                 case ObjectType.MarketStall when seat == 1: return new Placement(0.2, 1.0, 0, Stance.Standing, Facing.UpRight);
+                case ObjectType.Kitchen:
+                    return seat <= 3 ? new Placement(seat == 1 ? 0.2 : seat == 2 ? 0.8 : 1.0, seat == 3 ? 0.5 : 1.0, 0, Stance.Standing, seat == 3 ? Facing.UpLeft : Facing.UpRight) : (Placement?)null;
                 case ObjectType.Workbench:
                     return seat <= 2 ? new Placement(seat == 1 ? 0.2 : 0.8, 1.0, 0, Stance.Standing, Facing.UpRight) : (Placement?)null;
                 default: return null;
@@ -293,6 +295,7 @@ namespace TinyCity.Art
             if (activityId == ActivityCatalog.PlantCrops.Id || activityId == ActivityCatalog.WaterCrops.Id
                 || activityId == ActivityCatalog.Harvest.Id || activityId == ActivityCatalog.CatchFish.Id || activityId == ActivityCatalog.Cook.Id
                 || activityId == ActivityCatalog.RunStall.Id || activityId == ActivityCatalog.BuyFood.Id
+                || activityId == ActivityCatalog.KeepStore.Id || activityId == ActivityCatalog.BringToStore.Id
                 || TinyCity.Simulation.Economy.CraftingRules.IsCrafting(activityId)
                 || activityId == ActivityCatalog.PlanBuilding.Id || activityId == ActivityCatalog.Build.Id)
             {

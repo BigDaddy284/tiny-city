@@ -216,7 +216,7 @@ namespace TinyCity.Runtime
             SelectableText.Label($"Town: {game.CurrentTownName} · {Simulation.LivingCount} people", styles.Small);
             SelectableText.Label($"{Simulation.Time.Weekday}, Day {Simulation.Time.Day}   {Simulation.Time.ClockText}", styles.Text);
             SelectableText.Label(DescribeMeeting(), styles.Small);
-            SelectableText.Label($"Camp store: {Simulation.Food.Store.Describe(Simulation.Time.Day)}", styles.Small);
+            SelectableText.Label($"Camp store ({TinyCity.Simulation.AI.PromptText.StoreState(Simulation)}): {Simulation.Food.Store.Describe(Simulation.Time.Day)}", styles.Small);
 
             // The speeds, then the People and Roles drop-downs, all the same width on one line.
             var hasRoles = Simulation.Brief.Roles.Count > 0;

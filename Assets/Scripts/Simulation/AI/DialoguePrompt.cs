@@ -111,7 +111,7 @@ namespace TinyCity.Simulation.AI
             }
 
             sb.AppendLine($"Your food: {speaker.Food.Describe(sim.Time.Day)}. {PromptText.NoMoney}");
-            sb.AppendLine($"The camp store, shared by everyone: {sim.Food.Store.Describe(sim.Time.Day)}.");
+            sb.AppendLine($"The camp store ({PromptText.StoreState(sim)}): {sim.Food.Store.Describe(sim.Time.Day)}.");
             sb.AppendLine(PromptText.DirtyWater);
             sb.AppendLine($"Your things: {speaker.Belongings.Describe()}; clean water: {speaker.CleanWater}. {listener.FirstName}'s things: {listener.Food.Describe(sim.Time.Day)}; {listener.Belongings.Describe()}; clean water: {listener.CleanWater}.");
             sb.AppendLine($"You are {(speaker.Role == null ? "without a role" : "the " + speaker.Role)}; {listener.FirstName} is {(listener.Role == null ? "without a role" : "the " + listener.Role)}. Each role does its own work, so you need what others make.");
@@ -131,9 +131,16 @@ namespace TinyCity.Simulation.AI
               .Append("\"tone\" is one of warm, playful, neutral or disagree, ")
               .Append("\"topic\" is what you are talking about in a few words, ")
               .Append("and \"end\" is true if you want to wrap up the chat.");
-            sb.Append(" If you want to hand over some of your food, \"give_food\" is how many portions (any number up to what you have); otherwise give_food is 0.")
-              .Append(" \"accept_food\" is true if you take food you have just been offered.")
-              .Append($" To hand over a material or tool now, \"give_item\" is one of {string.Join(", ", Economy.CraftingRules.ItemNames)} and \"give_amount\" how many (for materials and clean water); otherwise leave give_item out.");
+            if (sim.MayHandOver(speaker, listener))
+            {
+                sb.Append(" If you want to hand over some of your food, \"give_food\" is how many portions (any number up to what you have); otherwise give_food is 0.")
+                  .Append(" \"accept_food\" is true if you take food you have just been offered.")
+                  .Append($" To hand over a material or tool now, \"give_item\" is one of {string.Join(", ", Economy.CraftingRules.ItemNames)} and \"give_amount\" how many (for materials and clean water); otherwise leave give_item out.");
+            }
+            else
+            {
+                sb.Append(" Neither of you is the merchant, so you can't hand each other food, water, materials or tools: everything goes through the merchant. Leave give_food at 0 and give_item out.");
+            }
             if (sim.Brief.CanTax(speaker.Role))
             {
                 sb.Append($" As the {speaker.Role}, \"tax\" is the percentage of their food and materials you ask them to hand over (0 to ask for nothing); they decide whether to pay.");

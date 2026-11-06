@@ -42,6 +42,27 @@ namespace TinyCity.Simulation
             }
         }
 
+        /// <summary>The merchant keeping the camp store open right now, or null when it is shut.</summary>
+        public Resident StoreKeeper => residents.FirstOrDefault(o =>
+            o.IsAlive && o.State == ResidentState.Performing && o.ActivityId == ActivityCatalog.KeepStore.Id && o.TargetObjectId == CampStore.StoveId);
+
+        /// <summary>
+        /// Owner, 6 November ("no free trading between residents, everything goes through the merchant"): whether two
+        /// people may hand food, water, materials or tools to each other in a chat. In a world with a merchant role,
+        /// only if one of them holds it.
+        /// </summary>
+        /// <summary>The role that keeps the camp store, or null in a world without one (where the store is always open).</summary>
+        public RoleOption StoreKeeperRole => Brief.Roles.FirstOrDefault(o => o.Skills.Contains(ActivityCatalog.KeepStore.Id));
+
+        /// <summary>Whether things can go into and out of the camp store now: while someone keeps it, or always in a world with no role to keep it.</summary>
+        public bool StoreIsOpen => StoreKeeperRole == null || StoreKeeper != null;
+
+        public bool MayHandOver(Resident a, Resident b)
+        {
+            var merchant = StoreKeeperRole;
+            return merchant == null || string.Equals(a?.Role, merchant.Name, StringComparison.OrdinalIgnoreCase) || string.Equals(b?.Role, merchant.Name, StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>What each stall-holder has sold since they set up (not saved).</summary>
         private readonly Dictionary<string, int> stallSales = new Dictionary<string, int>(StringComparer.Ordinal);
 
@@ -61,6 +82,12 @@ namespace TinyCity.Simulation
             if (activity == ActivityCatalog.RunStall)
             {
                 stallSales[r.Id] = 0;
+                return true;
+            }
+
+            if (activity == ActivityCatalog.KeepStore)
+            {
+                r.AddLog(Time, "Opened the camp store");
                 return true;
             }
 
@@ -128,7 +155,11 @@ namespace TinyCity.Simulation
             if (giveFood > 0 && speaker.Food.Total > 0)
             {
                 var other = session.ParticipantIds.FirstOrDefault(id => id != speaker.Id);
-                if (other != null)
+                if (other != null && !MayHandOver(speaker, GetResident(other)))
+                {
+                    speaker.AddLog(Time, "Wanted to hand over food, but everything goes through the merchant");
+                }
+                else if (other != null)
                 {
                     session.FoodOffer = new FoodOffer(speaker.Id, other, Math.Min(giveFood, speaker.Food.Total));
                 }
@@ -158,6 +189,12 @@ namespace TinyCity.Simulation
             var other = GetResident(session.ParticipantIds.FirstOrDefault(id => id != speaker.Id));
             if (other == null || !other.IsAlive)
             {
+                return;
+            }
+
+            if (!MayHandOver(speaker, other))
+            {
+                speaker.AddLog(Time, $"Wanted to hand over {item.Trim()}, but everything goes through the merchant");
                 return;
             }
 
@@ -277,6 +314,13 @@ namespace TinyCity.Simulation
 
         private void FinishFood(Resident r, ActivityDefinition activity)
         {
+            if (activity == ActivityCatalog.KeepStore)
+            {
+                r.AddLog(Time, "Shut the camp store");
+                Memories.Add(r.Id, Time, MemoryType.Event, 3, $"I kept the camp store open. It now holds {Food.Store.Describe(Time.Day)}.", tags: new[] { "food", "store", TradeTag });
+                return;
+            }
+
             if (activity == ActivityCatalog.RunStall)
             {
                 stallSales.TryGetValue(r.Id, out var handed);

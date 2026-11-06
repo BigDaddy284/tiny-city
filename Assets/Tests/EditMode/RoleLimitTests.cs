@@ -184,9 +184,10 @@ namespace TinyCity.Tests.EditMode
             var sim = NewGame();
             var s = new System.Text.StringBuilder();
             PromptText.AppendRoleAndMeeting(s, sim, sim.Residents[0]);
-            Assert.That(s.ToString(), Does.Contain("With no water purifier, nobody can get clean water").And.Contain("With no cook, nobody can eat").And.Contain("With no farmer or fisher, there is no food"));
+            Assert.That(s.ToString(), Does.Contain("With no water purifier, nobody can get clean water").And.Contain("With no cook, nobody can eat").And.Contain("With no farmer or fisher, there is no food").And.Contain("With no merchant, the camp store stays shut"));
 
             Choose(sim, sim.Residents[1], "water purifier");
+            Choose(sim, sim.Residents[4], "merchant");
             Choose(sim, sim.Residents[2], "cook");
             Choose(sim, sim.Residents[3], "fisher");
             s.Clear();
