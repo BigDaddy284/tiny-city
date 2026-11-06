@@ -36,7 +36,6 @@ namespace TinyCity.Simulation.AI
             var map = sim.World.GetMap(r.Location.MapId);
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are {sim.DoingText(r)} in {map.Name}.");
             sb.AppendLine($"How you feel: {PromptText.Feelings(r)}.");
-            sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
             PromptText.AppendDayPlan(sb, r, sim.Time);
             sb.AppendLine($"You notice {reaction.Seen}, nearby.");
             if (other != null)

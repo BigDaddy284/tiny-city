@@ -30,7 +30,6 @@ namespace TinyCity.Tests.EditMode
 
         [TestCase(NeedType.Hunger, Mood.Hungry)]
         [TestCase(NeedType.Thirst, Mood.Thirsty)]
-        [TestCase(NeedType.Energy, Mood.Tired)]
         [TestCase(NeedType.Hygiene, Mood.Grubby)]
         [TestCase(NeedType.Social, Mood.Lonely)]
         [TestCase(NeedType.Fun, Mood.Bored)]
@@ -53,27 +52,23 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Sleeping_ShowsAsleep_AndTheDeadShowNothing()
+        public void TheDead_ShowNothing()
         {
             var sim = FlatLand.CreateNewGame();
             var r = sim.Residents[0];
-            r.State = ResidentState.Performing;
-            r.ActivityId = ActivityCatalog.Sleep.Id;
             AllNeeds(r, 5);
-            Assert.That(Moods.Of(sim, r), Is.EqualTo(Mood.Asleep));
-
             r.IsAlive = false;
             Assert.That(Moods.Of(sim, r), Is.EqualTo(Mood.None));
             Assert.That(Moods.Of(sim, null), Is.EqualTo(Mood.None));
         }
 
         [Test]
-        public void ADayInTheVillage_EveryoneSleepsAtNight_AndMoodsNeverChangeTheGame()
+        public void ADayOnTheLand_MoodsNeverChangeTheGame()
         {
             var watched = FlatLand.CreateNewGame();
             var control = FlatLand.CreateNewGame();
             watched.AiDecisionsEnabled = control.AiDecisionsEnabled = true;
-            var asleep = 0;
+            var shown = 0;
             for (var minute = 0; minute < 24 * 60; minute++)
             {
                 TestTown.Answer(watched);
@@ -82,14 +77,14 @@ namespace TinyCity.Tests.EditMode
                 control.Tick();
                 foreach (var r in watched.Residents)
                 {
-                    if (Moods.Of(watched, r) == Mood.Asleep)
+                    if (Moods.Of(watched, r) != Mood.None)
                     {
-                        asleep++;
+                        shown++;
                     }
                 }
             }
 
-            Assert.That(asleep, Is.GreaterThan(10 * 6 * 60), "ten residents asleep for hours");
+            Assert.That(shown, Is.GreaterThan(0), "moods show");
             for (var i = 0; i < watched.Residents.Count; i++)
             {
                 Assert.That(watched.Residents[i].Location, Is.EqualTo(control.Residents[i].Location));

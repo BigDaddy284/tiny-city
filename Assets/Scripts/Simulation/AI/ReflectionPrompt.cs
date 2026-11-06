@@ -20,7 +20,7 @@ namespace TinyCity.Simulation.AI
         public int Importance { get; }
     }
 
-    /// <summary>At bedtime a resident looks back on the day; the AI suggests one memory and how much it mattered.</summary>
+    /// <summary>In the evening a resident looks back on the day; the AI suggests one memory and how much it mattered.</summary>
     public static class ReflectionPrompt
     {
         public const int MaxLogLines = 16;
@@ -32,7 +32,7 @@ namespace TinyCity.Simulation.AI
         {
             var sb = new StringBuilder();
             var dayStart = GameTime.FromDayAndTime(day, 6, 0);
-            sb.AppendLine($"It is {PromptText.Clock(sim.Time)} and you are going to bed. What you did today:");
+            sb.AppendLine($"It is {PromptText.Clock(sim.Time)} and the day is ending. What you did today:");
             foreach (var entry in PromptText.RecentLog(r, dayStart, MaxLogLines))
             {
                 sb.AppendLine($"- {entry.Time.ClockText} {entry.Text}");

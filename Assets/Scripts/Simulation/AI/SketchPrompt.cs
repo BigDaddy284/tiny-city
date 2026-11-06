@@ -53,7 +53,7 @@ namespace TinyCity.Simulation.AI
               .Append("A person needs a whole pace (2 by 2 letters) to stand on, so a doorway or a piece of furniture clears the 2 by 2 square it falls in. Blocks can't be walked through, so leave a doorway, and no open part may be shut in. ")
               .Append($"Whatever you build, anyone can use, and anyone can help you build it. \"height\" is how many blocks high the walls are, 1 to {BuildingRules.MaxHeight} (4 is about your height; a doorway is cleared up to 4). ")
               .Append($"Each {CraftingRules.Name(MaterialKind.Wood)} or other material you gather makes {BuildingRules.BlocksPerMaterial} blocks, so plan for what you have or can get. ")
-              .Append("For example a small wooden home 4 high: \"WWWWWWWWWW\", \"W........W\", \"W.B......W\", \"W........W\", \"W........W\", \"W........W\", \"W........W\", \"WWWWDWWWWW\". Give it a short \"name\", like \"wooden cabin\" or \"stone tower\".");
+              .Append("For example a small wooden shelter 4 high: \"WWWWWWWWWW\", \"W........W\", \"W.B......W\", \"W........W\", \"W........W\", \"W........W\", \"W........W\", \"WWWWDWWWWW\". Give it a short \"name\", like \"wooden cabin\" or \"stone tower\".");
             return sb.ToString();
         }
 

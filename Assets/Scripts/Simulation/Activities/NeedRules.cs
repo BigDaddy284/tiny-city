@@ -12,10 +12,8 @@ namespace TinyCity.Simulation.Activities
         {
             6.0, // Hunger
             8.0, // Thirst
-            3.5, // Energy
             3.0, // Hygiene
             2.0, // Social
-            2.0, // Exercise
             4.0, // Fun
         };
 
@@ -24,8 +22,6 @@ namespace TinyCity.Simulation.Activities
             var rate = BaseDecayPerHour[(int)need];
             switch (need)
             {
-                case NeedType.Exercise:
-                    return rate * (0.5 + personality.Active);
                 case NeedType.Social:
                     return rate * (0.5 + personality.Sociable);
                 default:

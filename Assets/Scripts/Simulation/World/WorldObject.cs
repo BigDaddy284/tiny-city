@@ -4,7 +4,6 @@ namespace TinyCity.Simulation.World
 {
     public enum ObjectType
     {
-        Bed,
         Kitchen,
         GardenPlot,
         Bench,
@@ -31,9 +30,6 @@ namespace TinyCity.Simulation.World
 
         /// <summary>Loose stones by the rocks, picked up by hand for a little stone, two at a time.</summary>
         LooseStones,
-
-        /// <summary>Bare ground someone lay down on to sleep, there only while they sleep. One at a time.</summary>
-        SleepingSpot,
     }
 
     /// <summary>Fixed furniture or outdoor feature. A resident uses it by standing on its tile.</summary>
@@ -65,7 +61,7 @@ namespace TinyCity.Simulation.World
 
         /// <summary>
         /// Furniture and fittings stand in the way: residents walk around them and step onto one only to use it.
-        /// Open ground (garden plots, the dance floor, spots for exercise, fishing or gathering) can be crossed.
+        /// Open ground (garden plots and crop patches, spots for fishing, gathering or meeting, building sites) can be crossed.
         /// </summary>
         public bool BlocksPassing => BlocksPassingType(Type);
 
@@ -81,7 +77,6 @@ namespace TinyCity.Simulation.World
                 case ObjectType.BuildPlot:
                 case ObjectType.StickPile:
                 case ObjectType.LooseStones:
-                case ObjectType.SleepingSpot:
                     return false;
                 default:
                     return true;

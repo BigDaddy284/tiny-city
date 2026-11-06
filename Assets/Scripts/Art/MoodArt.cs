@@ -16,10 +16,8 @@ namespace TinyCity.Art
         private static readonly Dictionary<Mood, string[]> Symbols = new Dictionary<Mood, string[]>
         {
             [Mood.Happy] = new[] { ".......", "..m.m..", ".......", ".m...m.", "..mmm.." },
-            [Mood.Asleep] = new[] { "....zzz", ".....z.", "zzz.zzz", ".z.....", "zzz...." },
             [Mood.Hungry] = new[] { ".......", "..bbb..", ".bbbbb.", ".bwbwb.", ".bbbbb." },
             [Mood.Thirsty] = new[] { "...s...", "..sss..", ".sssss.", ".sswss.", "..sss.." },
-            [Mood.Tired] = new[] { ".......", ".ee.ee.", ".......", "..eee..", "......." },
             [Mood.Grubby] = new[] { ".g..g..", "g..g..g", ".g..g..", "g..g..g", ".g..g.." },
             [Mood.Lonely] = new[] { "..ccc..", ".ccccc.", "ccccccc", ".s.s.s.", "s.s.s.." },
             [Mood.Bored] = new[] { ".......", ".......", "e..e..e", ".......", "......." },
@@ -30,7 +28,6 @@ namespace TinyCity.Art
             switch (c)
             {
                 case 'm': return Palette.Marigold.Shade(0.8);
-                case 'z': return Palette.Sleepy;
                 case 'q': return Palette.Queasy;
                 case 'r': return Palette.SignRed;
                 case 'b': return Palette.Bread;

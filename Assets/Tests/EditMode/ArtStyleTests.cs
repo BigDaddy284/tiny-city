@@ -84,7 +84,7 @@ namespace TinyCity.Tests.EditMode
             }
 
             Assert.That(trees.Value, Is.EqualTo(16681692374567243500UL), "Trees. " + Locked);
-            Assert.That(furniture.Value, Is.EqualTo(9574322580321607293UL), "Furniture. " + Locked);
+            Assert.That(furniture.Value, Is.EqualTo(8062335629622140553UL), "Furniture. " + Locked);
         }
 
         [Test]
@@ -106,7 +106,7 @@ namespace TinyCity.Tests.EditMode
                 hash.Add(MoodArt.Icon(mood));
             }
 
-            Assert.That(hash.Value, Is.EqualTo(2633782041813708967UL), "Residents. " + Locked);
+            Assert.That(hash.Value, Is.EqualTo(4152355863316568237UL), "Residents. " + Locked);
         }
 
         [Test]
@@ -122,7 +122,7 @@ namespace TinyCity.Tests.EditMode
                 }
             }
 
-            Assert.That(hash.Value, Is.EqualTo(15752147328595194006UL), "Marcus, Lola, Danny, Ruby and Walter. " + Locked);
+            Assert.That(hash.Value, Is.EqualTo(4124111382951412403UL), "Marcus, Lola, Danny, Ruby and Walter. " + Locked);
         }
 
         [Test]

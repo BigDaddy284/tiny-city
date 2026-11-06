@@ -189,12 +189,12 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void AtBedtime_TheResidentReflectsOnce_AndImportanceIsCapped()
+        public void InTheEvening_TheResidentReflectsOnce_AndImportanceIsCapped()
         {
             var sim = TestTown.WithResident(GameTime.FromDayAndTime(3, 21, 50));
             var transport = FakeAiTransport.WorkingOllama(body => body.Contains("diary-style")
                 ? "{\"summary\":\"I planted the last of the tulips and felt proud.\",\"importance\":9}"
-                : "{\"action\":\"sleep\",\"target_id\":\"obj-flat-bench-1\",\"reason\":\"Bedtime\",\"say\":\"What a day.\"}");
+                : "{\"action\":\"relax\",\"target_id\":\"obj-flat-bench-1\",\"reason\":\"A rest\",\"say\":\"What a day.\"}");
             var ai = Connected(sim, transport, new OllamaSettings());
 
             Run(ai, sim, 3 * 60);

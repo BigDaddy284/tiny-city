@@ -8,7 +8,7 @@ namespace TinyCity.Runtime
 {
     /// <summary>
     /// Pictures the player has put in <c>StreamingAssets/Art</c> to replace generated ones, named by
-    /// <see cref="ArtRequest.Key"/> (for example <c>tree.png</c>, <c>tree-winter.png</c>, <c>object-bed.png</c> or
+    /// <see cref="ArtRequest.Key"/> (for example <c>tree.png</c>, <c>tree-winter.png</c>, <c>object-bench.png</c> or
     /// <c>building-map-cafe.png</c>). See <c>Documentation/ArtOverrides.md</c>. With no folder, nothing is replaced.
     /// </summary>
     public sealed class ArtOverrides

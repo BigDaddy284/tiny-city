@@ -18,17 +18,15 @@ namespace TinyCity.Simulation.Health
 
         public const double NeglectDrainPerHour = 1.5;
 
-        public const double RecoveryPerHour = 0.5;
+        /// <summary>Nobody sleeps, so this is the whole day's recovery: about as much as a night's sleep and a day awake gave before.</summary>
+        public const double RecoveryPerHour = 0.8;
 
-        public const double RestingRecoveryPerHour = 1.5;
-
-        private static readonly NeedType[] VitalNeeds = { NeedType.Hunger, NeedType.Thirst, NeedType.Energy, NeedType.Hygiene };
+        private static readonly NeedType[] VitalNeeds = { NeedType.Hunger, NeedType.Thirst, NeedType.Hygiene };
 
         /// <summary>
-        /// One minute of health: neglected needs wear it down, and otherwise it slowly recovers (faster while
-        /// resting). Returns true when it has fallen to <paramref name="lowest"/>, where it stops.
+        /// One minute of health: neglected needs wear it down, and otherwise it slowly recovers. Returns true when it has fallen to <paramref name="lowest"/>, where it stops.
         /// </summary>
-        public static bool ApplyMinute(Resident r, bool resting, double lowest)
+        public static bool ApplyMinute(Resident r, double lowest)
         {
             var neglected = 0;
             foreach (var need in VitalNeeds)
@@ -40,7 +38,7 @@ namespace TinyCity.Simulation.Health
             }
 
             var change = neglected == 0
-                ? (resting ? RestingRecoveryPerHour : RecoveryPerHour) / 60.0
+                ? RecoveryPerHour / 60.0
                 : -neglected * NeglectDrainPerHour / 60.0;
             r.Health = Math.Max(lowest, Math.Min(MaxHealth, r.Health + change));
             return neglected > 0 && r.Health <= lowest;

@@ -65,7 +65,7 @@ namespace TinyCity.Tests.EditMode
             var sim = NewGame();
             var r = sim.Residents[0];
             var basics = Options(sim, r);
-            foreach (var id in new[] { "drink-pond", "wash-pond", "catch-fish", "sleep" })
+            foreach (var id in new[] { "drink-pond", "wash-pond", "catch-fish" })
             {
                 Assert.That(basics.Contains(id), Is.True, id);
             }

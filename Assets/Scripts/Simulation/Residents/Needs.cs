@@ -6,10 +6,8 @@ namespace TinyCity.Simulation.Residents
     {
         Hunger,
         Thirst,
-        Energy,
         Hygiene,
         Social,
-        Exercise,
         Fun,
     }
 

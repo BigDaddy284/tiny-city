@@ -10,7 +10,6 @@ namespace TinyCity.Simulation.Activities
     {
         /// <summary>Restores a need; chosen when that need gets low.</summary>
         Care,
-        Sleep,
         Leisure,
 
         /// <summary>Talking with another resident. Uses no object; see <see cref="ActivityCatalog.Chat"/>.</summary>

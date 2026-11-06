@@ -62,10 +62,8 @@ namespace TinyCity.Simulation.AI
             var map = sim.World.GetMap(r.Location.MapId);
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are in {map.Name}.");
             sb.AppendLine($"How you feel: {PromptText.Feelings(r, sim)}.");
-            sb.AppendLine($"Coming up: {PromptText.Commitments(r, sim.Time)}.");
             sb.AppendLine(PromptText.NoMoney);
             PromptText.AppendFood(sb, sim, r);
-            sb.AppendLine("Nobody has a bed of their own: you sleep wherever you choose, in any bed nobody is using, on a bench, or on the bare ground.");
 
             PromptText.AppendDayPlan(sb, r, sim.Time);
             PromptText.AppendMemories(sb, memories);
@@ -81,7 +79,7 @@ namespace TinyCity.Simulation.AI
                 }
             }
 
-            sb.AppendLine("Nobody decides for you. If you don't eat, drink, sleep or wash, nobody will do it for you, and your health suffers. Choose one option to do now:");
+            sb.AppendLine("Nobody decides for you. If you don't eat, drink or wash, nobody will do it for you, and your health suffers. Choose one option to do now:");
             foreach (var o in options)
             {
                 sb.AppendLine($"- action {PromptText.Quote(o.ActionId)}, target_id {PromptText.Quote(o.TargetId)}: {Describe(o)}");
@@ -249,8 +247,6 @@ namespace TinyCity.Simulation.AI
             {
                 return o.Activity == ActivityCatalog.PlantCrops
                     ? $"plant whatever you like, anywhere you like on open ground (about {o.Activity.DurationMinutes} minutes there)"
-                    : o.Activity == ActivityCatalog.Sleep
-                    ? $"lie down and sleep on the bare ground, anywhere you like (up to {o.Activity.DurationMinutes / 60} hours)"
                     : $"choose a spot anywhere on open ground and plan a building there; it is its back corner, and it reaches towards bigger x and y (about {o.Activity.DurationMinutes} minutes)";
             }
 

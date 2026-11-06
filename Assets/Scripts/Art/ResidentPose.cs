@@ -16,14 +16,12 @@ namespace TinyCity.Art
         Eat,
         Work,
         Cheer,
-        Sleep,
     }
 
     public enum Stance
     {
         Standing,
         Sitting,
-        Lying,
     }
 
     /// <summary>
@@ -113,14 +111,10 @@ namespace TinyCity.Art
         public static readonly Placement Centre = new Placement(0.5, 0.5, 0, Stance.Standing, Facing.DownRight);
 
         /// <summary>
-        /// How to use each kind of furniture: seats and beds hold the resident where the picture has its seat or
-        /// pillow, and worktops are used from the front, facing them. Furniture for more than one person has a place
+        /// How to use each kind of furniture: seats hold the resident where the picture has its seat, and worktops are used from the front, facing them. Furniture for more than one person has a place
         /// for each <paramref name="seat"/> (0 is the first to arrive), such as the two chairs of a café table; a seat
         /// past the last one shares the first.
         /// </summary>
-        /// <summary>Someone with nowhere to live, asleep along a park bench.</summary>
-        public static readonly Placement OnBench = new Placement(0.5, 0.5, 12, Stance.Lying, Facing.DownRight);
-
         public static Placement For(ObjectType type, int seat = 0)
         {
             if (seat > 0)
@@ -135,9 +129,6 @@ namespace TinyCity.Art
             switch (type)
             {
                 case ObjectType.Bench: return new Placement(0.32, 0.5, 12, Stance.Sitting, Facing.DownLeft);
-                case ObjectType.Bed:
-                    return new Placement(0.5, 0.5, 0, Stance.Lying, Facing.DownRight);
-                case ObjectType.SleepingSpot: return new Placement(0.5, 0.5, 2, Stance.Lying, Facing.DownRight);
                 case ObjectType.Kitchen:
                 case ObjectType.Workbench:
                     return new Placement(0.5, 1.0, 0, Stance.Standing, Facing.UpRight);
@@ -154,7 +145,6 @@ namespace TinyCity.Art
             switch (type)
             {
                 case ObjectType.Bench when seat == 1: return new Placement(0.68, 0.5, 12, Stance.Sitting, Facing.DownLeft);
-                case ObjectType.Bed when seat == 1: return new Placement(0.6, 0.74, 0, Stance.Lying, Facing.DownRight);
                 case ObjectType.FishingSpot when seat == 1: return new Placement(0.7, 0.26, 4, Stance.Standing, Facing.DownRight);
                 case ObjectType.MarketStall when seat == 1: return new Placement(0.2, 1.0, 0, Stance.Standing, Facing.UpRight);
                 case ObjectType.Workbench:
@@ -224,7 +214,7 @@ namespace TinyCity.Art
         public ResidentPose(ResidentAction action, Stance stance, Facing facing, int frame)
         {
             Action = action;
-            Stance = action == ResidentAction.Sleep ? Stance.Lying : stance == Stance.Lying ? Stance.Sitting : stance;
+            Stance = stance;
             Facing = facing;
             Frame = ((frame % FramesOf(action)) + FramesOf(action)) % FramesOf(action);
         }
@@ -246,7 +236,6 @@ namespace TinyCity.Art
             {
                 case ResidentAction.Walk: return 4;
                 case ResidentAction.Stand:
-                case ResidentAction.Sleep:
                     return 1;
                 default: return 2;
             }
@@ -276,7 +265,7 @@ namespace TinyCity.Art
             var placement = Placement.Centre;
             if (resident.TargetObjectId != null && world.TryGetObject(resident.TargetObjectId, out var obj) && obj.Location == resident.Location)
             {
-                placement = obj.Type == ObjectType.Bench && resident.ActivityId == ActivityCatalog.Sleep.Id ? Placement.OnBench : Placement.For(obj.Type, seat);
+                placement = Placement.For(obj.Type, seat);
             }
 
             return (ActionFor(resident.ActivityId, placement.Stance), placement);
@@ -284,11 +273,6 @@ namespace TinyCity.Art
 
         private static ResidentAction ActionFor(string activityId, Stance stance)
         {
-            if (activityId == ActivityCatalog.Sleep.Id)
-            {
-                return stance == Stance.Lying ? ResidentAction.Sleep : ResidentAction.Stand;
-            }
-
             if (activityId == ActivityCatalog.EatMeal.Id || activityId == ActivityCatalog.EatRaw.Id)
             {
                 return ResidentAction.Eat;

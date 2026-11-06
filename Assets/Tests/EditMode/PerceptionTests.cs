@@ -117,16 +117,14 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void NobodyAsleepOrAtWork_IsNoticedOrNotices()
+        public void NobodyInAChat_IsNoticedOrNotices()
         {
             var sim = TwoRelaxing();
             var arthur = sim.Residents[1];
-            arthur.ActivityId = ActivityCatalog.Sleep.Id;
+            arthur.State = ResidentState.Talking;
 
             Assert.That(TownSimulation.FreeToTalk(arthur), Is.False);
             Assert.That(TownSimulation.CanReact(arthur), Is.False);
-            sim.Tick();
-            Assert.That(sim.Residents[0].Reaction, Is.Null);
         }
 
         [Test]

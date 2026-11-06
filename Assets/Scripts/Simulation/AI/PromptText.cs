@@ -97,10 +97,8 @@ namespace TinyCity.Simulation.AI
             {
                 case NeedType.Hunger: words = new[] { "starving", "very hungry", "hungry" }; break;
                 case NeedType.Thirst: words = new[] { "parched with thirst", "very thirsty", "thirsty" }; break;
-                case NeedType.Energy: words = new[] { "exhausted", "very tired", "tired" }; break;
                 case NeedType.Hygiene: words = new[] { "filthy", "dirty", "grubby" }; break;
                 case NeedType.Social: words = new[] { "desperately lonely", "lonely", "wanting company" }; break;
-                case NeedType.Exercise: words = new[] { "stiff and restless", "restless", "wanting to move" }; break;
                 default: words = new[] { "miserably bored", "bored", "wanting some fun" }; break;
             }
 
@@ -112,9 +110,6 @@ namespace TinyCity.Simulation.AI
         {
             return r.Health >= 80 ? "you are in good health" : r.Health >= 50 ? "your health is fair" : "your health is poor";
         }
-
-        /// <summary>What is coming up for them: only their usual bedtime, since nothing else is fixed.</summary>
-        public static string Commitments(Resident r, GameTime now) => $"your usual bedtime is in {Duration(SleepSchedule.MinutesToBed(r, now))}";
 
         /// <summary>today's plan, and which part of it is for now, if the resident has one.</summary>
         public static void AppendDayPlan(StringBuilder sb, Resident r, GameTime now)
@@ -207,7 +202,7 @@ namespace TinyCity.Simulation.AI
             var mine = sim.Construction.OwnedBy(r.Id).ToList();
             if (mine.Count == 0)
             {
-                sb.AppendLine("Building: anyone can choose a spot on open ground and build whatever they like there from blocks of the materials they gather, with beds, stoves, stalls, crafting benches and benches inside or standing alone. Anyone can help build anyone's building with their own materials, and anyone can use what is built.");
+                sb.AppendLine("Building: anyone can choose a spot on open ground and build whatever they like there from blocks of the materials they gather, with stoves, stalls, crafting benches and benches inside or standing alone. Anyone can help build anyone's building with their own materials, and anyone can use what is built.");
             }
 
             foreach (var project in mine)

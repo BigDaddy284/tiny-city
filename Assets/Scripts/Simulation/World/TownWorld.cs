@@ -121,7 +121,7 @@ namespace TinyCity.Simulation.World
         /// </summary>
         public int PlacedVersion { get; private set; }
 
-        /// <summary>Everything residents have put in the world (crop patches, building sites, a finished home's bed), in a fixed order.</summary>
+        /// <summary>Everything residents have put in the world (crop patches, building sites, a finished building's furniture), in a fixed order.</summary>
         public IEnumerable<WorldObject> Placed => placedObjects.Values.SelectMany(list => list);
 
         /// <summary>True for something a resident put in the world, which is drawn with the blocks rather than with the map.</summary>

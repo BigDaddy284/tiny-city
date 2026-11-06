@@ -85,7 +85,7 @@ namespace TinyCity.Tests.EditMode
                         }
                     }
 
-                    Assert.That(filled, Is.GreaterThan(pose.Stance == Stance.Lying ? 30 : 150), name);
+                    Assert.That(filled, Is.GreaterThan(150), name);
                     Assert.That(outlined, Is.True, $"{name} has a dark outline");
                     Assert.That(ResidentArt.HeadTop(look, pose), Is.InRange(15, 40));
                 }
@@ -107,7 +107,6 @@ namespace TinyCity.Tests.EditMode
             var faces = Facings.Select(f => Convert.ToBase64String(ResidentArt.Render(look, new ResidentPose(ResidentAction.Walk, Stance.Standing, f, 0)).ToBytesBottomUp())).ToList();
             Assert.That(faces.Distinct().Count(), Is.EqualTo(4), "four ways to face");
             Assert.That(new ResidentPose(ResidentAction.Walk, Stance.Standing, Facing.DownRight, 5).Frame, Is.EqualTo(1), "frames wrap round");
-            Assert.That(new ResidentPose(ResidentAction.Sleep, Stance.Standing, Facing.DownRight, 0).Stance, Is.EqualTo(Stance.Lying), "sleeping is lying down");
         }
 
         [Test]
@@ -134,8 +133,6 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void FurnitureIsUsedSensibly()
         {
-            Assert.That(Placement.For(ObjectType.Bed).Stance, Is.EqualTo(Stance.Lying));
-            Assert.That(Placement.For(ObjectType.SleepingSpot).Stance, Is.EqualTo(Stance.Lying));
             foreach (var seat in new[] { ObjectType.Bench })
             {
                 Assert.That(Placement.For(seat).Stance, Is.EqualTo(Stance.Sitting), seat.ToString());
@@ -207,7 +204,6 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = FlatLand.CreateNewGame();
             var seen = new HashSet<ResidentAction>();
-            var seenSleepingInBed = false;
             var seenSitting = false;
             var last = sim.Residents.ToDictionary(r => r.Id, r => r.Location);
             sim.AiDecisionsEnabled = true;
@@ -220,12 +216,6 @@ namespace TinyCity.Tests.EditMode
                     var (action, placement) = ResidentPose.Choose(sim.World, r, last[r.Id] != r.Location);
                     last[r.Id] = r.Location;
                     seen.Add(action);
-                    if (r.State == ResidentState.Performing && r.ActivityId == ActivityCatalog.Sleep.Id)
-                    {
-                        Assert.That(action, Is.EqualTo(ResidentAction.Sleep), $"{r.FirstName} sleeps lying down");
-                        seenSleepingInBed |= placement.Stance == Stance.Lying;
-                    }
-
                     seenSitting |= placement.Stance == Stance.Sitting;
                     if (r.State == ResidentState.Talking)
                     {
@@ -234,12 +224,11 @@ namespace TinyCity.Tests.EditMode
                 }
             }
 
-            foreach (var everyday in new[] { ResidentAction.Walk, ResidentAction.Talk, ResidentAction.Eat, ResidentAction.Work, ResidentAction.Sleep })
+            foreach (var everyday in new[] { ResidentAction.Walk, ResidentAction.Talk, ResidentAction.Eat, ResidentAction.Work })
             {
                 Assert.That(seen.Contains(everyday), Is.True, $"{everyday} is seen in a day and a half");
             }
 
-            Assert.That(seenSleepingInBed, Is.True);
             Assert.That(seenSitting, Is.True);
         }
     }

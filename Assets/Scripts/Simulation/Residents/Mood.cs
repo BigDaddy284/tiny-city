@@ -7,10 +7,8 @@ namespace TinyCity.Simulation.Residents
     {
         None,
         Happy,
-        Asleep,
         Hungry,
         Thirsty,
-        Tired,
         Grubby,
         Lonely,
         Bored,
@@ -35,11 +33,6 @@ namespace TinyCity.Simulation.Residents
                 return Mood.None;
             }
 
-            if (resident.State == ResidentState.Performing && resident.ActivityId == Activities.ActivityCatalog.Sleep.Id)
-            {
-                return Mood.Asleep;
-            }
-
             var needs = resident.Needs;
             if (needs[NeedType.Hunger] < LowNeed)
             {
@@ -49,11 +42,6 @@ namespace TinyCity.Simulation.Residents
             if (needs[NeedType.Thirst] < LowNeed)
             {
                 return Mood.Thirsty;
-            }
-
-            if (needs[NeedType.Energy] < LowNeed)
-            {
-                return Mood.Tired;
             }
 
             if (needs[NeedType.Hygiene] < LowNeed)

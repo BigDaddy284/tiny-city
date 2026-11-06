@@ -55,7 +55,7 @@ namespace TinyCity.Simulation.Persistence
         /// <remarks>
         /// Version 1 of Tiny City 2 (4 November 2026): residents (needs, health, profile text, role, food, things),
         /// memories (with whether the AI rated their importance; embeddings aren't saved, they are made again after
-        /// loading), conversation history and conversations in progress, relationships, buildings, crops, sleeping
+        /// loading), conversation history and conversations in progress, relationships, buildings, crops
         /// spots, role requests and the town history. Fields from v1 and from earlier v2 saves (money, jobs, homes,
         /// shops, illness, couples) are ignored. Saves made before the fresh start used the format
         /// <see cref="FormatBeforeFreshStart"/> and aren't loaded.
@@ -104,15 +104,6 @@ namespace TinyCity.Simulation.Persistence
                 ["firstMeetingDay"] = simulation.FirstMeetingDay,
                 ["roleRequests"] = simulation.RoleRequests.OrderBy(p => p.Key, StringComparer.Ordinal).ToDictionary(p => p.Key, p => (object)p.Value),
                 ["noticed"] = simulation.RecentlyNoticed().ToDictionary(p => p.Key, p => (object)p.Value),
-                ["nextSleepSpotNumber"] = simulation.Sleeping.NextSpotNumber,
-                ["sleepSpots"] = simulation.Sleeping.Spots.Select(o => (object)new Dictionary<string, object>
-                {
-                    ["id"] = o.Id,
-                    ["mapId"] = o.Location.MapId,
-                    ["x"] = o.Location.Position.X,
-                    ["y"] = o.Location.Position.Y,
-                    ["sleeperId"] = o.SleeperId,
-                }).ToList(),
                 ["nextSiteNumber"] = simulation.Construction.NextSiteNumber,
                 ["sites"] = simulation.Construction.Sites.Select(site =>
                 {
@@ -217,7 +208,7 @@ namespace TinyCity.Simulation.Persistence
                 return Fail("The save file has no residents.");
             }
 
-            // Buildings and crop patches first, so a finished home's bed and every site and patch are in the world while the residents who use them are read.
+            // Buildings and crop patches first, so a finished building's furniture and every site and patch are in the world while the residents who use them are read.
             var sites = new List<(Building.Site site, Building.BuildPlan plan, int placed, int startedDay, List<string> builders)>();
             var early = new Building.Construction(world);
             foreach (var item in GetList(root, "sites").OfType<Dictionary<string, object>>())
@@ -240,7 +231,7 @@ namespace TinyCity.Simulation.Persistence
 
                 var site = new Building.Site(id, GetString(item, "ownerId"), corner, stand);
                 Building.BuildPlan plan = null;
-                if (item.ContainsKey("rows") && !Building.BuildPlan.TryParse(GetString(item, "name"), GetInt(item, "height", 1), GetList(item, "rows").OfType<string>().ToList(), out plan, out var planError))
+                if (item.ContainsKey("rows") && !Building.BuildPlan.TryParse(GetString(item, "name"), GetInt(item, "height", 1), GetList(item, "rows").OfType<string>().Select(row => row.Replace('B', '.')).ToList(), out plan, out var planError))
                 {
                     warnings.Add($"The building on \"{id}\" was dropped: {planError}.");
                     continue;
@@ -274,25 +265,6 @@ namespace TinyCity.Simulation.Persistence
                 var patch = new CropPatch(id, at, TextRules.Clean(what, FoodSupply.MaxCropNameLength).ToLowerInvariant(), GetString(item, "planterId"));
                 patches.Add(patch);
                 earlyFood.RestorePatch(patch);
-            }
-
-            var sleepSpots = new List<SleepingSpot>();
-            var earlySleeping = new SleepingGround();
-            earlySleeping.Attach(world);
-            foreach (var item in GetList(root, "sleepSpots").OfType<Dictionary<string, object>>())
-            {
-                var id = GetString(item, "id");
-                var mapId = GetString(item, "mapId");
-                var at = mapId == null ? default : new Location(mapId, GetInt(item, "x", -1), GetInt(item, "y", -1));
-                if (id == null || !id.StartsWith(SleepingSpot.IdPrefix, StringComparison.Ordinal) || sleepSpots.Any(o => o.Id == id) || mapId == null || !world.IsWalkable(at))
-                {
-                    warnings.Add($"A sleeping spot \"{id}\" that isn't on open ground was dropped.");
-                    continue;
-                }
-
-                var spot = new SleepingSpot(id, at, GetString(item, "sleeperId"));
-                sleepSpots.Add(spot);
-                earlySleeping.Restore(spot);
             }
 
             var residents = new List<Resident>();
@@ -341,11 +313,6 @@ namespace TinyCity.Simulation.Persistence
                 }
             }
 
-            foreach (var spot in sleepSpots)
-            {
-                simulation.Sleeping.Restore(spot);
-            }
-
             // Older saves have no brief: their world carries on with none.
             simulation.Brief = GetObject(root, "brief") is Dictionary<string, object> brief ? WorldBrief.Parse(brief, warnings).UpgradedFromOlderSave() : WorldBrief.Empty;
 
@@ -378,8 +345,6 @@ namespace TinyCity.Simulation.Persistence
                     }
                 }
             }
-
-            simulation.Sleeping.NextSpotNumber = Math.Max(GetInt(root, "nextSleepSpotNumber", 1), simulation.Sleeping.Spots.Select(o => NumberAfter(o.Id, SleepingSpot.IdPrefix)).DefaultIfEmpty(1).Max());
 
             simulation.Construction.NextSiteNumber = Math.Max(GetInt(root, "nextSiteNumber", 1), simulation.Construction.Sites.Select(o => NumberAfter(o.Id, Building.BuildingRules.SitePrefix)).DefaultIfEmpty(1).Max());
             foreach (var patch in patches)

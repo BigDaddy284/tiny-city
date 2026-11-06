@@ -60,10 +60,13 @@ namespace TinyCity.Simulation
         public const int PlanMinutes = 360;
 
         /// <summary>
-        /// A resident's day for reflection purposes runs from noon to noon, so going to bed after midnight, or still
-        /// sleeping early the next morning, counts as the same day.
+        /// A resident's day for reflection purposes runs from noon to noon, so a reflection late at night or in the
+        /// small hours counts for the same day.
         /// </summary>
         private const int ReflectionDayStartMinute = 12 * 60;
+
+        /// <summary>Nobody sleeps, so each resident looks back on their day from this time of the evening (21:00).</summary>
+        public const int ReflectionFromMinute = 21 * 60;
 
         private readonly List<Resident> residents;
         private readonly List<ConversationSession> sessions = new List<ConversationSession>();
@@ -82,7 +85,6 @@ namespace TinyCity.Simulation
             Time = time;
             Construction = new Building.Construction(world);
             Food.Attach(world);
-            Sleeping.Attach(world);
             Pathfinder = new Pathfinder(world, Construction.IsBlocked);
             Planner = new ActivityPlanner(world, Pathfinder, this.residents, () => Time) { Food = Food };
             Food.SellerAt = SellerAt;
@@ -194,7 +196,6 @@ namespace TinyCity.Simulation
         {
             StepFood();
             StepSketches();
-            StepSleepingGround();
             StepMeeting();
             foreach (var resident in residents)
             {
@@ -347,7 +348,6 @@ namespace TinyCity.Simulation
                 }
 
                 var placedId = option.Activity == ActivityCatalog.PlantCrops ? Food.AddPatch(spot, what, r.Id).Id
-                    : option.Activity == ActivityCatalog.Sleep ? Sleeping.Add(spot, r.Id).Id
                     : Construction.AddSite(r.Id, spot).Id;
                 World.TryGetObject(placedId, out var placed);
                 option = new FreeTimeOption(option.Activity, placed, Pathfinder.Distance(r.Location, spot));
@@ -581,10 +581,11 @@ namespace TinyCity.Simulation
         /// <summary>What a day plan answers to have no role.</summary>
         public const string RoleNone = "none";
 
-        /// <summary>A resident is ready to reflect once they have gone to bed for the night and haven't reflected on today yet.</summary>
+        /// <summary>A resident is ready to reflect from <see cref="ReflectionFromMinute"/> until a new day begins (<see cref="DayPlan.DayStartHour"/>), when not in a chat, if they haven't reflected on today yet.</summary>
         public bool IsReflectionDue(Resident r) =>
-            r != null && r.IsAlive && r.State == ResidentState.Performing && r.ActivityId == ActivityCatalog.Sleep.Id
-            && SleepSchedule.IsSleepTime(r, Time) && ReflectionDayFor(Time) > r.LastReflectionDay;
+            r != null && r.IsAlive && r.State != ResidentState.Talking
+            && (Time.MinuteOfDay >= ReflectionFromMinute || Time.Hour < DayPlan.DayStartHour)
+            && ReflectionDayFor(Time) > r.LastReflectionDay;
 
         /// <summary>
         /// Stores an AI-suggested reflection as a memory, after checking it is for a day not yet reflected on.
