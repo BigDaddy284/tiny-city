@@ -178,7 +178,7 @@ namespace TinyCity.Tests.EditMode
             sim.AiDecisionsEnabled = true;
             sim.Tick();
             var r = sim.Residents[0];
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "catch-fish", "obj-flat-fishing-1", "Supper", null), Is.EqualTo(TinyCity.Simulation.DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "catch-fish", "obj-flat-fishing-1", "Supper"), Is.EqualTo(TinyCity.Simulation.DecisionOutcome.Applied));
             Assert.That(r.State, Is.EqualTo(ResidentState.Travelling));
             var json = SaveSerializer.Save(sim).Replace("\"state\": \"Travelling\"", "\"state\": \"Performing\"");
 

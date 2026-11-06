@@ -4,19 +4,21 @@
   "roles": [
     {
       "name": "farmer",
-      "about": "You grow the food everyone depends on, and only a farmer can. You choose where to dig a patch, plant it, water it on different days until it is ready and pick it, and you plan ahead so there is always something growing. A hoe makes each harvest bigger.",
+      "about": "You grow the food everyone depends on, and only a farmer can. You plant squares of the farming patch, the only soil where crops grow, water them on different days until they are ready and pick them, and you plan ahead so there is always something growing. A hoe makes each harvest bigger.",
       "can": [
         "plant-crops",
         "water-crops",
         "harvest"
-      ]
+      ],
+      "max": 3
     },
     {
       "name": "fisher",
       "about": "You bring in fish from the pond. Anyone can catch the odd fish by hand, but you catch far more, and a rod means more still. Fish keep only a couple of days, so you catch what is needed and share or trade the rest.",
       "can": [
         "catch-fish"
-      ]
+      ],
+      "max": 3
     },
     {
       "name": "lumberjack",
@@ -26,7 +28,8 @@
         "gather-wood",
         "gather-hardwood",
         "gather-heartwood"
-      ]
+      ],
+      "max": 2
     },
     {
       "name": "miner",
@@ -36,7 +39,8 @@
         "gather-stone",
         "gather-iron",
         "gather-crystal"
-      ]
+      ],
+      "max": 2
     },
     {
       "name": "toolmaker",
@@ -50,14 +54,16 @@
         "craft-iron-pickaxe",
         "craft-hoe",
         "craft-rod"
-      ]
+      ],
+      "max": 1
     },
     {
       "name": "cook",
       "about": "Only you can cook. You turn raw vegetables and fish into proper meals at a stove, which fill people up far better than raw food and don't make them ill. You keep an eye on what is running low and make sure nobody goes hungry.",
       "can": [
         "cook"
-      ]
+      ],
+      "max": 2
     },
     {
       "name": "builder",
@@ -65,34 +71,40 @@
       "can": [
         "plan-building",
         "build"
-      ]
+      ],
+      "max": 3
     },
     {
       "name": "water purifier",
       "about": "Only you can clean water. Pond water is dirty and makes people unwell; you turn it into clean water at the pond, which quenches thirst properly, and you can share it or trade it.",
       "can": [
         "purify-water"
-      ]
+      ],
+      "max": 2
     },
     {
       "name": "merchant",
       "about": "Only you can run a stall. You trade food and goods with the others, deciding what you want in return. You can build up plenty for yourself or help everyone get what they need; how fair you are is up to you.",
       "can": [
         "run-stall"
-      ]
+      ],
+      "max": 1
     },
     {
       "name": "tax man",
       "about": "You collect a share of what people hold for the good of everyone. In a chat you can ask someone to hand over a percentage of their food and materials; they decide whether to pay, so they have to accept your authority. You may pay a security enforcer from what you collect.",
-      "canTax": true
+      "canTax": true,
+      "max": 1
     },
     {
       "name": "security enforcer",
-      "about": "You keep the peace. You stand up for anyone being treated unfairly and back up whoever pays you, such as the tax man, if you agree to work for them. Your only tools are your words and your presence."
+      "about": "You keep the peace. You stand up for anyone being treated unfairly and back up whoever pays you, such as the tax man, if you agree to work for them. Your only tools are your words and your presence.",
+      "max": 1
     },
     {
       "name": "mayor",
-      "about": "You lead the group and run the weekly meeting, helping everyone decide what to do: who grows, who builds, what is shared. You have no power except what people give you by listening, so you have to earn their trust."
+      "about": "You lead the group and run the weekly meeting, helping everyone decide what to do: who grows, who builds, what is shared. You have no power except what people give you by listening, so you have to earn their trust.",
+      "max": 1
     }
   ],
   "residents": [

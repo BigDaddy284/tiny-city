@@ -68,7 +68,7 @@ namespace TinyCity.Tests.EditMode
             sim.Tick();
             var r = sim.Residents[0];
             var fish = sim.FreeTimeOptionsFor(r).First(o => o.ActionId == ActivityCatalog.CatchFish.Id);
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, fish.ActionId, fish.TargetId, "Fishing", "Supper time"), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, fish.ActionId, fish.TargetId, "Fishing"), Is.EqualTo(DecisionOutcome.Applied));
             r.Needs[NeedType.Hunger] = 1;
 
             for (var i = 0; i < 10; i++)
@@ -95,7 +95,7 @@ namespace TinyCity.Tests.EditMode
                     var chat = sim.FreeTimeOptionsFor(r).FirstOrDefault(o => o.Partner == other);
                     if (chat != null)
                     {
-                        sim.ApplyDecision(r.Id, r.PendingDecisionId, chat.ActionId, chat.TargetId, "Chat", "Hello");
+                        sim.ApplyDecision(r.Id, r.PendingDecisionId, chat.ActionId, chat.TargetId, "Chat");
                     }
                 }
             }

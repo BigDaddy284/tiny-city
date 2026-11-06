@@ -279,9 +279,9 @@ namespace TinyCity.Simulation
         /// <summary>
         /// Applies an AI suggestion for a resident who is deciding. Everything is checked against the current state:
         /// the answer must be for the decision the resident is waiting on, and the action and target must be one of
-        /// <see cref="ActivityPlanner.FreeTimeOptions"/> right now. Reason and speech are cleaned and shortened.
+        /// <see cref="ActivityPlanner.FreeTimeOptions"/> right now. The reason is cleaned and shortened and goes in their log; nothing is said out loud (owner, 6 November: bubbles are only for chats).
         /// </summary>
-        public DecisionOutcome ApplyDecision(string residentId, long decisionId, string actionId, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null,
+        public DecisionOutcome ApplyDecision(string residentId, long decisionId, string actionId, string targetId, string reason, IReadOnlyList<PlanStep> then = null,
             int? x = null, int? y = null, string what = null)
         {
             var r = GetResident(residentId);
@@ -328,10 +328,10 @@ namespace TinyCity.Simulation
             {
                 // Tiny City 2: planting or building wherever they choose. The game only checks the spot is free ground they can reach.
                 var spot = x != null && y != null ? new Location(r.Location.MapId, x.Value, y.Value) : r.Location;
-                var problem = x == null || y == null ? "no spot was given" : GroundProblem(r, spot);
+                var problem = x == null || y == null ? "no spot was given" : GroundProblem(r, spot, option.Activity);
                 if (problem != null)
                 {
-                    var near = FreeGroundNear(r, 1, AI.PromptText.FreeSpotSearch);
+                    var near = option.Activity == ActivityCatalog.PlantCrops ? FreeSoil(r, 1) : FreeGroundNear(r, 1, AI.PromptText.FreeSpotSearch);
                     if (near.Count == 0)
                     {
                         r.AddLog(Time, $"Couldn't go {option.Activity.Verb} at ({x}, {y}): {problem}");
@@ -363,7 +363,6 @@ namespace TinyCity.Simulation
             StartOption(r, option, why, "(AI)");
             var actions = new HashSet<string>(options.Select(o => o.ActionId));
             r.SetPlan((then ?? Array.Empty<PlanStep>()).Where(step => step != null && actions.Contains(step.ActionId)).Take(MaxPlanSteps - 1), Time.TotalMinutes + PlanMinutes);
-            Conversations.AddRemark(r.Id, Time, say, option.ActionId);
             return DecisionOutcome.Applied;
         }
 
@@ -422,9 +421,24 @@ namespace TinyCity.Simulation
         /// <summary>
         /// Tiny City 2: why a resident can't plant or start building at this spot, or null if they can: it must be
         /// open ground on an outdoor map that they can reach, with nothing on it and no building planned over it.
+        /// Owner, 6 November: crops grow only in the farming patch (soil), and nobody builds on it.
         /// </summary>
-        public string GroundProblem(Resident r, Location spot)
+        public string GroundProblem(Resident r, Location spot, ActivityDefinition activity = null)
         {
+            if (activity != null && World.TryGetMap(spot.MapId, out var soilMap) && soilMap.InBounds(spot.Position))
+            {
+                var soil = soilMap.GetTile(spot.Position) == TileType.Garden;
+                if (activity == ActivityCatalog.PlantCrops && !soil)
+                {
+                    return "crops only grow in the farming patch";
+                }
+
+                if (activity == ActivityCatalog.PlanBuilding && soil)
+                {
+                    return "the farming patch is kept for crops";
+                }
+            }
+
             if (!World.TryGetMap(spot.MapId, out var map) || !map.IsExterior)
             {
                 return "that's not outdoors";
@@ -468,7 +482,7 @@ namespace TinyCity.Simulation
                     foreach (var dx in new[] { -(d - Math.Abs(dy)), d - Math.Abs(dy) }.Distinct())
                     {
                         var spot = new Location(map.Id, here.X + dx, here.Y + dy);
-                        if (free.Count < count && !(map.InBounds(spot.Position) && map.GetTile(spot.Position) == TileType.Path) && GroundProblem(r, spot) == null)
+                        if (free.Count < count && !(map.InBounds(spot.Position) && (map.GetTile(spot.Position) == TileType.Path || map.GetTile(spot.Position) == TileType.Garden)) && GroundProblem(r, spot) == null)
                         {
                             free.Add(spot);
                         }
@@ -477,6 +491,30 @@ namespace TinyCity.Simulation
             }
 
             return free;
+        }
+
+        /// <summary>Free soil in the farming patch where a resident could plant, nearest to them first.</summary>
+        public List<Location> FreeSoil(Resident r, int count)
+        {
+            var free = new List<Location>();
+            if (!World.TryGetMap(r.Location.MapId, out var map) || !map.IsExterior)
+            {
+                return free;
+            }
+
+            for (var y = 0; y < map.Height; y++)
+            {
+                for (var x = 0; x < map.Width; x++)
+                {
+                    var spot = new Location(map.Id, x, y);
+                    if (map.GetTile(spot.Position) == TileType.Garden && GroundProblem(r, spot, ActivityCatalog.PlantCrops) == null)
+                    {
+                        free.Add(spot);
+                    }
+                }
+            }
+
+            return free.OrderBy(s => Pathfinder.Distance(r.Location, s)).ThenBy(s => s.Position.Y).ThenBy(s => s.Position.X).Take(count).ToList();
         }
 
         /// <summary>
@@ -565,6 +603,15 @@ namespace TinyCity.Simulation
                 return;
             }
 
+            if (role != null && RoleIsFull(role, r))
+            {
+                r.AddLog(Time, $"Wanted to be the {role.Name}, but all {role.Max} places are taken");
+                Memories.Add(r.Id, Time, MemoryType.Event, 4,
+                    $"I wanted to be the {role.Name}, but there can only be {role.Max} and they are all taken, so I need to do something else for now.",
+                    tags: new[] { "role" });
+                return;
+            }
+
             if (RequestRoleChange(r, role, none))
             {
                 return;
@@ -577,6 +624,18 @@ namespace TinyCity.Simulation
                 role == null ? $"I decided to stop being the {old}." : old == null ? $"I decided to take up being the {role.Name}." : $"I decided to stop being the {old} and be the {role.Name} instead.",
                 tags: new[] { "role" });
         }
+
+        /// <summary>How many living people hold this role.</summary>
+        public int HoldersOf(string role) =>
+            role == null ? 0 : residents.Count(o => o.IsAlive && string.Equals(o.Role, role, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// Owner, 6 November: whether every place in a limited role (<see cref="RoleOption.Max"/>) is taken by
+        /// someone other than <paramref name="except"/>, so nobody else may take it up.
+        /// </summary>
+        public bool RoleIsFull(RoleOption role, Resident except = null) =>
+            role != null && role.Max > 0
+            && residents.Count(o => o.IsAlive && o != except && string.Equals(o.Role, role.Name, StringComparison.OrdinalIgnoreCase)) >= role.Max;
 
         /// <summary>What a day plan answers to have no role.</summary>
         public const string RoleNone = "none";
@@ -653,7 +712,7 @@ namespace TinyCity.Simulation
                 return DecisionOutcome.NotAlive;
             }
 
-            var clean = TextRules.Clean(text, ConversationLine.MaxTextLength);
+            var clean = Social.PrivateTraits.WithoutTraitTalk(TextRules.Clean(text, ConversationLine.MaxTextLength), residents);
             if (clean.Length == 0)
             {
                 return DecisionOutcome.InvalidText;

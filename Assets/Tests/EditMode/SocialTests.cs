@@ -399,7 +399,7 @@ namespace TinyCity.Tests.EditMode
             sim.AiDecisionsEnabled = true;
             sim.Tick();
             var chat = sim.FreeTimeOptionsFor(Mabel(sim)).Single(o => o.Partner == Arthur(sim));
-            Assert.That(sim.ApplyDecision(Mabel(sim).Id, Mabel(sim).PendingDecisionId, chat.ActionId, chat.TargetId, "Company", null), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(Mabel(sim).Id, Mabel(sim).PendingDecisionId, chat.ActionId, chat.TargetId, "Company"), Is.EqualTo(DecisionOutcome.Applied));
             sim.Advance(2);
             Assert.That(Mabel(sim).TargetResidentId, Is.EqualTo(StarterResidents.ArthurId));
 

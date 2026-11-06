@@ -37,7 +37,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(option, Is.Not.Null, $"{activity.Id} should be an option");
             var x = option.IsGround ? r.Location.Position.X + 2 : (int?)null;
             var y = option.IsGround ? r.Location.Position.Y : (int?)null;
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Food", "Right then", null, x, y, option.IsGround ? "carrots" : null), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Food", null, x, y, option.IsGround ? "carrots" : null), Is.EqualTo(DecisionOutcome.Applied));
             for (var i = 0; i < 600 && r.State != ResidentState.Deciding; i++)
             {
                 sim.Tick();
@@ -96,7 +96,7 @@ namespace TinyCity.Tests.EditMode
             sim.AiDecisionsEnabled = true;
             var r = sim.Residents[0];
             sim.Tick();
-            Assert.That(sim.World.ObjectsOfType(TinyCity.Simulation.World.ObjectType.GardenPlot).Any(), Is.False, "no garden plots: they plant where they like");
+            Assert.That(sim.World.ObjectsOfType(TinyCity.Simulation.World.ObjectType.GardenPlot).Any(), Is.False, "no garden plots: they plant where they like in the patch");
             var ground = sim.FreeTimeOptionsFor(r).Single(o => o.Activity == ActivityCatalog.PlantCrops);
             Assert.That(ground.IsGround, Is.True);
             Assert.That(ground.TargetId, Is.EqualTo(FreeTimeOption.GroundTargetId));
@@ -105,9 +105,17 @@ namespace TinyCity.Tests.EditMode
             var bench = sim.World.Objects.First(o => o.Type == TinyCity.Simulation.World.ObjectType.Bench);
             Assert.That(sim.GroundProblem(r, bench.Location), Is.Not.Null, "not on a bench");
 
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 40, 10, "Purple Potatoes"), Is.EqualTo(DecisionOutcome.Applied), "anywhere on open ground, not just the soil");
+            var field = new TinyCity.Simulation.World.Location(r.Location.MapId, 20, 24);
+            var open = new TinyCity.Simulation.World.Location(r.Location.MapId, 40, 10);
+            Assert.That(sim.GroundProblem(r, open, ActivityCatalog.PlantCrops), Does.Contain("farming patch"), "crops only grow in the farming patch");
+            Assert.That(sim.GroundProblem(r, field, ActivityCatalog.PlanBuilding), Does.Contain("kept for crops"), "and nobody builds on it");
+            Assert.That(sim.GroundProblem(r, open, ActivityCatalog.PlanBuilding), Is.Null);
+            Assert.That(sim.FreeSoil(r, 5).All(s => TinyCity.Simulation.Content.FlatLand.IsCropField(s.Position.X, s.Position.Y)), Is.True);
+            Assert.That(sim.FreeGroundNear(r, 30, 30).Any(s => TinyCity.Simulation.Content.FlatLand.IsCropField(s.Position.X, s.Position.Y)), Is.False, "building spots leave the patch alone");
+
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", null, 20, 24, "Purple Potatoes"), Is.EqualTo(DecisionOutcome.Applied));
             var patch = sim.Food.Patches.Single();
-            Assert.That((patch.What, patch.PlanterId, patch.Location.Position.X, patch.Location.Position.Y), Is.EqualTo(("purple potatoes", r.Id, 40, 10)));
+            Assert.That((patch.What, patch.PlanterId, patch.Location.Position.X, patch.Location.Position.Y), Is.EqualTo(("purple potatoes", r.Id, 20, 24)));
             Assert.That(r.TargetObjectId, Is.EqualTo(patch.Id));
             for (var i = 0; i < 300 && r.State != ResidentState.Deciding; i++)
             {
@@ -121,7 +129,7 @@ namespace TinyCity.Tests.EditMode
             var crop = sim.Food.CropAt(patch.Id);
             crop.WateredDays = FoodRules.WateredDaysToGrow;
             var option = sim.FreeTimeOptionsFor(r).Single(o => o.Activity == ActivityCatalog.Harvest);
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Food", "Ready"), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Food"), Is.EqualTo(DecisionOutcome.Applied));
             for (var i = 0; i < 300 && r.State != ResidentState.Deciding; i++)
             {
                 sim.Tick();
@@ -141,7 +149,7 @@ namespace TinyCity.Tests.EditMode
             sim.AiDecisionsEnabled = true;
             var r = sim.Residents[0];
             sim.Tick();
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 20, 23, "beans"), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", null, 20, 23, "beans"), Is.EqualTo(DecisionOutcome.Applied));
             sim.Advance(120);
             Assert.That(sim.Food.Patches.Count(), Is.EqualTo(1));
 
@@ -329,20 +337,20 @@ namespace TinyCity.Tests.EditMode
             sim.AiDecisionsEnabled = true;
             var r = sim.Residents[0];
             sim.Tick();
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", "Here", null, 22, 31, "rice"), Is.EqualTo(DecisionOutcome.Applied), "in the pond");
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plant-crops", "ground", "Food", null, 22, 31, "rice"), Is.EqualTo(DecisionOutcome.Applied), "in the pond");
             var patch = sim.Food.Patches.Single();
-            Assert.That(sim.Pathfinder.Distance(r.Location, patch.Location) <= TinyCity.Simulation.AI.PromptText.FreeSpotSearch * 2, Is.True, "planted on free ground nearby instead");
+            Assert.That(FlatLand.IsCropField(patch.Location.Position.X, patch.Location.Position.Y), Is.True, "planted on the nearest free soil instead");
             Assert.That(r.Log.Any(e => e.Text.Contains("so chose")), Is.True);
 
             var other = sim.Residents[1];
-            Assert.That(sim.ApplyDecision(other.Id, other.PendingDecisionId, "plant-crops", "ground", "Food", "Here"), Is.EqualTo(DecisionOutcome.Applied), "no spot given");
+            Assert.That(sim.ApplyDecision(other.Id, other.PendingDecisionId, "plant-crops", "ground", "Food"), Is.EqualTo(DecisionOutcome.Applied), "no spot given");
 
             var third = sim.Residents[2];
-            Assert.That(sim.ApplyDecision(third.Id, third.PendingDecisionId, "drink-pond", "obj-nowhere", "Thirsty", "Gulp"), Is.EqualTo(DecisionOutcome.Applied), "the wrong target: the nearest place to drink");
+            Assert.That(sim.ApplyDecision(third.Id, third.PendingDecisionId, "drink-pond", "obj-nowhere", "Thirsty"), Is.EqualTo(DecisionOutcome.Applied), "the wrong target: the nearest place to drink");
 
             var fourth = sim.Residents[3];
             var only = sim.FreeTimeOptionsFor(fourth).GroupBy(o => o.TargetId).First(g => g.Count() == 1).Single();
-            Assert.That(sim.ApplyDecision(fourth.Id, fourth.PendingDecisionId, "do-the-thing", only.TargetId, "Why not", "Hm"), Is.EqualTo(DecisionOutcome.Applied), "the wrong action for a target only one option uses");
+            Assert.That(sim.ApplyDecision(fourth.Id, fourth.PendingDecisionId, "do-the-thing", only.TargetId, "Why not"), Is.EqualTo(DecisionOutcome.Applied), "the wrong action for a target only one option uses");
             Assert.That(fourth.ActivityId, Is.EqualTo(only.ActionId));
         }
 

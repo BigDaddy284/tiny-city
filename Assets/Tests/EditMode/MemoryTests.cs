@@ -88,7 +88,7 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(history.All.Count, Is.EqualTo(ConversationHistory.MaxRecords));
             Assert.That(history.All[0].Lines[0].Text, Is.EqualTo("Line 10"));
-            Assert.That(history.LastLineBy(Mabel).Text, Is.EqualTo($"Line {ConversationHistory.MaxRecords + 9}"));
+            Assert.That(history.LastLineBy(Mabel), Is.Null, "a remark is never shown as speech: bubbles are only for chats");
             Assert.That(history.AddRemark(Mabel, new GameTime(0), "   ", "read"), Is.Null);
         }
 

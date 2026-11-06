@@ -111,6 +111,7 @@ namespace TinyCity.Simulation.AI
             }
 
             sb.AppendLine($"Your food: {speaker.Food.Describe(sim.Time.Day)}. {PromptText.NoMoney}");
+            sb.AppendLine(PromptText.DirtyWater);
             sb.AppendLine($"Your things: {speaker.Belongings.Describe()}; clean water: {speaker.CleanWater}. {listener.FirstName}'s things: {listener.Food.Describe(sim.Time.Day)}; {listener.Belongings.Describe()}; clean water: {listener.CleanWater}.");
             sb.AppendLine($"You are {(speaker.Role == null ? "without a role" : "the " + speaker.Role)}; {listener.FirstName} is {(listener.Role == null ? "without a role" : "the " + listener.Role)}. Each role does its own work, so you need what others make.");
             var offer = session.FoodOffer;

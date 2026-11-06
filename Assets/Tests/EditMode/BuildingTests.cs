@@ -47,7 +47,7 @@ namespace TinyCity.Tests.EditMode
 
             var option = Option(sim, activity);
             Assert.That(option, Is.Not.Null, $"{activity.Id} should be an option");
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Building", "Right then", null, x, y), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Building", null, x, y), Is.EqualTo(DecisionOutcome.Applied));
             for (var i = 0; i < 900 && r.State != ResidentState.Deciding; i++)
             {
                 sim.Tick();
@@ -118,7 +118,7 @@ namespace TinyCity.Tests.EditMode
                 Assert.That(sim.GroundProblem(r, new TinyCity.Simulation.World.Location(r.Location.MapId, x, y)), Does.Contain(why), $"({x}, {y})");
             }
 
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plan-building", "ground", "Home", "Here", null, SpotX, SpotY), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plan-building", "ground", "Home", null, SpotX, SpotY), Is.EqualTo(DecisionOutcome.Applied));
             var site = sim.Construction.Sites.Single();
             Assert.That((site.OwnerId, site.Corner), Is.EqualTo((r.Id, Spot())));
             Assert.That(r.TargetObjectId, Is.EqualTo(site.Id), "they go there to plan it");

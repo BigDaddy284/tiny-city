@@ -50,7 +50,7 @@ namespace TinyCity.Tests.EditMode
             WaitUntilDeciding(sim, r);
             var option = sim.Planner.FreeTimeOptions(r).FirstOrDefault(o => o.Activity == activity);
             Assert.That(option, Is.Not.Null, $"{activity.Id} should be an option");
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Work", "Right then"), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Work"), Is.EqualTo(DecisionOutcome.Applied));
             for (var i = 0; i < 600 && (r.State != ResidentState.Deciding || i == 0); i++)
             {
                 sim.Tick();
@@ -227,7 +227,7 @@ namespace TinyCity.Tests.EditMode
                 WaitUntilDeciding(sim, r);
                 var option = sim.Planner.FreeTimeOptions(r).FirstOrDefault(o => o.Activity == ActivityCatalog.AttendMeeting);
                 Assert.That(option, Is.Not.Null, "the meeting is on");
-                Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Meeting", "Let's go"), Is.EqualTo(DecisionOutcome.Applied));
+                Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, option.ActionId, option.TargetId, "Meeting"), Is.EqualTo(DecisionOutcome.Applied));
             }
 
             sim.Advance(TownSimulation.MeetingTurnsFromMinute - sim.Time.MinuteOfDay);
@@ -266,7 +266,7 @@ namespace TinyCity.Tests.EditMode
             sim.Advance(TownSimulation.MeetingStartMinute - sim.Time.MinuteOfDay);
             WaitUntilDeciding(sim, other);
             var option = sim.Planner.FreeTimeOptions(other).First(o => o.Activity == ActivityCatalog.AttendMeeting);
-            sim.ApplyDecision(other.Id, other.PendingDecisionId, option.ActionId, option.TargetId, "Meeting", "Let's go");
+            sim.ApplyDecision(other.Id, other.PendingDecisionId, option.ActionId, option.TargetId, "Meeting");
             sim.Advance(TownSimulation.MeetingCloseMinute - sim.Time.MinuteOfDay + 1);
             Assert.That(asker.Role, Is.EqualTo("farmer"));
             Assert.That(sim.RoleRequests[asker.Id], Is.EqualTo("cook"));

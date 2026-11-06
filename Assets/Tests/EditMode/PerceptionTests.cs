@@ -20,7 +20,7 @@ namespace TinyCity.Tests.EditMode
             sim.Tick();
             foreach (var r in sim.Residents.Where(x => x.State == ResidentState.Deciding))
             {
-                Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "Rest", "Ahh"), Is.EqualTo(DecisionOutcome.Applied));
+                Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "Rest"), Is.EqualTo(DecisionOutcome.Applied));
             }
 
             return sim;
@@ -63,13 +63,13 @@ namespace TinyCity.Tests.EditMode
                 Assert.That(mabel.Reaction == null || mabel.Reaction.OtherId != first.OtherId, Is.True, $"minute {i}");
                 if (mabel.State == ResidentState.Deciding)
                 {
-                    sim.ApplyDecision(mabel.Id, mabel.PendingDecisionId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "Rest", "Ahh");
+                    sim.ApplyDecision(mabel.Id, mabel.PendingDecisionId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "Rest");
                 }
 
                 var arthur = sim.Residents[1];
                 if (arthur.State == ResidentState.Deciding)
                 {
-                    sim.ApplyDecision(arthur.Id, arthur.PendingDecisionId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "Rest", "Ahh");
+                    sim.ApplyDecision(arthur.Id, arthur.PendingDecisionId, FreeTimeOption.RelaxActionId, FreeTimeOption.NoTargetId, "Rest");
                 }
 
                 if (arthur.Reaction != null)

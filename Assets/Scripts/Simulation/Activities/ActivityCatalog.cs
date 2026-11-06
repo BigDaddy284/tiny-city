@@ -10,11 +10,11 @@ namespace TinyCity.Simulation.Activities
     {
         /// <summary>The open land has no taps or showers, so people drink and wash at the pond.</summary>
         public static readonly ActivityDefinition DrinkFromPond = new ActivityDefinition(
-            "drink-pond", "Drink from the pond", "drinking from the pond", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.FishingSpot }, 5,
+            "drink-pond", "Drink dirty pond water", "drinking dirty pond water", ActivityKind.Care, NeedType.Thirst, new[] { ObjectType.FishingSpot }, 5,
             new Dictionary<NeedType, double> { [NeedType.Thirst] = 10 });
 
         public static readonly ActivityDefinition WashInPond = new ActivityDefinition(
-            "wash-pond", "Wash in the pond", "washing in the pond", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.FishingSpot }, 20,
+            "wash-pond", "Wash in the dirty pond", "washing in the dirty pond", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.FishingSpot }, 20,
             new Dictionary<NeedType, double> { [NeedType.Hygiene] = 5 });
 
         /// <summary>cleaning pond water to drink, which only the water purifier can do.</summary>

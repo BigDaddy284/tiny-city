@@ -50,7 +50,6 @@ namespace TinyCity.Tests.EditMode
             }
 
             Assert.That(loaded.Memories.NextNumber, Is.EqualTo(sim.Memories.NextNumber));
-            Assert.That(loaded.Conversations.LastLineBy(StarterResidents.ResidentId).Text, Is.EqualTo(sim.Conversations.LastLineBy(StarterResidents.ResidentId).Text));
             Assert.That(loaded.Conversations.All.Any(c => c.Lines.Any(l => l.Text == "What a glorious morning!")), Is.True);
             Assert.That(loaded.Conversations.NextNumber, Is.EqualTo(sim.Conversations.NextNumber));
             Assert.That(loaded.Residents[0].LastReflectionDay, Is.EqualTo(sim.Residents[0].LastReflectionDay));
@@ -64,7 +63,7 @@ namespace TinyCity.Tests.EditMode
             sim.AiDecisionsEnabled = true;
             sim.Tick();
             var r = sim.Residents[0];
-            sim.ApplyDecision(r.Id, r.PendingDecisionId, "catch-fish", "obj-flat-fishing-1", "Fish for supper", "Supper is in that pond!");
+            sim.ApplyDecision(r.Id, r.PendingDecisionId, "catch-fish", "obj-flat-fishing-1", "Fish for supper");
 
             var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation.Residents[0];
 

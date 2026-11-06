@@ -225,7 +225,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(text, Does.Contain("- Arthur Bramble: "));
             Assert.That(text, Does.Not.Contain("never really met"));
             Assert.That(DecisionPrompt.Cues(sim, mabel, options), Does.Contain(StarterResidents.ArthurId));
-            Assert.That(sim.ApplyDecision(mabel.Id, 1, chat.ActionId, StarterResidents.NellId, "x", null), Is.Not.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyDecision(mabel.Id, 1, chat.ActionId, StarterResidents.NellId, "x"), Is.Not.EqualTo(DecisionOutcome.Applied));
         }
     }
 }
