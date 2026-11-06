@@ -24,12 +24,6 @@ namespace TinyCity.Tests.PlayMode
             game = Object.FindAnyObjectByType<GameController>();
             Assert.That(game, Is.Not.Null, "GameController was not created.");
 
-            // These tests need the city's indoor maps and lit windows; Tiny City 2 starts on the flat map.
-            if (game.Simulation.World.TownId != StarterTown.TownId)
-            {
-                game.ShowTown(StarterTown.CreateNewGame());
-                yield return null;
-            }
             Assert.That(game.Panels, Is.Not.Null);
         }
 
@@ -40,12 +34,6 @@ namespace TinyCity.Tests.PlayMode
             if (game?.Panels != null)
             {
                 game.Panels.Limit = 1;
-            }
-
-            // Leave the game on Tiny City 2's own land, so later tests (and its saves) see the real game.
-            if (game != null && game.Simulation.World.TownId != FlatLand.TownId)
-            {
-                game.ShowTown(FlatLand.CreateNewGame());
             }
         }
 
@@ -151,35 +139,26 @@ namespace TinyCity.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator FollowPanel_StaysWithItsResident_IndoorsAndOut()
+        public IEnumerator FollowPanel_StaysWithItsResident()
         {
-            // CI has no Ollama, and in Tiny City 2 nobody moves without it, so this camera test uses the old routine.
-            game.Simulation.AiRunsEverything = false;
             var resident = game.Simulation.Residents.First(r => r.IsAlive);
             game.Select(resident, followInActivePanel: true);
             var panel = game.Panels.Active;
             Assert.That(panel.FollowId, Is.EqualTo(resident.Id));
 
-            var sawInside = false;
-            var sawOutside = false;
-            for (var minute = 0; minute < 2 * 24 * 60 && !(sawInside && sawOutside); minute += 5)
+            for (var minute = 0; minute < 60; minute += 5)
             {
                 game.AdvanceMinutes(5);
                 yield return null;
 
-                var map = game.Simulation.World.GetMap(resident.Location.MapId);
-                Assert.That(panel.MapId, Is.EqualTo(map.Id), $"day {game.Simulation.Time.Day} {game.Simulation.Time.ClockText}: the panel is on the resident's map");
+                Assert.That(panel.MapId, Is.EqualTo(resident.Location.MapId), "the panel is on the resident's map");
                 Assert.That(game.View.TryGetPosition(resident.Id, out var figure), Is.True);
                 var camera = panel.Camera.transform.position;
                 var halfWidth = panel.Camera.orthographicSize * panel.Camera.aspect;
                 Assert.That(Mathf.Abs(figure.x - camera.x) <= halfWidth && Mathf.Abs(figure.y - camera.y) <= panel.Camera.orthographicSize, Is.True,
-                    $"{resident.FirstName} at {figure} is outside the panel's view (camera {camera}, size {panel.Camera.orthographicSize}) on {map.Name}");
-
-                sawInside |= !map.IsExterior;
-                sawOutside |= map.IsExterior;
+                    $"{resident.FirstName} at {figure} is outside the panel's view (camera {camera}, size {panel.Camera.orthographicSize})");
             }
 
-            Assert.That(sawInside && sawOutside, Is.True, "the resident should go both indoors and out in two days");
             Assert.That(panel.FollowId, Is.EqualTo(resident.Id), "the panel never stopped following");
         }
 
@@ -189,16 +168,16 @@ namespace TinyCity.Tests.PlayMode
             game.Panels.Limit = CameraPanels.MaxPanels;
             game.SetPanelCount(2);
             yield return null;
-            var interior = game.Simulation.World.Maps.First(m => !m.IsExterior);
-            game.Panels.All[1].LookAtMap(interior.Id, game.View);
+            var land = game.Simulation.World.GetMap(FlatLand.MapId);
+            game.Panels.All[1].LookAtMap(land.Id, game.View);
 
             game.AdvanceMinutes(60);
             yield return null;
 
             var panel = game.Panels.All[1];
             Assert.That(panel.IsFree, Is.True);
-            Assert.That(panel.MapId, Is.EqualTo(interior.Id));
-            var (centre, _, _) = game.View.Bounds(interior.Id);
+            Assert.That(panel.MapId, Is.EqualTo(land.Id));
+            var (centre, _, _) = game.View.Bounds(land.Id);
             Assert.That(Vector2.Distance(panel.Camera.transform.position, centre), Is.LessThan(0.01f), "a free camera starts over the middle of its map");
         }
 
@@ -207,7 +186,7 @@ namespace TinyCity.Tests.PlayMode
         {
             var places = CameraPanels.Places(game.Simulation.World);
             Assert.That(places.Count, Is.EqualTo(game.Simulation.World.Maps.Count()), "every map is a place");
-            Assert.That(places[0].IsExterior, Is.True, "the village comes first");
+            Assert.That(places[0].IsExterior, Is.True, "the open land comes first");
 
             var someone = game.Simulation.Residents.First(r => r.IsAlive);
             game.Select(someone, followInActivePanel: true);

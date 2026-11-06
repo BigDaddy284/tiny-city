@@ -47,7 +47,7 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = TestTown.WithResident(TestTown.WeekendAfternoon, adjust: n => n[NeedType.Fun] = 30);
             var r = sim.Residents[0];
-            sim.Memories.Add(r.Id, sim.Time, TinyCity.Simulation.Memory.MemoryType.Event, 5, "My armchair has a wobbly leg.", tags: new[] { "obj-cottage1-armchair" });
+            sim.Memories.Add(r.Id, sim.Time, TinyCity.Simulation.Memory.MemoryType.Event, 5, "The camp stove has a wobbly leg.", tags: new[] { "obj-flat-stove-1" });
             var options = sim.Planner.FreeTimeOptions(r);
 
             var body = (Dictionary<string, object>)Json.Parse(DecisionPrompt.BuildBody("qwen2.5:7b", sim, r, options));
@@ -60,33 +60,30 @@ namespace TinyCity.Tests.EditMode
             Assert.That(body["stream"], Is.EqualTo(false));
             Assert.That(user, Does.Contain("wobbly leg"));
             Assert.That(user, Does.Contain("Saturday 14:00"));
-            Assert.That(actions.Contains("read"), Is.True);
+            Assert.That(actions.Contains("catch-fish"), Is.True);
             Assert.That(actions.Contains("relax"), Is.True);
             Assert.That(actions.Contains("work"), Is.False);
-            Assert.That(actions.Contains("sleep"), Is.False);
+            Assert.That(actions.Contains("cook"), Is.False, "nothing to cook");
             Assert.That(options.All(o => user.Contains(o.TargetId)), Is.True);
         }
 
-        [TestCase(4, 21, 37, "no work until tomorrow at 08:30")]
-        [TestCase(5, 19, 0, "no work until Monday at 08:30")]
-        [TestCase(1, 7, 0, "you leave for work as community gardener in 1 h 30 min")]
-        [TestCase(1, 12, 0, "you are on shift now")]
-        [TestCase(6, 7, 0, "no work until Monday at 08:30")]
-        public void Prompt_MentionsWorkOnlyWhenItIsComingUp(int day, int hour, int minute, string expected)
+        [Test]
+        public void Prompt_SaysWhenTheirUsualBedtimeIs()
         {
-            var sim = TestTown.WithResident(GameTime.FromDayAndTime(day, hour, minute));
+            var sim = TestTown.WithResident(GameTime.FromDayAndTime(1, 7, 0));
 
-            Assert.That(PromptText.Commitments(sim.Residents[0], sim.Time), Does.StartWith(expected));
+            Assert.That(PromptText.Commitments(sim.Residents[0], sim.Time), Does.StartWith("your usual bedtime is in"));
         }
 
         [Test]
         public void DecisionReply_FillsInTheOnlyPossibleTarget()
         {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon, adjust: n => n[NeedType.Fun] = 30);
+            var sim = TestTown.WithResident(TestTown.WeekendAfternoon);
+            sim.Residents[0].Food.Add(TinyCity.Simulation.Economy.FoodKind.Fish, 2, sim.Time.Day + 2);
             var options = sim.Planner.FreeTimeOptions(sim.Residents[0]);
 
-            Assert.That(DecisionPrompt.TryParse("{\"action\":\"read\"}", options, out var reply, out _), Is.True);
-            Assert.That(reply.TargetId, Is.EqualTo("obj-cottage1-armchair"));
+            Assert.That(DecisionPrompt.TryParse("{\"action\":\"cook\"}", options, out var reply, out _), Is.True);
+            Assert.That(reply.TargetId, Is.EqualTo("obj-flat-stove-1"), "the only stove");
             Assert.That(DecisionPrompt.TryParse("{\"reason\":\"no action\"}", options, out _, out var error), Is.False);
             Assert.That(error, Does.Contain("no action"));
         }

@@ -34,10 +34,9 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void FifteenStarterResidents_AllLookDifferent()
+        public void TheFifteenDesignedResidents_AllLookDifferent()
         {
-            var world = StarterTown.CreateWorld();
-            var looks = StarterTown.CreateResidents(world).Select(r => ResidentLook.For(r.Id, r.AgeYears)).ToList();
+            var looks = FlatLand.CreateResidents().Take(15).Select(r => ResidentLook.For(r.Id, r.AgeYears)).ToList();
             Assert.That(looks.Count, Is.EqualTo(15));
             Assert.That(looks.Select(l => (l.Top, l.Trim)).Distinct().Count(), Is.EqualTo(15), "everyone wears their own colours (techwear and its neon piping)");
             Assert.That(looks.All(l => l.Trim != null), Is.True, "everyone's clothes have neon piping");
@@ -61,8 +60,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void EveryPose_FitsItsCanvas_WithAnOutline()
         {
-            var world = StarterTown.CreateWorld();
-            foreach (var resident in StarterTown.CreateResidents(world))
+            foreach (var resident in FlatLand.CreateResidents())
             {
                 var look = ResidentLook.For(resident.Id, resident.AgeYears);
                 foreach (var pose in AllPoses())
@@ -97,7 +95,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Animations_Move_AndFacingsDiffer()
         {
-            var look = ResidentLook.For(StarterTown.ResidentId, 34);
+            var look = ResidentLook.For(StarterResidents.ResidentId, 34);
             foreach (ResidentAction action in Enum.GetValues(typeof(ResidentAction)))
             {
                 var frames = Enumerable.Range(0, ResidentPose.FramesOf(action))
@@ -137,8 +135,8 @@ namespace TinyCity.Tests.EditMode
         public void FurnitureIsUsedSensibly()
         {
             Assert.That(Placement.For(ObjectType.Bed).Stance, Is.EqualTo(Stance.Lying));
-            Assert.That(Placement.For(ObjectType.ClinicBed).Stance, Is.EqualTo(Stance.Lying));
-            foreach (var seat in new[] { ObjectType.Armchair, ObjectType.Bench, ObjectType.CafeTable, ObjectType.ChessTable, ObjectType.Piano, ObjectType.Toilet })
+            Assert.That(Placement.For(ObjectType.SleepingSpot).Stance, Is.EqualTo(Stance.Lying));
+            foreach (var seat in new[] { ObjectType.Bench })
             {
                 Assert.That(Placement.For(seat).Stance, Is.EqualTo(Stance.Sitting), seat.ToString());
                 Assert.That(Placement.For(seat).Z, Is.GreaterThan(5), seat.ToString());
@@ -163,40 +161,35 @@ namespace TinyCity.Tests.EditMode
                 }
             }
 
-            foreach (var type in new[] { ObjectType.CafeTable, ObjectType.Bench, ObjectType.ChessTable })
+            foreach (var type in new[] { ObjectType.Bench })
             {
                 var first = Placement.For(type, 0);
                 var second = Placement.For(type, 1);
                 Assert.That(first.U != second.U || first.V != second.V, Is.True, $"{type} seats two apart");
                 Assert.That(second.Stance, Is.EqualTo(Stance.Sitting), type.ToString());
             }
-
-            var near = Placement.For(ObjectType.CafeTable, 0);
-            var far = Placement.For(ObjectType.CafeTable, 1);
-            Assert.That(far.Behind && !near.Behind, Is.True, "the far chair is drawn behind the table");
-            Assert.That(far.Facing.Away, Is.Not.EqualTo(near.Facing.Away), "they face each other");
         }
 
         [Test]
         public void Seating_GivesEachPersonTheirOwnChair_UntilTheyLeave()
         {
-            var sim = StarterTown.CreateNewGame();
-            var table = sim.World.Objects.First(o => o.Type == ObjectType.CafeTable);
+            var sim = FlatLand.CreateNewGame();
+            var table = sim.World.Objects.First(o => o.Type == ObjectType.Bench);
             var people = sim.Residents.Take(3).ToList();
             foreach (var r in people.Take(2))
             {
                 r.Location = table.Location;
                 r.State = ResidentState.Performing;
                 r.TargetObjectId = table.Id;
-                r.ActivityId = ActivityCatalog.Coffee.Id;
+                r.ActivityId = ActivityCatalog.EatMeal.Id;
             }
 
             var seating = new Seating();
             seating.Update(sim.World, sim.Residents);
             Assert.That(new[] { seating.SeatOf(people[0].Id), seating.SeatOf(people[1].Id) }, Is.EquivalentTo(new[] { 0, 1 }));
             var secondSeat = seating.SeatOf(people[1].Id);
-            Assert.That(ResidentPose.Choose(sim.World, people[1], false, secondSeat).placement.V,
-                Is.Not.EqualTo(ResidentPose.Choose(sim.World, people[0], false, seating.SeatOf(people[0].Id)).placement.V));
+            Assert.That(ResidentPose.Choose(sim.World, people[1], false, secondSeat).placement.U,
+                Is.Not.EqualTo(ResidentPose.Choose(sim.World, people[0], false, seating.SeatOf(people[0].Id)).placement.U));
 
             people[0].State = ResidentState.Idle;
             seating.Update(sim.World, sim.Residents);
@@ -206,19 +199,21 @@ namespace TinyCity.Tests.EditMode
             people[2].State = ResidentState.Performing;
             people[2].TargetObjectId = table.Id;
             seating.Update(sim.World, sim.Residents);
-            Assert.That(seating.SeatOf(people[2].Id), Is.EqualTo(1 - secondSeat), "a newcomer takes the free chair");
+            Assert.That(seating.SeatOf(people[2].Id), Is.EqualTo(1 - secondSeat), "a newcomer takes the free seat");
         }
 
         [Test]
-        public void ADayInTheVillage_ShowsEveryEverydayAnimation()
+        public void ADayOnTheOpenLand_ShowsEveryEverydayAnimation()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             var seen = new HashSet<ResidentAction>();
             var seenSleepingInBed = false;
             var seenSitting = false;
             var last = sim.Residents.ToDictionary(r => r.Id, r => r.Location);
+            sim.AiDecisionsEnabled = true;
             for (var minute = 0; minute < 36 * 60; minute++)
             {
+                TestTown.Answer(sim);
                 sim.Tick();
                 foreach (var r in sim.Residents)
                 {

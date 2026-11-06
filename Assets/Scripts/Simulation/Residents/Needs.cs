@@ -8,7 +8,6 @@ namespace TinyCity.Simulation.Residents
         Thirst,
         Energy,
         Hygiene,
-        Toilet,
         Social,
         Exercise,
         Fun,

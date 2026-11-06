@@ -14,10 +14,8 @@ namespace TinyCity.Art
         Walk,
         Talk,
         Eat,
-        Read,
         Work,
         Cheer,
-        Exercise,
         Sleep,
     }
 
@@ -136,38 +134,16 @@ namespace TinyCity.Art
 
             switch (type)
             {
-                case ObjectType.Armchair: return new Placement(0.52, 0.5, 13, Stance.Sitting, Facing.DownRight);
                 case ObjectType.Bench: return new Placement(0.32, 0.5, 12, Stance.Sitting, Facing.DownLeft);
-                case ObjectType.CafeTable: return new Placement(0.5, 0.82, 12, Stance.Sitting, Facing.UpRight);
-                case ObjectType.BarTable: return new Placement(0.5, 0.86, 17, Stance.Sitting, Facing.UpRight);
-                case ObjectType.DanceFloor: return new Placement(0.3, 0.3, 1, Stance.Standing, Facing.DownRight);
-                case ObjectType.ChessTable: return new Placement(0.92, 0.5, 10, Stance.Sitting, Facing.UpLeft);
-                case ObjectType.Piano: return new Placement(0.5, 0.78, 9, Stance.Sitting, Facing.UpRight);
-                case ObjectType.Toilet: return new Placement(0.5, 0.55, 13, Stance.Sitting, Facing.DownLeft);
                 case ObjectType.Bed:
-                case ObjectType.ClinicBed:
                     return new Placement(0.5, 0.5, 0, Stance.Lying, Facing.DownRight);
                 case ObjectType.SleepingSpot: return new Placement(0.5, 0.5, 2, Stance.Lying, Facing.DownRight);
                 case ObjectType.Kitchen:
-                case ObjectType.Sink:
-                case ObjectType.Counter:
                 case ObjectType.Workbench:
-                case ObjectType.ShopShelf:
-                case ObjectType.BakeryDisplay:
-                case ObjectType.Easel:
-                case ObjectType.GardenTap:
                     return new Placement(0.5, 1.0, 0, Stance.Standing, Facing.UpRight);
                 case ObjectType.FishingSpot: return new Placement(0.7, 0.5, 4, Stance.Standing, Facing.DownRight);
-                case ObjectType.ExerciseSpot: return new Placement(0.5, 0.5, 1, Stance.Standing, Facing.DownRight);
-                case ObjectType.PoolTable:
-                case ObjectType.SnookerTable:
-                    return new Placement(0.5, 0.96, 0, Stance.Standing, Facing.UpRight);
-                case ObjectType.BowlingLane: return new Placement(0.4, 0.86, 0.6, Stance.Standing, Facing.UpRight);
-                case ObjectType.ArcadeMachine:
                 case ObjectType.MarketStall:
                     return new Placement(0.5, 1.0, 0, Stance.Standing, Facing.UpRight);
-                case ObjectType.GymMachine: return new Placement(0.5, 0.62, 4, Stance.Standing, Facing.UpRight);
-                case ObjectType.Fountain: return new Placement(0.5, 0.95, 8, Stance.Sitting, Facing.DownLeft);
                 default: return Centre;
             }
         }
@@ -179,24 +155,9 @@ namespace TinyCity.Art
             {
                 case ObjectType.Bench when seat == 1: return new Placement(0.68, 0.5, 12, Stance.Sitting, Facing.DownLeft);
                 case ObjectType.Bed when seat == 1: return new Placement(0.6, 0.74, 0, Stance.Lying, Facing.DownRight);
-                case ObjectType.CafeTable when seat == 1: return new Placement(0.5, 0.14, 12, Stance.Sitting, Facing.DownLeft, behind: true);
-                case ObjectType.BarTable when seat == 1: return new Placement(0.5, 0.14, 17, Stance.Sitting, Facing.DownLeft, behind: true);
-                case ObjectType.DanceFloor when seat == 1: return new Placement(0.7, 0.7, 1, Stance.Standing, Facing.UpLeft);
-                case ObjectType.ChessTable when seat == 1: return new Placement(0.06, 0.5, 10, Stance.Sitting, Facing.DownRight, behind: true);
                 case ObjectType.FishingSpot when seat == 1: return new Placement(0.7, 0.26, 4, Stance.Standing, Facing.DownRight);
-                case ObjectType.ExerciseSpot when seat == 1: return new Placement(0.28, 0.66, 1, Stance.Standing, Facing.DownRight);
-                case ObjectType.PoolTable when seat == 1:
-                case ObjectType.SnookerTable when seat == 1:
-                    return new Placement(0.5, 0.04, 0, Stance.Standing, Facing.DownLeft, behind: true);
-                case ObjectType.BowlingLane when seat == 1: return new Placement(0.65, 0.95, 0.6, Stance.Standing, Facing.UpLeft);
                 case ObjectType.MarketStall when seat == 1: return new Placement(0.2, 1.0, 0, Stance.Standing, Facing.UpRight);
-                case ObjectType.Fountain when seat == 1: return new Placement(0.95, 0.5, 8, Stance.Sitting, Facing.DownRight);
-                case ObjectType.Fountain when seat == 2: return new Placement(0.5, 0.05, 8, Stance.Sitting, Facing.UpRight, behind: true);
-                case ObjectType.Fountain when seat == 3: return new Placement(0.05, 0.5, 8, Stance.Sitting, Facing.UpLeft, behind: true);
-                case ObjectType.Counter:
                 case ObjectType.Workbench:
-                case ObjectType.ShopShelf:
-                case ObjectType.BakeryDisplay:
                     return seat <= 2 ? new Placement(seat == 1 ? 0.2 : 0.8, 1.0, 0, Stance.Standing, Facing.UpRight) : (Placement?)null;
                 default: return null;
             }
@@ -328,21 +289,9 @@ namespace TinyCity.Art
                 return stance == Stance.Lying ? ResidentAction.Sleep : ResidentAction.Stand;
             }
 
-            if (activityId == ActivityCatalog.Eat.Id || activityId == ActivityCatalog.Snack.Id || activityId == ActivityCatalog.CafeMeal.Id
-                || activityId == ActivityCatalog.Pastry.Id || activityId == ActivityCatalog.Drink.Id || activityId == ActivityCatalog.Coffee.Id
-                || activityId == ActivityCatalog.EatMeal.Id || activityId == ActivityCatalog.EatRaw.Id)
+            if (activityId == ActivityCatalog.EatMeal.Id || activityId == ActivityCatalog.EatRaw.Id)
             {
                 return ResidentAction.Eat;
-            }
-
-            if (activityId == ActivityCatalog.Read.Id)
-            {
-                return ResidentAction.Read;
-            }
-
-            if (activityId == ActivityCatalog.Exercise.Id)
-            {
-                return ResidentAction.Exercise;
             }
 
             if (activityId == ActivityCatalog.AttendMeeting.Id)
@@ -355,8 +304,7 @@ namespace TinyCity.Art
                 return ResidentAction.Talk;
             }
 
-            if (activityId == ActivityCatalog.Work.Id || activityId == ActivityCatalog.BuyGroceries.Id
-                || activityId == ActivityCatalog.PlantCrops.Id || activityId == ActivityCatalog.WaterCrops.Id
+            if (activityId == ActivityCatalog.PlantCrops.Id || activityId == ActivityCatalog.WaterCrops.Id
                 || activityId == ActivityCatalog.Harvest.Id || activityId == ActivityCatalog.CatchFish.Id || activityId == ActivityCatalog.Cook.Id
                 || activityId == ActivityCatalog.RunStall.Id || activityId == ActivityCatalog.BuyFood.Id
                 || TinyCity.Simulation.Economy.CraftingRules.IsCrafting(activityId)

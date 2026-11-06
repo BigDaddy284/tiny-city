@@ -1,4 +1,3 @@
-using System;
 using TinyCity.Simulation.Health;
 using TinyCity.Simulation.Residents;
 using TinyCity.Simulation.Time;
@@ -8,18 +7,13 @@ namespace TinyCity.Simulation.Activities
     /// <summary>
     /// Each resident's own bedtime and getting-up time, so the town doesn't all go to bed and get up at once.
     /// Worked out from who they are, never stored: younger people stay up later, everyone gets a fixed personal
-    /// shift of up to half an hour either way (from <see cref="Chance"/>, so it never changes between runs), early
-    /// shifts pull the alarm earlier, and late shifts push bedtime until after work.
+    /// shift of up to half an hour either way (from <see cref="Chance"/>, so it never changes between runs). Nobody is
+    /// sent to bed: the AI chooses when they sleep, and a sleeper gets up once it is past their waking time and they
+    /// are rested.
     /// </summary>
     public static class SleepSchedule
     {
         public const int SleepMinutes = 8 * 60;
-
-        /// <summary>Time between getting up and leaving for work (washing, breakfast).</summary>
-        public const int GetReadyMinutes = 45;
-
-        /// <summary>After a late shift, time to get home and wind down before bed.</summary>
-        public const int WindDownMinutes = 45;
 
         /// <summary>The most a resident's bedtime moves from the usual one for their age, either way.</summary>
         public const int PersonalShiftMinutes = 30;
@@ -28,19 +22,7 @@ namespace TinyCity.Simulation.Activities
 
         public static int BedtimeOf(Resident r)
         {
-            var job = r.Job;
-            if (job != null && EndsLate(job))
-            {
-                return (job.EndMinuteOfDay + WindDownMinutes) % GameTime.MinutesPerDay;
-            }
-
             var bedtime = UsualBedtime(r.AgeYears) + PersonalShift(r.Id);
-            if (job != null && StartsInTheMorning(job))
-            {
-                var latestWake = job.StartMinuteOfDay - ActivityPlanner.CommuteLeadMinutes - GetReadyMinutes;
-                bedtime = Math.Min(bedtime, latestWake - SleepMinutes + GameTime.MinutesPerDay);
-            }
-
             return ((bedtime % GameTime.MinutesPerDay) + GameTime.MinutesPerDay) % GameTime.MinutesPerDay;
         }
 
@@ -62,10 +44,5 @@ namespace TinyCity.Simulation.Activities
             var steps = (2 * PersonalShiftMinutes / 5) + 1;
             return ((int)(Chance.Roll(residentId, 0, ShiftSalt) * steps) * 5) - PersonalShiftMinutes;
         }
-
-        private static bool StartsInTheMorning(Job job) => job.StartMinuteOfDay >= GameTime.MinuteOfDayFor(4, 0) && job.StartMinuteOfDay < GameTime.MinuteOfDayFor(14, 0);
-
-        /// <summary>A shift that ends at 22:00 or later, or runs past midnight.</summary>
-        private static bool EndsLate(Job job) => job.EndMinuteOfDay >= GameTime.MinuteOfDayFor(22, 0) || job.EndMinuteOfDay < job.StartMinuteOfDay;
     }
 }

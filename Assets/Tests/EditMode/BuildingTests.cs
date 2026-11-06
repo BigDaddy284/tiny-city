@@ -28,8 +28,8 @@ namespace TinyCity.Tests.EditMode
         private static TownSimulation Town()
         {
             var sim = FlatLand.CreateNewGame();
-            sim.AiRunsEverything = true;
-            sim.FoodMustBeMade = true;
+            // Anyone may do anything here: these tests are about the work, not who may do it.
+            sim.Brief = TinyCity.Simulation.Residents.WorldBrief.Empty;
             sim.AiDecisionsEnabled = true;
             return sim;
         }
@@ -123,9 +123,6 @@ namespace TinyCity.Tests.EditMode
             var site = sim.Construction.Sites.Single();
             Assert.That((site.OwnerId, site.Corner), Is.EqualTo((r.Id, Spot())));
             Assert.That(r.TargetObjectId, Is.EqualTo(site.Id), "they go there to plan it");
-
-            Assert.That(TestTown.WithResident(TestTown.WeekendAfternoon).Planner.FreeTimeOptions(sim.Residents[0], everything: true)
-                .Any(o => o.Activity != null && BuildingRules.IsBuilding(o.Activity)), Is.False, "v1 towns never build");
         }
 
         [Test]
@@ -193,7 +190,6 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(sim.World.TryGetObject(Construction.BedIdOf(project.SiteId), out var bed), Is.True, "a finished home has its bed");
             Assert.That(bed.Location, Is.EqualTo(Spot(1, 1)));
-            Assert.That(r.BedObjectId, Is.Null, "nobody is moved in: they choose where to sleep");
             Assert.That(sim.Planner.IsAvailableTo(r, bed), Is.True);
 
             var map = sim.World.GetMap(FlatLand.MapId);
@@ -215,7 +211,7 @@ namespace TinyCity.Tests.EditMode
             sim.World.TryGetObject(Construction.BedIdOf(project.SiteId), out var bed);
             var other = sim.Residents[1];
             Assert.That(sim.Planner.IsAvailableTo(other, bed), Is.True, "nothing belongs to anyone");
-            Assert.That(sim.Planner.FreeTimeOptions(other, everything: true).Any(o => o.ActionId == "sleep" && o.TargetId == bed.Id), Is.True);
+            Assert.That(sim.Planner.FreeTimeOptions(other).Any(o => o.ActionId == "sleep" && o.TargetId == bed.Id), Is.True);
 
             r.TargetObjectId = bed.Id;
             r.ActivityId = ActivityCatalog.Sleep.Id;
@@ -276,7 +272,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.History.Events.Any(e => e.Kind == TownEventKind.Built), Is.True);
 
             r.Food.Add(FoodKind.Fish, 3, sim.Time.Day + 2);
-            Assert.That(sim.Planner.FreeTimeOptions(r, everything: true).Any(o => o.ActionId == ActivityCatalog.RunStall.Id && o.TargetId == made.Id), Is.True, "and they can sell from it");
+            Assert.That(sim.Planner.FreeTimeOptions(r).Any(o => o.ActionId == ActivityCatalog.RunStall.Id && o.TargetId == made.Id), Is.True, "and they can sell from it");
             var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
             Assert.That(loaded.World.Objects.Count(o => o.Type == ObjectType.MarketStall), Is.EqualTo(1));
         }
@@ -324,8 +320,6 @@ namespace TinyCity.Tests.EditMode
                 Assert.That(loaded.Construction.IsBlocked(BuildingRules.TileOf(project.Corner, cell)), Is.True);
             }
 
-            loaded.FoodMustBeMade = true;
-            loaded.AiRunsEverything = true;
             var prompt = DecisionPrompt.UserText(loaded, loaded.Residents[0], loaded.FreeTimeOptionsFor(loaded.Residents[0]), new TinyCity.Simulation.Memory.MemoryRecord[0]);
             Assert.That(prompt, Does.Contain($"Your building: a Little hut at ({SpotX}, {SpotY}), 20 of 30 blocks laid; it still needs 3 wood."));
             var other = loaded.Residents[1];

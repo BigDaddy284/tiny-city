@@ -14,12 +14,12 @@ namespace TinyCity.Tests.EditMode
     {
         private static TownSimulation TownWithMemoriesAndSpeech()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             sim.Advance(9 * 60);
-            sim.Memories.Add(StarterTown.ResidentId, sim.Time, MemoryType.Event, 6, "The tulips came up at last.", new[] { "res-0002" }, new[] { StarterTown.GardenPlotId });
-            sim.Conversations.AddRemark(StarterTown.ResidentId, sim.Time, "What a glorious morning!", "work");
+            sim.Memories.Add(StarterResidents.ResidentId, sim.Time, MemoryType.Event, 6, "The tulips came up at last.", new[] { "res-0002" }, new[] { "obj-flat-stove-1" });
+            sim.Conversations.AddRemark(StarterResidents.ResidentId, sim.Time, "What a glorious morning!", "work");
             sim.Advance(14 * 60);
-            Assert.That(sim.ApplyReflection(StarterTown.ResidentId, TownSimulation.ReflectionDayFor(sim.Time), "A good, honest day's work.", 3), Is.EqualTo(DecisionOutcome.Applied));
+            Assert.That(sim.ApplyReflection(StarterResidents.ResidentId, TownSimulation.ReflectionDayFor(sim.Time), "A good, honest day's work.", 3), Is.EqualTo(DecisionOutcome.Applied));
             return sim;
         }
 
@@ -29,7 +29,7 @@ namespace TinyCity.Tests.EditMode
             var sim = TownWithMemoriesAndSpeech();
             var saved = SaveSerializer.Save(sim);
 
-            var result = SaveSerializer.Load(saved, StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(saved, FlatLand.CreateWorld());
 
             Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
             Assert.That(result.Warnings, Is.Empty, string.Join("; ", result.Warnings));
@@ -50,7 +50,7 @@ namespace TinyCity.Tests.EditMode
             }
 
             Assert.That(loaded.Memories.NextNumber, Is.EqualTo(sim.Memories.NextNumber));
-            Assert.That(loaded.Conversations.LastLineBy(StarterTown.ResidentId).Text, Is.EqualTo(sim.Conversations.LastLineBy(StarterTown.ResidentId).Text));
+            Assert.That(loaded.Conversations.LastLineBy(StarterResidents.ResidentId).Text, Is.EqualTo(sim.Conversations.LastLineBy(StarterResidents.ResidentId).Text));
             Assert.That(loaded.Conversations.All.Any(c => c.Lines.Any(l => l.Text == "What a glorious morning!")), Is.True);
             Assert.That(loaded.Conversations.NextNumber, Is.EqualTo(sim.Conversations.NextNumber));
             Assert.That(loaded.Residents[0].LastReflectionDay, Is.EqualTo(sim.Residents[0].LastReflectionDay));
@@ -64,13 +64,13 @@ namespace TinyCity.Tests.EditMode
             sim.AiDecisionsEnabled = true;
             sim.Tick();
             var r = sim.Residents[0];
-            sim.ApplyDecision(r.Id, r.PendingDecisionId, "read", "obj-cottage1-armchair", "A good book is calling", "Tea and a book!");
+            sim.ApplyDecision(r.Id, r.PendingDecisionId, "catch-fish", "obj-flat-fishing-1", "Fish for supper", "Supper is in that pond!");
 
-            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), StarterTown.CreateWorld()).Simulation.Residents[0];
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation.Residents[0];
 
             Assert.That(loaded.GoalSource, Is.EqualTo(DecisionSource.Ai));
-            Assert.That(loaded.Goal, Is.EqualTo("A good book is calling"));
-            Assert.That(loaded.ActivityId, Is.EqualTo("read"));
+            Assert.That(loaded.Goal, Is.EqualTo("Fish for supper"));
+            Assert.That(loaded.ActivityId, Is.EqualTo("catch-fish"));
         }
 
         [Test]
@@ -82,19 +82,20 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.Residents[0].State, Is.EqualTo(ResidentState.Deciding));
 
             var json = SaveSerializer.Save(sim);
-            var loaded = SaveSerializer.Load(json, StarterTown.CreateWorld()).Simulation;
+            var loaded = SaveSerializer.Load(json, FlatLand.CreateWorld()).Simulation;
 
             Assert.That(json, Does.Not.Contain("Deciding"));
             Assert.That(loaded.Residents[0].State, Is.EqualTo(ResidentState.Idle));
             Assert.That(loaded.AiDecisionsEnabled, Is.False, "AI availability is checked again after loading");
             loaded.Tick();
-            Assert.That(loaded.Residents[0].ActivityId, Is.Not.Null);
+            Assert.That(loaded.Residents[0].State, Is.EqualTo(ResidentState.Deciding), "they are asked again");
+            Assert.That(loaded.Residents[0].PendingDecisionId, Is.GreaterThan(0));
         }
 
         [Test]
         public void DamagedMemoryRecords_AreSkipped_WithAWarning()
         {
-            var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(StarterTown.CreateNewGame()));
+            var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(FlatLand.CreateNewGame()));
             var records = (List<object>)((Dictionary<string, object>)root["memories"])["records"];
             var validCount = records.Count;
             var good = (Dictionary<string, object>)records[0];
@@ -104,7 +105,7 @@ namespace TinyCity.Tests.EditMode
             records.Add(new Dictionary<string, object>(good) { ["id"] = "mem-000101", ["type"] = "Prophecy" });
             records.Add("not a record");
 
-            var result = SaveSerializer.Load(Json.Write(root), StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(Json.Write(root), FlatLand.CreateWorld());
 
             Assert.That(result.Success, Is.True);
             Assert.That(result.Simulation.Memories.All.Count, Is.EqualTo(validCount));
@@ -114,13 +115,13 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void NewIds_NeverCollideWithLoadedOnes_EvenIfTheCounterWasDamaged()
         {
-            var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(StarterTown.CreateNewGame()));
+            var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(FlatLand.CreateNewGame()));
             var memories = (Dictionary<string, object>)root["memories"];
             memories["nextNumber"] = 1.0;
             ((Dictionary<string, object>)((List<object>)memories["records"])[1])["id"] = "mem-000041";
 
-            var sim = SaveSerializer.Load(Json.Write(root), StarterTown.CreateWorld()).Simulation;
-            var added = sim.Memories.Add(StarterTown.ResidentId, sim.Time, MemoryType.Event, 2, "Something new");
+            var sim = SaveSerializer.Load(Json.Write(root), FlatLand.CreateWorld()).Simulation;
+            var added = sim.Memories.Add(StarterResidents.ResidentId, sim.Time, MemoryType.Event, 2, "Something new");
 
             Assert.That(added.Id, Is.EqualTo("mem-000042"));
         }
@@ -131,7 +132,7 @@ namespace TinyCity.Tests.EditMode
             var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(TownWithMemoriesAndSpeech()));
             root.Remove("memories");
 
-            var result = SaveSerializer.Load(Json.Write(root), StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(Json.Write(root), FlatLand.CreateWorld());
 
             Assert.That(result.Success, Is.True);
             Assert.That(result.Simulation.Memories.All, Is.Empty);

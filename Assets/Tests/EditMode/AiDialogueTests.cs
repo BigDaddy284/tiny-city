@@ -48,26 +48,16 @@ namespace TinyCity.Tests.EditMode
             ai.Update(now);
         }
 
-        /// <summary>Runs at 1x until the first chat has ended (waiting for AI lines pauses the chat clock).</summary>
-        private void RunUntilChatEnds(AiService ai, TownSimulation sim, int maxMinutes = 240)
-        {
-            for (var i = 0; i < maxMinutes && (sim.ActiveConversations.Count > 0 || !sim.Conversations.All.Any(c => c.Kind == ConversationKind.Chat)); i++)
-            {
-                Run(ai, sim, 1);
-            }
-
-            Assert.That(sim.ActiveConversations, Is.Empty, "the chat ended within the time limit");
-        }
-
         private static string Line(string say, string tone = "warm", string topic = "the roses", bool end = false) =>
             "{\"say\":" + FakeAiTransport.Quote(say) + ",\"tone\":\"" + tone + "\",\"topic\":\"" + topic + "\",\"end\":" + (end ? "true" : "false") + "}";
 
         [Test]
         public void ConnectedAi_WritesTheLines_AndTheGameKeepsTheTurns()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             var transport = FakeAiTransport.WorkingOllama(body => body.Contains(DialogueMarker) ? Line("The roses are glorious this year!") : Relax);
             var ai = Connected(sim, transport);
+            TestTown.StartChat(sim);
 
             Run(ai, sim, SocialRules.MaxConversationMinutes + 5);
 
@@ -87,53 +77,40 @@ namespace TinyCity.Tests.EditMode
             Assert.That(prompts[1].Body, Does.Contain("The roses are glorious this year!"));
             Assert.That(prompts[0].Body, Does.Contain("\"disagree\""), "tone is limited by the schema");
 
-            var warm = sim.Relationships.Get(StarterTown.ArthurId, StarterTown.ResidentId).Friendship;
+            var warm = sim.Relationships.Get(StarterResidents.ArthurId, StarterResidents.ResidentId).Friendship;
             Assert.That(warm, Is.GreaterThan(15), "warm words count for more than small talk");
         }
 
         [TestCase("not json at all")]
         [TestCase("{\"say\":\"\",\"tone\":\"warm\"}")]
         [TestCase("{\"tone\":\"warm\"}")]
-        public void BadAiLines_FallBackToSmallTalk(string reply)
+        public void BadAiLines_AreAskedForAgain(string reply)
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             var transport = FakeAiTransport.WorkingOllama(body => body.Contains(DialogueMarker) ? reply : Relax);
             var ai = Connected(sim, transport);
+            TestTown.StartChat(sim);
 
-            RunUntilChatEnds(ai, sim);
+            Run(ai, sim, 30);
 
-            var chat = sim.Conversations.All.Single(c => c.Kind == ConversationKind.Chat);
-            Assert.That(chat.Lines.Count, Is.GreaterThanOrEqualTo(SocialRules.MinLines));
-            Assert.That(chat.Lines.Any(l => l.FromAi), Is.False);
+            var session = sim.ActiveConversations.Single();
+            Assert.That(session.Lines, Is.Empty, "nothing is said until the AI writes a usable line");
+            Assert.That(session.AwaitingLine, Is.True);
             Assert.That(ai.Queue.Stats.InvalidReplies, Is.GreaterThan(0));
             Assert.That(ai.Status, Is.EqualTo(AiConnectionStatus.Connected), "a bad answer isn't a lost connection");
         }
 
         [Test]
-        public void SilentOllama_StillLetsResidentsChat()
+        public void SlowishAiLines_AreWaitedFor()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             var transport = FakeAiTransport.WorkingOllama(body => body.Contains(DialogueMarker) ? null : Relax);
             var ai = Connected(sim, transport);
-
-            RunUntilChatEnds(ai, sim);
-
-            var chat = sim.Conversations.All.Single(c => c.Kind == ConversationKind.Chat);
-            Assert.That(chat.Lines.Count, Is.GreaterThanOrEqualTo(SocialRules.MinLines));
-            Assert.That(chat.Lines.Any(l => l.FromAi), Is.False);
-            Assert.That(sim.ActiveConversations, Is.Empty);
-        }
-
-        [Test]
-        public void AtTenTimesSpeed_SlowishAiLinesAreStillUsed()
-        {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
-            var transport = FakeAiTransport.WorkingOllama(body => body.Contains(DialogueMarker) ? null : Relax);
-            var ai = Connected(sim, transport);
+            TestTown.StartChat(sim);
             var answerAfter = 0.8;
             var sentAt = new System.Collections.Generic.Dictionary<FakeAiCall, double>();
 
-            // 10x: ten game minutes per real second. Each line takes the AI 0.8 real seconds, i.e. 8 game minutes.
+            // Each line takes the AI 0.8 real seconds while the game runs at 10 game minutes a second.
             for (var step = 0; step < 3000 && (sim.ActiveConversations.Count > 0 || !sim.Conversations.All.Any(c => c.Kind == ConversationKind.Chat)); step++)
             {
                 foreach (var call in transport.Calls.Where(c => !c.IsDone && c.Body != null && c.Body.Contains(DialogueMarker)))
@@ -155,43 +132,38 @@ namespace TinyCity.Tests.EditMode
 
             var chat = sim.Conversations.All.Single(c => c.Kind == ConversationKind.Chat);
             Assert.That(chat.Lines.Count, Is.InRange(SocialRules.MinLines, SocialRules.MaxLines));
-            Assert.That(chat.Lines.All(l => l.FromAi), Is.True, "no line fell back to small talk");
+            Assert.That(chat.Lines.All(l => l.FromAi), Is.True, "every line is the AI's");
         }
 
         [Test]
-        public void LineThatNeverComes_UsesSmallTalkAfterTheRealTimeWait()
+        public void LineThatNeverComes_IsAskedForAgain()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             var transport = FakeAiTransport.WorkingOllama(body => body.Contains(DialogueMarker) ? null : Relax);
             var ai = Connected(sim, transport);
-            ConversationSession session = null;
-            for (var i = 0; i < 10 && (session == null || !session.AwaitingLine); i++)
-            {
-                Run(ai, sim, 1);
-                session = sim.ActiveConversations.FirstOrDefault();
-            }
-
+            var session = TestTown.StartChat(sim);
+            Run(ai, sim, 2);
             Assert.That(session.AwaitingLine, Is.True);
-            var asked = now;
-            while (now - asked < AiService.LineWaitSeconds - 0.5)
+            var first = session.LineRequestId;
+
+            for (var i = 0; i < 2000 && session.LineRequestId == first; i++)
             {
                 ai.Update(now);
-                now += 0.25;
+                now += 1;
             }
 
-            Assert.That(session.Lines, Is.Empty, "still waiting, even though the game is paused");
-            ai.Update(now + 1);
-            Assert.That(session.Lines.Count, Is.EqualTo(1));
-            Assert.That(session.Lines[0].FromAi, Is.False);
-            Assert.That(ai.RecentEvents.Last(), Does.Contain("small talk"));
+            Assert.That(session.LineRequestId, Is.Not.EqualTo(first), "the line is asked for again");
+            Assert.That(session.Lines, Is.Empty, "there is no made-up line in its place");
+            Assert.That(ai.RecentEvents.Last(), Does.Contain("asked for again"));
         }
 
         [Test]
         public void AiCanWrapUpEarly()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             var transport = FakeAiTransport.WorkingOllama(body => body.Contains(DialogueMarker) ? Line("Must dash!", "playful", "errands", end: true) : Relax);
             var ai = Connected(sim, transport);
+            TestTown.StartChat(sim);
 
             Run(ai, sim, SocialRules.MaxConversationMinutes + 5);
 
@@ -202,26 +174,13 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void DialoguePrompt_KnowsWhoTheyAreTalkingTo_AndWhatHappenedBefore()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
-            sim.Advance(SocialRules.MaxConversationMinutes + 5);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
+            TestTown.Run(sim, 0);
+            TestTown.StartChat(sim);
+            TestTown.Run(sim, SocialRules.MaxConversationMinutes + 5);
             Assert.That(sim.Conversations.All.Any(c => c.Kind == ConversationKind.Chat), Is.True);
-            sim.Advance(SocialRules.PairCooldownMinutes);
-            sim.AiDecisionsEnabled = true;
-            foreach (var r in sim.Residents)
-            {
-                // Back on the green after the cooldown, and ready for company.
-                r.ResetActivity();
-                r.Location = r.Id == StarterTown.ResidentId ? new Location(StarterTown.VillageMapId, 10, 9) : new Location(StarterTown.VillageMapId, 11, 9);
-                r.Needs[NeedType.Social] = 40;
-            }
-
-            ConversationSession session = null;
-            for (var i = 0; i < 30 && (session == null || !session.AwaitingLine); i++)
-            {
-                sim.Tick();
-                session = sim.ActiveConversations.FirstOrDefault();
-            }
-
+            var session = TestTown.StartChat(sim);
+            sim.Tick();
             Assert.That(session, Is.Not.Null);
             var speaker = sim.GetResident(session.SpeakerId);
             var listener = sim.GetResident(session.ListenerId);
@@ -248,25 +207,25 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void DecisionPrompt_OffersChats_WithTheResidentId()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon, social: 90);
-            var mabel = sim.GetResident(StarterTown.ResidentId);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon, social: 90);
+            var mabel = sim.GetResident(StarterResidents.ResidentId);
             var options = sim.FreeTimeOptionsFor(mabel);
             var chat = options.Single(o => o.Partner != null);
 
             var text = DecisionPrompt.UserText(sim, mabel, options, new MemoryRecord[0]);
 
-            Assert.That(chat.TargetId, Is.EqualTo(StarterTown.ArthurId));
-            Assert.That(text, Does.Contain($"target_id \"{StarterTown.ArthurId}\": go and chat with Arthur Bramble"));
+            Assert.That(chat.TargetId, Is.EqualTo(StarterResidents.ArthurId));
+            Assert.That(text, Does.Contain($"target_id \"{StarterResidents.ArthurId}\": go and chat with Arthur Bramble"));
             Assert.That(text, Does.Contain("People in the city:"));
             Assert.That(text, Does.Contain("- You have never really met: Arthur Bramble"));
-            Assert.That(text, Does.Contain("Money: you have £450.00, and food at home for 4 meals."));
+            Assert.That(text, Does.Not.Contain("£"), "there is no money");
 
-            sim.Relationships.Get(mabel.Id, StarterTown.ArthurId).Interactions = 1;
+            sim.Relationships.Get(mabel.Id, StarterResidents.ArthurId).Interactions = 1;
             text = DecisionPrompt.UserText(sim, mabel, options, new MemoryRecord[0]);
-            Assert.That(text, Does.Contain("- Arthur Bramble, 71: "));
+            Assert.That(text, Does.Contain("- Arthur Bramble: "));
             Assert.That(text, Does.Not.Contain("never really met"));
-            Assert.That(DecisionPrompt.Cues(sim, mabel, options), Does.Contain(StarterTown.ArthurId));
-            Assert.That(sim.ApplyDecision(mabel.Id, 1, chat.ActionId, StarterTown.NellId, "x", null), Is.Not.EqualTo(DecisionOutcome.Applied));
+            Assert.That(DecisionPrompt.Cues(sim, mabel, options), Does.Contain(StarterResidents.ArthurId));
+            Assert.That(sim.ApplyDecision(mabel.Id, 1, chat.ActionId, StarterResidents.NellId, "x", null), Is.Not.EqualTo(DecisionOutcome.Applied));
         }
     }
 }

@@ -13,8 +13,7 @@ namespace TinyCity.Tests.EditMode
     {
         private static TownSimulation Town(System.Action<Needs> adjust = null)
         {
-            var sim = TestTown.WithResident(TestTown.WorkHour, adjust: adjust);
-            sim.AiRunsEverything = true;
+            var sim = TestTown.WithResident(TestTown.WeekendAfternoon, adjust: adjust);
             return sim;
         }
 
@@ -34,7 +33,7 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Options_IncludeEatingSleepingAndTheirOwnJob_WhateverTheirNeeds()
+        public void Options_IncludeEverythingTheyMayDo_WhateverTheirNeeds()
         {
             var sim = Town();
             sim.AiDecisionsEnabled = true;
@@ -42,24 +41,9 @@ namespace TinyCity.Tests.EditMode
             var r = sim.Residents[0];
             var actions = sim.FreeTimeOptionsFor(r).Select(o => o.ActionId).ToList();
 
-            Assert.That(actions, Does.Contain(ActivityCatalog.Work.Id));
             Assert.That(actions, Does.Contain(ActivityCatalog.Sleep.Id));
-            Assert.That(actions, Does.Contain(ActivityCatalog.Snack.Id));
-            Assert.That(sim.FreeTimeOptionsFor(r).Where(o => o.ActionId == ActivityCatalog.Work.Id).All(o => o.TargetId == r.Job.WorkObjectId), Is.True);
-        }
-
-        [Test]
-        public void TheAiCanChooseToGoToWork()
-        {
-            var sim = Town();
-            sim.AiDecisionsEnabled = true;
-            sim.Tick();
-            var r = sim.Residents[0];
-
-            var outcome = sim.ApplyDecision(r.Id, r.PendingDecisionId, ActivityCatalog.Work.Id, r.Job.WorkObjectId, "Shift starts", "Off to work");
-
-            Assert.That(outcome, Is.EqualTo(DecisionOutcome.Applied));
-            Assert.That(r.ActivityId, Is.EqualTo(ActivityCatalog.Work.Id));
+            Assert.That(actions, Does.Contain(ActivityCatalog.DrinkFromPond.Id), "even though they aren't thirsty");
+            Assert.That(actions, Does.Contain(ActivityCatalog.CatchFish.Id));
         }
 
         [Test]
@@ -80,12 +64,11 @@ namespace TinyCity.Tests.EditMode
         public void NothingInterruptsWhatTheAiChose_EvenAnUrgentNeed()
         {
             var sim = TestTown.WithResident(TestTown.WeekendAfternoon, adjust: n => n[NeedType.Fun] = 20);
-            sim.AiRunsEverything = true;
             sim.AiDecisionsEnabled = true;
             sim.Tick();
             var r = sim.Residents[0];
-            var read = sim.FreeTimeOptionsFor(r).First(o => o.ActionId == ActivityCatalog.Read.Id);
-            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, read.ActionId, read.TargetId, "Reading", "Book time"), Is.EqualTo(DecisionOutcome.Applied));
+            var fish = sim.FreeTimeOptionsFor(r).First(o => o.ActionId == ActivityCatalog.CatchFish.Id);
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, fish.ActionId, fish.TargetId, "Fishing", "Supper time"), Is.EqualTo(DecisionOutcome.Applied));
             r.Needs[NeedType.Hunger] = 1;
 
             for (var i = 0; i < 10; i++)
@@ -93,14 +76,13 @@ namespace TinyCity.Tests.EditMode
                 sim.Tick();
             }
 
-            Assert.That(r.ActivityId, Is.EqualTo(ActivityCatalog.Read.Id));
+            Assert.That(r.ActivityId, Is.EqualTo(ActivityCatalog.CatchFish.Id));
         }
 
         [Test]
-        public void Conversations_WaitForTheAi_AndNeverUseSmallTalk()
+        public void Conversations_WaitForTheAi()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon, social: 10);
-            sim.AiRunsEverything = true;
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon, social: 10);
             sim.AiDecisionsEnabled = true;
             var mabel = sim.Residents[0];
             var arthur = sim.Residents[1];
@@ -133,7 +115,7 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(session.Lines.Count, Is.EqualTo(0));
             Assert.That(session.AwaitingLine, Is.True);
-            Assert.That(sim.UseSmallTalk(session.Id, lineId), Is.False);
+            Assert.That(sim.AskForLineAgain(session.Id, lineId), Is.True);
             Assert.That(session.LineRequestId, Is.GreaterThan(lineId), "a failed line is asked for again");
         }
 

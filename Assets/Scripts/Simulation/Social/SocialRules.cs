@@ -15,7 +15,8 @@ namespace TinyCity.Simulation.Social
         /// <summary>A conversation may end early only after this many lines, so both residents contribute.</summary>
         public const int MinLines = 4;
 
-        public const int MaxLines = 10;
+        /// <summary>Chats are at most this many lines, since each line is one AI request.</summary>
+        public const int MaxLines = 6;
 
         /// <summary>Game minutes between lines.</summary>
         public const int MinutesPerLine = 2;
@@ -26,20 +27,8 @@ namespace TinyCity.Simulation.Social
         /// </summary>
         public const int MaxConversationMinutes = 40;
 
-        /// <summary>
-        /// Safety net in game minutes for one AI line. The AI service normally gives up much sooner, after
-        /// <c>AiService.LineWaitSeconds</c> of real time, so the wait is the same at every game speed.
-        /// </summary>
-        public const int LineWaitMinutes = 60;
-
         /// <summary>The same two residents won't start another conversation within this many game minutes.</summary>
         public const int PairCooldownMinutes = 180;
-
-        /// <summary>Residents passing within this many tiles may stop for a chat.</summary>
-        public const int MeetingDistance = 2;
-
-        /// <summary>Someone only stops to chat by chance if one of the two has Social below this.</summary>
-        public const double MeetingSocialThreshold = 80;
 
         /// <summary>Longest walk, in steps, worth making to find someone to talk to.</summary>
         public const int MaxSeekDistance = 45;
@@ -54,9 +43,6 @@ namespace TinyCity.Simulation.Social
 
         /// <summary>Friendship at which a memory of becoming good friends is made.</summary>
         public const double GoodFriendsAt = 40;
-
-        /// <summary>Residents at least this sociable look for company in their free time, not only when lonely.</summary>
-        public const double ChattyPersonality = 0.6;
 
         /// <summary>How many lines this pair will exchange: longer between friends and between two chatty people.</summary>
         public static int LinesFor(Resident a, Resident b, Relationship ab, Relationship ba)
@@ -79,35 +65,6 @@ namespace TinyCity.Simulation.Social
             !book.TryGet(a, b, out var rel) || rel.LastInteractionMinute == Relationship.Never
             || now.TotalMinutes - rel.LastInteractionMinute >= PairCooldownMinutes;
 
-        /// <summary>Free and willing to start talking right now: awake, off work, nothing urgent, not busy with care or another chat.</summary>
-        public static bool CanJoinConversation(Resident r, GameTime now)
-        {
-            if (r == null || !r.IsAlive || r.State == ResidentState.Talking || ActivityPlanner.MostUrgentNeed(r) != null
-                || SleepSchedule.IsSleepTime(r, now) || ActivityPlanner.ShouldWork(r, now))
-            {
-                return false;
-            }
-
-            switch (r.State)
-            {
-                case ResidentState.Idle:
-                case ResidentState.Waiting:
-                case ResidentState.Deciding:
-                    return true;
-                default:
-                    return ActivityCatalog.TryGet(r.ActivityId, out var activity)
-                        && (activity.Kind == ActivityKind.Leisure || activity.Kind == ActivityKind.Social);
-            }
-        }
-
-        /// <summary>Someone worth walking over to: outdoors (homes are private), awake and not working, sleeping or chatting.</summary>
-        public static bool CanBeApproached(Resident r, GameTime now, bool isOutdoors)
-        {
-            return r != null && r.IsAlive && isOutdoors && r.State != ResidentState.Talking
-                && ActivityPlanner.MostUrgentNeed(r) == null && !SleepSchedule.IsSleepTime(r, now) && !ActivityPlanner.ShouldWork(r, now)
-                && !(r.ActivityId == ActivityCatalog.Sleep.Id || r.ActivityId == ActivityCatalog.Work.Id);
-        }
-
         /// <summary>A reason this resident must leave a conversation now, or null to stay.</summary>
         public static string ReasonToLeave(Resident r, GameTime now)
         {
@@ -115,16 +72,6 @@ namespace TinyCity.Simulation.Social
             if (urgent != null)
             {
                 return $"{urgent.Value.ToString().ToLowerInvariant()} couldn't wait";
-            }
-
-            if (ActivityPlanner.ShouldWork(r, now))
-            {
-                return "time for work";
-            }
-
-            if (SleepSchedule.IsSleepTime(r, now))
-            {
-                return "bedtime";
             }
 
             return null;

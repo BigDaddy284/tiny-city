@@ -70,24 +70,11 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void RunningDesperatelyLow_IsRememberedOncePerDay()
-        {
-            var sim = TestTown.WithResident(TestTown.WeekendAfternoon, adjust: n => n[NeedType.Hunger] = 10);
-            sim.Advance(60);
-            sim.Residents[0].Needs[NeedType.Hunger] = 5;
-            sim.Advance(60);
-
-            var hungry = sim.Memories.ForResident(Mabel).Where(m => m.Tags.Contains("urgent-hunger")).ToList();
-            Assert.That(hungry.Count, Is.EqualTo(1));
-            Assert.That(hungry[0].Type, Is.EqualTo(MemoryType.Event));
-        }
-
-        [Test]
         public void NewGame_StartsWithLifeHistory()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
 
-            Assert.That(sim.Memories.ForResident(Mabel).Count(m => m.Type == MemoryType.LifeHistory), Is.EqualTo(2));
+            Assert.That(sim.Memories.ForResident(Mabel).Count(m => m.Type == MemoryType.LifeHistory), Is.EqualTo(1), "coming to the open land; they have no backstory unless residents.json gives one");
         }
 
         [Test]

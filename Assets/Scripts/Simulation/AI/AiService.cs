@@ -20,8 +20,9 @@ namespace TinyCity.Simulation.AI
 
     /// <summary>
     /// Connects the town to Ollama: checks the service and model, turns AI decisions on only while it works,
-    /// asks for free-time decisions and bedtime reflections through the central queue, and hands every answer to
-    /// the simulation for validation. Whenever anything goes wrong the built-in routine carries on.
+    /// asks for every choice, line, plan and reflection through the central queue, and hands every answer to the
+    /// simulation for validation. There is no built-in routine: an unusable answer is asked for again, and while
+    /// Ollama can't be reached the game holds its clock.
     /// Call <see cref="Update"/> once per frame with a real-time clock in seconds.
     /// </summary>
     public sealed class AiService
@@ -35,12 +36,6 @@ namespace TinyCity.Simulation.AI
         public const int OfflineAfterFailures = 3;
 
         public const int MaxEvents = 20;
-
-        /// <summary>
-        /// Real seconds a conversation line waits for the AI before built-in small talk is used. Measured in real time,
-        /// not game time, so AI lines keep coming at 4x and 10x speed (the conversation pauses while it waits).
-        /// </summary>
-        public const double LineWaitSeconds = 6;
 
         private enum CheckPhase
         {
@@ -88,7 +83,6 @@ namespace TinyCity.Simulation.AI
         private double listStartedAt;
         private bool listWanted;
         private List<string> installedModels = new List<string>();
-        private double gameMinutesPerSecond = 1;
         private double lastNow;
         private double embedPausedUntil;
 
@@ -156,35 +150,9 @@ namespace TinyCity.Simulation.AI
             Simulation = simulation;
             if (simulation != null)
             {
-                simulation.DecisionWaitMinutes = DecisionWaitMinutesAt(gameMinutesPerSecond);
                 simulation.AiDecisionsEnabled = Status == AiConnectionStatus.Connected;
             }
         }
-
-        /// <summary>
-        /// Tells the service how fast the game runs (game minutes per real second: 1 at 1x, 4 at 4x), so a resident
-        /// waits long enough in real time for the AI's answer. Pausing keeps the last wait.
-        /// </summary>
-        public void SetGameSpeed(double minutesPerSecond)
-        {
-            if (minutesPerSecond <= 0)
-            {
-                return;
-            }
-
-            gameMinutesPerSecond = minutesPerSecond;
-            if (Simulation != null)
-            {
-                Simulation.DecisionWaitMinutes = DecisionWaitMinutesAt(minutesPerSecond);
-            }
-        }
-
-        /// <summary>
-        /// Game minutes a resident waits for a decision at this speed: the setting's minutes, or its real seconds
-        /// turned into game minutes if that is longer.
-        /// </summary>
-        public int DecisionWaitMinutesAt(double minutesPerSecond) =>
-            Math.Min(OllamaSettings.MaxDecisionWaitMinutes, Math.Max(settings.decisionWaitMinutes, (int)Math.Ceiling(settings.decisionWaitSeconds * Math.Max(0, minutesPerSecond))));
 
         /// <summary>Asks Ollama which models are installed, even while the AI is turned off, for the Settings window.</summary>
         public void RefreshModelList()
@@ -269,22 +237,13 @@ namespace TinyCity.Simulation.AI
             {
                 case AiConnectionStatus.Connected:
                     var latency = s.LastLatencySeconds > 0 ? $", last answer {s.LastLatencySeconds:0.0}s (avg {s.AverageLatencySeconds:0.0}s)" : string.Empty;
-                    if (Simulation?.AiRunsEverything == true)
-                    {
-                        // Tiny City 2 has nothing to fall back on: an unusable answer is asked again, so say what went wrong.
-                        var problem = string.IsNullOrEmpty(s.LastError) ? string.Empty : $" Last unusable answer: {s.LastError}";
-                        return $"AI: connected to {Model}. Queue {Queue.PendingCount + Queue.ActiveCount}{latency}. Used {s.Accepted}, unusable {s.InvalidReplies}, given up and asked again {s.GaveUp}.{problem}";
-                    }
-
-                    return $"AI: connected to {Model}. Queue {Queue.PendingCount + Queue.ActiveCount}{latency}. Used {s.Accepted}, fell back {s.GaveUp}.";
+                    // There is nothing to fall back on: an unusable answer is asked again, so say what went wrong.
+                    var problem = string.IsNullOrEmpty(s.LastError) ? string.Empty : $" Last unusable answer: {s.LastError}";
+                    return $"AI: connected to {Model}. Queue {Queue.PendingCount + Queue.ActiveCount}{latency}. Used {s.Accepted}, unusable {s.InvalidReplies}, given up and asked again {s.GaveUp}.{problem}";
                 case AiConnectionStatus.Disabled:
-                    return Simulation?.AiRunsEverything == true
-                        ? "AI: off (Settings). The city waits until it's turned on."
-                        : "AI: off (Settings). Residents use their built-in routine.";
+                    return "AI: off (Settings). The city waits until it's turned on.";
                 default:
-                    return Simulation?.AiRunsEverything == true
-                        ? $"AI: {Words(Status)} ({StatusDetail}). The city waits until Ollama answers."
-                        : $"AI: {Words(Status)} ({StatusDetail}). Residents use their built-in routine meanwhile.";
+                    return $"AI: {Words(Status)} ({StatusDetail}). The city waits until Ollama answers.";
             }
         }
 
@@ -495,7 +454,7 @@ namespace TinyCity.Simulation.AI
         {
             if (Status != AiConnectionStatus.Offline || StatusDetail != reason)
             {
-                AddEvent($"Ollama unavailable: {reason}. Using built-in routines.");
+                AddEvent($"Ollama unavailable: {reason}. The city waits.");
             }
 
             Status = AiConnectionStatus.Offline;
@@ -568,10 +527,6 @@ namespace TinyCity.Simulation.AI
                     requestedLines[session.Id] = (session.LineRequestId, now);
                     Queue.Enqueue(LineRequest(sim, session), now);
                 }
-                else if (!sim.AiRunsEverything && now - asked.askedAt > LineWaitSeconds && sim.UseSmallTalk(session.Id, asked.lineId))
-                {
-                    AddEvent($"{sim.GetResident(session.Lines.Last().SpeakerId)?.FirstName} used small talk: no AI line within {LineWaitSeconds:0}s");
-                }
             }
 
             RequestInsights(sim, now);
@@ -592,7 +547,7 @@ namespace TinyCity.Simulation.AI
         /// </summary>
         private bool WaitingForDayPlan(TownSimulation sim, Resident r, double now)
         {
-            if (!sim.AiRunsEverything || !sim.NeedsDayPlan(r))
+            if (!sim.NeedsDayPlan(r))
             {
                 return false;
             }
@@ -633,7 +588,7 @@ namespace TinyCity.Simulation.AI
                 }
 
                 var batch = sim.Memories.NeedingRating(r.Id).Take(ImportancePrompt.MaxPerRequest).ToList();
-                if (batch.Count > 0 && (!sim.AiRunsEverything || batch.Count >= RatingBatchMin
+                if (batch.Count > 0 && (batch.Count >= RatingBatchMin
                     || sim.Time.TotalMinutes - batch[0].Time.TotalMinutes >= RatingMaxWaitMinutes))
                 {
                     Queue.Enqueue(ImportanceRequest(sim, r, batch), now);
@@ -658,7 +613,7 @@ namespace TinyCity.Simulation.AI
                 r.Id,
                 AiPriority.Flavour,
                 $"memory ratings for {r.FirstName}",
-                ImportancePrompt.BuildBody(Model, r, batch),
+                ImportancePrompt.BuildBody(Model, sim, r, batch),
                 text =>
                 {
                     if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
@@ -766,9 +721,9 @@ namespace TinyCity.Simulation.AI
                 () => Simulation == sim && sim.GetConversation(session.Id) == session && session.AwaitingLine && session.LineRequestId == lineId,
                 reason =>
                 {
-                    if (sim.UseSmallTalk(session.Id, lineId))
+                    if (sim.AskForLineAgain(session.Id, lineId))
                     {
-                        AddEvent($"{speaker.FirstName} used small talk: {reason}");
+                        AddEvent($"{speaker.FirstName}'s line was asked for again: {reason}");
                     }
                 });
         }
@@ -786,7 +741,7 @@ namespace TinyCity.Simulation.AI
                 text =>
                 {
                     if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)
-                        || !DecisionPrompt.TryParse(content, options, out var reply, out error, sim.PlanStepLimit))
+                        || !DecisionPrompt.TryParse(content, options, out var reply, out error, TownSimulation.MaxPlanSteps))
                     {
                         return AiReplyCheck.Invalid(error);
                     }
@@ -810,7 +765,7 @@ namespace TinyCity.Simulation.AI
                 {
                     if (sim.AbandonDecision(r.Id, decisionId, "AI answer unusable"))
                     {
-                        AddEvent($"{r.FirstName} used the built-in routine: {reason}");
+                        AddEvent($"{r.FirstName} thought again: {reason}");
                     }
                 });
         }
@@ -818,7 +773,7 @@ namespace TinyCity.Simulation.AI
         /// <summary>Tiny City 2: once a game minute, asks for insights from anyone whose recent memories add up to enough.</summary>
         private void RequestInsights(TownSimulation sim, double now)
         {
-            if (!sim.AiRunsEverything || sim.Time.TotalMinutes == lastInsightCheckMinute)
+            if (sim.Time.TotalMinutes == lastInsightCheckMinute)
             {
                 return;
             }
@@ -845,7 +800,7 @@ namespace TinyCity.Simulation.AI
                 r.Id,
                 AiPriority.Reflection,
                 $"insights for {r.FirstName}",
-                InsightPrompt.BuildBody(Model, r, evidence),
+                InsightPrompt.BuildBody(Model, sim, r, evidence),
                 text =>
                 {
                     if (!OllamaProtocol.TryReadChatContent(text, out var content, out var error)

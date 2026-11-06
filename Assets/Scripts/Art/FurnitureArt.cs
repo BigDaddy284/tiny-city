@@ -13,7 +13,7 @@ namespace TinyCity.Art
         /// <summary>A new canvas whose anchor is the centre of the object's tile.</summary>
         public static PixelCanvas NewCanvas() => new PixelCanvas(CanvasWidth, CanvasHeight, CanvasWidth / 2.0, CanvasHeight - 16);
 
-        public static PixelCanvas Render(ObjectType type, int variant, Palette palette, bool outdoors, PlaceKind place = PlaceKind.Village)
+        public static PixelCanvas Render(ObjectType type, int variant, Palette palette, bool outdoors)
         {
             var canvas = NewCanvas();
             var p = new IsoPainter(canvas);
@@ -49,30 +49,6 @@ namespace TinyCity.Art
                     });
                     p.Box(0.55, 0.22, 20, 0.12, 0.12, 9, Palette.Tomato);
                     break;
-                case ObjectType.Sink:
-                    p.Box(0.15, 0.25, 0, 0.7, 0.62, 19, Palette.WoodLight);
-                    p.Top(0.15, 0.25, 19, 0.7, 0.62, (s, t) => s > 0.2 && s < 0.8 && t > 0.2 && t < 0.8 ? Palette.GlassLight : Palette.Porcelain);
-                    p.Post(0.5, 0.3, 19, 0.04, 9, Palette.Metal);
-                    break;
-                case ObjectType.Toilet:
-                    p.Box(0.28, 0.18, 0, 0.44, 0.16, 26, Palette.Porcelain);
-                    p.Post(0.5, 0.55, 0, 0.17, 12, Palette.Porcelain);
-                    p.FlatDisc(0.5, 0.55, 13, 0.15, Palette.PorcelainShade);
-                    break;
-                case ObjectType.Shower:
-                    p.Box(0.08, 0.08, 0, 0.84, 0.84, 3, Palette.Porcelain);
-                    p.Post(0.15, 0.15, 3, 0.03, 44, Palette.Metal);
-                    p.Box(0.15, 0.15, 44, 0.3, 0.06, 3, Palette.Metal);
-                    p.LeftWall(0.1, 0.9, 3, 0.82, 40, (s, t) => Palette.ShowerGlass.WithAlpha((byte)(s < 0.04 || s > 0.96 ? 200 : 70)));
-                    p.RightWall(0.92, 0.1, 3, 0.8, 40, (s, t) => Palette.ShowerGlass.WithAlpha((byte)(s > 0.96 ? 200 : 60)));
-                    break;
-                case ObjectType.Armchair:
-                    p.Box(0.18, 0.18, 0, 0.64, 0.64, 10, accent.Shade(0.9));
-                    p.Box(0.12, 0.16, 0, 0.16, 0.68, 26, accent.Shade(0.85));
-                    p.Box(0.18, 0.12, 0, 0.64, 0.1, 17, accent);
-                    p.Box(0.18, 0.8, 0, 0.64, 0.1, 17, accent);
-                    p.Box(0.28, 0.24, 10, 0.5, 0.54, 3, accent.Mix(Palette.White, 0.25));
-                    break;
                 case ObjectType.GardenPlot:
                     p.Box(0.05, 0.05, 0, 0.9, 0.06, 5, Palette.Wood);
                     p.Box(0.05, 0.89, 0, 0.9, 0.06, 5, Palette.Wood);
@@ -81,12 +57,6 @@ namespace TinyCity.Art
                         Plant(p, palette, 0.25 + (i * 0.25), 0.5, variant + i);
                     }
 
-                    break;
-                case ObjectType.GardenTap:
-                    p.Box(0.42, 0.42, 0, 0.14, 0.14, 22, Palette.WoodDark);
-                    p.Box(0.38, 0.56, 16, 0.08, 0.14, 3, Palette.Metal);
-                    p.Post(0.7, 0.66, 0, 0.12, 10, Palette.LeafGreen);
-                    p.Box(0.8, 0.62, 6, 0.16, 0.05, 2, Palette.LeafGreen);
                     break;
                 case ObjectType.Bench:
                     foreach (var leg in new[] { 0.14, 0.78 })
@@ -99,12 +69,6 @@ namespace TinyCity.Art
                     p.Top(0.1, 0.32, 12, 0.8, 0.4, (s, t) => (int)(t * 3) % 2 == 0 ? Palette.WoodLight : Palette.Wood);
                     SnowOn(p, palette, outdoors, 0.1, 0.32, 12, 0.8, 0.4);
                     break;
-                case ObjectType.ExerciseSpot:
-                    p.Top(0.12, 0.2, 0.5, 0.76, 0.6, (s, t) => (int)(s * 6) % 2 == 0 ? Palette.Mat : Palette.MatDark);
-                    p.Post(0.28, 0.36, 1, 0.07, 4, Palette.Charcoal);
-                    p.Post(0.72, 0.36, 1, 0.07, 4, Palette.Charcoal);
-                    p.Box(0.3, 0.33, 3, 0.4, 0.05, 2, Palette.Metal);
-                    break;
                 case ObjectType.Workbench:
                     foreach (var (lu, lv) in new[] { (0.1, 0.25), (0.82, 0.25), (0.1, 0.78), (0.82, 0.78) })
                     {
@@ -116,88 +80,6 @@ namespace TinyCity.Art
                     p.Box(0.5, 0.5, 22, 0.3, 0.05, 2, Palette.Tomato);
                     p.Box(0.22, 0.25, 4, 0.6, 0.55, 2, Palette.WoodDark);
                     break;
-                case ObjectType.ShopShelf:
-                    p.Box(0.1, 0.1, 0, 0.8, 0.4, 46, Palette.Wood);
-                    p.LeftWall(0.12, 0.5, 2, 0.76, 42, (s, t) =>
-                    {
-                        var shelf = (int)(t * 4);
-                        if ((t * 4) - shelf < 0.12)
-                        {
-                            return Palette.WoodDark;
-                        }
-
-                        var item = (int)(s * 6);
-                        return Noise.Value(item, shelf, variant) < 0.8 ? Palette.Goods[(item + shelf) % Palette.Goods.Length].Shade(0.9) : Palette.WoodDark.Shade(0.8);
-                    });
-                    break;
-                case ObjectType.Counter:
-                    p.Box(0.05, 0.3, 0, 0.9, 0.45, 22, Palette.Wood);
-                    p.LeftWall(0.05, 0.75, 4, 0.9, 14, (s, t) => (int)(s * 5) % 2 == 0 ? Palette.WoodLight.Shade(0.85) : Palette.Wood.Shade(0.85));
-                    p.Top(0.05, 0.3, 22, 0.9, 0.45, (s, t) => Palette.WoodLight);
-                    p.Box(0.6, 0.38, 22, 0.24, 0.22, 9, Palette.Slate);
-                    p.Box(0.62, 0.38, 31, 0.2, 0.06, 5, Palette.SlateLight);
-                    break;
-                case ObjectType.CafeTable:
-                    Chair(p, 0.5, 0.12, accent);
-                    p.Post(0.5, 0.5, 0, 0.05, 18, Palette.WoodDark);
-                    p.FlatDisc(0.5, 0.5, 18, 0.3, Palette.WoodDark);
-                    p.FlatDisc(0.5, 0.5, 19, 0.28, Palette.WoodLight);
-                    p.Post(0.42, 0.45, 19, 0.06, 4, Palette.White);
-                    Chair(p, 0.5, 0.82, accent);
-                    break;
-                case ObjectType.BakeryDisplay:
-                    p.Box(0.08, 0.22, 0, 0.84, 0.6, 16, Palette.Wood);
-                    p.Top(0.08, 0.22, 16, 0.84, 0.6, (s, t) => Palette.White);
-                    for (var i = 0; i < 4; i++)
-                    {
-                        var colour = i % 2 == 0 ? Palette.Bread : Palette.Icing;
-                        p.Post(0.2 + (i * 0.2), 0.5, 16, 0.07, 5, colour);
-                    }
-
-                    p.LeftWall(0.08, 0.82, 16, 0.84, 12, (s, t) => Palette.DisplayGlass);
-                    p.RightWall(0.92, 0.22, 16, 0.6, 12, (s, t) => Palette.DisplayGlass);
-                    p.Top(0.08, 0.22, 28, 0.84, 0.6, (s, t) => Palette.DisplayGlassTop);
-                    break;
-                case ObjectType.ClinicBed:
-                    foreach (var (lu, lv) in new[] { (0.12, 0.2), (0.84, 0.2), (0.12, 0.76), (0.84, 0.76) })
-                    {
-                        p.Box(lu, lv, 0, 0.05, 0.05, 10, Palette.Metal);
-                    }
-
-                    p.Box(0.1, 0.18, 10, 0.82, 0.66, 5, Palette.White);
-                    p.Box(0.06, 0.16, 0, 0.06, 0.7, 24, Palette.Metal);
-                    p.Box(0.16, 0.24, 15, 0.18, 0.54, 3, Palette.White);
-                    p.Box(0.42, 0.2, 15, 0.48, 0.62, 2, Palette.ClinicBlanket);
-                    break;
-                case ObjectType.Easel:
-                    p.Post(0.32, 0.6, 0, 0.03, 34, Palette.WoodDark);
-                    p.Post(0.68, 0.6, 0, 0.03, 34, Palette.WoodDark);
-                    p.Post(0.5, 0.35, 0, 0.03, 38, Palette.WoodDark);
-                    p.LeftWall(0.25, 0.62, 14, 0.5, 22, (s, t) =>
-                    {
-                        if (s < 0.06 || s > 0.94 || t < 0.06 || t > 0.94)
-                        {
-                            return Palette.WoodLight;
-                        }
-
-                        return t < 0.45 ? palette.Grass : t < 0.55 ? Palette.Yellow : Palette.Sky;
-                    });
-                    break;
-                case ObjectType.Piano:
-                    p.Box(0.1, 0.12, 0, 0.8, 0.4, 36, Palette.Ebony);
-                    p.Box(0.1, 0.52, 14, 0.8, 0.2, 4, Palette.Ebony);
-                    p.Top(0.12, 0.52, 18, 0.76, 0.18, (s, t) => (int)(s * 22) % 2 == 0 ? Palette.White : Palette.Ivory);
-                    p.Box(0.2, 0.72, 0, 0.6, 0.12, 9, Palette.WoodDark);
-                    break;
-                case ObjectType.ChessTable:
-                    p.Box(0.2, 0.2, 0, 0.6, 0.6, 16, Palette.Wood);
-                    p.Top(0.2, 0.2, 16, 0.6, 0.6, (s, t) => ((int)(s * 6) + (int)(t * 6)) % 2 == 0 ? Palette.White : Palette.Ebony);
-                    p.Post(0.35, 0.35, 16, 0.03, 4, Palette.White);
-                    p.Post(0.62, 0.6, 16, 0.03, 5, Palette.Ebony);
-                    Stool(p, 0.05, 0.5);
-                    Stool(p, 0.92, 0.5);
-                    SnowOn(p, palette, outdoors, 0.2, 0.2, 16.5, 0.6, 0.6, 0.4);
-                    break;
                 case ObjectType.FishingSpot:
                     p.Box(0.05, 0.2, 0, 0.9, 0.6, 4, Palette.Wood);
                     p.Top(0.05, 0.2, 4, 0.9, 0.6, (s, t) => (int)(s * 6) % 2 == 0 ? Palette.WoodLight : Palette.Wood);
@@ -207,98 +89,7 @@ namespace TinyCity.Art
                     SnowOn(p, palette, outdoors, 0.05, 0.2, 4, 0.9, 0.6);
                     break;
                 case ObjectType.GatheringSpot:
-                    if (outdoors)
-                    {
-                        Maypole(p, palette);
-                    }
-                    else if (place == PlaceKind.Bar)
-                    {
-                        // The DJ booth for club night: a desk with two decks and a neon strip along the front.
-                        p.Box(0.15, 0.3, 0, 0.7, 0.4, 18, Palette.Charcoal);
-                        p.LeftWall(0.15, 0.7, 6, 0.7, 3, (s, t) => Palette.NeonPink);
-                        p.FlatDisc(0.33, 0.5, 18, 0.12, Palette.Iron);
-                        p.FlatDisc(0.67, 0.5, 18, 0.12, Palette.Iron);
-                        p.Post(0.33, 0.5, 18, 0.03, 1, Palette.NeonCyan);
-                        p.Post(0.67, 0.5, 18, 0.03, 1, Palette.NeonCyan);
-                        p.Box(0.2, 0.32, 18, 0.06, 0.06, 14, Palette.Iron);
-                        p.Box(0.2, 0.32, 32, 0.06, 0.06, 2, Palette.NeonLime);
-                    }
-                    else
-                    {
-                        // A chalkboard on an easel for the quiz night.
-                        p.Post(0.35, 0.5, 0, 0.03, 30, Palette.WoodDark);
-                        p.Post(0.65, 0.5, 0, 0.03, 30, Palette.WoodDark);
-                        p.LeftWall(0.28, 0.52, 10, 0.44, 22, (s, t) => s < 0.07 || s > 0.93 || t < 0.07 || t > 0.93 ? Palette.Wood : Noise.Value((int)(s * 20), (int)(t * 8), 1) < 0.15 ? Palette.White : Palette.Chalkboard);
-                    }
-
-                    break;
-                case ObjectType.BarTable:
-                    HighStool(p, 0.5, 0.14);
-                    p.Post(0.5, 0.5, 0, 0.05, 26, Palette.Iron);
-                    p.FlatDisc(0.5, 0.5, 26, 0.26, Palette.NeonViolet);
-                    p.FlatDisc(0.5, 0.5, 27, 0.24, Palette.Charcoal);
-                    p.Post(0.42, 0.45, 27, 0.04, 5, Palette.GlassLight);
-                    p.Post(0.58, 0.55, 27, 0.04, 5, Palette.NeonPink);
-                    HighStool(p, 0.5, 0.86);
-                    break;
-                case ObjectType.DanceFloor:
-                    // Light-up squares in the city's neons, each one picked by the tile and the square.
-                    p.Top(0, 0, 0.5, 1, 1, (s, t) =>
-                    {
-                        var square = ((int)(s * 4) * 4) + (int)(t * 4);
-                        var edge = (s * 4) - Math.Floor(s * 4) < 0.1 || (t * 4) - Math.Floor(t * 4) < 0.1;
-                        return edge ? Palette.Iron : Noise.Value(square, variant, 7) < 0.8 ? Palette.Neons[(int)(Noise.Value(square, variant, 8) * Palette.Neons.Length)] : Palette.SlateLight;
-                    });
-                    break;
-                case ObjectType.PoolTable:
-                case ObjectType.SnookerTable:
-                    CueTable(p, type == ObjectType.SnookerTable);
-                    break;
-                case ObjectType.BowlingLane:
-                    // The far end of a lane: polished boards between two gutters, the pins, and the ball return.
-                    p.Top(0.12, 0, 0.5, 0.08, 1, (s, t) => Palette.Iron);
-                    p.Top(0.6, 0, 0.5, 0.08, 1, (s, t) => Palette.Iron);
-                    p.Top(0.2, 0, 0.6, 0.4, 1, (s, t) => (int)(s * 6) % 2 == 0 ? Palette.WoodLight : Palette.WoodLight.Shade(0.92));
-                    foreach (var (pu, pv) in new[] { (0.4, 0.12), (0.3, 0.12), (0.5, 0.12), (0.35, 0.22), (0.45, 0.22), (0.4, 0.32) })
-                    {
-                        p.Post(pu, pv, 0.6, 0.03, 7, Palette.White);
-                        p.Post(pu, pv, 4.5, 0.032, 1, Palette.SignRed);
-                    }
-
-                    p.Box(0.76, 0.55, 0, 0.18, 0.35, 9, Palette.Charcoal);
-                    p.Post(0.85, 0.72, 9, 0.06, 3, Palette.Neons[variant % Palette.Neons.Length]);
-                    break;
-                case ObjectType.ArcadeMachine:
-                {
-                    // A cabinet with a glowing screen, a control panel and a marquee in one of the city's neons.
-                    var neon = Palette.Neons[variant % Palette.Neons.Length];
-                    p.Box(0.22, 0.25, 0, 0.56, 0.45, 44, Palette.Charcoal, Palette.Charcoal.Shade(0.85), Palette.Charcoal.Shade(0.7));
-                    p.LeftWall(0.26, 0.705, 22, 0.48, 14, (s, t) => s < 0.08 || s > 0.92 || t < 0.1 || t > 0.9 ? Palette.Iron : Noise.Value((int)(s * 8), (int)(t * 6), variant) < 0.25 ? neon : Palette.TechNavy);
-                    p.Box(0.24, 0.7, 14, 0.52, 0.14, 4, Palette.Slate);
-                    p.Post(0.36, 0.77, 18, 0.025, 4, Palette.Ebony);
-                    p.Post(0.58, 0.77, 18, 0.03, 1, Palette.SignRed);
-                    p.Post(0.66, 0.77, 18, 0.03, 1, Palette.NeonCyan);
-                    p.LeftWall(0.22, 0.705, 38, 0.56, 6, (s, t) => neon);
-                    break;
-                }
-
-                case ObjectType.GymMachine:
-                    // A treadmill: a running belt on a low base, two uprights and a console with a light.
-                    p.Box(0.15, 0.2, 0, 0.7, 0.65, 4, Palette.Charcoal);
-                    p.Top(0.2, 0.25, 4, 0.6, 0.55, (s, t) => (int)(t * 10) % 2 == 0 ? Palette.Iron : Palette.Iron.Shade(0.9));
-                    p.Post(0.2, 0.25, 4, 0.03, 26, Palette.Metal);
-                    p.Post(0.8, 0.25, 4, 0.03, 26, Palette.Metal);
-                    p.Box(0.25, 0.16, 28, 0.5, 0.14, 5, Palette.Slate);
-                    p.Post(0.5, 0.2, 33, 0.04, 1, Palette.NeonMint);
-                    break;
-                case ObjectType.Fountain:
-                    // A round stone basin of water with a column and a little top bowl spilling over.
-                    p.Post(0.5, 0.5, 0, 0.46, 8, Palette.Stone);
-                    p.FlatDisc(0.5, 0.5, 8, 0.4, palette.IsWinter ? Palette.Snow : palette.Water);
-                    p.Post(0.5, 0.5, 8, 0.08, 16, Palette.StoneDark);
-                    p.FlatDisc(0.5, 0.5, 24, 0.2, Palette.Stone);
-                    p.FlatDisc(0.5, 0.5, 25, 0.16, palette.IsWinter ? Palette.Snow : palette.Water);
-                    p.Post(0.5, 0.5, 25, 0.03, 8, Palette.GlassLight);
+                    Maypole(p, palette);
                     break;
                 case ObjectType.MarketStall:
                 {

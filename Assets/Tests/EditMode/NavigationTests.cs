@@ -33,16 +33,16 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void StarterTown_Distances_MatchAPlainSearchOverEveryTileAndDoor()
+        public void TheOpenLand_Distances_MatchAPlainSearchOverEveryTile()
         {
-            var world = StarterTown.CreateWorld();
+            var world = FlatLand.CreateWorld();
             var pf = new Pathfinder(world);
             var places = world.Objects.Select(o => o.Location).Concat(world.Portals.Select(p => p.From)).Distinct().ToList();
             var checkedPairs = 0;
-            for (var a = 0; a < places.Count; a += 7)
+            for (var a = 0; a < places.Count; a++)
             {
                 var reference = Search(world, places[a]);
-                for (var b = 0; b < places.Count; b += 3)
+                for (var b = 0; b < places.Count; b++)
                 {
                     var expected = reference.TryGetValue(places[b], out var d) ? d : Pathfinder.Unreachable;
                     Assert.That(pf.Distance(places[a], places[b]), Is.EqualTo(expected), $"{places[a]} to {places[b]}");
@@ -54,7 +54,7 @@ namespace TinyCity.Tests.EditMode
 
             // Walking it one step at a time takes exactly that many steps.
             var from = places[0];
-            foreach (var to in places.Where((_, i) => i % 11 == 5))
+            foreach (var to in places.Where((_, i) => i % 3 == 1))
             {
                 var expected = pf.Distance(from, to);
                 var at = from;
@@ -175,11 +175,11 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void StarterTown_EveryObjectIsReachableFromBed()
+        public void TheOpenLand_EveryObjectIsReachableFromTheCamp()
         {
-            var world = StarterTown.CreateWorld();
+            var world = FlatLand.CreateWorld();
             var pf = new Pathfinder(world);
-            world.TryGetObject(StarterTown.BedId, out var bed);
+            world.TryGetObject("obj-flat-stove-1", out var bed);
 
             foreach (var obj in world.Objects)
             {
@@ -218,10 +218,10 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void StarterTown_FurnitureNeverBlocksTheWay()
+        public void TheOpenLand_FurnitureNeverBlocksTheWay()
         {
             // From every open tile, every object and every door can still be reached.
-            var world = StarterTown.CreateWorld();
+            var world = FlatLand.CreateWorld();
             var pf = new Pathfinder(world);
             foreach (var map in world.Maps)
             {

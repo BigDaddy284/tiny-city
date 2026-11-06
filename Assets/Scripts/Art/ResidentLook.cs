@@ -75,49 +75,49 @@ namespace TinyCity.Art
         private static readonly Dictionary<string, ResidentLook> Starters = new Dictionary<string, ResidentLook>
         {
             // Mabel, the gardener: auburn ponytail with mint tips, a cap and an olive utility jacket piped in mint.
-            [StarterTown.ResidentId] = new ResidentLook(Palette.Skin[1], Palette.HairAuburn, HairStyle.Ponytail, Palette.TechOlive, Palette.CargoGrey, hat: Palette.TechCharcoal, trim: Palette.NeonMint, hairTips: Palette.NeonMint),
+            [StarterResidents.ResidentId] = new ResidentLook(Palette.Skin[1], Palette.HairAuburn, HairStyle.Ponytail, Palette.TechOlive, Palette.CargoGrey, hat: Palette.TechCharcoal, trim: Palette.NeonMint, hairTips: Palette.NeonMint),
 
             // Arthur: bald with grey sides, glasses and a long navy coat with amber piping.
-            [StarterTown.ArthurId] = new ResidentLook(Palette.Skin[0], Palette.HairGrey, HairStyle.Bald, Palette.TechNavy, Palette.TechPants, glasses: true, trim: Palette.NeonAmber, coat: true),
+            [StarterResidents.ArthurId] = new ResidentLook(Palette.Skin[0], Palette.HairGrey, HairStyle.Bald, Palette.TechNavy, Palette.TechPants, glasses: true, trim: Palette.NeonAmber, coat: true),
 
             // Nell, the repair-maker: short dark hair, a cyan visor and a charcoal work jacket with lime piping.
-            [StarterTown.NellId] = new ResidentLook(Palette.Skin[2], Palette.HairDarkBrown, HairStyle.Short, Palette.TechCharcoal, Palette.CargoGrey, trim: Palette.NeonLime, visor: Palette.NeonCyan),
+            [StarterResidents.NellId] = new ResidentLook(Palette.Skin[2], Palette.HairDarkBrown, HairStyle.Short, Palette.TechCharcoal, Palette.CargoGrey, trim: Palette.NeonLime, visor: Palette.NeonCyan),
 
             // Rosa, the shopkeeper: black curls with pink tips, a violet jacket, plum skirt and a charcoal apron.
-            [StarterTown.RosaId] = new ResidentLook(Palette.Skin[1], Palette.HairBlack, HairStyle.Curly, Palette.TechViolet, Palette.TechPlum, skirt: true, apron: Palette.TechCharcoal, trim: Palette.NeonPink, hairTips: Palette.NeonPink),
+            [StarterResidents.RosaId] = new ResidentLook(Palette.Skin[1], Palette.HairBlack, HairStyle.Curly, Palette.TechViolet, Palette.TechPlum, skirt: true, apron: Palette.TechCharcoal, trim: Palette.NeonPink, hairTips: Palette.NeonPink),
 
             // Tom, the cook: ginger hair and beard, a white chef's jacket with cyan piping and a charcoal apron.
-            [StarterTown.TomId] = new ResidentLook(Palette.Skin[0], Palette.HairGinger, HairStyle.Short, Palette.White, Palette.TechPants, beard: true, apron: Palette.TechCharcoal, trim: Palette.NeonCyan),
+            [StarterResidents.TomId] = new ResidentLook(Palette.Skin[0], Palette.HairGinger, HairStyle.Short, Palette.White, Palette.TechPants, beard: true, apron: Palette.TechCharcoal, trim: Palette.NeonCyan),
 
             // Priya, the café server: long black hair with violet tips and a charcoal dress piped in café pink.
-            [StarterTown.PriyaId] = new ResidentLook(Palette.Skin[3], Palette.HairBlack, HairStyle.Long, Palette.TechCharcoal, Palette.TechCharcoal, skirt: true, trim: Palette.CafeNeon, hairTips: Palette.NeonViolet),
+            [StarterResidents.PriyaId] = new ResidentLook(Palette.Skin[3], Palette.HairBlack, HairStyle.Long, Palette.TechCharcoal, Palette.TechCharcoal, skirt: true, trim: Palette.CafeNeon, hairTips: Palette.NeonViolet),
 
             // Ivy, the baker: blonde bob with pink tips, a wine top and skirt, and a white apron piped in amber.
-            [StarterTown.IvyId] = new ResidentLook(Palette.Skin[0], Palette.HairBlonde, HairStyle.Bob, Palette.TechWine, Palette.TechPants, skirt: true, apron: Palette.White, trim: Palette.NeonAmber, hairTips: Palette.NeonPink),
+            [StarterResidents.IvyId] = new ResidentLook(Palette.Skin[0], Palette.HairBlonde, HairStyle.Bob, Palette.TechWine, Palette.TechPants, skirt: true, apron: Palette.White, trim: Palette.NeonAmber, hairTips: Palette.NeonPink),
 
             // Samuel, the doctor: short black hair, beard, glasses and a white lab coat with cyan piping.
-            [StarterTown.SamuelId] = new ResidentLook(Palette.Skin[4], Palette.HairBlack, HairStyle.Short, Palette.LabCoat, Palette.TechPants, beard: true, glasses: true, trim: Palette.NeonCyan, coat: true),
+            [StarterResidents.SamuelId] = new ResidentLook(Palette.Skin[4], Palette.HairBlack, HairStyle.Short, Palette.LabCoat, Palette.TechPants, beard: true, glasses: true, trim: Palette.NeonCyan, coat: true),
 
             // Felix: messy brown hair with cyan tips, and a violet visor to match the piping on his charcoal hoodie.
-            [StarterTown.FelixId] = new ResidentLook(Palette.Skin[2], Palette.HairBrown, HairStyle.Messy, Palette.TechCharcoal, Palette.CargoGrey, trim: Palette.NeonViolet, visor: Palette.NeonViolet, hairTips: Palette.NeonCyan),
+            [StarterResidents.FelixId] = new ResidentLook(Palette.Skin[2], Palette.HairBrown, HairStyle.Messy, Palette.TechCharcoal, Palette.CargoGrey, trim: Palette.NeonViolet, visor: Palette.NeonViolet, hairTips: Palette.NeonCyan),
 
             // Edith: white hair in a bun, glasses and a long plum coat with amber piping over a dark skirt.
-            [StarterTown.EdithId] = new ResidentLook(Palette.Skin[0], Palette.HairWhite, HairStyle.Bun, Palette.TechPlum, Palette.TechPants, skirt: true, glasses: true, trim: Palette.NeonAmber, coat: true),
+            [StarterResidents.EdithId] = new ResidentLook(Palette.Skin[0], Palette.HairWhite, HairStyle.Bun, Palette.TechPlum, Palette.TechPants, skirt: true, glasses: true, trim: Palette.NeonAmber, coat: true),
 
             // Marcus, the gym instructor: short brown hair and a navy training top with lime piping.
-            [StarterTown.MarcusId] = new ResidentLook(Palette.Skin[3], Palette.HairBrown, HairStyle.Short, Palette.TechNavy, Palette.CargoGrey, trim: Palette.NeonLime),
+            [StarterResidents.MarcusId] = new ResidentLook(Palette.Skin[3], Palette.HairBrown, HairStyle.Short, Palette.TechNavy, Palette.CargoGrey, trim: Palette.NeonLime),
 
             // Lola, from the bowling lanes: a ginger ponytail with violet tips and a wine top and skirt piped in pink.
-            [StarterTown.LolaId] = new ResidentLook(Palette.Skin[1], Palette.HairGinger, HairStyle.Ponytail, Palette.TechWine, Palette.TechCharcoal, skirt: true, trim: Palette.NeonPink, hairTips: Palette.NeonViolet),
+            [StarterResidents.LolaId] = new ResidentLook(Palette.Skin[1], Palette.HairGinger, HairStyle.Ponytail, Palette.TechWine, Palette.TechCharcoal, skirt: true, trim: Palette.NeonPink, hairTips: Palette.NeonViolet),
 
             // Danny, from the arcade: messy black hair, a pink visor and a charcoal hoodie with cyan piping.
-            [StarterTown.DannyId] = new ResidentLook(Palette.Skin[2], Palette.HairBlack, HairStyle.Messy, Palette.TechCharcoal, Palette.TechPants, trim: Palette.NeonCyan, visor: Palette.NeonPink),
+            [StarterResidents.DannyId] = new ResidentLook(Palette.Skin[2], Palette.HairBlack, HairStyle.Messy, Palette.TechCharcoal, Palette.TechPants, trim: Palette.NeonCyan, visor: Palette.NeonPink),
 
             // Ruby, who runs the cue club: long dark hair and a plum jacket with mint piping.
-            [StarterTown.RubyId] = new ResidentLook(Palette.Skin[4], Palette.HairDarkBrown, HairStyle.Long, Palette.TechPlum, Palette.TechCharcoal, trim: Palette.NeonMint),
+            [StarterResidents.RubyId] = new ResidentLook(Palette.Skin[4], Palette.HairDarkBrown, HairStyle.Long, Palette.TechPlum, Palette.TechCharcoal, trim: Palette.NeonMint),
 
             // Walter, retired: short white hair, a beard, glasses and a long olive coat with amber piping.
-            [StarterTown.WalterId] = new ResidentLook(Palette.Skin[1], Palette.HairWhite, HairStyle.Short, Palette.TechOlive, Palette.TechPants, beard: true, glasses: true, trim: Palette.NeonAmber, coat: true),
+            [StarterResidents.WalterId] = new ResidentLook(Palette.Skin[1], Palette.HairWhite, HairStyle.Short, Palette.TechOlive, Palette.TechPants, beard: true, glasses: true, trim: Palette.NeonAmber, coat: true),
         };
 
         /// <summary>

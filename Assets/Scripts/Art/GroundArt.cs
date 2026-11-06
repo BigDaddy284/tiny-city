@@ -31,7 +31,7 @@ namespace TinyCity.Art
         }
 
         /// <summary>The canvas for a map's ground. Its anchor is the centre of tile (0, 0).</summary>
-        public static PixelCanvas Render(TileMap map, PlaceKind kind, Palette palette)
+        public static PixelCanvas Render(TileMap map, Palette palette)
         {
             var w = map.Width;
             var h = map.Height;
@@ -66,7 +66,7 @@ namespace TinyCity.Art
                     var cv = (int)(v * Cells);
                     var colour = exterior
                         ? Outdoor(grid, w * Cells, h * Cells, cu, cv, u, v, px, py, palette, seed)
-                        : Indoor(map, kind, u, v, px, py);
+                        : Planks(map, u, v, px, py, Palette.CottageFloors[Noise.Of(map.Id) % Palette.CottageFloors.Length]);
                     canvas.Set(px, py, colour);
                 }
             }
@@ -271,25 +271,6 @@ namespace TinyCity.Art
             }
 
             return colour;
-        }
-
-        private static Rgba Indoor(TileMap map, PlaceKind kind, double u, double v, int px, int py)
-        {
-            switch (kind)
-            {
-                case PlaceKind.Store: return Checker(u, v, Palette.StoreFloor[0], Palette.StoreFloor[1]);
-                case PlaceKind.Clinic: return Checker(u, v, Palette.ClinicFloor[0], Palette.ClinicFloor[1]);
-                case PlaceKind.Bakery: return Checker(u, v, Palette.BakeryFloor[0], Palette.BakeryFloor[1]);
-                case PlaceKind.Cafe: return Planks(map, u, v, px, py, Palette.CafeFloor);
-                case PlaceKind.Shop: return Checker(u, v, Palette.ShopFloor[0], Palette.ShopFloor[1]);
-                case PlaceKind.Bar: return Checker(u, v, Palette.Slate, Palette.Iron);
-                case PlaceKind.CueClub: return Planks(map, u, v, px, py, Palette.WoodDark);
-                case PlaceKind.Bowling: return Planks(map, u, v, px, py, Palette.WoodLight);
-                case PlaceKind.Arcade: return Checker(u, v, Palette.Charcoal, Palette.TechPlum);
-                case PlaceKind.Gym: return Checker(u, v, Palette.Slate, Palette.Charcoal);
-                default:
-                    return Planks(map, u, v, px, py, Palette.CottageFloors[PlaceStyle.Variant(map.Id) % Palette.CottageFloors.Length]);
-            }
         }
 
         private static Rgba Checker(double u, double v, Rgba a, Rgba b)

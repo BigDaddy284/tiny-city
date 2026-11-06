@@ -15,8 +15,7 @@ namespace TinyCity.Simulation.Content
     /// them along its far edge, rocks with loose stones in its corner, a patch of good soil for crops by the cross
     /// path and a pond for fishing; the ground between them is left open where a sawmill or a stone mason's could go,
     /// if anyone builds one. The top and right quarters are open land. Residents plant and build wherever they
-    /// choose. They keep their looks, personalities and hobbies from <see cref="StarterTown"/>, but have no job,
-    /// rent or business: everything they have, they make.
+    /// choose. The people are <see cref="StarterResidents"/>: everything they have, they make.
     /// </summary>
     public static class FlatLand
     {
@@ -60,7 +59,8 @@ namespace TinyCity.Simulation.Content
         /// <summary>Good soil for crops, beside the cross path. Crops can be planted on any open ground, but this is where the owner drew the field.</summary>
         public static bool IsCropField(int x, int y) => x >= 18 && x <= 26 && y >= 22 && y <= 26;
 
-        public static GameTime StartTime => StarterTown.StartTime;
+        /// <summary>The world begins on day 1, a Monday, at 07:00.</summary>
+        public static GameTime StartTime => GameTime.FromDayAndTime(1, 7, 0);
 
         /// <summary>The meeting circle's two spots in the camp.</summary>
         public static readonly string[] MeetingCircleIds = { "obj-flat-meeting-1", "obj-flat-meeting-2" };
@@ -141,32 +141,19 @@ namespace TinyCity.Simulation.Content
         }
 
         /// <summary>
-        /// The starter residents (or those <paramref name="profiles"/> list), standing at the camp: no home, bed,
-        /// job, rent, income, business or money (unless a profile gives some), only their food.
+        /// The starter residents (or those <paramref name="profiles"/> list), standing at the camp a few paces apart
+        /// with nothing: no bed, no food and no money (there is none).
         /// </summary>
-        public static IReadOnlyList<Resident> CreateResidents(TownWorld world, IReadOnlyList<ResidentProfile> profiles)
+        public static IReadOnlyList<Resident> CreateResidents(IReadOnlyList<ResidentProfile> profiles = null)
         {
-            var residents = StarterTown.CreateResidents(StarterTown.CreateWorld(), profiles, openLand: true);
             var spots = StartingSpots().ToList();
-            for (var i = 0; i < residents.Count && i < spots.Count; i++)
+            var residents = StarterResidents.Create(spots[0], profiles).Take(Math.Min(spots.Count, MaxResidents)).ToList();
+            for (var i = 0; i < residents.Count; i++)
             {
-                var r = residents[i];
-                r.HomeMapId = null;
-                r.BedObjectId = null;
-                r.Location = spots[i];
-                r.Job = null;
-                r.WeeklyRentPence = 0;
-                r.WeeklyIncomePence = 0;
-                r.IncomeLabel = string.Empty;
-                r.OwnsBusinessId = null;
-
-                // Owner, 6 November: nobody arrives with food; v1's starting groceries would become cooked meals.
-                r.Groceries = 0;
-                // Owner, 6 November: there is no money in Tiny City 2 at all.
-                r.MoneyPence = 0;
+                residents[i].Location = spots[i];
             }
 
-            return residents.Take(spots.Count).ToList();
+            return residents;
         }
 
         /// <summary>
@@ -176,7 +163,7 @@ namespace TinyCity.Simulation.Content
         public static TownSimulation CreateNewGame(IReadOnlyList<ResidentProfile> profiles = null, IReadOnlyList<string> lessons = null, WorldBrief brief = null)
         {
             var world = CreateWorld();
-            var simulation = new TownSimulation(world, CreateResidents(world, profiles), StartTime) { Brief = brief ?? WorldBrief.Default, FirstMeetingDay = StartTime.Day + DaysToFirstMeeting };
+            var simulation = new TownSimulation(world, CreateResidents(profiles), StartTime) { Brief = brief ?? WorldBrief.Default, FirstMeetingDay = StartTime.Day + DaysToFirstMeeting };
             foreach (var r in simulation.Residents)
             {
                 simulation.Memories.Add(r.Id, simulation.Time, MemoryType.LifeHistory, 8,

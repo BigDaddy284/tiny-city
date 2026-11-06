@@ -5,11 +5,8 @@ namespace TinyCity.Simulation.Activities
     /// <summary>Deterministic per-minute need changes. Nothing else changes need values.</summary>
     public static class NeedRules
     {
-        /// <summary>Below this a need is urgent and interrupts most activities.</summary>
+        /// <summary>Below this a need is urgent: it shows as a worry and makes a resident leave a chat.</summary>
         public const double Critical = 20;
-
-        /// <summary>Below this a resident starts looking after the need when nothing more important is due.</summary>
-        public const double Comfortable = 65;
 
         private static readonly double[] BaseDecayPerHour =
         {
@@ -17,7 +14,6 @@ namespace TinyCity.Simulation.Activities
             8.0, // Thirst
             3.5, // Energy
             3.0, // Hygiene
-            7.0, // Toilet
             2.0, // Social
             2.0, // Exercise
             4.0, // Fun
@@ -35,12 +31,6 @@ namespace TinyCity.Simulation.Activities
                 default:
                     return rate;
             }
-        }
-
-        /// <summary>The level below which a resident wants to look after a need. Tidy residents shower sooner.</summary>
-        public static double ComfortThreshold(NeedType need, Personality personality)
-        {
-            return need == NeedType.Hygiene ? Comfortable + (20 * (personality.Tidy - 0.5)) : Comfortable;
         }
 
         /// <summary>Applies one minute of decay plus the gains of <paramref name="activity"/> if one is being performed.</summary>

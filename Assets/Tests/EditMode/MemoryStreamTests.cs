@@ -131,12 +131,12 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Saves_KeepRatings_ButMakeEmbeddingsAgain()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
             var first = sim.Memories.All.First();
             sim.Memories.RateImportance(first.Id, 9);
             sim.Memories.SetEmbedding(first.Id, new[] { 1f, 2f });
 
-            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), StarterTown.CreateWorld());
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld());
 
             Assert.That(loaded.Success, Is.True);
             var again = loaded.Simulation.Memories.Get(first.Id);
@@ -149,18 +149,31 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void TinyCityOneSave_IsRefused_WithAMessage()
         {
-            var json = SaveSerializer.Save(StarterTown.CreateNewGame()).Replace(SaveSerializer.Format, SaveSerializer.FormatTinyCityOne);
+            var json = SaveSerializer.Save(FlatLand.CreateNewGame()).Replace(SaveSerializer.Format, SaveSerializer.FormatTinyCityOne);
 
-            var result = SaveSerializer.Load(json, StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(json, FlatLand.CreateWorld());
 
             Assert.That(result.Success, Is.False);
             Assert.That(string.Join(" ", result.Errors), Does.Contain("Tiny City (v1)"));
         }
 
+        /// <summary>Gives everyone enough new memories that rating them is worth a request (<see cref="AiService.RatingBatchMin"/>).</summary>
+        private static void EnoughToRate(TownSimulation sim)
+        {
+            foreach (var r in sim.Residents)
+            {
+                for (var i = 1; i < AiService.RatingBatchMin; i++)
+                {
+                    sim.Memories.Add(r.Id, sim.Time, MemoryType.Event, 3, "Something small happened " + i, new string[0], new string[0]);
+                }
+            }
+        }
+
         [Test]
         public void AiService_RatesAndEmbedsNewMemories_InTheBackground()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
+            EnoughToRate(sim);
             var transport = new FakeAiTransport
             {
                 Responder = call =>
@@ -209,7 +222,8 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void AiService_WithoutTheEmbeddingModel_StillRatesButNeverEmbeds()
         {
-            var sim = StarterTown.CreateNewGame();
+            var sim = FlatLand.CreateNewGame();
+            EnoughToRate(sim);
             var transport = FakeAiTransport.WorkingOllama(body => body.Contains("ratings") ? "{\"ratings\":[]}" : null);
             var ai = new AiService(new OllamaSettings(), transport);
             ai.Attach(sim);
@@ -228,8 +242,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void TinyCityTwo_RatesNewMemoriesOnlyInBatches()
         {
-            var sim = StarterTown.CreateNewGame();
-            sim.AiRunsEverything = true;
+            var sim = FlatLand.CreateNewGame();
             foreach (var m in sim.Memories.All.Where(m => !m.ImportanceRated).ToList())
             {
                 sim.Memories.RateImportance(m.Id, m.Importance);

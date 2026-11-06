@@ -8,7 +8,6 @@ namespace TinyCity.Simulation.Residents
         None,
         Happy,
         Asleep,
-        NeedsToilet,
         Hungry,
         Thirsty,
         Tired,
@@ -26,9 +25,6 @@ namespace TinyCity.Simulation.Residents
         /// <summary>A need below this shows as a worry over the resident's head.</summary>
         public const double LowNeed = 20;
 
-        /// <summary>The toilet becomes the only thing on their mind a little earlier.</summary>
-        public const double UrgentToilet = 15;
-
         /// <summary>Every need at or above this, in good health, shows as happy.</summary>
         public const double ContentNeed = 70;
 
@@ -45,11 +41,6 @@ namespace TinyCity.Simulation.Residents
             }
 
             var needs = resident.Needs;
-            if (needs[NeedType.Toilet] < UrgentToilet)
-            {
-                return Mood.NeedsToilet;
-            }
-
             if (needs[NeedType.Hunger] < LowNeed)
             {
                 return Mood.Hungry;

@@ -29,8 +29,8 @@ namespace TinyCity.Sound
     }
 
     /// <summary>
-    /// Turns what happened in each minute of the simulation into sounds: a footstep for each step, a door when
-    /// someone goes in or out, and a sound for the activity they start (repeated now and then while it lasts).
+    /// Turns what happened in each minute of the simulation into sounds: a footstep for each step and a
+    /// sound for the activity they start (repeated now and then while it lasts).
     /// It only reads the town, never changes it, and nothing it remembers is saved.
     /// </summary>
     public sealed class SoundDirector
@@ -71,11 +71,7 @@ namespace TinyCity.Sound
                     continue;
                 }
 
-                if (r.Location.MapId != before.Location.MapId)
-                {
-                    cues.Add(new SoundCue(SoundEffect.Door, 0, r.Id, r.Location));
-                }
-                else if (r.Location.Position != before.Location.Position)
+                if (r.Location.Position != before.Location.Position)
                 {
                     before.Steps++;
                     cues.Add(new SoundCue(SoundEffect.Footstep, before.Steps % SoundEffects.FootstepVariants, r.Id, r.Location));
@@ -107,17 +103,17 @@ namespace TinyCity.Sound
         public static SoundEffect? EffectFor(TownWorld world, Resident r)
         {
             var id = r.ActivityId;
-            if (id == ActivityCatalog.Eat.Id || id == ActivityCatalog.Snack.Id || id == ActivityCatalog.Cook.Id)
+            if (id == ActivityCatalog.Cook.Id)
             {
                 return SoundEffect.Cooking;
             }
 
-            if (id == ActivityCatalog.Drink.Id || id == ActivityCatalog.Coffee.Id)
+            if (id == ActivityCatalog.DrinkFromPond.Id || id == ActivityCatalog.DrinkCleanWater.Id)
             {
                 return SoundEffect.Drink;
             }
 
-            if (id == ActivityCatalog.BuyGroceries.Id || id == ActivityCatalog.Pastry.Id || id == ActivityCatalog.BuyFood.Id || id == ActivityCatalog.RunStall.Id)
+            if (id == ActivityCatalog.BuyFood.Id || id == ActivityCatalog.RunStall.Id)
             {
                 return SoundEffect.Till;
             }
@@ -145,21 +141,6 @@ namespace TinyCity.Sound
             if (id == ActivityCatalog.PlantCrops.Id || id == ActivityCatalog.WaterCrops.Id || id == ActivityCatalog.Harvest.Id)
             {
                 return SoundEffect.Digging;
-            }
-
-            if (id == ActivityCatalog.Work.Id && r.TargetObjectId != null && world.TryGetObject(r.TargetObjectId, out var workplace))
-            {
-                switch (workplace.Type)
-                {
-                    case ObjectType.GardenPlot:
-                        return SoundEffect.Digging;
-                    case ObjectType.Counter:
-                        // Counters where things are sold ring them up; the clinic desk is paperwork.
-                        var business = world.BusinessOnMap(workplace.Location.MapId);
-                        return business != null && business.Items.Count > 0 ? SoundEffect.Till : SoundEffect.Typing;
-                    default:
-                        return SoundEffect.Typing;
-                }
             }
 
             return null;

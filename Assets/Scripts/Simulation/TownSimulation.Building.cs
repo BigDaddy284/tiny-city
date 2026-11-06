@@ -36,11 +36,6 @@ namespace TinyCity.Simulation
 
         private void StepSketches()
         {
-            if (!FoodMustBeMade)
-            {
-                return;
-            }
-
             foreach (var r in residents)
             {
                 if (r.Sketch != null && Time.TotalMinutes - r.Sketch.AskedMinute >= BuildingRules.SketchWaitMinutes)
@@ -139,7 +134,7 @@ namespace TinyCity.Simulation
 
         private void FinishBuilding(Resident r, ActivityDefinition activity)
         {
-            if (!FoodMustBeMade || activity != ActivityCatalog.Build)
+            if (activity != ActivityCatalog.Build)
             {
                 return;
             }

@@ -12,7 +12,7 @@ namespace TinyCity.Tests.EditMode
     /// <summary>Phase 6, build 1: the generated art for places, seasons and the light.</summary>
     public class ArtTests
     {
-        private static readonly TownWorld World = StarterTown.CreateWorld();
+        private static readonly TownWorld World = FlatLand.CreateWorld();
 
         [Test]
         public void Seasons_ShareTheYearEqually_SpringFirst()
@@ -102,92 +102,6 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Buildings_AreFoundForEveryHouseBlock_WithTheirDoorAndPlace()
-        {
-            World.TryGetMap(StarterTown.VillageMapId, out var village);
-            var buildings = BuildingArt.Find(World, village);
-            Assert.That(buildings.Count, Is.EqualTo(27));
-            Assert.That(buildings.Count(b => b.Kind == PlaceKind.Cottage), Is.EqualTo(16));
-            Assert.That(buildings.Count(b => b.Kind == PlaceKind.Apartments), Is.EqualTo(2));
-            foreach (var kind in new[] { PlaceKind.Store, PlaceKind.Cafe, PlaceKind.Bakery, PlaceKind.Clinic, PlaceKind.Bar, PlaceKind.CueClub, PlaceKind.Bowling, PlaceKind.Arcade, PlaceKind.Gym })
-            {
-                Assert.That(buildings.Count(b => b.Kind == kind), Is.EqualTo(1), kind.ToString());
-            }
-
-            foreach (var b in buildings)
-            {
-                if (b.Kind == PlaceKind.Apartments)
-                {
-                    Assert.That(b.Width == 6 && b.Depth == 6, Is.True, $"{b.InteriorMapId} is {b.Width}x{b.Depth}");
-                    Assert.That(b.Doors.Count, Is.EqualTo(8), "a door to each flat");
-                    Assert.That(b.Doors.Select(d => World.Portals.First(p => p.From.MapId == village.Id && p.From.Position.Equals(d)).To.MapId).Distinct().Count(), Is.EqualTo(8));
-                }
-                else
-                {
-                    Assert.That(b.Width >= 5 && b.Width <= 8 && b.Depth >= 3 && b.Depth <= 4, Is.True, $"{b.InteriorMapId} is {b.Width}x{b.Depth}");
-                    Assert.That(b.Doors.Count, Is.EqualTo(1));
-                }
-
-                Assert.That(b.Contains(b.Door.X, b.Door.Y), Is.True, $"{b.InteriorMapId}'s door is part of the building");
-                Assert.That(b.Door.Y, Is.EqualTo(b.Y + b.Depth - 1), "doors are on the front row");
-                Assert.That(village.GetTile(b.Door), Is.EqualTo(TileType.Door));
-                Assert.That(World.TryGetMap(b.InteriorMapId, out _), Is.True);
-            }
-
-            Assert.That(buildings.Select(b => b.InteriorMapId).Distinct().Count(), Is.EqualTo(27));
-        }
-
-        [Test]
-        public void BuildingStrips_CoverThePicture_AndSortByTheirFrontTile()
-        {
-            World.TryGetMap(StarterTown.VillageMapId, out var village);
-            var plan = BuildingArt.Find(World, village).First(b => b.Kind == PlaceKind.Cafe);
-            var (body, _) = BuildingArt.Render(plan, Palette.For(Season.Summer));
-            var strips = BuildingArt.Strips(body, plan);
-            Assert.That(strips.Count, Is.GreaterThan(plan.Width + plan.Depth - 2));
-
-            var painted = Count(body);
-            Assert.That(strips.Sum(s => Count(s.strip)), Is.EqualTo(painted), "no pixel is lost or doubled");
-            foreach (var (strip, tileX, tileY) in strips)
-            {
-                Assert.That(strip.Width, Is.LessThanOrEqualTo(IsoPainter.HalfTileWidth));
-                Assert.That(plan.Contains(tileX, tileY), Is.True, $"strip sorts by ({tileX}, {tileY}), outside the footprint");
-            }
-
-            // The strip over the door sorts by the front row, so someone at the door stands in front of the wall.
-            Assert.That(strips.Any(s => s.tileX == plan.Door.X && s.tileY == plan.Door.Y), Is.True);
-
-            // Every footprint tile on a strip's two diagonals is no nearer the viewer than its sorting tile.
-            for (var k = -plan.Depth; k <= plan.Width; k++)
-            {
-                var (fi, fj) = BuildingArt.FrontTile(plan, k);
-                for (var i = 0; i < plan.Width; i++)
-                {
-                    for (var j = 0; j < plan.Depth; j++)
-                    {
-                        if (i - j == k || i - j == k + 1)
-                        {
-                            Assert.That(i + j, Is.LessThanOrEqualTo(fi + fj), $"strip {k}: tile ({i}, {j}) is in front of ({fi}, {fj})");
-                        }
-                    }
-                }
-            }
-        }
-
-        [Test]
-        public void Buildings_LightTheirWindows_OnlyInTheGlowPicture()
-        {
-            World.TryGetMap(StarterTown.VillageMapId, out var village);
-            foreach (var plan in BuildingArt.Find(World, village))
-            {
-                var (body, glow) = BuildingArt.Render(plan, Palette.For(Season.Autumn));
-                Assert.That(Count(body), Is.GreaterThan(5000), plan.InteriorMapId);
-                Assert.That(Count(glow), Is.GreaterThan(50), $"{plan.InteriorMapId} has lit windows");
-                Assert.That(Count(glow), Is.LessThan(Count(body) / 4));
-            }
-        }
-
-        [Test]
         public void EveryObjectType_HasAPicture_IndoorsAndOut()
         {
             foreach (ObjectType type in Enum.GetValues(typeof(ObjectType)))
@@ -232,7 +146,7 @@ namespace TinyCity.Tests.EditMode
 
                 var trees = Tiles(map).Count(t => map.GetTile(t) == TileType.Tree);
                 Assert.That(art.Pieces.Count(p => p.Name.StartsWith("Tree ", StringComparison.Ordinal)), Is.EqualTo(trees), map.Id);
-                if (map.IsExterior && map.Id != StarterTown.OpenLandMapId)
+                if (map.IsExterior && map.Id != FlatLand.MapId)
                 {
                     Assert.That(art.Pieces.Count(p => p.Layer == ArtLayer.Glow), Is.GreaterThan(14), "the city's windows glow");
                 }
@@ -253,10 +167,10 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Art_IsTheSameEveryTime_AndDiffersBetweenSummerAndWinter()
         {
-            World.TryGetMap(StarterTown.VillageMapId, out var village);
-            var a = GroundArt.Render(village, PlaceKind.Village, Palette.For(Season.Summer));
-            var b = GroundArt.Render(village, PlaceKind.Village, Palette.For(Season.Summer));
-            var winter = GroundArt.Render(village, PlaceKind.Village, Palette.For(Season.Winter));
+            World.TryGetMap(FlatLand.MapId, out var village);
+            var a = GroundArt.Render(village, Palette.For(Season.Summer));
+            var b = GroundArt.Render(village, Palette.For(Season.Summer));
+            var winter = GroundArt.Render(village, Palette.For(Season.Winter));
             Assert.That(Same(a, b), Is.True);
             Assert.That(Same(a, winter), Is.False);
         }
@@ -264,7 +178,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Replacements_AreUsed_SeasonalOnesFirst()
         {
-            World.TryGetMap(StarterTown.VillageMapId, out var village);
+            World.TryGetMap(FlatLand.MapId, out var village);
             var asked = new List<string>();
             var custom = new PixelCanvas(10, 20, 5, 4);
             var winterCustom = new PixelCanvas(12, 20, 6, 4);
@@ -274,8 +188,7 @@ namespace TinyCity.Tests.EditMode
                 return request.Key == "tree-winter" ? winterCustom : request.Key == "object-bench" ? custom : null;
             });
 
-            Assert.That(asked, Does.Contain("ground-map-village-winter"));
-            Assert.That(asked, Does.Contain("building-map-cafe-winter"));
+            Assert.That(asked, Does.Contain("ground-map-flat-land-winter"));
             Assert.That(art.Pieces.Where(p => p.Name.StartsWith("Tree ", StringComparison.Ordinal) && p.Canvas == winterCustom).Count(), Is.GreaterThan(10));
             Assert.That(art.Pieces.Count(p => p.Canvas == custom), Is.EqualTo(World.ObjectsOfType(ObjectType.Bench).Count(o => o.Location.MapId == village.Id)));
         }
@@ -284,9 +197,7 @@ namespace TinyCity.Tests.EditMode
         public void ReplacementAnchor_CentresOnTheFootprint_WithTheBottomOnItsNearestCorner()
         {
             Assert.That(MapArt.AnchorFor(64, 100, 1, 1), Is.EqualTo((32.0, 84.0)));
-            var plan = BuildingArt.NewCanvas(new BuildingPlan(0, 0, 5, 4, new GridPos(2, 3), PlaceKind.Cottage, 0, null));
-            var (ax, _) = MapArt.AnchorFor(plan.Width, plan.Height, 5, 4);
-            Assert.That(ax, Is.EqualTo(plan.AnchorX), "a picture as wide as a generated one lines up the same way");
+            Assert.That(MapArt.AnchorFor(320, 200, 5, 4), Is.EqualTo((144.0, 72.0)), "a 5 x 4 footprint: centred, with its nearest corner at the bottom");
         }
 
         [Test]

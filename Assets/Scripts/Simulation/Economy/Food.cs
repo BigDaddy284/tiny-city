@@ -260,12 +260,8 @@ namespace TinyCity.Simulation.Economy
             }
         }
 
-        /// <summary>v1's food, which comes from nowhere: none of it exists when food must be made.</summary>
-        public static bool IsFreeFood(ActivityDefinition a) =>
-            a == ActivityCatalog.Eat || a == ActivityCatalog.Snack || a == ActivityCatalog.Leftovers || a == ActivityCatalog.BuyGroceries
-            || a == ActivityCatalog.CafeMeal || a == ActivityCatalog.Pastry;
 
-        /// <summary>Tiny City 2's food activities, which don't exist in v1.</summary>
+        /// <summary>The food activities.</summary>
         public static bool IsMadeFood(ActivityDefinition a) =>
             a == ActivityCatalog.PlantCrops || a == ActivityCatalog.WaterCrops || a == ActivityCatalog.Harvest || a == ActivityCatalog.CatchFish
             || a == ActivityCatalog.Cook || a == ActivityCatalog.EatMeal || a == ActivityCatalog.EatRaw
@@ -277,7 +273,7 @@ namespace TinyCity.Simulation.Economy
         public const int PurifyPortions = 4;
 
         /// <summary>
-        /// Tiny City 2 (owner, 5 November: push them to want the clean, better things): health lost to a drink of
+        /// (owner, 5 November: push them to want the clean, better things): health lost to a drink of
         /// pond water or a raw meal, and (owner, 6 November: "way too happy to continue drinking and washing in dirty
         /// water") a wash in the pond. Clean water and cooked meals cost nothing. Health comes back at only
         /// <see cref="Health.HealthRules.RecoveryPerHour"/> (more asleep), so a few pond drinks a day wear it down.
@@ -304,8 +300,8 @@ namespace TinyCity.Simulation.Economy
     }
 
     /// <summary>
-    /// Tiny City 2's food supply: the crops on each garden plot, and the checks and results of the food activities.
-    /// Off (<see cref="MustBeMade"/> false) it changes nothing, so v1 towns keep v1's free food.
+    /// The food supply: the crops on each patch, and the checks and results of the food and other made-things
+    /// activities. Nothing is free.
     /// </summary>
     public sealed class FoodSupply
     {
@@ -354,21 +350,19 @@ namespace TinyCity.Simulation.Economy
         /// <summary>What grows on this plot or patch, for logs and prompts.</summary>
         public string WhatGrowsAt(string objectId) => PatchOf(objectId)?.What ?? "crops";
 
-        public bool MustBeMade { get; set; }
-
         /// <summary>Who is selling food at this stall right now, or null. Set by the simulation.</summary>
         public Func<WorldObject, Resident> SellerAt { get; set; }
 
-        /// <summary>Tiny City 2: whether the building rules allow this plan-or-build activity at this plot. Set by the simulation.</summary>
+        /// <summary>whether the building rules allow this plan-or-build activity at this plot. Set by the simulation.</summary>
         public Func<Resident, ActivityDefinition, WorldObject, bool> BuildingAllows { get; set; }
 
-        /// <summary>Tiny City 2: whether this resident's role lets them do this activity. Set by the simulation.</summary>
+        /// <summary>whether this resident's role lets them do this activity. Set by the simulation.</summary>
         public Func<Resident, ActivityDefinition, bool> RoleAllows { get; set; }
 
-        /// <summary>Tiny City 2: whether this activity is their role's own work (a fisher fishing). Set by the simulation.</summary>
+        /// <summary>whether this activity is their role's own work (a fisher fishing). Set by the simulation.</summary>
         public Func<Resident, ActivityDefinition, bool> Skilled { get; set; }
 
-        /// <summary>Tiny City 2: whether the town meeting is on at this spot for them to join. Set by the simulation.</summary>
+        /// <summary>whether the town meeting is on at this spot for them to join. Set by the simulation.</summary>
         public Func<Resident, WorldObject, bool> MeetingAllows { get; set; }
 
         public IReadOnlyDictionary<string, Crop> Crops => crops;
@@ -387,12 +381,12 @@ namespace TinyCity.Simulation.Economy
             }
         }
 
-        /// <summary>Whether food allows this activity here now. Without a supply, only v1's food exists.</summary>
+        /// <summary>Whether the world's rules allow this activity here now (role, food, crops, things, buildings).</summary>
         public static bool Allows(FoodSupply food, Resident r, ActivityDefinition a, WorldObject obj, int today)
         {
-            if (food == null || !food.MustBeMade)
+            if (food == null)
             {
-                return !FoodRules.IsMadeFood(a) && !CraftingRules.IsCrafting(a) && !Building.BuildingRules.IsBuilding(a) && !ActivityCatalog.IsOpenLandOnly(a);
+                return true;
             }
 
             if (food.RoleAllows != null && !food.RoleAllows(r, a))
@@ -423,11 +417,6 @@ namespace TinyCity.Simulation.Economy
             if (CraftingRules.IsCrafting(a))
             {
                 return CraftingRules.Allows(r.Belongings, a);
-            }
-
-            if (FoodRules.IsFreeFood(a))
-            {
-                return false;
             }
 
             var crop = food.CropAt(obj?.Id);

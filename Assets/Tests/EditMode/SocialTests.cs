@@ -14,29 +14,27 @@ using TinyCity.Simulation.World;
 
 namespace TinyCity.Tests.EditMode
 {
-    /// <summary>Phase 3: relationships, conversations, shared memories and interruptions, all without AI.</summary>
+    /// <summary>Relationships, conversations, shared memories and interruptions, with a stand-in AI writing the lines.</summary>
     public class SocialTests
     {
-        private static Resident Mabel(TownSimulation sim) => sim.GetResident(StarterTown.ResidentId);
+        private static Resident Mabel(TownSimulation sim) => sim.GetResident(StarterResidents.ResidentId);
 
-        private static Resident Arthur(TownSimulation sim) => sim.GetResident(StarterTown.ArthurId);
+        private static Resident Arthur(TownSimulation sim) => sim.GetResident(StarterResidents.ArthurId);
 
-        /// <summary>Ticks until Mabel and Arthur are talking, or fails.</summary>
+        /// <summary>Mabel goes over to Arthur and they start talking.</summary>
         private static ConversationSession StartChat(TownSimulation sim)
         {
-            for (var i = 0; i < 5 && sim.ActiveConversations.Count == 0; i++)
-            {
-                sim.Tick();
-            }
-
-            Assert.That(sim.ActiveConversations.Count, Is.EqualTo(1), string.Join(" / ", Mabel(sim).Log.Select(e => e.Text)));
-            return sim.ActiveConversations[0];
+            var session = TestTown.StartChat(sim);
+            Assert.That(sim.ActiveConversations.Count, Is.EqualTo(1));
+            return session;
         }
 
+        /// <summary>Runs until the chat is over, with a stand-in AI writing every line.</summary>
         private static void FinishChat(TownSimulation sim)
         {
-            for (var i = 0; i <= SocialRules.MaxConversationMinutes && sim.ActiveConversations.Count > 0; i++)
+            for (var i = 0; i <= SocialRules.MaxConversationMinutes * 2 && sim.ActiveConversations.Count > 0; i++)
             {
+                TestTown.Answer(sim);
                 sim.Tick();
             }
 
@@ -46,11 +44,11 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void LonelyNeighbours_StartTalking_AndBothAreInTheSameConversation()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
 
             var session = StartChat(sim);
 
-            Assert.That(session.ParticipantIds, Is.EquivalentTo(new[] { StarterTown.ResidentId, StarterTown.ArthurId }));
+            Assert.That(session.ParticipantIds, Is.EquivalentTo(new[] { StarterResidents.ResidentId, StarterResidents.ArthurId }));
             foreach (var r in new[] { Mabel(sim), Arthur(sim) })
             {
                 Assert.That(r.State, Is.EqualTo(ResidentState.Talking));
@@ -62,7 +60,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Conversation_TakesTurns_StaysWithinTheGameLimits_AndIsRecorded()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             var session = StartChat(sim);
             var started = sim.Time.TotalMinutes;
 
@@ -80,14 +78,14 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.Time.TotalMinutes - started, Is.LessThanOrEqualTo(SocialRules.MaxConversationMinutes));
             Assert.That(Mabel(sim).State, Is.Not.EqualTo(ResidentState.Talking));
             Assert.That(Arthur(sim).State, Is.Not.EqualTo(ResidentState.Talking));
-            Assert.That(record.Lines.All(l => !l.FromAi), Is.True);
+            Assert.That(record.Lines.All(l => l.FromAi), Is.True, "every line is written by the AI");
         }
 
         [Test]
         public void FirstChat_MakesThemAcquainted_AndGivesBothASharedMemory()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
-            Assert.That(sim.Relationships.TryGet(StarterTown.ResidentId, StarterTown.ArthurId, out _), Is.False);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
+            Assert.That(sim.Relationships.TryGet(StarterResidents.ResidentId, StarterResidents.ArthurId, out _), Is.False);
             var socialBefore = Mabel(sim).Needs[NeedType.Social];
             var session = StartChat(sim);
 
@@ -110,23 +108,12 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void SmallTalk_IsDeterministic()
-        {
-            var a = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
-            var b = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
-            a.Advance(6 * 60);
-            b.Advance(6 * 60);
-
-            Assert.That(a.Conversations.All, Is.Not.Empty);
-            Assert.That(SaveSerializer.Save(a), Is.EqualTo(SaveSerializer.Save(b)));
-        }
-
-        [Test]
         public void UrgentNeed_EndsTheConversation_ForBoth()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             var session = StartChat(sim);
             sim.Tick();
+            TestTown.Answer(sim);
             Mabel(sim).Needs[NeedType.Thirst] = 5;
 
             sim.Tick();
@@ -140,36 +127,9 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void Bedtime_EndsTheConversation()
-        {
-            var town = TestTown.MabelAndArthurOnTheGreen(GameTime.FromDayAndTime(6, 12, 0));
-            var firstBedtime = new[] { Mabel(town), Arthur(town) }.Min(SleepSchedule.BedtimeOf);
-            var sim = TestTown.MabelAndArthurOnTheGreen(GameTime.FromDayAndTime(6, 0, 0).AddMinutes(firstBedtime - 4));
-            StartChat(sim);
-
-            sim.Advance(10);
-
-            Assert.That(sim.ActiveConversations, Is.Empty);
-            Assert.That(Mabel(sim).Log.Any(e => e.Text.Contains("Left the chat") || e.Text.Contains("had to go")), Is.True);
-        }
-
-        [Test]
-        public void WorkTime_EndsTheConversation_ForTheWorker()
-        {
-            var shiftStart = GameTime.FromDayAndTime(1, 0, 0).AddMinutes(StarterTown.CreateResident(StarterTown.CreateWorld()).Job.StartMinuteOfDay - ActivityPlanner.CommuteLeadMinutes);
-            var sim = TestTown.MabelAndArthurOnTheGreen(shiftStart.AddMinutes(-4));
-            StartChat(sim);
-
-            sim.Advance(6);
-
-            Assert.That(sim.ActiveConversations, Is.Empty);
-            Assert.That(Mabel(sim).Log.Any(e => e.Text == "Left the chat with Arthur: time for work"), Is.True);
-        }
-
-        [Test]
         public void AfterAChat_TheSamePairWaitsBeforeChattingAgain()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             StartChat(sim);
             FinishChat(sim);
             var chats = sim.Conversations.All.Count(c => c.Kind == ConversationKind.Chat);
@@ -186,55 +146,10 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void LonelyResident_GoesLookingForSomeone()
-        {
-            var sim = TestTown.WithResidents(
-                TestTown.WeekendAfternoon,
-                r => r.Id == StarterTown.ResidentId ? new Location(StarterTown.VillageMapId, 3, 8) : r.Id == StarterTown.ArthurId ? new Location(StarterTown.VillageMapId, 14, 9) : (Location?)null,
-                (r, n) => n[NeedType.Social] = r.Id == StarterTown.ResidentId ? 30 : 90,
-                r => r.Id == StarterTown.ResidentId || r.Id == StarterTown.ArthurId);
-
-            sim.Tick();
-
-            Assert.That(Mabel(sim).State, Is.EqualTo(ResidentState.Travelling));
-            Assert.That(Mabel(sim).TargetResidentId, Is.EqualTo(StarterTown.ArthurId));
-            Assert.That(Mabel(sim).Log.Last().Text, Does.StartWith("Went to find Arthur for a chat"));
-        }
-
-        [Test]
-        public void NobodyIsApproachedIndoors()
-        {
-            var sim = TestTown.WithResidents(
-                TestTown.WeekendAfternoon,
-                r => r.Id == StarterTown.ResidentId ? new Location(StarterTown.VillageMapId, 10, 9) : (Location?)null,
-                (r, n) => n[NeedType.Social] = 30,
-                r => r.Id == StarterTown.ResidentId || r.Id == StarterTown.ArthurId);
-
-            sim.Tick();
-
-            Assert.That(sim.FreeTimeOptionsFor(Mabel(sim)).Any(o => o.Partner != null), Is.False, "Arthur is at home in Willow Cottage");
-            Assert.That(Mabel(sim).TargetResidentId, Is.Null);
-        }
-
-        [Test]
-        public void OtherPeoplesHomes_ArePrivate()
-        {
-            var sim = StarterTown.CreateNewGame();
-            var mabel = Mabel(sim);
-            var armchairInWillow = sim.World.Objects.First(o => o.Location.MapId == StarterTown.WillowCottageMapId && o.Type == ObjectType.Armchair);
-            var armchairAtHome = sim.World.Objects.First(o => o.Location.MapId == StarterTown.CottageMapId && o.Type == ObjectType.Armchair);
-
-            Assert.That(sim.Planner.IsAvailableTo(mabel, armchairInWillow), Is.False);
-            Assert.That(sim.Planner.IsAvailableTo(mabel, armchairAtHome), Is.True);
-            Assert.That(sim.Planner.IsAvailableTo(Arthur(sim), armchairInWillow), Is.True);
-            Assert.That(sim.FreeTimeOptionsFor(mabel).Where(o => o.Target != null).All(o => o.Target.Location.MapId != StarterTown.WillowCottageMapId), Is.True);
-        }
-
-        [Test]
         public void FullObjects_AreNotOffered()
         {
-            var sim = StarterTown.CreateNewGame();
-            var tap = sim.World.Objects.First(o => o.Location.MapId == StarterTown.VillageMapId && o.Capacity == 1);
+            var sim = FlatLand.CreateNewGame();
+            var tap = sim.World.Objects.First(o => o.Location.MapId == FlatLand.MapId && o.Capacity == 1);
             var bench = sim.World.Objects.First(o => o.Type == ObjectType.Bench);
             Arthur(sim).State = ResidentState.Travelling;
             Arthur(sim).TargetObjectId = tap.Id;
@@ -244,35 +159,9 @@ namespace TinyCity.Tests.EditMode
 
             Arthur(sim).TargetObjectId = bench.Id;
             Assert.That(sim.Planner.IsAvailableTo(Mabel(sim), bench), Is.True, "benches seat two");
-            sim.GetResident(StarterTown.NellId).State = ResidentState.Performing;
-            sim.GetResident(StarterTown.NellId).TargetObjectId = bench.Id;
+            sim.GetResident(StarterResidents.NellId).State = ResidentState.Performing;
+            sim.GetResident(StarterResidents.NellId).TargetObjectId = bench.Id;
             Assert.That(sim.Planner.IsAvailableTo(Mabel(sim), bench), Is.False);
-        }
-
-        [Test]
-        public void CafeTables_SeatTwo_AndNewcomersPreferAnEmptyOne()
-        {
-            var town = StarterTown.CreateNewGame();
-            var window = TestTown.Object(town, "obj-cafe-table-window");
-            var counter = TestTown.Object(town, "obj-cafe-counter");
-            var sim = TestTown.WithResidents(
-                TestTown.WeekendAfternoon,
-                r => r.Id == StarterTown.ResidentId ? window.Location : r.Id == StarterTown.PriyaId ? counter.Location : (Location?)null,
-                needsLevel: 60);
-            var mabel = Mabel(sim);
-            Assert.That(window.Capacity, Is.EqualTo(2), "one chair each side");
-
-            string FirstTable() => sim.FreeTimeOptionsFor(mabel).First(o => o.Activity == ActivityCatalog.Coffee).Target.Id;
-            Assert.That(FirstTable(), Is.EqualTo(window.Id), "the table she's standing at is nearest");
-
-            Arthur(sim).State = ResidentState.Performing;
-            Arthur(sim).TargetObjectId = window.Id;
-            Assert.That(sim.Planner.IsAvailableTo(mabel, window), Is.True, "there's still a chair");
-            Assert.That(FirstTable(), Is.Not.EqualTo(window.Id), "but an empty table is better than a stranger's");
-
-            sim.GetResident(StarterTown.NellId).State = ResidentState.Travelling;
-            sim.GetResident(StarterTown.NellId).TargetObjectId = window.Id;
-            Assert.That(sim.Planner.IsAvailableTo(mabel, window), Is.False, "both chairs taken");
         }
 
         [Test]
@@ -320,37 +209,28 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void Disagreement_IsRemembered()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             Meet(sim);
             sim.AiDecisionsEnabled = true;
             sim.Advance(SocialRules.PairCooldownMinutes);
-            Mabel(sim).Needs[NeedType.Social] = 40;
-            Arthur(sim).Needs[NeedType.Social] = 40;
-            ConversationSession session = null;
-            for (var i = 0; i < 10 && session == null; i++)
-            {
-                sim.Tick();
-                session = sim.ActiveConversations.FirstOrDefault();
-            }
-
-            Assert.That(session, Is.Not.Null);
+            var session = StartChat(sim);
             while (sim.GetConversation(session.Id) != null)
             {
                 if (session.AwaitingLine)
                 {
-                    var tone = session.SpeakerId == StarterTown.ArthurId ? "disagree" : "neutral";
+                    var tone = session.SpeakerId == StarterResidents.ArthurId ? "disagree" : "neutral";
                     Assert.That(sim.ApplyConversationLine(session.Id, session.LineRequestId, session.SpeakerId, "I don't agree at all.", tone, "the hedges", false), Is.EqualTo(DecisionOutcome.Applied));
                 }
 
                 sim.Tick();
             }
 
-            var memory = sim.Memories.ForResident(StarterTown.ResidentId).Last();
+            var memory = sim.Memories.ForResident(StarterResidents.ResidentId).Last();
             Assert.That(memory.Summary, Is.EqualTo("Arthur and I didn't see eye to eye about the hedges."));
-            Assert.That(sim.Relationships.Get(StarterTown.ResidentId, StarterTown.ArthurId).Dislike, Is.GreaterThan(0));
+            Assert.That(sim.Relationships.Get(StarterResidents.ResidentId, StarterResidents.ArthurId).Dislike, Is.GreaterThan(0));
         }
 
-        /// <summary>Lets Mabel and Arthur have their first chat with built-in small talk.</summary>
+        /// <summary>Lets Mabel and Arthur have their first chat, with a stand-in AI writing the lines.</summary>
         private static void Meet(TownSimulation sim)
         {
             StartChat(sim);
@@ -360,7 +240,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void AiLines_AreCheckedBeforeTheyCount()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             sim.AiDecisionsEnabled = true;
             var session = StartChat(sim);
             while (!session.AwaitingLine)
@@ -386,28 +266,9 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
-        public void LateAiLine_FallsBackToSmallTalk()
-        {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
-            sim.AiDecisionsEnabled = true;
-            var session = StartChat(sim);
-            while (!session.AwaitingLine)
-            {
-                sim.Tick();
-            }
-
-            var id = session.LineRequestId;
-            sim.Advance(SocialRules.LineWaitMinutes);
-
-            Assert.That(session.Lines.Count, Is.EqualTo(1));
-            Assert.That(session.Lines[0].FromAi, Is.False);
-            Assert.That(sim.ApplyConversationLine(session.Id, id, session.Lines[0].SpeakerId, "Sorry I'm late!", "warm", null, false), Is.EqualTo(DecisionOutcome.Stale));
-        }
-
-        [Test]
         public void AiCanEndAChatEarly_OnceTheMinimumIsSaid()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             sim.AiDecisionsEnabled = true;
             var session = StartChat(sim);
             var said = 0;
@@ -430,10 +291,17 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void SaveDuringAChat_LoadsAndCarriesOnExactly()
         {
-            var world = StarterTown.CreateWorld();
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var world = FlatLand.CreateWorld();
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             var session = StartChat(sim);
-            sim.Advance(3);
+            for (var i = 0; i < 3; i++)
+            {
+                TestTown.Answer(sim);
+                sim.Tick();
+            }
+
+            // Answered first, so the save isn't halfway through a line (that is asked for again after loading).
+            TestTown.Answer(sim);
             Assert.That(session.Lines, Is.Not.Empty);
 
             var saved = SaveSerializer.Save(sim);
@@ -449,16 +317,23 @@ namespace TinyCity.Tests.EditMode
             Assert.That(Mabel(loaded).State, Is.EqualTo(ResidentState.Talking));
             Assert.That(SaveSerializer.Save(loaded), Is.EqualTo(saved));
 
-            sim.Advance(120);
-            loaded.Advance(120);
+            loaded.AiDecisionsEnabled = sim.AiDecisionsEnabled;
+            for (var i = 0; i < 120; i++)
+            {
+                TestTown.Answer(sim);
+                sim.Tick();
+                TestTown.Answer(loaded);
+                loaded.Tick();
+            }
+
             Assert.That(SaveSerializer.Save(loaded), Is.EqualTo(SaveSerializer.Save(sim)));
-            Assert.That(loaded.Relationships.Get(StarterTown.ResidentId, StarterTown.ArthurId).HaveMet, Is.True);
+            Assert.That(loaded.Relationships.Get(StarterResidents.ResidentId, StarterResidents.ArthurId).HaveMet, Is.True);
         }
 
         [Test]
         public void RelationshipsAndLineTones_SurviveSaveAndLoad()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             sim.AiDecisionsEnabled = true;
             var session = StartChat(sim);
             while (sim.GetConversation(session.Id) != null)
@@ -471,7 +346,7 @@ namespace TinyCity.Tests.EditMode
                 sim.Tick();
             }
 
-            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), StarterTown.CreateWorld()).Simulation;
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
 
             foreach (var rel in sim.Relationships.All)
             {
@@ -492,7 +367,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void WaitingForAnAiLine_IsNotSaved()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             sim.AiDecisionsEnabled = true;
             var session = StartChat(sim);
             while (!session.AwaitingLine)
@@ -502,14 +377,16 @@ namespace TinyCity.Tests.EditMode
 
             sim.Advance(3);
             Assert.That(session.WaitedMinutes, Is.EqualTo(3));
-            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), StarterTown.CreateWorld()).Simulation;
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
 
             var restored = loaded.GetConversation(session.Id);
             Assert.That(restored.WaitedMinutes, Is.EqualTo(3), "waiting time still doesn't count towards the chat's length");
             Assert.That(restored.AwaitingLine, Is.False);
             Assert.That(restored.LineRequestId, Is.EqualTo(0));
             loaded.Tick();
-            Assert.That(restored.Lines.Count, Is.EqualTo(1), "without the AI the line is small talk");
+            Assert.That(restored.AwaitingLine, Is.True, "the line is asked for again");
+            Assert.That(restored.LineRequestId, Is.GreaterThan(0));
+            Assert.That(restored.Lines, Is.Empty, "nothing is said until the AI writes it");
         }
 
         [Test]
@@ -517,33 +394,36 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = TestTown.WithResidents(
                 TestTown.WeekendAfternoon,
-                r => r.Id == StarterTown.ResidentId ? new Location(StarterTown.VillageMapId, 3, 8) : r.Id == StarterTown.ArthurId ? new Location(StarterTown.VillageMapId, 14, 9) : (Location?)null,
-                (r, n) => n[NeedType.Social] = r.Id == StarterTown.ResidentId ? 30 : 90,
-                r => r.Id == StarterTown.ResidentId || r.Id == StarterTown.ArthurId);
+                r => r.Id == StarterResidents.ResidentId ? TestTown.At(30, 8) : r.Id == StarterResidents.ArthurId ? TestTown.At(44, 9) : (Location?)null,
+                include: r => r.Id == StarterResidents.ResidentId || r.Id == StarterResidents.ArthurId);
+            sim.AiDecisionsEnabled = true;
+            sim.Tick();
+            var chat = sim.FreeTimeOptionsFor(Mabel(sim)).Single(o => o.Partner == Arthur(sim));
+            Assert.That(sim.ApplyDecision(Mabel(sim).Id, Mabel(sim).PendingDecisionId, chat.ActionId, chat.TargetId, "Company", null), Is.EqualTo(DecisionOutcome.Applied));
             sim.Advance(2);
-            Assert.That(Mabel(sim).TargetResidentId, Is.EqualTo(StarterTown.ArthurId));
+            Assert.That(Mabel(sim).TargetResidentId, Is.EqualTo(StarterResidents.ArthurId));
 
-            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), StarterTown.CreateWorld()).Simulation;
+            var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
 
             Assert.That(Mabel(loaded).State, Is.EqualTo(ResidentState.Travelling));
-            Assert.That(Mabel(loaded).TargetResidentId, Is.EqualTo(StarterTown.ArthurId));
+            Assert.That(Mabel(loaded).TargetResidentId, Is.EqualTo(StarterResidents.ArthurId));
             Assert.That(Mabel(loaded).MinutesRemaining, Is.EqualTo(Mabel(sim).MinutesRemaining));
         }
 
         [Test]
         public void DamagedSocialData_IsRepairedWithWarnings()
         {
-            var sim = TestTown.MabelAndArthurOnTheGreen(TestTown.WeekendAfternoon);
+            var sim = TestTown.TwoSideBySide(TestTown.WeekendAfternoon);
             StartChat(sim);
             sim.Advance(2);
             var root = (Dictionary<string, object>)Json.Parse(SaveSerializer.Save(sim));
             var conversations = (List<object>)root["activeConversations"];
-            ((Dictionary<string, object>)conversations[0])["participants"] = new List<object> { StarterTown.ResidentId, "res-ghost" };
+            ((Dictionary<string, object>)conversations[0])["participants"] = new List<object> { StarterResidents.ResidentId, "res-ghost" };
             var relationships = (List<object>)root["relationships"];
-            relationships.Add(new Dictionary<string, object> { ["ownerId"] = StarterTown.ResidentId, ["otherId"] = "res-ghost", ["friendship"] = 90.0 });
-            relationships.Add(new Dictionary<string, object> { ["ownerId"] = StarterTown.ResidentId, ["otherId"] = StarterTown.ResidentId });
+            relationships.Add(new Dictionary<string, object> { ["ownerId"] = StarterResidents.ResidentId, ["otherId"] = "res-ghost", ["friendship"] = 90.0 });
+            relationships.Add(new Dictionary<string, object> { ["ownerId"] = StarterResidents.ResidentId, ["otherId"] = StarterResidents.ResidentId });
 
-            var result = SaveSerializer.Load(Json.Write(root), StarterTown.CreateWorld());
+            var result = SaveSerializer.Load(Json.Write(root), FlatLand.CreateWorld());
 
             Assert.That(result.Success, Is.True, string.Join("; ", result.Errors));
             var loaded = result.Simulation;
@@ -554,50 +434,6 @@ namespace TinyCity.Tests.EditMode
             Assert.That(result.Warnings.Any(w => w.Contains("2 damaged or duplicate relationship")), Is.True, string.Join("; ", result.Warnings));
             Assert.That(result.Warnings.Any(w => w.Contains("conversation")), Is.True, string.Join("; ", result.Warnings));
             loaded.Advance(60);
-        }
-
-        [Test]
-        public void EveryResident_CanReachEveryPlaceTheyMayUse()
-        {
-            var sim = StarterTown.CreateNewGame();
-            foreach (var r in sim.Residents)
-            {
-                Assert.That(sim.World.TryGetObject(r.BedObjectId, out var bed), Is.True);
-                Assert.That(bed.Location.MapId, Is.EqualTo(r.HomeMapId));
-                foreach (var obj in sim.World.Objects.Where(o => sim.Planner.IsAvailableTo(r, o)))
-                {
-                    Assert.That(sim.Pathfinder.Distance(bed.Location, obj.Location), Is.Not.EqualTo(Pathfinder.Unreachable), $"{r.FirstName} can't reach {obj.Name}");
-                }
-
-                if (r.Job != null)
-                {
-                    Assert.That(sim.World.TryGetObject(r.Job.WorkObjectId, out var work), Is.True);
-                    Assert.That(ActivityCatalog.Work.CanUse(work), Is.True, $"{r.FirstName} can work at {work.Name}");
-                }
-            }
-
-            Assert.That(sim.Residents.Select(r => r.Id).Distinct().Count(), Is.EqualTo(sim.Residents.Count));
-            Assert.That(sim.Residents.Select(r => r.BedObjectId).Distinct().Count(), Is.EqualTo(sim.Residents.Count));
-        }
-
-        [Test]
-        public void AMonthInTheCity_EveryoneMeetsEveryone()
-        {
-            // Four weeks: with fifteen people, the venue staff working days and evenings, the last pairs meet on a day
-            // off (Danny, from the arcade, on Sundays, and Marcus and Lola, whose shifts never cross, on day 28).
-            var sim = StarterTown.CreateNewGame();
-            sim.Advance(28 * 24 * 60 + 20 * 60); // to 03:00, when nobody should be chatting
-
-            foreach (var r in sim.Residents)
-            {
-                foreach (var other in sim.Residents.Where(o => o != r))
-                {
-                    Assert.That(sim.Relationships.Get(r.Id, other.Id).HaveMet, Is.True, $"{r.FirstName} never met {other.FirstName}");
-                }
-
-                Assert.That(r.Needs[NeedType.Social], Is.GreaterThan(20), $"{r.FirstName} is lonely");
-                Assert.That(r.State, Is.Not.EqualTo(ResidentState.Talking), "nobody chats through the night");
-            }
         }
     }
 }

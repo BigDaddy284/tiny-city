@@ -6,7 +6,6 @@ namespace TinyCity.Sound
     public enum SoundEffect
     {
         Footstep,
-        Door,
         Typing,
         Till,
         Cooking,
@@ -41,10 +40,6 @@ namespace TinyCity.Sound
                 case SoundEffect.Footstep:
                     samples = Footstep(variant);
                     peak = 0.5;
-                    break;
-                case SoundEffect.Door:
-                    samples = Door();
-                    peak = 0.55;
                     break;
                 case SoundEffect.Typing:
                     samples = Typing();
@@ -92,27 +87,6 @@ namespace TinyCity.Sound
 
             Synth.LowPass(s, 700 + (variant * 120));
             Synth.LowPass(s, 900 + (variant * 120));
-            return s;
-        }
-
-        /// <summary>A sliding door: an airy whoosh that opens and closes, and a two-note chime.</summary>
-        private static double[] Door()
-        {
-            var length = 0.9;
-            var s = new double[Synth.Samples(length)];
-            var low = 0.0;
-            var smooth = 0.0;
-            for (var i = 0; i < s.Length; i++)
-            {
-                var t = (double)i / Synth.Rate;
-                var cutoff = 300 + (1400 * Synth.Bell(t, 0.6));
-                low += Synth.LowPassFactor(cutoff) * (Synth.Noise(310, i) - low);
-                smooth += Synth.LowPassFactor(cutoff) * (low - smooth);
-                s[i] = smooth * Synth.Bell(t, 0.6) * 2.5;
-                s[i] += 0.25 * Synth.Sine(Synth.Hz(88) * t) * Synth.Pluck(t - 0.05, 0.005, 0.12);
-                s[i] += 0.2 * Synth.Sine(Synth.Hz(95) * t) * Synth.Pluck(t - 0.2, 0.005, 0.15);
-            }
-
             return s;
         }
 

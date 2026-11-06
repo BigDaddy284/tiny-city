@@ -47,24 +47,20 @@ namespace TinyCity.Tests.EditMode
             Assert.That(settings.Validate(), Has.Count.EqualTo(1));
         }
 
-        [TestCase(-1, 20)]
-        [TestCase(OllamaSettings.MaxMaxRetries + 1, 20)]
-        [TestCase(1, 0)]
-        [TestCase(1, OllamaSettings.MaxDecisionWaitMinutes + 1)]
-        public void OutOfRangeRetriesOrDecisionWait_IsRejected(int retries, int waitMinutes)
+        [TestCase(-1)]
+        [TestCase(OllamaSettings.MaxMaxRetries + 1)]
+        public void OutOfRangeRetries_IsRejected(int retries)
         {
-            var settings = new OllamaSettings { maxRetries = retries, decisionWaitMinutes = waitMinutes };
+            var settings = new OllamaSettings { maxRetries = retries };
 
             Assert.That(settings.Validate(), Has.Count.EqualTo(1));
         }
 
-        [TestCase(-1, 1)]
-        [TestCase(OllamaSettings.MaxDecisionWaitSeconds + 1, 1)]
-        [TestCase(8, 0)]
-        [TestCase(8, OllamaSettings.MaxParallelRequests + 1)]
-        public void OutOfRangeWaitSecondsOrParallelRequests_IsRejected(int waitSeconds, int parallel)
+        [TestCase(0)]
+        [TestCase(OllamaSettings.MaxParallelRequests + 1)]
+        public void OutOfRangeParallelRequests_IsRejected(int parallel)
         {
-            var settings = new OllamaSettings { decisionWaitSeconds = waitSeconds, parallelRequests = parallel };
+            var settings = new OllamaSettings { parallelRequests = parallel };
 
             Assert.That(settings.Validate().Count, Is.EqualTo(1));
         }
@@ -76,8 +72,6 @@ namespace TinyCity.Tests.EditMode
 
             Assert.That(settings.enabled, Is.True);
             Assert.That(settings.maxRetries, Is.EqualTo(1));
-            Assert.That(settings.decisionWaitMinutes, Is.EqualTo(20));
-            Assert.That(settings.decisionWaitSeconds, Is.EqualTo(8));
             Assert.That(settings.parallelRequests, Is.EqualTo(1), "one at a time unless the player sets Ollama up for more");
         }
 
