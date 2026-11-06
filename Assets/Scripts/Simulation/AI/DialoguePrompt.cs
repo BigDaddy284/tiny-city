@@ -88,7 +88,7 @@ namespace TinyCity.Simulation.AI
             var sb = new StringBuilder();
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are chatting with {listener.FullName} (aged {listener.AgeYears}) at the {session.Place.ToLowerInvariant()}.");
             sb.AppendLine($"{listener.FirstName} to you: {PromptText.Relationship(sim, speaker, listener)}.");
-            sb.AppendLine($"How you feel: {PromptText.Feelings(speaker)}.");
+            sb.AppendLine($"How you feel: {PromptText.Feelings(speaker, sim)}.");
             PromptText.AppendMemories(sb, memories);
 
             var last = sim.Conversations.Involving(speaker.Id)

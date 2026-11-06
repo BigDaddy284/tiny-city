@@ -288,11 +288,23 @@ namespace TinyCity.Simulation.Economy
 
         /// <summary>
         /// Tiny City 2 (owner, 5 November: push them to want the clean, better things): health lost to a drink of
-        /// pond water or a raw meal. Clean water and cooked meals cost nothing.
+        /// pond water or a raw meal, and (owner, 6 November: "way too happy to continue drinking and washing in dirty
+        /// water") a wash in the pond. Clean water and cooked meals cost nothing. Health comes back at only
+        /// <see cref="Health.HealthRules.RecoveryPerHour"/> (more asleep), so a few pond drinks a day wear it down.
         /// </summary>
-        public const double DirtyWaterHealthCost = 2;
+        public const double DirtyWaterHealthCost = 4;
 
-        public const double RawFoodHealthCost = 2;
+        public const double RawFoodHealthCost = 3;
+
+        public const double PondWashHealthCost = 1;
+
+        /// <summary>What the decision prompt says beside an option that hurts, so they know before they choose.</summary>
+        public static string HealthWarning(Activities.ActivityDefinition a) =>
+            a == Activities.ActivityCatalog.DrinkFromPond ? $"dirty water: it makes you ill, costs {DirtyWaterHealthCost:0} health"
+            : a == Activities.ActivityCatalog.EatRaw ? $"raw food: it makes you ill, costs {RawFoodHealthCost:0} health; cooked meals don't"
+            : a == Activities.ActivityCatalog.WashInPond ? $"dirty water: costs {PondWashHealthCost:0} health"
+            : a == Activities.ActivityCatalog.DrinkCleanWater ? "clean and safe"
+            : null;
 
         /// <summary>Fish someone without the fishing role catches by hand in one go.</summary>
         public const int ByHandCatch = 1;

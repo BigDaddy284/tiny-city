@@ -143,6 +143,28 @@ namespace TinyCity.Simulation.AI
             return true;
         }
 
+        /// <summary>The text of a chat request's messages (system, then user), for the AI log; empty if it can't be read.</summary>
+        public static string PromptText(string requestBody)
+        {
+            if (!TryParse(requestBody, out var root, out _) || !root.TryGetValue("messages", out var value) || !(value is IList<object> messages))
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>();
+            foreach (var message in messages)
+            {
+                var m = message as Dictionary<string, object>;
+                var text = AiJson.GetString(m, "content");
+                if (text != null)
+                {
+                    parts.Add($"[{AiJson.GetString(m, "role") ?? "message"}] {text}");
+                }
+            }
+
+            return string.Join("\n", parts);
+        }
+
         /// <summary>Reads the installed model names from a /api/tags response.</summary>
         public static bool TryReadModelNames(string responseJson, out List<string> names, out string error)
         {

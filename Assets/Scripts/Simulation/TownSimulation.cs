@@ -305,6 +305,11 @@ namespace TinyCity.Simulation
 
             NeedRules.ApplyMinute(r.Needs, r.Personality, r.State == ResidentState.Performing || r.State == ResidentState.Talking ? activity : null, IllnessCatalog.Get(r.IllnessId),
                 AiRunsEverything ? HungerThirstRateWhenAiRuns : 1.0);
+            if (!HasNeed(NeedType.Toilet))
+            {
+                r.Needs[NeedType.Toilet] = Needs.Max;
+            }
+
             StepHealth(r, activity);
             if (!r.IsAlive)
             {
@@ -1231,6 +1236,12 @@ namespace TinyCity.Simulation
 
             Memories.Add(r.Id, Time, MemoryType.Event, 3, UrgentNeedSummary(need), tags: new[] { tag, need.ToString().ToLowerInvariant() });
         }
+
+        /// <summary>
+        /// Whether residents have this need. With <see cref="AiRunsEverything"/> there is no toilet need (owner,
+        /// 6 November: removed from v2 entirely): it is kept full and never shown.
+        /// </summary>
+        public bool HasNeed(NeedType need) => !(AiRunsEverything && need == NeedType.Toilet);
 
         private static string UrgentNeedSummary(NeedType need)
         {

@@ -289,11 +289,23 @@ namespace TinyCity.Simulation
                 return;
             }
 
-            if (activity == ActivityCatalog.DrinkFromPond || activity == ActivityCatalog.EatRaw)
+            if (activity == ActivityCatalog.DrinkFromPond || activity == ActivityCatalog.EatRaw || activity == ActivityCatalog.WashInPond)
             {
-                var cost = activity == ActivityCatalog.EatRaw ? FoodRules.RawFoodHealthCost : FoodRules.DirtyWaterHealthCost;
+                var cost = activity == ActivityCatalog.EatRaw ? FoodRules.RawFoodHealthCost
+                    : activity == ActivityCatalog.WashInPond ? FoodRules.PondWashHealthCost
+                    : FoodRules.DirtyWaterHealthCost;
                 r.Health = Math.Max(AiRunsEverything ? LowestHealthWhenAiRuns : 0.0, r.Health - cost);
-                r.AddLog(Time, activity == ActivityCatalog.EatRaw ? "The raw food sat badly and left them feeling rough" : "The dirty pond water upset their stomach");
+                var felt = activity == ActivityCatalog.EatRaw ? "The raw food made me feel sick"
+                    : activity == ActivityCatalog.WashInPond ? "Washing in the dirty pond left my skin itching"
+                    : "The dirty pond water made me feel sick";
+                r.AddLog(Time, felt);
+
+                // Remembered once a day for each, so it comes back to them when they next think about drinking or eating.
+                var tag = activity.Id;
+                if (!Memories.ForResident(r.Id).Any(m => m.Time.Day == Time.Day && m.Tags.Contains(tag) && m.Tags.Contains("felt-ill")))
+                {
+                    Memories.Add(r.Id, Time, MemoryType.Event, 5, felt + ". Clean water and cooked food don't do that.", tags: new[] { tag, "felt-ill", "health", "water", "food" });
+                }
             }
             else if (activity == ActivityCatalog.PurifyWater)
             {

@@ -181,6 +181,11 @@ namespace TinyCity.Runtime
                 Bar("Health", r.Health, HealthRules.MaxHealthFor(r.AgeYears), barsWidth);
                 for (var i = 0; i < Needs.Count; i++)
                 {
+                    if (!Simulation.HasNeed((NeedType)i))
+                    {
+                        continue;
+                    }
+
                     Bar(((NeedType)i).ToString(), r.Needs[(NeedType)i], Needs.Max, barsWidth);
                 }
 

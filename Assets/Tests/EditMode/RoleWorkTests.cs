@@ -68,7 +68,7 @@ namespace TinyCity.Tests.EditMode
             var sim = NewGame();
             var r = sim.Residents[0];
             var basics = Options(sim, r);
-            foreach (var id in new[] { "drink-pond", "wash-pond", "catch-fish", "gather-sticks", "gather-loose-stones", "toilet-outdoors", "sleep" })
+            foreach (var id in new[] { "drink-pond", "wash-pond", "catch-fish", "gather-sticks", "gather-loose-stones", "sleep" })
             {
                 Assert.That(basics.Contains(id), Is.True, id);
             }
@@ -234,6 +234,23 @@ namespace TinyCity.Tests.EditMode
             Assert.That(asker.Role, Is.EqualTo("farmer"));
             Assert.That(sim.RoleRequests[asker.Id], Is.EqualTo("cook"));
             Assert.That(sim.NextMeetingDay(sim.Time.Day + 1), Is.EqualTo(sim.Time.Day + 7));
+        }
+
+        [Test]
+        public void NoToiletNeed_InTinyCityTwo()
+        {
+            var sim = NewGame();
+            var r = sim.Residents[0];
+            r.Needs[NeedType.Thirst] = 5;
+            r.Needs[NeedType.Toilet] = 0;
+            sim.Tick();
+            Assert.That(r.Needs[NeedType.Toilet], Is.EqualTo(Needs.Max));
+            Assert.That(sim.HasNeed(NeedType.Toilet), Is.False);
+            var feelings = PromptText.Feelings(r, sim);
+            Assert.That(feelings.Contains("toilet"), Is.False, feelings);
+            Assert.That(feelings.Contains("parched with thirst"), Is.True, feelings);
+            Assert.That(feelings.Contains("getting worse every hour"), Is.True, feelings);
+            Assert.That(ActivityCatalog.All.Any(a => a.Id == "toilet-outdoors"), Is.False);
         }
     }
 }

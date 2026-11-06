@@ -36,17 +36,82 @@ namespace TinyCity.Simulation.AI
 
         public static string Clock(GameTime time) => $"{time.Weekday} {time.ClockText} (day {time.Day})";
 
-        public static string Feelings(Resident r)
+        /// <summary>
+        /// How they feel, in words rather than numbers (a need's number is how well it is met, which small models
+        /// read backwards: "thirst 0" sounded like not thirsty): the worst first, then what's fine, then their
+        /// health and whether going without is wearing it down.
+        /// </summary>
+        public static string Feelings(Resident r, TownSimulation sim = null)
         {
-            var parts = new List<string>();
+            var low = new List<(double value, string words)>();
+            var fine = new List<string>();
             for (var i = 0; i < Needs.Count; i++)
             {
                 var need = (NeedType)i;
+                if (sim != null && !sim.HasNeed(need))
+                {
+                    continue;
+                }
+
                 var value = r.Needs[need];
-                parts.Add($"{need} {value:0}/100{Word(value)}");
+                var words = FeltAs(need, value);
+                if (words == null)
+                {
+                    fine.Add(Lower(need));
+                }
+                else
+                {
+                    low.Add((value, words));
+                }
             }
 
-            return string.Join(", ", parts) + "; " + HealthText(r);
+            var parts = new List<string>();
+            if (low.Count > 0)
+            {
+                parts.Add("you are " + string.Join(", ", low.OrderBy(o => o.value).Select(o => o.words)));
+            }
+
+            if (fine.Count > 0)
+            {
+                parts.Add($"you're fine for {string.Join(", ", fine)}");
+            }
+
+            var neglected = low.Count(o => o.value < Health.HealthRules.NeglectedNeed);
+            var health = $"{HealthText(r)} ({r.Health:0} out of 100)";
+            if (neglected > 0)
+            {
+                health += $", and it is getting worse every hour you go without: {(neglected == 1 ? "one need is" : $"{neglected} needs are")} badly neglected";
+            }
+
+            parts.Add(health);
+            return string.Join("; ", parts);
+        }
+
+        private static string Lower(NeedType need) => need == NeedType.Toilet ? "the toilet" : need.ToString().ToLowerInvariant();
+
+        /// <summary>How a need that isn't well met feels, or null when it's fine.</summary>
+        private static string FeltAs(NeedType need, double value)
+        {
+            var level = value < 10 ? 0 : value < 25 ? 1 : value < 45 ? 2 : -1;
+            if (level < 0)
+            {
+                return null;
+            }
+
+            string[] words;
+            switch (need)
+            {
+                case NeedType.Hunger: words = new[] { "starving", "very hungry", "hungry" }; break;
+                case NeedType.Thirst: words = new[] { "parched with thirst", "very thirsty", "thirsty" }; break;
+                case NeedType.Energy: words = new[] { "exhausted", "very tired", "tired" }; break;
+                case NeedType.Hygiene: words = new[] { "filthy", "dirty", "grubby" }; break;
+                case NeedType.Toilet: words = new[] { "bursting for the toilet", "needing the toilet badly", "needing the toilet" }; break;
+                case NeedType.Social: words = new[] { "desperately lonely", "lonely", "wanting company" }; break;
+                case NeedType.Exercise: words = new[] { "stiff and restless", "restless", "wanting to move" }; break;
+                default: words = new[] { "miserably bored", "bored", "wanting some fun" }; break;
+            }
+
+            return words[level];
         }
 
         /// <summary>How the resident's health feels from the inside, for prompts.</summary>
@@ -399,7 +464,6 @@ namespace TinyCity.Simulation.AI
 
         public static string Quote(string text) => "\"" + (text ?? string.Empty).Replace("\"", "'") + "\"";
 
-        private static string Word(double value) => value < 20 ? " (desperate)" : value < 40 ? " (low)" : value < 65 ? " (could be better)" : string.Empty;
 
         private static string Duration(int minutes)
         {

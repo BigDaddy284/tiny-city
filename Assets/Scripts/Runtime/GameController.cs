@@ -151,6 +151,7 @@ namespace TinyCity.Runtime
             ScreenSettings.Apply(Preferences);
             Ai = new AiService(Settings.ollama, new UnityAiTransport()) { Log = message => Debug.Log($"[TinyCity] AI: {message}") };
             Ai.SetGameSpeed(Speed);
+            Ai.Queue.Answered = (request, response, check) => AiLogStore.Write(Simulation, request, response, check);
 
             SidebarHidden = PlayerPrefs.GetInt(SidebarPrefsKey, 0) == 1;
             SlotNames = SaveStore.ReadIndex();

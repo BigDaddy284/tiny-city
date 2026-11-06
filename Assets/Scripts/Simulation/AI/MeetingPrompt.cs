@@ -46,7 +46,7 @@ namespace TinyCity.Simulation.AI
             var meeting = sim.Meeting;
             var others = meeting.Attendees.Where(id => id != r.Id).Select(sim.GetResident).Where(o => o != null).Select(o => o.FirstName).ToList();
             sb.AppendLine($"It is {PromptText.Clock(sim.Time)}. You are at the weekly town meeting at the meeting circle, with {(others.Count == 0 ? "nobody else" : string.Join(", ", others))}.");
-            sb.AppendLine($"How you feel: {PromptText.Feelings(r)}.");
+            sb.AppendLine($"How you feel: {PromptText.Feelings(r, sim)}.");
             PromptText.AppendFood(sb, sim, r);
             if (meeting.Said.Count > 0)
             {

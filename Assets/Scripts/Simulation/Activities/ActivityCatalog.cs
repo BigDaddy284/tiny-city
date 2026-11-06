@@ -70,10 +70,6 @@ namespace TinyCity.Simulation.Activities
             "wash-pond", "Wash in the pond", "washing in the pond", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.FishingSpot }, 20,
             new Dictionary<NeedType, double> { [NeedType.Hygiene] = 5 });
 
-        public static readonly ActivityDefinition RelieveOutdoors = new ActivityDefinition(
-            "toilet-outdoors", "Go to the toilet among the trees", "going to the toilet among the trees", ActivityKind.Care, NeedType.Toilet, new[] { ObjectType.Woodland }, 5,
-            new Dictionary<NeedType, double> { [NeedType.Toilet] = 20 });
-
         /// <summary>Tiny City 2: cleaning pond water to drink, which only the water purifier can do.</summary>
         public static readonly ActivityDefinition PurifyWater = new ActivityDefinition(
             "purify-water", "Clean pond water", "cleaning water", ActivityKind.Errand, null, new[] { ObjectType.FishingSpot }, 45,
@@ -93,7 +89,7 @@ namespace TinyCity.Simulation.Activities
         public static bool IsOpenLandOnly(ActivityDefinition a) => IsInTheWild(a) || a == PurifyWater || a == DrinkCleanWater || a == AttendMeeting;
 
         /// <summary>Drinking, washing and the toilet out in the open: Tiny City 2 only, where nothing is laid on.</summary>
-        public static bool IsInTheWild(ActivityDefinition a) => a == DrinkFromPond || a == WashInPond || a == RelieveOutdoors;
+        public static bool IsInTheWild(ActivityDefinition a) => a == DrinkFromPond || a == WashInPond;
 
         public static readonly ActivityDefinition Work = new ActivityDefinition(
             "work", "Work", "working", ActivityKind.Work, null, new[] { ObjectType.GardenPlot, ObjectType.Workbench, ObjectType.Counter }, 8 * 60,
@@ -340,7 +336,7 @@ namespace TinyCity.Simulation.Activities
             PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, EatRaw, RunStall, BuyFood,
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
             GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
-            PlanBuilding, Build, GatherSticks, GatherLooseStones, DrinkFromPond, WashInPond, RelieveOutdoors,
+            PlanBuilding, Build, GatherSticks, GatherLooseStones, DrinkFromPond, WashInPond,
             PurifyWater, DrinkCleanWater, AttendMeeting,
         };
 
