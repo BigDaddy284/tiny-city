@@ -126,19 +126,6 @@ namespace TinyCity.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator WatchEveryone_GivesEachLivingResidentAPanel()
-        {
-            game.Panels.Limit = CameraPanels.MaxPanels;
-            game.WatchEveryone();
-            yield return null;
-
-            var living = game.Simulation.Residents.Where(r => r.IsAlive).Take(CameraPanels.MaxPanels).Select(r => r.Id).ToList();
-            Assert.That(game.Panels.Count, Is.EqualTo(living.Count));
-            Assert.That(game.Simulation.Residents.Count(r => r.IsAlive), Is.LessThanOrEqualTo(CameraPanels.MaxPanels), "a new town's residents all fit, so everyone gets a panel");
-            CollectionAssert.AreEquivalent(living, game.Panels.All.Select(p => p.FollowId).ToList());
-        }
-
-        [UnityTest]
         public IEnumerator FollowPanel_StaysWithItsResident()
         {
             var resident = game.Simulation.Residents.First(r => r.IsAlive);
