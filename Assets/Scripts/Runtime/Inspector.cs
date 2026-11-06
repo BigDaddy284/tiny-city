@@ -902,7 +902,7 @@ namespace TinyCity.Runtime
         {
             var map = Simulation.World.GetMap(r.Location.MapId);
             var at = Simulation.World.Objects.FirstOrDefault(o => o.Location == r.Location);
-            return at != null ? $"{map.Name}, at the {at.Name.ToLowerInvariant()}" : name;
+            return at != null ? $"{map.Name}, at the {at.Name.ToLowerInvariant()}" : map.Name;
         }
 
         private string DescribePlanStep(PlanStep step)
