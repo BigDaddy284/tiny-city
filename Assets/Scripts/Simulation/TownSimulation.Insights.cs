@@ -52,7 +52,7 @@ namespace TinyCity.Simulation
         }
 
         public bool IsInsightDue(Resident r) =>
-            r != null && r.IsAlive && !r.IsBaby && MemoriesSinceInsight(r.Id).Sum(m => m.Importance) >= InsightThreshold;
+            r != null && r.IsAlive && MemoriesSinceInsight(r.Id).Sum(m => m.Importance) >= InsightThreshold;
 
         /// <summary>The memories offered as evidence: the most recent since the last insight, oldest first.</summary>
         public List<MemoryRecord> InsightEvidence(string residentId)

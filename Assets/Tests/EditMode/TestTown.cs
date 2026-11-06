@@ -87,9 +87,7 @@ namespace TinyCity.Tests.EditMode
             to.WeeklyRentPence = from.WeeklyRentPence;
             to.WeeklyIncomePence = from.WeeklyIncomePence;
             to.IncomeLabel = from.IncomeLabel;
-            to.SetHobbies(from.Hobbies);
             to.Health = from.Health;
-            to.OpenToRomance = from.OpenToRomance;
         }
 
         public static WorldObject Object(TownSimulation sim, string id)

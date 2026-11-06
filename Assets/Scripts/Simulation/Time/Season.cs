@@ -1,4 +1,3 @@
-using TinyCity.Simulation.Health;
 
 namespace TinyCity.Simulation.Time
 {
@@ -10,16 +9,22 @@ namespace TinyCity.Simulation.Time
         Winter,
     }
 
-    /// <summary>The four seasons share each <see cref="HealthRules.DaysPerYear"/>-day year equally, spring first.</summary>
+    /// <summary>The four seasons share each <see cref="DaysPerYear"/>-day year equally, spring first.</summary>
     public static class Seasons
     {
-        public const int DaysPerSeason = HealthRules.DaysPerYear / 4;
+        /// <summary>Game days in one year.</summary>
+        public const int DaysPerYear = 28;
 
-        public static Season Of(int day) => (Season)((HealthRules.CycleDay(day) - 1) / DaysPerSeason);
+        public const int DaysPerSeason = DaysPerYear / 4;
+
+        /// <summary>The day of the year, 1 to <see cref="DaysPerYear"/>.</summary>
+        public static int CycleDay(int day) => ((day - 1) % DaysPerYear) + 1;
+
+        public static Season Of(int day) => (Season)((CycleDay(day) - 1) / DaysPerSeason);
 
         public static Season Of(GameTime time) => Of(time.Day);
 
         /// <summary>1 to <see cref="DaysPerSeason"/>: how far into its season a day is.</summary>
-        public static int DayOfSeason(int day) => ((HealthRules.CycleDay(day) - 1) % DaysPerSeason) + 1;
+        public static int DayOfSeason(int day) => ((CycleDay(day) - 1) % DaysPerSeason) + 1;
     }
 }

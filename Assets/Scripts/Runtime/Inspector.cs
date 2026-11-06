@@ -171,7 +171,7 @@ namespace TinyCity.Runtime
                 GUILayout.BeginVertical(GUILayout.Width(leftWidth));
             }
 
-            GUILayout.Label(Simulation.AiRunsEverything ? $"{r.FullName}{RoleText(r)}" : $"{r.FullName}, {r.AgeYears} ({Words(r.LifeStage.ToString())})", styles.Title);
+            GUILayout.Label(Simulation.AiRunsEverything ? $"{r.FullName}{RoleText(r)}" : $"{r.FullName}, {r.AgeYears}", styles.Title);
             if (columns)
             {
                 DrawNowSummary(r);
@@ -179,7 +179,7 @@ namespace TinyCity.Runtime
                 GUILayout.Space(8f);
                 GUILayout.BeginVertical();
                 var barsWidth = ScrollContentWidth() - leftWidth - 12f;
-                Bar("Health", r.Health, HealthRules.MaxHealthFor(r.AgeYears), barsWidth);
+                Bar("Health", r.Health, HealthRules.MaxHealth, barsWidth);
                 for (var i = 0; i < Needs.Count; i++)
                 {
                     if (!Simulation.HasNeed((NeedType)i))
@@ -193,23 +193,6 @@ namespace TinyCity.Runtime
                 GUILayout.EndVertical();
                 GUILayout.EndHorizontal();
             }
-            if (r.IsNewcomer)
-            {
-                GUILayout.Label($"Moved to the city on day {r.MovedInDay}", styles.Text);
-            }
-
-            if (r.BornDay > 0)
-            {
-                var parents = string.Join(" and ", r.ParentIds.Select(id => Simulation.GetResident(id)?.FullName).Where(n => n != null));
-                GUILayout.Label($"Born in the city on day {r.BornDay}{(parents.Length > 0 ? ", to " + parents : string.Empty)}", styles.Text);
-            }
-
-            if (r.IsBaby && r.IsAlive)
-            {
-                var carer = Simulation.CarerOf(r);
-                GUILayout.Label(carer == null ? "A baby, looked after at home" : $"A baby, carried about by {carer.FirstName}", styles.Text);
-            }
-
             if (r.IsHomeless && r.IsAlive && !Simulation.FoodMustBeMade)
             {
                 GUILayout.Label("Nowhere to live: sleeps on a park bench until a home comes free", styles.Text);
@@ -264,7 +247,7 @@ namespace TinyCity.Runtime
             GUILayout.EndHorizontal();
             GUILayout.Label($"Town: {game.CurrentTownName} · {Simulation.LivingCount} people", styles.Small);
             GUILayout.Label($"{Simulation.Time.Weekday}, Day {Simulation.Time.Day}   {Simulation.Time.ClockText}", styles.Text);
-            GUILayout.Label(Simulation.RolesLimitSkills ? DescribeMeeting() : DescribeCalendar(), styles.Small);
+            GUILayout.Label(DescribeMeeting(), styles.Small);
 
             // The speeds, then the People and Roles drop-downs, all the same width on one line.
             var hasRoles = Simulation.Brief.Roles.Count > 0;
@@ -683,16 +666,10 @@ namespace TinyCity.Runtime
 
         private static string RoleText(Resident r) => string.IsNullOrEmpty(r.Role) ? string.Empty : $" ({r.Role})";
 
-        /// <summary>The Now tab's left column under the name: who they are, any illness, where they are and what they're doing.</summary>
+        /// <summary>The Now tab's left column under the name: who they are, where they are and what they're doing.</summary>
         private void DrawNowSummary(Resident r)
         {
             GUILayout.Label(Simulation.FoodMustBeMade ? r.Personality.Describe() : $"{DescribeLivelihood(r)} · {r.Personality.Describe()}", styles.Small);
-            var illness = DescribeIllness(r);
-            if (illness.Length > 0)
-            {
-                GUILayout.Label($"Unwell{illness}", styles.Small);
-            }
-
             GUILayout.Label($"Where: {DescribeLocation(r)}", styles.Text);
             GUILayout.Label($"Doing: {DescribeActivity(r)}", styles.Text);
         }
@@ -783,8 +760,6 @@ namespace TinyCity.Runtime
 
         private void DrawPeople(Resident r)
         {
-            GUILayout.Label(DescribeLoveLife(r), styles.Text);
-            GUILayout.Space(4f);
             var strangers = new List<string>();
             var known = Simulation.Residents
                 .Where(o => o != r)
@@ -967,13 +942,6 @@ namespace TinyCity.Runtime
 
         private void DrawTimeline(Resident r)
         {
-            if (!Simulation.AiRunsEverything)
-            {
-                GUILayout.Label($"Born on day {HealthRules.BirthdayCycleDay(r)} of each {HealthRules.DaysPerYear}-day year · {r.Personality.Describe()}", styles.Small);
-            }
-
-            GUILayout.Label($"Hobbies: {(r.Hobbies.Count > 0 ? string.Join(", ", r.Hobbies) : "none")}", styles.Small);
-            GUILayout.Label(DescribeLoveLife(r), styles.Small);
             if (!r.IsAlive)
             {
                 GUILayout.Label($"Died on day {r.DiedAt?.Day} at {r.DiedAt?.ClockText}, of {r.CauseOfDeath}.", styles.Text);
@@ -1143,19 +1111,6 @@ namespace TinyCity.Runtime
             return business.IsOpen(Simulation.Time) ? "closed, nobody at work" : "closed";
         }
 
-        private static string DescribeIllness(Resident r)
-        {
-            var illness = IllnessCatalog.Get(r.IllnessId);
-            if (illness == null)
-            {
-                return string.Empty;
-            }
-
-            var left = r.IllnessMinutesLeft / 60;
-            var progress = illness.Serious && !r.IllnessTreated ? "needs the doctor" : $"about {left} h of recovery left (half that resting)";
-            return $" · ill with {illness.Name}, {progress}";
-        }
-
         private static string DescribeLivelihood(Resident r)
         {
             if (r.Job != null)
@@ -1224,51 +1179,9 @@ namespace TinyCity.Runtime
                 return $"{other.FirstName}: hasn't met yet";
             }
 
-            var heart = Simulation.Relationships.PartnerOf(r.Id) == other.Id ? ", partner"
-                : rel.Romance >= RomanceRules.SoftSpot ? $", soft spot ({rel.Romance:0})" : string.Empty;
-            return $"{other.FirstName}: {rel.Describe()} (friendship {rel.Friendship:0}, trust {rel.Trust:0}{(rel.Dislike >= 10 ? $", dislike {rel.Dislike:0}" : string.Empty)}{heart}), {rel.Interactions} chat(s)";
-        }
-
-        private string DescribeLoveLife(Resident r)
-        {
-            var couple = Simulation.Relationships.PartnershipOf(r.Id);
-            if (couple != null)
-            {
-                var partner = Simulation.GetResident(couple.OtherThan(r.Id));
-                return couple.Stage == RomanceStage.Committed
-                    ? $"Love life: committed to {partner?.FirstName} (together since day {couple.Since.Day})"
-                    : $"Love life: dating {partner?.FirstName} since day {couple.Since.Day}";
-            }
-
-            if (!Simulation.RomanceEnabled)
-            {
-                return "Love life: romance is switched off in settings";
-            }
-
-            return r.OpenToRomance ? "Love life: single" : "Love life: not looking for romance";
-        }
-
-        private string DescribeCalendar()
-        {
-            if (!Simulation.CommunityEventsEnabled)
-            {
-                return "Community events are switched off in settings";
-            }
-
-            var on = Simulation.Planner.CurrentEvent(Simulation.Time);
-            if (on != null)
-            {
-                Simulation.World.TryGetObject(on.PlaceObjectId, out var place);
-                return $"On now: {on.Name} at the {place?.Name.ToLowerInvariant()}, until {on.EndMinute / 60:00}:{on.EndMinute % 60:00}";
-            }
-
-            var next = Simulation.World.Calendar.Next(Simulation.Time);
-            return next == null ? "Nothing on the city calendar" : $"Next: {next.Value.evt.Name}, {next.Value.start.Weekday} (day {next.Value.start.Day}) at {next.Value.start.ClockText}";
+            return $"{other.FirstName}: {rel.Describe()} (friendship {rel.Friendship:0}, trust {rel.Trust:0}{(rel.Dislike >= 10 ? $", dislike {rel.Dislike:0}" : string.Empty)}), {rel.Interactions} chat(s)";
         }
 
         private static string Capital(string text) => string.IsNullOrEmpty(text) ? text : char.ToUpperInvariant(text[0]) + text.Substring(1);
-
-        private static string Words(string pascal) =>
-            string.Concat(pascal.Select((c, i) => i > 0 && char.IsUpper(c) ? " " + char.ToLowerInvariant(c) : c.ToString()));
     }
 }

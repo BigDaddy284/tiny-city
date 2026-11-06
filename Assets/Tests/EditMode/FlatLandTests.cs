@@ -30,7 +30,6 @@ namespace TinyCity.Tests.EditMode
             var world = sim.World;
             Assert.That(world.Maps.Count(), Is.EqualTo(1));
             Assert.That(world.Businesses, Is.Empty, "no shops: someone has to open a stall");
-            Assert.That(world.JobOpenings, Is.Empty);
             foreach (var type in new[] { ObjectType.Kitchen, ObjectType.Bench, ObjectType.FishingSpot, ObjectType.Woodland, ObjectType.StickPile, ObjectType.RockPile, ObjectType.LooseStones, ObjectType.Workbench })
             {
                 Assert.That(world.ObjectsOfType(type).Any(), Is.True, type.ToString());
@@ -110,9 +109,7 @@ namespace TinyCity.Tests.EditMode
         [Test]
         public void NobodyMovesIn_AndNoBabiesAreBorn_InTiny_City_2()
         {
-            // The game turns both off for the open land; the simulation's own defaults are off too.
             var sim = NewGame();
-            Assert.That((sim.NewcomersEnabled, sim.BabiesEnabled), Is.EqualTo((false, false)));
             sim.Advance(3 * 24 * 60);
             Assert.That(sim.Residents.Count, Is.EqualTo(StarterTown.OpenLandResidentIds.Count));
         }
@@ -139,7 +136,7 @@ namespace TinyCity.Tests.EditMode
 
             var needs = new Needs();
             var before = needs[NeedType.Hunger];
-            NeedRules.ApplyMinute(needs, new Personality(0.5, 0.5, 0.5, 0.5), null, null, TownSimulation.HungerThirstRateWhenAiRuns);
+            NeedRules.ApplyMinute(needs, new Personality(0.5, 0.5, 0.5, 0.5), null, TownSimulation.HungerThirstRateWhenAiRuns);
             Assert.That(before - needs[NeedType.Hunger], Is.EqualTo(NeedRules.DecayPerHour(NeedType.Hunger, new Personality(0.5, 0.5, 0.5, 0.5)) / 120.0).Within(1e-9));
         }
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyCity.Simulation.Community;
 using TinyCity.Simulation.Economy;
 using TinyCity.Simulation.Health;
 using TinyCity.Simulation.Residents;
@@ -137,9 +136,6 @@ namespace TinyCity.Simulation.Activities
         /// <summary>How much a pound of cost counts against an activity when choosing.</summary>
         private const double PricePenaltyPerPound = 1.5;
 
-        /// <summary>How much more a resident enjoys their own hobbies than ordinary pastimes.</summary>
-        private const double HobbyPreference = 1.6;
-
         private static readonly NeedType[] UrgentNeeds = { NeedType.Toilet, NeedType.Thirst, NeedType.Hunger, NeedType.Energy };
 
         private readonly TownWorld world;
@@ -171,11 +167,6 @@ namespace TinyCity.Simulation.Activities
             var mapId = obj.Location.MapId;
             var business = world.BusinessOnMap(mapId);
             if (!world.GetMap(mapId).IsExterior && mapId != resident.HomeMapId && business == null)
-            {
-                return false;
-            }
-
-            if (business != null && business.AdultsOnly && resident.IsMinor)
             {
                 return false;
             }
@@ -244,9 +235,7 @@ namespace TinyCity.Simulation.Activities
 
         /// <summary>Whether the resident can use this object for this activity now: available, and affordable if it costs anything.</summary>
         public bool CanDo(Resident resident, ActivityDefinition activity, WorldObject obj, GameTime time) =>
-            activity.CanUse(obj) && (activity.Hobby == null || resident.Hobbies.Contains(activity.Hobby))
-            && (activity != ActivityCatalog.AttendEvent || EventAt(obj, time) != null)
-            && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _))
+            activity.CanUse(obj) && IsAvailableTo(resident, obj) && (economy == null || economy.CanAfford(resident, activity, obj, time, out _))
             && SuitsHousing(resident, activity, obj) && FoodSupply.Allows(Food, resident, activity, obj, time.Day);
 
         /// <summary>Tiny City 2's food supply, or null (v1: only v1's free food exists).</summary>
@@ -286,21 +275,8 @@ namespace TinyCity.Simulation.Activities
             return true;
         }
 
-        /// <summary>Whether the calendar's community events take place. Turned off in settings, nobody can attend one.</summary>
-        public bool CommunityEventsEnabled { get; set; } = true;
-
-        /// <summary>The community event on now, or null (also when events are switched off).</summary>
-        public CommunityEvent CurrentEvent(GameTime time) => CommunityEventsEnabled ? world.Calendar.OnAt(time) : null;
-
-        /// <summary>The event on now at this spot, or null.</summary>
-        public CommunityEvent EventAt(WorldObject obj, GameTime time)
-        {
-            var current = CurrentEvent(time);
-            return current != null && obj != null && current.PlaceObjectId == obj.Id ? current : null;
-        }
-
-        /// <summary>A work day and time, and well enough to go: flu and worse keep people at home.</summary>
-        public static bool ShouldWork(Resident resident, GameTime time) => IsWorkTime(resident, time) && HealthRules.CanWork(resident);
+        /// <summary>A work day and time.</summary>
+        public static bool ShouldWork(Resident resident, GameTime time) => IsWorkTime(resident, time);
 
         public PlanChoice Choose(Resident resident, GameTime time)
         {
@@ -312,12 +288,6 @@ namespace TinyCity.Simulation.Activities
                 {
                     return choice;
                 }
-            }
-
-            var doctor = DoctorChoice(resident, time);
-            if (doctor != null)
-            {
-                return doctor;
             }
 
             if (SleepSchedule.IsSleepTime(resident, time))
@@ -335,12 +305,6 @@ namespace TinyCity.Simulation.Activities
                 return new PlanChoice(ActivityCatalog.Work, workplace, $"Shift as {resident.Job.Title} until {FormatMinute(resident.Job.EndMinuteOfDay)}", PlanPriority.Work);
             }
 
-            var rest = RestChoice(resident);
-            if (rest != null)
-            {
-                return rest;
-            }
-
             if (resident.Needs[NeedType.Energy] < TiredEnergy)
             {
                 var nap = BedChoice(resident, "Feeling tired", PlanPriority.Nap);
@@ -353,168 +317,13 @@ namespace TinyCity.Simulation.Activities
             // Null means every need is comfortable and nothing is due; the simulation lets the resident take it easy.
             return BestScored(resident, time, comfortOnly: true)
                 ?? ShoppingChoice(resident, time)
-                ?? EventChoice(resident, time)
-                ?? OutingChoice(resident, time)
-                ?? NightOutChoice(resident, time)
                 ?? BestScored(resident, time, comfortOnly: false);
-        }
-
-        /// <summary>A serious illness needs the clinic, as soon as it's open.</summary>
-        private PlanChoice DoctorChoice(Resident resident, GameTime time)
-        {
-            if (!HealthRules.NeedsDoctor(resident))
-            {
-                return null;
-            }
-
-            var clinic = NearestDoable(resident, ActivityCatalog.SeeDoctor, time);
-            return clinic == null ? null : new PlanChoice(ActivityCatalog.SeeDoctor, clinic, $"Needs to see the doctor about {IllnessCatalog.Get(resident.IllnessId).Name}", PlanPriority.UrgentNeed);
-        }
-
-        /// <summary>
-        /// Anyone unwell rests in their own bed, unless food, drink or the toilet need seeing to first. A cold only
-        /// sends people to bed when they're also tired.
-        /// </summary>
-        private PlanChoice RestChoice(Resident resident)
-        {
-            var illness = IllnessCatalog.Get(resident.IllnessId);
-            if (illness == null || (illness == IllnessCatalog.Cold && resident.Needs[NeedType.Energy] >= RestedEnergy))
-            {
-                return null;
-            }
-
-            foreach (var need in new[] { NeedType.Hunger, NeedType.Thirst, NeedType.Toilet })
-            {
-                if (resident.Needs[need] < NeedRules.Comfortable)
-                {
-                    return null;
-                }
-            }
-
-            return world.TryGetObject(resident.BedObjectId, out var bed) && CanDo(resident, ActivityCatalog.Rest, bed, clock())
-                && pathfinder.Distance(resident.Location, bed.Location) != Pathfinder.Unreachable
-                ? new PlanChoice(ActivityCatalog.Rest, bed, $"Feeling poorly with {illness.Name}", PlanPriority.Nap)
-                : null;
-        }
-
-        /// <summary>
-        /// Whether a resident fancies going along to the event that's on. Decided once per resident and event by
-        /// <see cref="Chance"/>, more likely for sociable people, so the same people don't always turn up.
-        /// </summary>
-        public bool FanciesGoing(Resident resident, CommunityEvent evt, int day) =>
-            Chance.Roll(resident.Id + ":" + evt.Id, day, 30) < evt.Turnout * (0.5 + resident.Personality.Sociable);
-
-        private PlanChoice EventChoice(Resident resident, GameTime time)
-        {
-            var evt = CurrentEvent(time);
-            if (evt == null || !world.TryGetObject(evt.PlaceObjectId, out var place) || !FanciesGoing(resident, evt, time.Day)
-                || !CanDo(resident, ActivityCatalog.AttendEvent, place, time) || pathfinder.Distance(resident.Location, place.Location) == Pathfinder.Unreachable)
-            {
-                return null;
-            }
-
-            return new PlanChoice(ActivityCatalog.AttendEvent, place, $"The {evt.Name.ToLowerInvariant()} is on at the {place.Name.ToLowerInvariant()}", PlanPriority.Leisure);
-        }
-
-        /// <summary>Nights out start from this time.</summary>
-        public static readonly int NightOutFrom = GameTime.MinuteOfDayFor(19, 0);
-
-        /// <summary>The chance, each evening hour, that an average resident fancies a drink or a dance.</summary>
-        public const double NightOutChance = 0.2;
-
-        /// <summary>Nobody heads out with less than this long before their bedtime.</summary>
-        public const int NightOutBeforeBedMinutes = 60;
-
-        /// <summary>Nobody spends their last few pounds on a night out.</summary>
-        public const long NightOutMinimumPence = 3000;
-
-        /// <summary>
-        /// A night out at the bar, for someone with nothing better to do in the evening. Each hour of the evening each
-        /// resident fancies it or not by <see cref="Chance"/>, likelier for the sociable and the young; the active
-        /// ones prefer to dance. Only while somewhere is open, with money to spare and time before bed.
-        /// </summary>
-        /// <summary>From late morning until the night out begins, residents now and then head out to one of the city's venues.</summary>
-        public static readonly int OutingFrom = GameTime.MinuteOfDayFor(10, 0);
-
-        /// <summary>The chance, each daytime hour, that a resident fancies an outing, before personality.</summary>
-        public const double OutingChance = 0.15;
-
-        /// <summary>Outings cost a few pounds, so residents keep something back.</summary>
-        public const long OutingMinimumPence = 2000;
-
-        /// <summary>Enough time to get there, play and get home before bed.</summary>
-        public const int OutingBeforeBedMinutes = 90;
-
-        /// <summary>The city's places for an outing; each resident tries them in an order of their own for the hour, favourites first.</summary>
-        private static readonly ActivityDefinition[] Outings =
-        {
-            ActivityCatalog.PlayPool, ActivityCatalog.PlaySnooker, ActivityCatalog.Bowling, ActivityCatalog.PlayArcade, ActivityCatalog.GymWorkout, ActivityCatalog.BrowseMarket,
-        };
-
-        /// <summary>
-        /// A daytime outing to the cue club, the bowling alley, the arcade, the gym or the market, by chance for each
-        /// hour (likelier for the sociable and active) and only with money to spare. Without it the venues, being further
-        /// from most homes than an armchair or the park, would hardly ever be chosen.
-        /// </summary>
-        private PlanChoice OutingChoice(Resident resident, GameTime time)
-        {
-            if (time.MinuteOfDay < OutingFrom || time.MinuteOfDay >= NightOutFrom || resident.MoneyPence < OutingMinimumPence
-                || SleepSchedule.MinutesToBed(resident, time) < OutingBeforeBedMinutes)
-            {
-                return null;
-            }
-
-            var hour = time.MinuteOfDay / 60;
-            var p = resident.Personality;
-            if (Chance.Roll(resident.Id, time.Day, 80 + hour) >= OutingChance * (0.5 + ((p.Sociable + p.Active) / 2)))
-            {
-                return null;
-            }
-
-            foreach (var activity in Outings.OrderBy(a => Chance.Roll(resident.Id, time.Day, 100 + (hour * 8) + Array.IndexOf(Outings, a)) / Preference(p, a)))
-            {
-                var place = NearestDoable(resident, activity, time);
-                if (place != null)
-                {
-                    return new PlanChoice(activity, place, $"Fancies an outing: {activity.Verb}", PlanPriority.Leisure);
-                }
-            }
-
-            return null;
-        }
-
-        private PlanChoice NightOutChoice(Resident resident, GameTime time)
-        {
-            if (time.MinuteOfDay < NightOutFrom || resident.MoneyPence < NightOutMinimumPence
-                || SleepSchedule.MinutesToBed(resident, time) < NightOutBeforeBedMinutes)
-            {
-                return null;
-            }
-
-            var age = resident.AgeYears < 40 ? 1.3 : resident.AgeYears >= 65 ? 0.5 : 1.0;
-            var hour = time.MinuteOfDay / 60;
-            if (Chance.Roll(resident.Id, time.Day, 31 + hour) >= NightOutChance * (0.5 + resident.Personality.Sociable) * age)
-            {
-                return null;
-            }
-
-            var dance = Chance.Roll(resident.Id, time.Day, 60 + hour) < 0.3 + (0.5 * resident.Personality.Active);
-            foreach (var activity in dance ? new[] { ActivityCatalog.Dance, ActivityCatalog.BarDrink } : new[] { ActivityCatalog.BarDrink, ActivityCatalog.Dance })
-            {
-                var place = NearestDoable(resident, activity, time);
-                if (place != null)
-                {
-                    return new PlanChoice(activity, place, $"Fancies a night out: {activity.Verb}", PlanPriority.Leisure);
-                }
-            }
-
-            return null;
         }
 
         /// <summary>A trip to the shop when groceries are running low and the shop can serve them.</summary>
         private PlanChoice ShoppingChoice(Resident resident, GameTime time)
         {
-            if (resident.Groceries > LowGroceries || resident.IsHomeless || resident.IsMinor)
+            if (resident.Groceries > LowGroceries || resident.IsHomeless)
             {
                 return null;
             }
@@ -532,7 +341,7 @@ namespace TinyCity.Simulation.Activities
 
         /// <summary>
         /// With <paramref name="everything"/> (Tiny City 2, where the AI makes every choice), every activity the
-        /// resident could start right now: eating, sleeping, the toilet, the doctor and their own job during its
+        /// resident could start right now: eating, sleeping and their own job during its
         /// hours too, whatever their needs. The game still checks each one is possible.
         /// </summary>
         public IReadOnlyList<FreeTimeOption> FreeTimeOptions(Resident resident, bool everything)
@@ -543,8 +352,7 @@ namespace TinyCity.Simulation.Activities
             {
                 if (everything)
                 {
-                    if (activity == ActivityCatalog.Chat || (activity == ActivityCatalog.Work && !(resident.Job != null && ShouldWork(resident, time)))
-                        || (activity == ActivityCatalog.SeeDoctor && resident.IllnessId == null))
+                    if (activity == ActivityCatalog.Chat || (activity == ActivityCatalog.Work && !(resident.Job != null && ShouldWork(resident, time))))
                     {
                         continue;
                     }
@@ -561,7 +369,7 @@ namespace TinyCity.Simulation.Activities
                 }
                 else
                 {
-                    var errand = (activity == ActivityCatalog.BuyGroceries && resident.Groceries < ShoppingWorthwhile) || activity == ActivityCatalog.AttendEvent;
+                    var errand = (activity == ActivityCatalog.BuyGroceries && resident.Groceries < ShoppingWorthwhile);
                     if (!errand && (activity.PrimaryNeed == null || (activity.Kind != ActivityKind.Care && activity.Kind != ActivityKind.Leisure)
                         || resident.Needs[activity.PrimaryNeed.Value] > Needs.Max - MinimumLeisureDeficit))
                     {
@@ -606,11 +414,6 @@ namespace TinyCity.Simulation.Activities
                 return true;
             }
 
-            if (current != ActivityCatalog.SeeDoctor && current.Kind != ActivityKind.Sleep && urgent == null && DoctorChoice(resident, time) != null)
-            {
-                return true;
-            }
-
             if (current.Kind == ActivityKind.Leisure || current.Kind == ActivityKind.Care || current.Kind == ActivityKind.Social || current.Kind == ActivityKind.Errand)
             {
                 // Finish looking after an urgent need first; otherwise work and bedtime come before leisure.
@@ -642,8 +445,6 @@ namespace TinyCity.Simulation.Activities
                     return !SleepSchedule.IsSleepTime(resident, time) && resident.Needs[NeedType.Energy] >= RestedEnergy;
                 case ActivityKind.Work:
                     return resident.MinutesRemaining <= 0 || !ShouldWork(resident, time);
-                case ActivityKind.Leisure when activity == ActivityCatalog.AttendEvent:
-                    return resident.MinutesRemaining <= 0 || CurrentEvent(time) == null;
                 default:
                     return resident.MinutesRemaining <= 0
                         || (activity.PrimaryNeed != null && resident.Needs[activity.PrimaryNeed.Value] >= Needs.Max - 0.5);
@@ -777,31 +578,19 @@ namespace TinyCity.Simulation.Activities
 
         private static double Preference(Personality p, ActivityDefinition activity)
         {
-            if (activity == ActivityCatalog.Exercise || activity == ActivityCatalog.GymWorkout)
+            if (activity == ActivityCatalog.Exercise)
             {
                 return 0.5 + p.Active;
             }
 
-            if (activity == ActivityCatalog.WatchTown || activity == ActivityCatalog.Coffee || activity == ActivityCatalog.CafeMeal || activity == ActivityCatalog.BarDrink
-                || activity == ActivityCatalog.PlayPool || activity == ActivityCatalog.PlaySnooker || activity == ActivityCatalog.BrowseMarket)
+            if (activity == ActivityCatalog.WatchTown || activity == ActivityCatalog.Coffee || activity == ActivityCatalog.CafeMeal)
             {
                 return 0.5 + p.Sociable;
-            }
-
-            if (activity == ActivityCatalog.Dance || activity == ActivityCatalog.Bowling)
-            {
-                return 0.5 + ((p.Active + p.Sociable) / 2);
             }
 
             if (activity == ActivityCatalog.Read)
             {
                 return 0.5 + p.Bookish;
-            }
-
-            if (activity.Hobby != null)
-            {
-                // Only residents with the hobby can do it at all, and they love it.
-                return HobbyPreference;
             }
 
             return 1.0;

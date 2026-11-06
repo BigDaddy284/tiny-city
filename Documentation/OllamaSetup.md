@@ -49,15 +49,6 @@ These choices are kept in `player-settings.json` in the game's data folder (`%US
 | `decisionWaitSeconds` | `8` | Real seconds a resident waits at the least, at any speed (0 to 120; 0 turns it off). At 4x that is 32 game minutes, and at 10x it's 80, so answers still arrive in time at high speed. |
 | `parallelRequests` | `1` | How many requests the game sends to Ollama at once (1 to 8). Raise it only after setting up Ollama to answer that many together; see below. |
 
-The same file has a `simulation` section for optional parts of the game, which work with or without Ollama:
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| `romance` | `true` | `false` stops new romances and changes in feelings. Couples already together stay together. |
-| `communityEvents` | `true` | `false` cancels the get-togethers, quiz nights and the village fête. |
-| `babies` | `true` | `false` stops couples having babies (never while 50 people live in the city). |
-| `newcomers` | `true` | `false` stops people moving to the city from out of town (at most 10 ever, never past 50 residents). |
-
 Invalid values are reported in `Player.log`, and the game uses the defaults instead.
 
 ## How the AI is used

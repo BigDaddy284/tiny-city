@@ -10,11 +10,5 @@
         "decisionWaitMinutes": 20,
         "decisionWaitSeconds": 8,
         "parallelRequests": 1
-    },
-    "simulation": {
-        "romance": true,
-        "communityEvents": true,
-        "newcomers": true,
-        "babies": true
     }
 }

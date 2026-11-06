@@ -3,7 +3,6 @@ using System.Linq;
 using NUnit.Framework;
 using TinyCity.Simulation;
 using TinyCity.Simulation.Content;
-using TinyCity.Simulation.Health;
 using TinyCity.Simulation.History;
 using TinyCity.Simulation.Memory;
 using TinyCity.Simulation.Persistence;
@@ -19,45 +18,12 @@ namespace TinyCity.Tests.EditMode
         private const string Felix = StarterTown.FelixId;
 
         [Test]
-        public void Illness_AndRecovery_GoInTheHistory()
+        public void AYearOfTownLife_RecordsFirstMeetings_AndFriendships_EachOnce()
         {
             var sim = StarterTown.CreateNewGame();
-            var mia = sim.GetResident(Mia);
-            sim.FallIll(mia, IllnessCatalog.Cold);
-            Assert.That(sim.History.Events.Last().Kind, Is.EqualTo(TownEventKind.Illness));
-            Assert.That(sim.History.Events.Last().ResidentIds.ToList(), Is.EqualTo(new List<string> { Mia }));
-            Assert.That(sim.History.Events.Last().Summary, Does.Contain("cold"));
-
-            mia.IllnessMinutesLeft = 1;
-            for (var i = 0; i < 5 && mia.IllnessId != null; i++)
+            for (var i = 0; i < Seasons.DaysPerYear * GameTime.MinutesPerDay; i++)
             {
                 sim.Tick();
-            }
-
-            Assert.That(mia.IllnessId, Is.Null);
-            Assert.That(sim.History.Events.Any(e => e.Kind == TownEventKind.Recovered && e.ResidentIds.Contains(Mia)), Is.True);
-
-            sim.FallIll(sim.GetResident(Ivy), IllnessCatalog.Pneumonia);
-            Assert.That(sim.History.Events.Last().Kind, Is.EqualTo(TownEventKind.SeriousIllness));
-            Assert.That(Journal.IsNotable(TownEventKind.SeriousIllness), Is.True);
-            Assert.That(Journal.IsNotable(TownEventKind.Illness), Is.False);
-        }
-
-        [Test]
-        public void AYearOfTownLife_RecordsBirthdays_FirstMeetings_AndFriendships_EachOnce()
-        {
-            var sim = StarterTown.CreateNewGame();
-            var ages = sim.Residents.ToDictionary(r => r.Id, r => r.AgeYears);
-            for (var i = 0; i < HealthRules.DaysPerYear * GameTime.MinutesPerDay; i++)
-            {
-                sim.Tick();
-            }
-
-            foreach (var r in sim.Residents.Where(r => r.IsAlive))
-            {
-                var birthdays = sim.History.About(r.Id).Where(e => e.Kind == TownEventKind.Birthday).ToList();
-                Assert.That(birthdays.Count, Is.EqualTo(1), $"{r.FirstName} has one birthday a year");
-                Assert.That(birthdays[0].Summary, Does.Contain($"turned {ages[r.Id] + 1}"));
             }
 
             var met = sim.History.Events.Where(e => e.Kind == TownEventKind.Met).ToList();
@@ -80,9 +46,9 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = StarterTown.CreateNewGame();
             sim.History.Add(GameTime.FromDayAndTime(1, 9, 0), TownEventKind.Met, "Mia Hart and Ivy Brook met for the first time at the café.", new[] { Mia, Ivy });
-            sim.History.Add(GameTime.FromDayAndTime(2, 5, 0), TownEventKind.Illness, "Felix came down with a cold.", new[] { Felix });
-            sim.History.Add(GameTime.FromDayAndTime(3, 18, 0), TownEventKind.Gathering, "Quiz night at the café.", new[] { Mia, Felix });
-            sim.History.Add(GameTime.FromDayAndTime(9, 12, 0), TownEventKind.Couple, "Ivy and Felix started dating.", new[] { Ivy, Felix });
+            sim.History.Add(GameTime.FromDayAndTime(2, 5, 0), TownEventKind.Built, "Felix finished building a hut.", new[] { Felix });
+            sim.History.Add(GameTime.FromDayAndTime(3, 18, 0), TownEventKind.Meeting, "The town meeting by the quiz board.", new[] { Mia, Felix });
+            sim.History.Add(GameTime.FromDayAndTime(9, 12, 0), TownEventKind.Friends, "Ivy and Felix became good friends.", new[] { Ivy, Felix });
             return sim;
         }
 
@@ -91,20 +57,19 @@ namespace TinyCity.Tests.EditMode
         {
             var sim = TownWithHistory();
             var all = Journal.Search(sim.History, sim.GetResident);
-            Assert.That(all.Select(e => e.Kind).ToList(), Is.EqualTo(new List<TownEventKind> { TownEventKind.Couple, TownEventKind.Gathering, TownEventKind.Illness, TownEventKind.Met }));
+            Assert.That(all.Select(e => e.Kind).ToList(), Is.EqualTo(new List<TownEventKind> { TownEventKind.Friends, TownEventKind.Meeting, TownEventKind.Built, TownEventKind.Met }));
 
-            Assert.That(Journal.Search(sim.History, sim.GetResident, JournalTopic.Love).Single().Kind, Is.EqualTo(TownEventKind.Couple));
-            Assert.That(Journal.Search(sim.History, sim.GetResident, JournalTopic.Health).Single().Kind, Is.EqualTo(TownEventKind.Illness));
-            Assert.That(Journal.Search(sim.History, sim.GetResident, JournalTopic.Friends).Single().Kind, Is.EqualTo(TownEventKind.Met));
-            Assert.That(Journal.Search(sim.History, sim.GetResident, JournalTopic.Gatherings).Single().Kind, Is.EqualTo(TownEventKind.Gathering));
+            Assert.That(Journal.Search(sim.History, sim.GetResident, JournalTopic.Life).Single().Kind, Is.EqualTo(TownEventKind.Built));
+            Assert.That(Journal.Search(sim.History, sim.GetResident, JournalTopic.Friends).Count, Is.EqualTo(2));
+            Assert.That(Journal.Search(sim.History, sim.GetResident, JournalTopic.Meetings).Single().Kind, Is.EqualTo(TownEventKind.Meeting));
 
             var felix = Journal.Search(sim.History, sim.GetResident, residentId: Felix);
             Assert.That(felix.Count, Is.EqualTo(3));
-            Assert.That(Journal.Search(sim.History, sim.GetResident, JournalTopic.Love, Mia), Is.Empty);
+            Assert.That(Journal.Search(sim.History, sim.GetResident, JournalTopic.Life, Mia), Is.Empty);
 
-            Assert.That(Journal.Search(sim.History, sim.GetResident, text: "QUIZ").Single().Kind, Is.EqualTo(TownEventKind.Gathering), "case doesn't matter");
+            Assert.That(Journal.Search(sim.History, sim.GetResident, text: "QUIZ").Single().Kind, Is.EqualTo(TownEventKind.Meeting), "case doesn't matter");
             Assert.That(Journal.Search(sim.History, sim.GetResident, text: "café first").Single().Kind, Is.EqualTo(TownEventKind.Met), "every word must match");
-            Assert.That(Journal.Search(sim.History, sim.GetResident, text: "day 9").Single().Kind, Is.EqualTo(TownEventKind.Couple), "dates can be searched");
+            Assert.That(Journal.Search(sim.History, sim.GetResident, text: "day 9").Single().Kind, Is.EqualTo(TownEventKind.Friends), "dates can be searched");
             var felixName = sim.GetResident(Felix).FullName.Split(' ').Last();
             Assert.That(Journal.Search(sim.History, sim.GetResident, text: felixName).Count, Is.EqualTo(3), "a surname finds events that only say a first name");
             Assert.That(Journal.Search(sim.History, sim.GetResident, text: "dragons"), Is.Empty);
@@ -116,12 +81,12 @@ namespace TinyCity.Tests.EditMode
             var sim = StarterTown.CreateNewGame();
             for (var i = 0; i < Journal.MaxResults + 50; i++)
             {
-                sim.History.Add(new GameTime(i), TownEventKind.Gathering, $"Gathering {i}", new[] { Mia });
+                sim.History.Add(new GameTime(i), TownEventKind.Meeting, $"Meeting {i}", new[] { Mia });
             }
 
             var found = Journal.Search(sim.History, sim.GetResident);
             Assert.That(found.Count, Is.EqualTo(Journal.MaxResults));
-            Assert.That(found[0].Summary, Is.EqualTo($"Gathering {Journal.MaxResults + 49}"));
+            Assert.That(found[0].Summary, Is.EqualTo($"Meeting {Journal.MaxResults + 49}"));
         }
 
         [Test]
@@ -144,18 +109,16 @@ namespace TinyCity.Tests.EditMode
             var sim = TownWithHistory();
             sim.Memories.Add(Mia, GameTime.FromDayAndTime(2, 22, 0), MemoryType.Reflection, 5, "A lovely, slow day.");
             sim.Memories.Add(Mia, GameTime.FromDayAndTime(4, 8, 0), MemoryType.Event, 8, "I couldn't cover this week's rent.", tags: new[] { "money" });
-            sim.Memories.Add(Mia, GameTime.FromDayAndTime(5, 0, 0), MemoryType.Event, 6, "It was my 30th birthday.", tags: new[] { "birthday" });
             sim.Memories.Add(Mia, GameTime.FromDayAndTime(6, 0, 0), MemoryType.Event, 2, "I had a sandwich.");
 
             var timeline = LifeStory.Timeline(sim, Mia);
             var texts = timeline.Select(e => e.Text).ToList();
             Assert.That(timeline.Select(e => e.Time.TotalMinutes).ToList(), Is.Ordered);
             Assert.That(texts.Any(t => t.Contains("met for the first time")), Is.True);
-            Assert.That(texts.Any(t => t.Contains("Quiz night")), Is.True);
-            Assert.That(texts.Any(t => t.Contains("started dating")), Is.False, "not about Mia");
+            Assert.That(texts.Any(t => t.Contains("quiz board")), Is.True);
+            Assert.That(texts.Any(t => t.Contains("became good friends")), Is.False, "not about Mia");
             Assert.That(timeline.Single(e => e.Text == "A lovely, slow day.").Source, Is.EqualTo(TimelineSource.AiReflection));
             Assert.That(timeline.Single(e => e.Text.Contains("rent")).Source, Is.EqualTo(TimelineSource.Memory));
-            Assert.That(texts.Any(t => t.Contains("birthday")), Is.False, "birthdays come from the town records, not twice");
             Assert.That(texts.Any(t => t.Contains("sandwich")), Is.False, "trivial memories stay out");
         }
 
@@ -168,7 +131,6 @@ namespace TinyCity.Tests.EditMode
             var story = LifeStory.Write(sim, Ivy);
             Assert.That(story, Does.StartWith($"The life of {ivy.FullName}"));
             Assert.That(story, Does.Contain($"{ivy.FullName} is {ivy.AgeYears}"));
-            Assert.That(story, Does.Contain("Hobbies: "));
             Assert.That(story, Does.Contain("Day 1, Monday 09:00: Mia Hart and Ivy Brook met"));
             Assert.That(story, Does.Contain("[AI]: Felix made me laugh today."));
             Assert.That(LifeStory.Write(sim, "res-9999"), Is.Empty);
@@ -189,8 +151,8 @@ namespace TinyCity.Tests.EditMode
             }
 
             Assert.That(text, Does.Contain("Day 3, Wednesday"));
-            Assert.That(text, Does.Contain("  18:00  Quiz night at the café."));
-            Assert.That(text.IndexOf("met for the first time"), Is.LessThan(text.IndexOf("started dating")), "oldest first");
+            Assert.That(text, Does.Contain("  18:00  The town meeting by the quiz board."));
+            Assert.That(text.IndexOf("met for the first time"), Is.LessThan(text.IndexOf("became good friends")), "oldest first");
             Assert.That(LifeStory.WriteTownHistory(StarterTown.CreateNewGame()), Does.Contain("Nothing has happened yet."));
         }
 

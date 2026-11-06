@@ -23,6 +23,9 @@ namespace TinyCity.Simulation.Content
         public const string TownId = "town-tiny-city-2";
         public const string MapId = "map-flat-land";
 
+        /// <summary>The most people there can be: twenty start, and the world never grows.</summary>
+        public const int MaxResidents = 20;
+
         public const int Width = 56;
         public const int Height = 44;
 
@@ -164,17 +167,6 @@ namespace TinyCity.Simulation.Content
             }
 
             return residents.Take(spots.Count).ToList();
-        }
-
-        /// <summary>The open land filled to <paramref name="people"/> living residents, for the camera panel test only (never saved).</summary>
-        public static TownSimulation CreateCrowdedTown(int people)
-        {
-            var simulation = CreateNewGame();
-            while (simulation.LivingCount < Math.Min(people, PopulationRules.MaxLiving) && simulation.MoveInNewcomer(anyNumber: true) != null)
-            {
-            }
-
-            return simulation;
         }
 
         /// <summary>

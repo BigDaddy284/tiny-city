@@ -25,7 +25,7 @@ sound.
 | `sfx-till.wav` | shop, café and bakery counters, buying groceries and pastries |
 | `sfx-cooking.wav` | cooking, snacks and baking |
 | `sfx-drink.wav` | drinks and coffee |
-| `sfx-chess.wav`, `sfx-piano.wav`, `sfx-splash.wav`, `sfx-digging.wav` | chess, piano, fishing, gardening |
+| `sfx-splash.wav`, `sfx-digging.wav` | fishing, gathering, farming and building |
 | `sfx-chime.wav` | a city news pop-up |
 
 ## Format

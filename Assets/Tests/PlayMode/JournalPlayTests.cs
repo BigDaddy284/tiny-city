@@ -36,13 +36,13 @@ namespace TinyCity.Tests.PlayMode
         public IEnumerator NotableEvent_PopsUp_ButEverydayOnesDoNot()
         {
             var r = game.Simulation.Residents.First(x => x.IsAlive);
-            var birthday = game.Simulation.History.Add(game.Simulation.Time, TownEventKind.Birthday, $"{r.FullName} had a test birthday.", new[] { r.Id });
-            var couple = game.Simulation.History.Add(game.Simulation.Time, TownEventKind.Couple, $"{r.FullName} found a test sweetheart.", new[] { r.Id });
+            var met = game.Simulation.History.Add(game.Simulation.Time, TownEventKind.Met, $"{r.FullName} met someone for a test.", new[] { r.Id });
+            var built = game.Simulation.History.Add(game.Simulation.Time, TownEventKind.Built, $"{r.FullName} finished a test building.", new[] { r.Id });
             yield return null;
 
             var showing = game.Notifications.Showing.ToList();
-            Assert.That(showing.Contains(couple), Is.True, "a new couple is a notification");
-            Assert.That(showing.Contains(birthday), Is.False, "a birthday is only in the journal");
+            Assert.That(showing.Contains(built), Is.True, "a finished building is a notification");
+            Assert.That(showing.Contains(met), Is.False, "a first meeting is only in the journal");
         }
 
         [UnityTest]

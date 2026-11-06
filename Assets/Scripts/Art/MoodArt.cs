@@ -17,7 +17,6 @@ namespace TinyCity.Art
         {
             [Mood.Happy] = new[] { ".......", "..m.m..", ".......", ".m...m.", "..mmm.." },
             [Mood.Asleep] = new[] { "....zzz", ".....z.", "zzz.zzz", ".z.....", "zzz...." },
-            [Mood.Ill] = new[] { ".qqqqq.", "qq.q.qq", "qqqqqqq", "qq.q.qq", ".qqqqq." },
             [Mood.NeedsToilet] = new[] { "...r...", "...r...", "...r...", ".......", "...r..." },
             [Mood.Hungry] = new[] { ".......", "..bbb..", ".bbbbb.", ".bwbwb.", ".bbbbb." },
             [Mood.Thirsty] = new[] { "...s...", "..sss..", ".sssss.", ".sswss.", "..sss.." },
@@ -25,7 +24,6 @@ namespace TinyCity.Art
             [Mood.Grubby] = new[] { ".g..g..", "g..g..g", ".g..g..", "g..g..g", ".g..g.." },
             [Mood.Lonely] = new[] { "..ccc..", ".ccccc.", "ccccccc", ".s.s.s.", "s.s.s.." },
             [Mood.Bored] = new[] { ".......", ".......", "e..e..e", ".......", "......." },
-            [Mood.InLove] = new[] { ".hh.hh.", "hhhhhhh", "hhhhhhh", ".hhhhh.", "...h..." },
         };
 
         private static Rgba Key(char c)

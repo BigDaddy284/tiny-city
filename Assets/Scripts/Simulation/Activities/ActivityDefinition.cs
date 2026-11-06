@@ -37,14 +37,9 @@ namespace TinyCity.Simulation.Activities
             IReadOnlyDictionary<NeedType, double> gainPerMinute,
             IReadOnlyDictionary<NeedType, double> decayMultiplier = null,
             string itemId = null,
-            bool usesGroceries = false,
-            string hobby = null,
-            bool shared = false,
-            bool needsOpenBusiness = false)
+            bool usesGroceries = false)
         {
-            Hobby = hobby;
-            Shared = shared;
-            NeedsOpenBusiness = needsOpenBusiness || itemId != null;
+            NeedsOpenBusiness = itemId != null;
             ItemId = itemId;
             UsesGroceries = usesGroceries;
             Id = id;
@@ -92,13 +87,7 @@ namespace TinyCity.Simulation.Activities
         /// <summary>Uses up one meal's worth of the resident's groceries.</summary>
         public bool UsesGroceries { get; }
 
-        /// <summary>The hobby this activity belongs to, e.g. "chess"; only residents with that hobby do it. Null for anyone.</summary>
-        public string Hobby { get; }
-
-        /// <summary>More fun with company: residents doing it together at the same object enjoy each other's company and remember it.</summary>
-        public bool Shared { get; }
-
-        /// <summary>Only possible while the business it happens in is open, e.g. seeing the doctor.</summary>
+        /// <summary>Only possible while the business it happens in is open, e.g. a coffee.</summary>
         public bool NeedsOpenBusiness { get; }
 
         public double GainPerMinute(NeedType need) => gainPerMinute[(int)need];

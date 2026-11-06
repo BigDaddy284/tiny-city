@@ -78,10 +78,9 @@ namespace TinyCity.Tests.EditMode
             var msPerDay = tickTicks * 1000.0 / Stopwatch.Frequency / SoakDays;
             TestContext.WriteLine($"Simulated {SoakDays} days in {timer.Elapsed.TotalSeconds:0.0} s (both runs, with saves); one run's ticks average {msPerDay:0.0} ms per game day.");
             TestContext.WriteLine($"Longest time any resident spent with a critical need: {worstCritical} minutes.");
-            TestContext.WriteLine($"Memories {straight.Memories.All.Count}, chats {straight.Conversations.All.Count}, ledger {straight.Economy.Ledger.All.Count}, history {straight.History.Events.Count}, couples {straight.Relationships.Partnerships.Count}, deaths {straight.Residents.Count(r => !r.IsAlive)}.");
+            TestContext.WriteLine($"Memories {straight.Memories.All.Count}, chats {straight.Conversations.All.Count}, ledger {straight.Economy.Ledger.All.Count}, history {straight.History.Events.Count}, deaths {straight.Residents.Count(r => !r.IsAlive)}.");
 
             Assert.That(worstCritical, Is.LessThanOrEqualTo(MaxMinutesCritical), "a critical need was left unmet for too long");
-            Assert.That(straight.History.Events.Count(e => e.Kind == TownEventKind.Gathering), Is.GreaterThanOrEqualTo(40), "two community events a week");
             Assert.That(straight.Residents.Count(r => r.IsAlive), Is.GreaterThanOrEqualTo(5), "the town shouldn't empty in six months");
         }
 
@@ -111,15 +110,7 @@ namespace TinyCity.Tests.EditMode
                 {
                     Assert.That(r.State, Is.EqualTo(ResidentState.Idle), $"{label}: {r.FirstName} has died and does nothing");
                     Assert.That(r.ConversationId, Is.Null, label);
-                    Assert.That(sim.Relationships.PartnerOf(r.Id), Is.Null, $"{label}: {r.FirstName} has died and is no longer in a couple");
                 }
-            }
-
-            foreach (var couple in sim.Relationships.Partnerships)
-            {
-                var a = sim.GetResident(couple.FirstId);
-                var b = sim.GetResident(couple.SecondId);
-                Assert.That(RomanceRules.Compatible(a, b), Is.True, $"{label}: {a.FirstName} and {b.FirstName} are a couple but not compatible");
             }
         }
 

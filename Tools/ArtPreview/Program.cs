@@ -223,11 +223,7 @@ namespace TinyCity.Tools.ArtPreview
                 poses.Add(new ResidentPose(action, Stance.Sitting, Facing.UpRight, 1));
             }
 
-            // The starter residents, then children born in the city: a child, a teenager and a baby.
             var looks = residents.Select(r => ResidentLook.For(r.Id, r.AgeYears)).ToList();
-            looks.Add(ResidentLook.For("res-0021", 7));
-            looks.Add(ResidentLook.For("res-0022", 15));
-            looks.Add(ResidentLook.For("res-0023", 1));
 
             const int scale = 2;
             var cellW = ResidentArt.Width;

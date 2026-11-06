@@ -85,17 +85,10 @@ namespace TinyCity.Simulation.History
             text.AppendLine($"Written on {Journal.DateText(sim.Time)} in Tiny City.");
             text.AppendLine();
             text.AppendLine(r.IsAlive
-                ? $"{r.FullName} is {r.AgeYears}, {Words(r.LifeStage)}, with a birthday on day {HealthRules.BirthdayCycleDay(r)} of each {HealthRules.DaysPerYear}-day year."
+                ? $"{r.FullName} is {r.AgeYears}."
                 : $"{r.FullName} died on {Journal.DateText(r.DiedAt.Value)}, of {r.CauseOfDeath}, aged {r.AgeYears}.");
             text.AppendLine($"Personality: {r.Personality.Describe()}.");
             text.AppendLine(r.Job != null ? $"Work: {r.Job.Title}, {r.Job.DaysText()}." : $"Work: none{(string.IsNullOrEmpty(r.IncomeLabel) ? string.Empty : $" ({r.IncomeLabel.ToLowerInvariant()})")}.");
-            text.AppendLine($"Hobbies: {(r.Hobbies.Count > 0 ? string.Join(", ", r.Hobbies) : "none")}.");
-            var partnership = sim.Relationships.PartnershipOf(r.Id);
-            var partner = partnership == null ? null : sim.GetResident(partnership.OtherThan(r.Id));
-            if (partner != null)
-            {
-                text.AppendLine($"{(partnership.Stage == RomanceStage.Committed ? "Partner" : "Dating")}: {partner.FullName}, since day {partnership.Since.Day}.");
-            }
 
             var friends = sim.Residents
                 .Where(o => o != r && sim.Relationships.TryGet(r.Id, o.Id, out var rel) && rel.HaveMet && rel.Friendship >= SocialRules.GoodFriendsAt)
@@ -163,27 +156,6 @@ namespace TinyCity.Simulation.History
         }
 
         private static bool IsCoveredByTown(MemoryRecord m) =>
-            m.Tags.Any(t => t == "birthday" || t == "health" || t == "life-stage");
-
-        private static string Words(LifeStage stage)
-        {
-            switch (stage)
-            {
-                case LifeStage.YoungAdult:
-                    return "a young adult";
-                case LifeStage.MiddleAged:
-                    return "middle-aged";
-                case LifeStage.Elderly:
-                    return "elderly";
-                case LifeStage.Baby:
-                    return "a baby";
-                case LifeStage.Child:
-                    return "a child";
-                case LifeStage.Teen:
-                    return "a teenager";
-                default:
-                    return "an adult";
-            }
-        }
+            m.Tags.Any(t => t == "health");
     }
 }

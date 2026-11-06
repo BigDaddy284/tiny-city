@@ -7,39 +7,18 @@ namespace TinyCity.Simulation.History
 {
     public enum TownEventKind
     {
+        // Saved by name, so kinds can be added anywhere.
         Death,
-        Couple,
-        Committed,
-        BreakUp,
-        Reconciled,
-        Gathering,
-
-        // Added in Phase 5 for the journal. Saved by name, so the order above must not change.
-        Birthday,
-        LifeStage,
-        Illness,
-        SeriousIllness,
-        Recovered,
         Met,
         Friends,
 
-        // Added with newcomers (save version 7).
-        MovedIn,
-        Housed,
-        Homeless,
-        Born,
-        MovedOut,
-
-        // Added with jobs at the venues.
-        NewJob,
-
-        // Tiny City 2's block building.
+        /// <summary>Somebody finished a building.</summary>
         Built,
 
-        // Tiny City 2: the last resident died, and the world's legacy log was written for the next one.
+        /// <summary>The last resident died, and the world's legacy log was written for the next one.</summary>
         WorldEnded,
 
-        // Tiny City 2: the weekly town meeting and its votes on role changes.
+        /// <summary>The weekly town meeting and its votes on role changes.</summary>
         Meeting,
     }
 
