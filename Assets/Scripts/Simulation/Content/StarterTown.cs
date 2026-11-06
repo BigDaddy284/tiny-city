@@ -635,7 +635,6 @@ namespace TinyCity.Simulation.Content
                 r.Outlook = profile?.Personality ?? (DefaultPersonalities.TryGetValue(d.id, out var personality) ? personality : string.Empty);
                 if (profile != null)
                 {
-                    r.MoneyPence = profile.MoneyPence;
                     r.OwnsBusinessId = world.Businesses.Any(b => b.Id == profile.OwnsBusinessId) ? profile.OwnsBusinessId : null;
                 }
 
@@ -659,7 +658,7 @@ namespace TinyCity.Simulation.Content
         /// what type of person they are, no backstory and no business owned (someone has to choose to take one on).
         /// </summary>
         public static IReadOnlyList<ResidentProfile> DefaultProfiles() =>
-            Designs.Concat(OpenLandDesigns).Select(d => new ResidentProfile(d.id, d.first, d.last, d.age, string.Empty, 0, null,
+            Designs.Concat(OpenLandDesigns).Select(d => new ResidentProfile(d.id, d.first, d.last, d.age, string.Empty, null,
                 DefaultPersonalities.TryGetValue(d.id, out var p) ? p : null)).ToList();
 
         /// <summary>What type of person each one is, bluntly: the personalities the shipped residents.json gives (Tiny City 2).</summary>

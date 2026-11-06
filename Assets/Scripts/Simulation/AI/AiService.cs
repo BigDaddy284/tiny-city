@@ -752,7 +752,7 @@ namespace TinyCity.Simulation.AI
                         return AiReplyCheck.Invalid(error);
                     }
 
-                    var outcome = sim.ApplyConversationLine(session.Id, lineId, speakerId, reply.Say, reply.Tone, reply.Topic, reply.End, reply.GiveFood, reply.PricePence, reply.AcceptOffer, reply.GiveMoneyPence, reply.TaxPercent, reply.PayTax, reply.GiveItem, reply.GiveAmount);
+                    var outcome = sim.ApplyConversationLine(session.Id, lineId, speakerId, reply.Say, reply.Tone, reply.Topic, reply.End, reply.GiveFood, reply.AcceptOffer, reply.TaxPercent, reply.PayTax, reply.GiveItem, reply.GiveAmount);
                     switch (outcome)
                     {
                         case DecisionOutcome.Applied:
@@ -791,7 +791,7 @@ namespace TinyCity.Simulation.AI
                         return AiReplyCheck.Invalid(error);
                     }
 
-                    var outcome = sim.ApplyDecision(r.Id, decisionId, reply.Action, reply.TargetId, reply.Reason, reply.Say, reply.Then, reply.X, reply.Y, reply.What, reply.PricePence);
+                    var outcome = sim.ApplyDecision(r.Id, decisionId, reply.Action, reply.TargetId, reply.Reason, reply.Say, reply.Then, reply.X, reply.Y, reply.What);
                     switch (outcome)
                     {
                         case DecisionOutcome.Applied:

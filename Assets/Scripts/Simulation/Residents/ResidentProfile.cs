@@ -17,9 +17,8 @@ namespace TinyCity.Simulation.Residents
         public const int MaxPersonalityLength = 200;
         public const int MinAge = 18;
         public const int MaxAge = 100;
-        public static readonly long MaxMoneyPence = 100_000_000;
 
-        public ResidentProfile(string id, string firstName, string lastName, int age, string about, long moneyPence, string ownsBusinessId = null, string personality = null)
+        public ResidentProfile(string id, string firstName, string lastName, int age, string about, string ownsBusinessId = null, string personality = null)
         {
             Personality = personality ?? string.Empty;
             Id = id;
@@ -27,7 +26,6 @@ namespace TinyCity.Simulation.Residents
             LastName = lastName;
             Age = age;
             About = about ?? string.Empty;
-            MoneyPence = moneyPence;
             OwnsBusinessId = string.IsNullOrWhiteSpace(ownsBusinessId) ? null : ownsBusinessId;
         }
 
@@ -45,8 +43,6 @@ namespace TinyCity.Simulation.Residents
 
         /// <summary>A few lines of personality and background, given to the AI.</summary>
         public string About { get; }
-
-        public long MoneyPence { get; }
 
         /// <summary>The business they start as boss of, or null.</summary>
         public string OwnsBusinessId { get; }
@@ -129,13 +125,6 @@ namespace TinyCity.Simulation.Residents
                 }
 
                 var about = TextRules.Clean(Text(p, "about"), ResidentProfile.MaxAboutLength);
-                var pounds = Number(p, "money", 0);
-                if (pounds < 0 || pounds * 100 > ResidentProfile.MaxMoneyPence)
-                {
-                    problems.Add($"{label}: money must be from 0 to {ResidentProfile.MaxMoneyPence / 100}, so they start with none.");
-                    pounds = 0;
-                }
-
                 var owns = Text(p, "owns");
                 if (!string.IsNullOrEmpty(owns))
                 {
@@ -151,7 +140,7 @@ namespace TinyCity.Simulation.Residents
                     }
                 }
 
-                profiles.Add(new ResidentProfile(id, first, last, (int)age, about, (long)Math.Round(pounds * 100), owns, TextRules.Clean(Text(p, "personality"), ResidentProfile.MaxPersonalityLength)));
+                profiles.Add(new ResidentProfile(id, first, last, (int)age, about, owns, TextRules.Clean(Text(p, "personality"), ResidentProfile.MaxPersonalityLength)));
             }
 
             return profiles;
@@ -186,7 +175,6 @@ namespace TinyCity.Simulation.Residents
                     ["age"] = p.Age,
                     ["personality"] = p.Personality,
                     ["about"] = p.About,
-                    ["money"] = p.MoneyPence / 100.0,
                 };
                 if (p.OwnsBusinessId != null)
                 {

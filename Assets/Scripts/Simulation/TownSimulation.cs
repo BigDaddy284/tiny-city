@@ -418,7 +418,7 @@ namespace TinyCity.Simulation
         /// <see cref="ActivityPlanner.FreeTimeOptions"/> right now. Reason and speech are cleaned and shortened.
         /// </summary>
         public DecisionOutcome ApplyDecision(string residentId, long decisionId, string actionId, string targetId, string reason, string say, IReadOnlyList<PlanStep> then = null,
-            int? x = null, int? y = null, string what = null, long? pricePence = null)
+            int? x = null, int? y = null, string what = null)
         {
             var r = GetResident(residentId);
             if (r == null)
@@ -499,12 +499,6 @@ namespace TinyCity.Simulation
             if (why.Length == 0)
             {
                 why = option.Activity == null ? "Felt like taking it easy" : $"Fancied {option.Activity.Verb}";
-            }
-
-            if (option.Activity == ActivityCatalog.RunStall)
-            {
-                // Tiny City 2: the stall-holder names their own price; with none given, they keep the last one.
-                r.StallPricePence = MoneyInUse ? Math.Max(0, pricePence ?? r.StallPricePence) : 0;
             }
 
             r.ResetActivity();
@@ -791,7 +785,7 @@ namespace TinyCity.Simulation
 
         /// <summary>Applies an AI-written conversation line, after checking it is for the turn the conversation is waiting on.</summary>
         public DecisionOutcome ApplyConversationLine(string conversationId, long lineRequestId, string speakerId, string text, string tone, string topic, bool wantsToEnd,
-            int giveFood = 0, long pricePence = 0, bool acceptOffer = false, long giveMoneyPence = 0, int taxPercent = 0, bool payTax = false,
+            int giveFood = 0, bool acceptOffer = false, int taxPercent = 0, bool payTax = false,
             string giveItem = null, int giveAmount = 0)
         {
             var session = GetConversation(conversationId);
@@ -817,8 +811,8 @@ namespace TinyCity.Simulation
                 parsedTone = ConversationTone.Neutral;
             }
 
-            ApplyFoodInChat(session, speaker, giveFood, pricePence, acceptOffer);
-            ApplyMoneyAndTaxInChat(session, speaker, giveMoneyPence, taxPercent, payTax);
+            ApplyFoodInChat(session, speaker, giveFood, acceptOffer);
+            ApplyTaxInChat(session, speaker, taxPercent, payTax);
             ApplyGoodsInChat(session, speaker, giveItem, giveAmount);
             AddLine(session, clean, parsedTone, fromAi: true, SocialRules.CleanTopic(topic), wantsToEnd);
             return DecisionOutcome.Applied;

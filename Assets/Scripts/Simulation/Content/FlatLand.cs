@@ -159,11 +159,8 @@ namespace TinyCity.Simulation.Content
 
                 // Owner, 6 November: nobody arrives with food; v1's starting groceries would become cooked meals.
                 r.Groceries = 0;
-                if (profiles == null)
-                {
-                    // Tiny City 2 has no money to start with (owner, 5 November): they barter.
-                    r.MoneyPence = 0;
-                }
+                // Owner, 6 November: there is no money in Tiny City 2 at all.
+                r.MoneyPence = 0;
             }
 
             return residents.Take(spots.Count).ToList();

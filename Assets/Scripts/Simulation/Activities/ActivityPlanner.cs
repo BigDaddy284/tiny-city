@@ -590,7 +590,7 @@ namespace TinyCity.Simulation.Activities
 
         /// <summary>What an option costs: a business's price, or what the stall-holder asks for a portion (Tiny City 2).</summary>
         private long PriceFor(ActivityDefinition activity, WorldObject obj) =>
-            activity == ActivityCatalog.BuyFood && Food?.SellerAt?.Invoke(obj) is Resident seller ? seller.StallPricePence : economy?.PriceOf(activity, obj) ?? 0;
+            activity == ActivityCatalog.BuyFood ? 0 : economy?.PriceOf(activity, obj) ?? 0;
 
         /// <summary>Whether something more important should stop the resident's current activity.</summary>
         public bool ShouldInterrupt(Resident resident, ActivityDefinition current, GameTime time)

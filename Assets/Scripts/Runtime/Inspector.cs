@@ -895,11 +895,6 @@ namespace TinyCity.Runtime
             {
                 GUILayout.Label(wanted == TownSimulation.RoleNone ? "Asked to give up their role at the next meeting" : $"Asked to become the {wanted} at the next meeting", styles.Small);
             }
-            if (Simulation.MoneyInUse)
-            {
-                GUILayout.Label($"Money: {Money.Format(r.MoneyPence)}", styles.Text);
-            }
-
             GUILayout.Space(4f);
             GUILayout.Label("CARRYING", styles.Section);
             if (r.Food.Total == 0)
@@ -967,26 +962,6 @@ namespace TinyCity.Runtime
             foreach (var trade in trades)
             {
                 GUILayout.Label($"Day {trade.Time.Day} {trade.Time.ClockText}  {trade.Summary}", styles.Small);
-            }
-
-            // Owner, 6 November: no money talk while nobody has any.
-            if (!Simulation.MoneyInUse && !Simulation.Economy.Ledger.For(r.Id).Any())
-            {
-                return;
-            }
-
-            GUILayout.Space(4f);
-            GUILayout.Label("MONEY IN AND OUT", styles.Section);
-            var payments = Simulation.Economy.Ledger.For(r.Id).Reverse().Take(10).ToList();
-            if (payments.Count == 0)
-            {
-                GUILayout.Label("No money has changed hands yet.", styles.Small);
-            }
-
-            foreach (var payment in payments)
-            {
-                var sign = payment.AmountPence >= 0 ? "+" : string.Empty;
-                GUILayout.Label($"Day {payment.Time.Day} {payment.Time.ClockText}  {sign}{Money.Format(payment.AmountPence)}  {payment.Description}", styles.Small);
             }
         }
 

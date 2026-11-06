@@ -12,12 +12,11 @@ namespace TinyCity.Simulation.AI
     /// <summary>What the AI wrote for one line of a conversation, before the game checks it.</summary>
     public sealed class DialogueReply
     {
-        public DialogueReply(string say, string tone, string topic, bool end, int giveFood = 0, long pricePence = 0, bool acceptOffer = false,
-            long giveMoneyPence = 0, int taxPercent = 0, bool payTax = false, string giveItem = null, int giveAmount = 0)
+        public DialogueReply(string say, string tone, string topic, bool end, int giveFood = 0, bool acceptOffer = false,
+            int taxPercent = 0, bool payTax = false, string giveItem = null, int giveAmount = 0)
         {
             GiveItem = giveItem;
             GiveAmount = giveAmount;
-            GiveMoneyPence = giveMoneyPence;
             TaxPercent = taxPercent;
             PayTax = payTax;
             Say = say;
@@ -25,18 +24,11 @@ namespace TinyCity.Simulation.AI
             Topic = topic;
             End = end;
             GiveFood = giveFood;
-            PricePence = pricePence;
             AcceptOffer = acceptOffer;
         }
 
         /// <summary>Tiny City 2: portions of food offered to the other person (0 for none).</summary>
         public int GiveFood { get; }
-
-        /// <summary>What the offer costs them, in pence; 0 is a gift.</summary>
-        public long PricePence { get; }
-
-        /// <summary>Tiny City 2: money handed to the other person now, in pence.</summary>
-        public long GiveMoneyPence { get; }
 
         /// <summary>Tiny City 2: the share of the other person's goods a tax man asks for (0 for none).</summary>
         public int TaxPercent { get; }
@@ -119,12 +111,9 @@ namespace TinyCity.Simulation.AI
             }
 
             var food = sim.FoodMustBeMade;
-            var money = sim.MoneyInUse;
             if (food)
             {
-                sb.AppendLine(money
-                    ? $"Your food: {speaker.Food.Describe(sim.Time.Day)}. Your money: {Economy.Money.Format(speaker.MoneyPence)}."
-                    : $"Your food: {speaker.Food.Describe(sim.Time.Day)}. {PromptText.NoMoney}");
+                sb.AppendLine($"Your food: {speaker.Food.Describe(sim.Time.Day)}. {PromptText.NoMoney}");
                 sb.AppendLine($"Your things: {speaker.Belongings.Describe()}; clean water: {speaker.CleanWater}. {listener.FirstName}'s things: {listener.Food.Describe(sim.Time.Day)}; {listener.Belongings.Describe()}; clean water: {listener.CleanWater}.");
                 if (sim.RolesLimitSkills)
                 {
@@ -133,8 +122,7 @@ namespace TinyCity.Simulation.AI
                 var offer = session.FoodOffer;
                 if (offer != null && offer.ToId == speaker.Id)
                 {
-                    sb.AppendLine($"{listener.FirstName} has just offered you {offer.Portions} portion{(offer.Portions == 1 ? string.Empty : "s")} of food " +
-                        (offer.PricePence > 0 ? $"for {Economy.Money.Format(offer.PricePence)}." : money ? "as a gift." : "."));
+                    sb.AppendLine($"{listener.FirstName} has just offered you {offer.Portions} portion{(offer.Portions == 1 ? string.Empty : "s")} of food.");
                 }
 
                 var demand = session.TaxDemand;
@@ -150,15 +138,9 @@ namespace TinyCity.Simulation.AI
               .Append("and \"end\" is true if you want to wrap up the chat.");
             if (food)
             {
-                sb.Append(money
-                        ? " If you want to hand over some of your food, \"give_food\" is how many portions (any number up to what you have) and \"price\" what you ask for them in pounds (0 for a gift); otherwise give_food is 0."
-                        : " If you want to hand over some of your food, \"give_food\" is how many portions (any number up to what you have); otherwise give_food is 0.")
+                sb.Append(" If you want to hand over some of your food, \"give_food\" is how many portions (any number up to what you have); otherwise give_food is 0.")
                   .Append(" \"accept_food\" is true if you take food you have just been offered.")
                   .Append($" To hand over a material or tool now, \"give_item\" is one of {string.Join(", ", Economy.CraftingRules.ItemNames)} and \"give_amount\" how many (for materials and clean water); otherwise leave give_item out.");
-                if (money)
-                {
-                    sb.Append(" \"give_money\" is pounds you hand over to them now, as a gift, a wage or a payment (0 for none).");
-                }
                 if (sim.Brief.CanTax(speaker.Role))
                 {
                     sb.Append($" As the {speaker.Role}, \"tax\" is the percentage of their food and materials you ask them to hand over (0 to ask for nothing); they decide whether to pay.");
@@ -185,9 +167,7 @@ namespace TinyCity.Simulation.AI
                     ["topic"] = new Dictionary<string, object> { ["type"] = "string" },
                     ["end"] = new Dictionary<string, object> { ["type"] = "boolean" },
                     ["give_food"] = new Dictionary<string, object> { ["type"] = "integer" },
-                    ["price"] = new Dictionary<string, object> { ["type"] = "number" },
                     ["accept_food"] = new Dictionary<string, object> { ["type"] = "boolean" },
-                    ["give_money"] = new Dictionary<string, object> { ["type"] = "number" },
                     ["tax"] = new Dictionary<string, object> { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 100 },
                     ["pay_tax"] = new Dictionary<string, object> { ["type"] = "boolean" },
                     ["give_item"] = new Dictionary<string, object> { ["type"] = "string" },
@@ -214,10 +194,8 @@ namespace TinyCity.Simulation.AI
             }
 
             var give = AiJson.TryGetNumber(obj, "give_food", out var g) && g >= 1 && g <= int.MaxValue ? (int)g : 0;
-            var price = AiJson.TryGetNumber(obj, "price", out var p) ? FoodRules.PenceFromPounds(p) : 0;
             reply = new DialogueReply(say, AiJson.GetString(obj, "tone"), AiJson.GetString(obj, "topic"), AiJson.TryGetBool(obj, "end", out var end) && end,
-                give, price, AiJson.TryGetBool(obj, "accept_food", out var accept) && accept,
-                AiJson.TryGetNumber(obj, "give_money", out var m) ? FoodRules.PenceFromPounds(m) : 0,
+                give, AiJson.TryGetBool(obj, "accept_food", out var accept) && accept,
                 AiJson.TryGetInt(obj, "tax", out var tax) && tax > 0 && tax <= 100 ? tax : 0,
                 AiJson.TryGetBool(obj, "pay_tax", out var pay) && pay,
                 TextRules.Clean(AiJson.GetString(obj, "give_item"), 40) is var item && item.Length > 0 && !item.Equals("none", StringComparison.OrdinalIgnoreCase) ? item : null,

@@ -24,8 +24,6 @@ namespace TinyCity.Tests.EditMode
             Assert.That(problems, Is.Empty);
             Assert.That(profiles.Count, Is.EqualTo(StarterTown.OpenLandResidentIds.Count));
 
-            // Tiny City 2's shipped profiles start everyone with no money (owner, 5 November), as the open land does without them.
-            Assert.That(profiles.All(p => p.MoneyPence == 0), Is.True);
             var fromProfiles = FlatLand.CreateNewGame(profiles);
             var designed = FlatLand.CreateNewGame();
             Assert.That(SaveSerializer.Save(fromProfiles), Is.EqualTo(SaveSerializer.Save(designed)));
@@ -47,7 +45,6 @@ namespace TinyCity.Tests.EditMode
             var rosa = sim.Residents[0];
             Assert.That(rosa.FullName, Is.EqualTo("Rosa Grey"));
             Assert.That(rosa.AgeYears, Is.EqualTo(50));
-            Assert.That(rosa.MoneyPence, Is.EqualTo(7550));
             Assert.That(rosa.About, Is.EqualTo("Runs the shop and knows every price."));
             Assert.That(rosa.OwnsBusinessId, Is.EqualTo("biz-store"));
             Assert.That(sim.Residents[1].FirstName, Is.EqualTo("Mae"));
@@ -61,18 +58,17 @@ namespace TinyCity.Tests.EditMode
                 "{\"id\":\"res-0099\",\"firstName\":\"Stranger\",\"age\":30}," +
                 "{\"id\":\"res-0001\",\"firstName\":\"\",\"age\":30}," +
                 "{\"id\":\"res-0002\",\"firstName\":\"Arthur\",\"age\":12}," +
-                "{\"id\":\"res-0003\",\"firstName\":\"Nell\",\"age\":27,\"money\":-5,\"owns\":\"biz-moon\"}," +
+                "{\"id\":\"res-0003\",\"firstName\":\"Nell\",\"age\":27,\"owns\":\"biz-moon\"}," +
                 "{\"id\":\"res-0004\",\"firstName\":\"Rosa\",\"age\":46,\"owns\":\"biz-store\"}," +
                 "{\"id\":\"res-0005\",\"firstName\":\"Tom\",\"age\":31,\"owns\":\"biz-store\"}," +
                 "{\"id\":\"res-0004\",\"firstName\":\"Rosa again\",\"age\":46}]}";
             var profiles = Parse(json, out var problems);
 
             Assert.That(profiles.Select(p => p.Id), Is.EqualTo(new[] { "res-0003", "res-0004", "res-0005" }));
-            Assert.That(profiles[0].MoneyPence, Is.EqualTo(0));
             Assert.That(profiles[0].OwnsBusinessId, Is.Null);
             Assert.That(profiles[1].OwnsBusinessId, Is.EqualTo("biz-store"));
             Assert.That(profiles[2].OwnsBusinessId, Is.Null);
-            Assert.That(problems.Count, Is.EqualTo(8));
+            Assert.That(problems.Count, Is.EqualTo(7));
         }
 
         [TestCase("not json")]

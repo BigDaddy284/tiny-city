@@ -70,7 +70,7 @@ namespace TinyCity.Simulation
         }
 
         /// <summary>What each stall-holder has sold since they set up (not saved).</summary>
-        private readonly Dictionary<string, (int portions, long pence)> stallSales = new Dictionary<string, (int, long)>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> stallSales = new Dictionary<string, int>(StringComparer.Ordinal);
 
         /// <summary>The living resident selling food at this stall right now, or null.</summary>
         private Resident SellerAt(WorldObject stall) => stall == null ? null : residents.FirstOrDefault(o =>
@@ -87,7 +87,7 @@ namespace TinyCity.Simulation
 
             if (activity == ActivityCatalog.RunStall)
             {
-                stallSales[r.Id] = (0, 0);
+                stallSales[r.Id] = 0;
                 return true;
             }
 
@@ -104,13 +104,6 @@ namespace TinyCity.Simulation
                 return false;
             }
 
-            var price = seller.StallPricePence;
-            if (r.MoneyPence < price)
-            {
-                reason = $"they couldn't afford it ({Money.Format(price)})";
-                return false;
-            }
-
             var kind = seller.Food.Count(FoodKind.Meal) > 0 ? FoodKind.Meal : seller.Food.Batches.First().Kind;
             if (seller.Food.MoveTo(r.Food, 1) == 0)
             {
@@ -118,22 +111,19 @@ namespace TinyCity.Simulation
                 return false;
             }
 
-            Pay(r, seller, price, FoodRules.Portions(kind, 1));
-            var paid = price > 0 ? $" for {Money.Format(price)}" : " for nothing";
-            var sold = stallSales.TryGetValue(seller.Id, out var so) ? so : (0, 0L);
-            stallSales[seller.Id] = (sold.Item1 + 1, sold.Item2 + price);
-            r.AddLog(Time, $"{(price > 0 ? "Bought" : "Was given")} {FoodRules.Portions(kind, 1)} from {seller.FullName}{paid}");
-            seller.AddLog(Time, $"{(price > 0 ? "Sold" : "Gave")} {FoodRules.Portions(kind, 1)} to {r.FullName}{paid}");
-            Memories.Add(r.Id, Time, MemoryType.Event, 3, price > 0 ? $"I bought {FoodRules.Portions(kind, 1)} from {seller.FullName} at a market stall for {Money.Format(price)}." : $"{seller.FullName} gave me {FoodRules.Portions(kind, 1)} at a market stall.",
+            stallSales[seller.Id] = (stallSales.TryGetValue(seller.Id, out var given) ? given : 0) + 1;
+            r.AddLog(Time, $"Was handed {FoodRules.Portions(kind, 1)} by {seller.FullName}");
+            seller.AddLog(Time, $"Handed {FoodRules.Portions(kind, 1)} to {r.FullName}");
+            Memories.Add(r.Id, Time, MemoryType.Event, 3, $"{seller.FullName} handed me {FoodRules.Portions(kind, 1)} at a market stall.",
                 new[] { seller.Id }, new[] { seller.Id, "food", TradeTag });
             return true;
         }
 
         /// <summary>
-        /// Tiny City 2: what a chat line did with food. A speaker may offer some of their food (free, or for a price),
-        /// and the other person's next line may accept it; the game moves the food and money only if both still can.
+        /// Tiny City 2: what a chat line did with food. A speaker may offer some of their food, and the other person's
+        /// next line may accept it; the game moves the food only if the giver still has it. There is no money.
         /// </summary>
-        private void ApplyFoodInChat(ConversationSession session, Resident speaker, int giveFood, long pricePence, bool acceptOffer)
+        private void ApplyFoodInChat(ConversationSession session, Resident speaker, int giveFood, bool acceptOffer)
         {
             if (!FoodMustBeMade)
             {
@@ -152,22 +142,16 @@ namespace TinyCity.Simulation
                     {
                         speaker.AddLog(Time, $"{giver.FirstName} had no food left to give after all");
                     }
-                    else if (speaker.MoneyPence < offer.PricePence)
-                    {
-                        speaker.AddLog(Time, $"Couldn't afford the food {giver.FirstName} offered ({Money.Format(offer.PricePence)})");
-                    }
                     else
                     {
                         var moved = giver.Food.MoveTo(speaker.Food, portions);
                         if (moved > 0)
                         {
                             var what = $"{moved} portion{(moved == 1 ? string.Empty : "s")} of food";
-                            Pay(speaker, giver, offer.PricePence, what);
-                            var price = offer.PricePence > 0 ? $" for {Money.Format(offer.PricePence)}" : " for nothing";
-                            giver.AddLog(Time, $"Gave {speaker.FullName} {what}{price}");
-                            speaker.AddLog(Time, $"Got {what} from {giver.FullName}{price}");
-                            Memories.Add(giver.Id, Time, MemoryType.Event, 4, offer.PricePence > 0 ? $"I sold {speaker.FullName} {what} for {Money.Format(offer.PricePence)}." : $"I gave {speaker.FullName} {what}.", new[] { speaker.Id }, new[] { speaker.Id, "food", TradeTag });
-                            Memories.Add(speaker.Id, Time, MemoryType.Event, 4, offer.PricePence > 0 ? $"{giver.FullName} sold me {what} for {Money.Format(offer.PricePence)}." : $"{giver.FullName} gave me {what}.", new[] { giver.Id }, new[] { giver.Id, "food", TradeTag });
+                            giver.AddLog(Time, $"Gave {speaker.FullName} {what}");
+                            speaker.AddLog(Time, $"Got {what} from {giver.FullName}");
+                            Memories.Add(giver.Id, Time, MemoryType.Event, 4, $"I gave {speaker.FullName} {what}.", new[] { speaker.Id }, new[] { speaker.Id, "food", TradeTag });
+                            Memories.Add(speaker.Id, Time, MemoryType.Event, 4, $"{giver.FullName} gave me {what}.", new[] { giver.Id }, new[] { giver.Id, "food", TradeTag });
                         }
                     }
                 }
@@ -178,7 +162,7 @@ namespace TinyCity.Simulation
                 var other = session.ParticipantIds.FirstOrDefault(id => id != speaker.Id);
                 if (other != null)
                 {
-                    session.FoodOffer = new FoodOffer(speaker.Id, other, Math.Min(giveFood, speaker.Food.Total), Math.Max(0, Math.Min(pricePence, FoodRules.LargestPricePence)));
+                    session.FoodOffer = new FoodOffer(speaker.Id, other, Math.Min(giveFood, speaker.Food.Total));
                 }
             }
         }
@@ -249,14 +233,11 @@ namespace TinyCity.Simulation
             Memories.Add(other.Id, Time, MemoryType.Event, 4, $"{speaker.FullName} gave me {what}.", new[] { speaker.Id }, new[] { speaker.Id, "goods", TradeTag });
         }
 
-        /// <summary>Tiny City 2: whether anyone alive has any money; while nobody does, prompts leave money out.</summary>
-        public bool MoneyInUse => Residents.Any(r => r.IsAlive && r.MoneyPence > 0);
-
         /// <summary>Tiny City 2: a resident's trades, newest first.</summary>
         public IEnumerable<MemoryRecord> TradesOf(string residentId) =>
             Memories.ForResident(residentId).Where(m => m.Tags.Contains(TradeTag)).OrderByDescending(m => m.Time.TotalMinutes).ThenByDescending(m => m.Id, StringComparer.Ordinal);
 
-        private void ApplyMoneyAndTaxInChat(ConversationSession session, Resident speaker, long giveMoneyPence, int taxPercent, bool payTax)
+        private void ApplyTaxInChat(ConversationSession session, Resident speaker, int taxPercent, bool payTax)
         {
             if (!FoodMustBeMade)
             {
@@ -291,22 +272,6 @@ namespace TinyCity.Simulation
             if (other == null)
             {
                 return;
-            }
-
-            if (giveMoneyPence > 0)
-            {
-                var amount = Math.Min(giveMoneyPence, Math.Max(0, speaker.MoneyPence));
-                if (amount > 0)
-                {
-                    speaker.MoneyPence -= amount;
-                    other.MoneyPence += amount;
-                    Economy.Ledger.Add(Time, speaker.Id, -amount, TransactionKind.Gift, $"handed to {other.FullName}");
-                    Economy.Ledger.Add(Time, other.Id, amount, TransactionKind.Gift, $"from {speaker.FullName}");
-                    speaker.AddLog(Time, $"Gave {other.FullName} {Money.Format(amount)}");
-                    other.AddLog(Time, $"Got {Money.Format(amount)} from {speaker.FullName}");
-                    Memories.Add(speaker.Id, Time, MemoryType.Event, 4, $"I gave {other.FullName} {Money.Format(amount)}.", new[] { other.Id }, new[] { other.Id, "money", TradeTag });
-                    Memories.Add(other.Id, Time, MemoryType.Event, 4, $"{speaker.FullName} gave me {Money.Format(amount)}.", new[] { speaker.Id }, new[] { speaker.Id, "money", TradeTag });
-                }
             }
 
             if (taxPercent > 0 && Brief.CanTax(speaker.Role))
@@ -347,32 +312,16 @@ namespace TinyCity.Simulation
             return parts.Count == 0 ? "nothing, as they had too little" : string.Join(", ", parts);
         }
 
-        /// <summary>Money between residents for food, through the ledger.</summary>
-        private void Pay(Resident buyer, Resident seller, long pence, string what)
-        {
-            if (pence <= 0)
-            {
-                return;
-            }
-
-            buyer.MoneyPence -= pence;
-            seller.MoneyPence += pence;
-            Economy.Ledger.Add(Time, buyer.Id, -pence, TransactionKind.Purchase, $"{what} from {seller.FullName}");
-            Economy.Ledger.Add(Time, seller.Id, pence, TransactionKind.Sale, $"{what} for {buyer.FullName}");
-        }
-
         private void FinishFood(Resident r, ActivityDefinition activity)
         {
             if (FoodMustBeMade && activity == ActivityCatalog.RunStall)
             {
-                stallSales.TryGetValue(r.Id, out var sold);
+                stallSales.TryGetValue(r.Id, out var handed);
                 stallSales.Remove(r.Id);
-                var note = sold.portions == 0
-                    ? "I sold food at a market stall, but nobody bought any."
-                    : sold.pence == 0
-                    ? $"I gave away {sold.portions} portion{(sold.portions == 1 ? string.Empty : "s")} of food at a market stall."
-                    : $"I sold {sold.portions} portion{(sold.portions == 1 ? string.Empty : "s")} of food at a market stall for {Money.Format(sold.pence)}, asking {Money.Format(r.StallPricePence)} a portion.";
-                r.AddLog(Time, sold.portions == 0 ? "Packed up the stall: nobody bought anything" : $"Packed up the stall: sold {sold.portions} for {Money.Format(sold.pence)}");
+                var note = handed == 0
+                    ? "I ran a market stall, but nobody came for food."
+                    : $"I handed out {handed} portion{(handed == 1 ? string.Empty : "s")} of food at a market stall.";
+                r.AddLog(Time, handed == 0 ? "Packed up the stall: nobody came" : $"Packed up the stall: handed out {handed}");
                 Memories.Add(r.Id, Time, MemoryType.Event, 3, note, tags: new[] { "food", "stall", r.TargetObjectId, TradeTag });
                 return;
             }
