@@ -115,7 +115,10 @@ namespace TinyCity.Tests.EditMode
             sim.Tick();
             TestTown.Answer(sim);
             Mabel(sim).Needs[NeedType.Thirst] = 5;
+            sim.Tick();
+            Assert.That(sim.ActiveConversations, Is.Not.Empty, "owner's AI log, 7 November: with nothing to drink, leaving wouldn't help, so she stays");
 
+            Mabel(sim).CleanWater = 1;
             sim.Tick();
 
             Assert.That(sim.ActiveConversations, Is.Empty);

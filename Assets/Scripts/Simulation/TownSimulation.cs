@@ -260,7 +260,7 @@ namespace TinyCity.Simulation
                     }
 
                     var leaveReason = SocialRules.ReasonToLeave(r, Time);
-                    if (leaveReason != null)
+                    if (leaveReason != null && CanSeeToUrgentNeed(r))
                     {
                         EndConversation(conversation, r, leaveReason);
                     }
@@ -427,6 +427,27 @@ namespace TinyCity.Simulation
         }
 
         /// <summary>
+        /// Whether something they could do right now would see to their most urgent need. Owner's AI log of 7 November:
+        /// starving people with nothing to eat walked out of every chat ("hunger couldn't wait") only to choose another
+        /// chat, so a need with nothing to meet it no longer ends a chat.
+        /// </summary>
+        private bool CanSeeToUrgentNeed(Resident r)
+        {
+            switch (ActivityPlanner.MostUrgentNeed(r))
+            {
+                case null:
+                    return false;
+                case NeedType.Hunger:
+                    return r.Food.Count(FoodKind.Meal) > 0 || (Food.MayTakeFromStore(r) && Food.Store.Food.Count(FoodKind.Meal) > 0);
+                case NeedType.Thirst:
+                case NeedType.Hygiene:
+                    return r.CleanWater > 0 || (Food.MayTakeFromStore(r) && Food.Store.Water > 0);
+                default:
+                    return true;
+            }
+        }
+
+        /// <summary>
         /// Tiny City 2: why a resident can't plant or start building at this spot, or null if they can: it must be
         /// open ground on an outdoor map that they can reach, with nothing on it and no building planned over it.
         /// Owner, 6 November: crops grow only in the farming patch (soil), and nobody builds on it.
@@ -467,6 +488,11 @@ namespace TinyCity.Simulation
                 return "they can't get there";
             }
 
+            if (activity == ActivityCatalog.PlanBuilding && AI.SketchPrompt.Room(this, spot, null) is var room && room < Building.BuildingRules.MinBuildRoom)
+            {
+                return $"only {room} by {room} paces are clear there, and a building needs at least {Building.BuildingRules.MinBuildRoom} by {Building.BuildingRules.MinBuildRoom}";
+            }
+
             return null;
         }
 
@@ -490,7 +516,7 @@ namespace TinyCity.Simulation
                     foreach (var dx in new[] { -(d - Math.Abs(dy)), d - Math.Abs(dy) }.Distinct())
                     {
                         var spot = new Location(map.Id, here.X + dx, here.Y + dy);
-                        if (free.Count < count && !(map.InBounds(spot.Position) && (map.GetTile(spot.Position) == TileType.Path || map.GetTile(spot.Position) == TileType.Garden)) && GroundProblem(r, spot) == null)
+                        if (free.Count < count && !(map.InBounds(spot.Position) && (map.GetTile(spot.Position) == TileType.Path || map.GetTile(spot.Position) == TileType.Garden)) && GroundProblem(r, spot, ActivityCatalog.PlanBuilding) == null)
                         {
                             free.Add(spot);
                         }

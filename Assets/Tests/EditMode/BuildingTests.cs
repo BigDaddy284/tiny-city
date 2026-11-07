@@ -125,6 +125,25 @@ namespace TinyCity.Tests.EditMode
         }
 
         [Test]
+        public void ABuildingSpot_NeedsRoom_AndACrampedOneIsMovedToOneWithRoom()
+        {
+            var sim = Town();
+            var r = sim.Residents[0];
+            sim.Tick();
+            var map = sim.World.GetMap(r.Location.MapId);
+            var edge = new TinyCity.Simulation.World.Location(map.Id, map.Width - 2, 5);
+            Assert.That(sim.GroundProblem(r, edge), Is.Null, "planting or standing there is fine");
+            Assert.That(sim.GroundProblem(r, edge, ActivityCatalog.PlanBuilding), Does.Contain("paces are clear"), "owner's AI log, 7 November: no building spot without room");
+            Assert.That(sim.FreeGroundNear(r, 5, 10).All(s => SketchPrompt.Room(sim, s, null) >= BuildingRules.MinBuildRoom), Is.True, "suggested spots have room");
+
+            Assert.That(sim.ApplyDecision(r.Id, r.PendingDecisionId, "plan-building", "ground", "Home", null, edge.Position.X, edge.Position.Y), Is.EqualTo(DecisionOutcome.Applied));
+            var site = sim.Construction.Sites.Single();
+            Assert.That(site.Corner, Is.Not.EqualTo(edge));
+            Assert.That(SketchPrompt.Room(sim, site.Corner, site.Id), Is.GreaterThanOrEqualTo(BuildingRules.MinBuildRoom));
+            Assert.That(SketchPrompt.UserText(sim, r, new PendingSketch(1, site.Id, 0)), Does.Not.Contain(".B.").And.Contain("WWDDWW"), "the example uses only letters a plan may have");
+        }
+
+        [Test]
         public void APlan_MustFitTheGround_AndShutNothingIn()
         {
             var sim = Town();
