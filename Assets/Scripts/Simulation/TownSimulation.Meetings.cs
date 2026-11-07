@@ -281,23 +281,10 @@ namespace TinyCity.Simulation
             History.Add(Time, TownEventKind.Meeting, $"The town meeting ({present.Count} came). {votesText}", present.Select(o => o.Id).ToArray());
         }
 
-        /// <summary>The open land's costs and gains as an activity finishes: washing in the dirty pond hurts, cleaning water fills their flasks.</summary>
+        /// <summary>Cleaning water fills the water purifier's flasks as the activity finishes.</summary>
         private void FinishOpenLand(Resident r, ActivityDefinition activity)
         {
-            if (activity == ActivityCatalog.WashInPond)
-            {
-                r.Health = Math.Max(LowestHealth, r.Health - FoodRules.PondWashHealthCost);
-                const string felt = "Washing in the dirty pond left my skin itching";
-                r.AddLog(Time, felt);
-
-                // Remembered once a day for each, so it comes back to them when they next think about drinking or eating.
-                var tag = activity.Id;
-                if (!Memories.ForResident(r.Id).Any(m => m.Time.Day == Time.Day && m.Tags.Contains(tag) && m.Tags.Contains("felt-ill")))
-                {
-                    Memories.Add(r.Id, Time, MemoryType.Event, 5, felt + ".", tags: new[] { tag, "felt-ill", "health", "water", "food" });
-                }
-            }
-            else if (activity == ActivityCatalog.PurifyWater)
+            if (activity == ActivityCatalog.PurifyWater)
             {
                 var made = Math.Min(FoodRules.PurifyPortions, FoodRules.MaxCleanWater - r.CleanWater);
                 r.CleanWater += made;

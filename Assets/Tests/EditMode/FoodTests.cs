@@ -354,7 +354,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(sim.ApplyDecision(other.Id, other.PendingDecisionId, "plant-crops", "ground", "Food"), Is.EqualTo(DecisionOutcome.Applied), "no spot given");
 
             var third = sim.Residents[2];
-            Assert.That(sim.ApplyDecision(third.Id, third.PendingDecisionId, "wash-pond", "obj-nowhere", "Grubby"), Is.EqualTo(DecisionOutcome.Applied), "the wrong target: the nearest place to wash");
+            Assert.That(sim.ApplyDecision(third.Id, third.PendingDecisionId, "catch-fish", "obj-nowhere", "Hungry"), Is.EqualTo(DecisionOutcome.Applied), "the wrong target: the nearest place to fish");
 
             var fourth = sim.Residents[3];
             var only = sim.FreeTimeOptionsFor(fourth).GroupBy(o => o.TargetId).First(g => g.Count() == 1).Single();

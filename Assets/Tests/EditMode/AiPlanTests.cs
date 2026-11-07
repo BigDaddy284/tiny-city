@@ -77,12 +77,12 @@ namespace TinyCity.Tests.EditMode
         public void AGoneTarget_FallsBackToTheNearestForTheSameActivity()
         {
             var sim = DecidingTown(out var r);
-            var bench = sim.FreeTimeOptionsFor(r).First(o => o.ActionId == "wash-pond");
-            Relax(sim, r, new PlanStep("wash-pond", "obj-somewhere-else"));
+            var bench = sim.FreeTimeOptionsFor(r).First(o => o.ActionId == "catch-fish");
+            Relax(sim, r, new PlanStep("catch-fish", "obj-somewhere-else"));
 
             sim.Advance(TownSimulation.RelaxMinutes + 1);
 
-            Assert.That(r.ActivityId, Is.EqualTo("wash-pond"));
+            Assert.That(r.ActivityId, Is.EqualTo("catch-fish"));
             Assert.That(r.TargetObjectId, Is.EqualTo(bench.TargetId));
         }
 
@@ -117,11 +117,11 @@ namespace TinyCity.Tests.EditMode
             var sim = DecidingTown(out var r);
             var options = sim.FreeTimeOptionsFor(r);
             var content = "{\"action\":\"catch-fish\",\"target_id\":\"" + Fishing + "\",\"reason\":\"x\",\"say\":\"y\",\"then\":["
-                + "{\"action\":\"wash-pond\",\"target_id\":\"obj-flat-fishing-2\"},{\"target_id\":\"no-action\"},{\"action\":\"relax\"},{\"action\":\"paint\"}]}";
+                + "{\"action\":\"catch-fish\",\"target_id\":\"obj-flat-fishing-2\"},{\"target_id\":\"no-action\"},{\"action\":\"relax\"},{\"action\":\"paint\"}]}";
 
             Assert.That(DecisionPrompt.TryParse(content, options, out var reply, out var error), Is.True, error);
             var steps = reply.Then.Select(s => s.ActionId + "@" + (s.TargetId ?? "-")).ToList();
-            Assert.That(steps, Is.EqualTo(new List<string> { "wash-pond@obj-flat-fishing-2", "relax@-", "paint@-" }), "steps are checked against the options when the plan is made, not when it is read");
+            Assert.That(steps, Is.EqualTo(new List<string> { "catch-fish@obj-flat-fishing-2", "relax@-", "paint@-" }), "steps are checked against the options when the plan is made, not when it is read");
         }
 
         [TestCase("{\"action\":\"relax\",\"target_id\":\"none\",\"reason\":\"x\",\"say\":\"y\"}")]

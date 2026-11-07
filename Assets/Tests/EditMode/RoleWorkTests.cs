@@ -110,7 +110,7 @@ namespace TinyCity.Tests.EditMode
                 shipped.Text.Replace(
                     "without one you can do nothing for yourself: you can't fish, grow or cook food or touch the pond's dirty water, so you need each other.",
                     "without one you can only drink and wash in the dirty pond and eat raw fish and pick up fallen branches and loose stones, so you need each other."),
-                shipped.Roles.Select(role => new RoleOption(role.Name, role.Name == "cook" ? cookBefore : role.About, role.CanTax, role.Skills.Where(id => id != "gather-sticks" && id != "gather-loose-stones" && id != "wash-pond"))));
+                shipped.Roles.Select(role => new RoleOption(role.Name, role.Name == "cook" ? cookBefore : role.About, role.CanTax, role.Name == "water purifier" ? role.Skills.Concat(new[] { "wash-pond" }) : role.Skills.Where(id => id != "gather-sticks" && id != "gather-loose-stones"))));
             Assert.That(sim.Brief.Text, Does.Contain("pick up fallen branches"));
 
             var loaded = SaveSerializer.Load(SaveSerializer.Save(sim), FlatLand.CreateWorld()).Simulation;
@@ -119,7 +119,9 @@ namespace TinyCity.Tests.EditMode
             Assert.That(loaded.Brief.Find("miner").Skills, Does.Contain("gather-loose-stones"));
             Assert.That(loaded.Brief.Text, Does.Not.Contain("pick up fallen branches").And.Not.Contain("eat raw").And.Contain("you can't fish, grow or cook food"));
             Assert.That(loaded.Brief.Find("cook").About, Is.EqualTo(shipped.Find("cook").About), "the cook's old words about raw food are replaced");
-            Assert.That(loaded.Brief.Find("water purifier").Skills, Does.Contain("wash-pond"));
+            Assert.That(loaded.Brief.Find("water purifier").Skills, Does.Not.Contain("wash-pond"), "owner, 7 November: washing in the pond is gone");
+            TakeRole(loaded, loaded.Residents[1], "water purifier");
+            Assert.That(Options(loaded, loaded.Residents[1]).Contains("wash-pond"), Is.False);
             var r = loaded.Residents[0];
             Assert.That(Options(loaded, r).Contains("gather-sticks"), Is.False);
             TakeRole(loaded, r, "lumberjack");
@@ -130,7 +132,7 @@ namespace TinyCity.Tests.EditMode
         public void Brief_ListsWhatEachRoleCanDo_AndRejectsUnknownWork()
         {
             Assert.That(WorldBrief.Default.Find("lumberjack").Skills, Does.Contain("gather-wood"));
-            Assert.That(WorldBrief.Default.Find("water purifier").Skills, Is.EqualTo(new[] { "purify-water", "wash-pond" }));
+            Assert.That(WorldBrief.Default.Find("water purifier").Skills, Is.EqualTo(new[] { "purify-water" }));
             Assert.That(WorldBrief.Default.Text, Does.Contain("majority vote at the weekly meeting"));
             var brief = ResidentProfiles.ParseBrief("{\"roles\":[{\"name\":\"digger\",\"about\":\"digs\",\"can\":[\"gather-stone\",\"juggling\"]}]}", out var problems);
             Assert.That(brief.Find("digger").Skills, Is.EqualTo(new[] { "gather-stone" }));
@@ -141,7 +143,7 @@ namespace TinyCity.Tests.EditMode
             Assert.That(brief.MayDo(null, "drink-clean"), Is.True, "everyday things are open to everyone");
             Assert.That(brief.MayDo(null, "wash-clean"), Is.True);
             Assert.That(brief.MayDo(null, "catch-fish"), Is.False, "owner, 6 November: only a fisher catches fish");
-            Assert.That(brief.MayDo(null, "wash-pond"), Is.False, "and only the water purifier touches the pond");
+            Assert.That(ActivityCatalog.TryGet("wash-pond", out _), Is.False, "owner, 7 November: nobody washes in the pond");
         }
 
         [Test]
@@ -166,7 +168,6 @@ namespace TinyCity.Tests.EditMode
             var r = sim.Residents[0];
             WaitUntilDeciding(sim, r);
             Assert.That(ActivityCatalog.TryGet("drink-pond", out _), Is.False, "owner, 6 November: pond water can't be drunk");
-            Assert.That(Options(sim, r).Contains("wash-pond"), Is.False, "only the water purifier touches the pond");
             Assert.That(Options(sim, r).Contains("drink-clean"), Is.False, "no clean water yet");
 
             TakeRole(sim, r, "water purifier");
