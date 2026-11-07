@@ -312,17 +312,9 @@ namespace TinyCity.Simulation.Economy
 
         public const int PurifyPortions = 4;
 
-        /// <summary>
-        /// Health lost to a wash in the pond (owner, 6 November: "way too happy to continue drinking and washing in
-        /// dirty water"). Pond water can't be drunk and raw food can't be eaten at all (owner, 6 November): only
-        /// clean water and cooked meals.
-        /// </summary>
-        public const double PondWashHealthCost = 1;
-
-        /// <summary>What the decision prompt says beside an option that hurts, so they know before they choose.</summary>
+        /// <summary>What the decision prompt says beside the clean-water options. Owner, 7 November: washing in the pond is gone; nobody touches its water but to clean it.</summary>
         public static string HealthWarning(Activities.ActivityDefinition a) =>
-            a == Activities.ActivityCatalog.WashInPond ? $"dirty water: costs {PondWashHealthCost:0} health"
-            : a == Activities.ActivityCatalog.DrinkCleanWater || a == Activities.ActivityCatalog.WashWithCleanWater ? "clean and safe, uses one portion of clean water"
+            a == Activities.ActivityCatalog.DrinkCleanWater || a == Activities.ActivityCatalog.WashWithCleanWater ? "clean and safe, uses one portion of clean water"
             : null;
 
 

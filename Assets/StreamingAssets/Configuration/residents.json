@@ -76,10 +76,9 @@
     },
     {
       "name": "water purifier",
-      "about": "Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and bring it to the camp store while the merchant has it open. You may also wash in the pond, though it costs you a little health.",
+      "about": "Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and bring it to the camp store while the merchant has it open.",
       "can": [
-        "purify-water",
-        "wash-pond"
+        "purify-water"
       ],
       "max": 2
     },

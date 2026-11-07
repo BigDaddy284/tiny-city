@@ -88,8 +88,8 @@ namespace TinyCity.Simulation.Residents
                     skills: new[] { "cook" }, max: 2),
                 new RoleOption("builder", "Only you know masonry and building. You plan and build what the group needs: shelters, stoves, stalls, benches and crafting benches. You can ask others to bring materials, and you think about where things should go.",
                     skills: new[] { "plan-building", "build" }, max: 3),
-                new RoleOption("water purifier", "Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and bring it to the camp store while the merchant has it open. You may also wash in the pond, though it costs you a little health.",
-                    skills: new[] { "purify-water", "wash-pond" }, max: 2),
+                new RoleOption("water purifier", "Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and bring it to the camp store while the merchant has it open.",
+                    skills: new[] { "purify-water" }, max: 2),
                 new RoleOption("merchant", "You keep the camp store. Only you can open it, at the camp stove, and only while you keep it open can anyone bring in what they have made or take out meals, clean water and food to cook. Every hand-over of food, water, materials or tools goes through you, in or out, so keeping it open is your work nearly all the time: the whole camp depends on you being there, and you step away only to eat, drink and wash, which you can always do from the store yourself. What you ask in return, and how fair you are, is up to you.",
                     skills: new[] { "run-stall", "keep-store" }, max: 1),
                 new RoleOption("tax man", "You collect a share of what people hold for the good of everyone. In a chat you can ask someone to hand over a percentage of their food and materials; they decide whether to pay, so they have to accept your authority. You may pay a security enforcer from what you collect.", canTax: true, max: 1),
@@ -134,8 +134,11 @@ namespace TinyCity.Simulation.Residents
         /// Shipped roles' words from before 6 November, when anyone could drink pond water, eat raw food and fish by
         /// hand (owner: none of these any more), with the role each belongs to; an older town gets the new words.
         /// </summary>
+        private const string RemovedPondWash = "wash-pond";
+
         private static readonly Dictionary<string, string> OldAbouts = new Dictionary<string, string>
         {
+            ["Only you can touch the pond. Its water is dirty and nobody can drink it, so you clean it at the pond into the water everyone needs to drink and wash with, and bring it to the camp store while the merchant has it open. You may also wash in the pond, though it costs you a little health."] = "water purifier",
             ["Only you can cook. You turn raw vegetables and fish into proper meals at a stove, which fill people up far better than raw food and don't make them ill. You keep an eye on what is running low and make sure nobody goes hungry."] = "cook",
             ["Only you can clean water. Pond water is dirty and makes people unwell; you turn it into clean water at the pond, which quenches thirst properly, and you can share it or trade it."] = "water purifier",
             ["Only you can catch fish, and a rod means more. Fish keep only a couple of days and must be cooked before anyone can eat them, so you catch what is needed and share or trade the rest."] = "fisher",
@@ -157,6 +160,8 @@ namespace TinyCity.Simulation.Residents
             {
                 var same = shipped.Find(r.Name);
                 var missing = same == null ? new List<string>() : same.Skills.Where(id => !r.Skills.Contains(id)).ToList();
+                // Owner, 7 November: washing in the pond is gone, so a saved role loses it.
+                var kept = r.Skills.Where(id => id != RemovedPondWash).ToList();
                 var about = r.About.Replace(OldFarmerWords, NewFarmerWords);
                 var max = r.Max == 0 && same != null ? same.Max : r.Max;
                 if (same != null && OldAbouts.TryGetValue(about, out var newer) && newer == same.Name)
@@ -164,7 +169,7 @@ namespace TinyCity.Simulation.Residents
                     about = same.About;
                 }
 
-                return missing.Count == 0 && about == r.About && max == r.Max ? r : new RoleOption(r.Name, about, r.CanTax, r.Skills.Concat(missing), max);
+                return missing.Count == 0 && kept.Count == r.Skills.Count() && about == r.About && max == r.Max ? r : new RoleOption(r.Name, about, r.CanTax, kept.Concat(missing), max);
             });
             var text = Text.Replace(OldHandGatheringWords, "catch the odd fish by hand to eat raw")
                 .Replace("without one you can only drink and wash in the dirty pond and catch the odd fish by hand to eat raw, so you need each other.", "without one you can do nothing for yourself: you can't fish, grow or cook food or touch the pond's dirty water, so you need each other.")

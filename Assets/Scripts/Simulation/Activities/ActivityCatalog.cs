@@ -8,14 +8,6 @@ namespace TinyCity.Simulation.Activities
     /// <summary>Every activity a resident can choose. Ids are stable because save files store them.</summary>
     public static class ActivityCatalog
     {
-        /// <summary>
-        /// The open land has no taps or showers, so people wash at the pond. Owner, 6 November: its water can't be
-        /// drunk, so the only drink is clean water from the water purifier.
-        /// </summary>
-        public static readonly ActivityDefinition WashInPond = new ActivityDefinition(
-            "wash-pond", "Wash in the dirty pond", "washing in the dirty pond", ActivityKind.Care, NeedType.Hygiene, new[] { ObjectType.FishingSpot }, 20,
-            new Dictionary<NeedType, double> { [NeedType.Hygiene] = 5 });
-
         /// <summary>cleaning pond water to drink, which only the water purifier can do.</summary>
         public static readonly ActivityDefinition PurifyWater = new ActivityDefinition(
             "purify-water", "Clean pond water", "cleaning water", ActivityKind.Errand, null, new[] { ObjectType.FishingSpot }, 45,
@@ -51,9 +43,6 @@ namespace TinyCity.Simulation.Activities
         public static readonly ActivityDefinition BringToStore = new ActivityDefinition(
             "bring-to-store", "Bring your food and water to the camp store", "bringing things to the camp store", ActivityKind.Errand, null, new[] { ObjectType.Kitchen }, 10,
             new Dictionary<NeedType, double> { [NeedType.Social] = 0.5 });
-
-        /// <summary>Drinking and washing out in the open, where nothing is laid on.</summary>
-        public static bool IsInTheWild(ActivityDefinition a) => a == WashInPond;
 
         /// <summary>Walking over to someone and talking with them. The duration is set by the conversation, not here.</summary>
         public static readonly ActivityDefinition Chat = new ActivityDefinition(
@@ -173,7 +162,7 @@ namespace TinyCity.Simulation.Activities
             PlantCrops, WaterCrops, Harvest, CatchFish, Cook, EatMeal, RunStall, BuyFood,
             GatherWood, GatherStone, CraftAxe, CraftPickaxe, CraftHoe, CraftRod,
             GatherHardwood, GatherHeartwood, GatherIron, GatherCrystal, CraftStoneAxe, CraftStonePickaxe, CraftIronAxe, CraftIronPickaxe,
-            PlanBuilding, Build, GatherSticks, GatherLooseStones, WashInPond,
+            PlanBuilding, Build, GatherSticks, GatherLooseStones,
             PurifyWater, DrinkCleanWater, WashWithCleanWater, AttendMeeting, KeepStore, BringToStore,
         };
 

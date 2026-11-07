@@ -24,7 +24,7 @@ namespace TinyCity.Simulation.AI
         /// Owner, 6 November: residents told each other the dirty pond was good for their health; then pond water
         /// was made undrinkable, raw food uneatable, and the pond only the water purifier's to touch.
         /// </summary>
-        public const string DirtyWater = "The pond's water is dirty: nobody can drink it, and only the water purifier may touch it. "
+        public const string DirtyWater = "The pond's water is dirty: nobody can drink it or wash in it, and only the water purifier touches it, to clean it. "
             + "Clean water from the water purifier is the only thing to drink or wash with, and food can only be eaten once a cook has made it into meals.";
 
         /// <summary>Below this a need counts as badly neglected in <see cref="CampStatus"/>.</summary>
