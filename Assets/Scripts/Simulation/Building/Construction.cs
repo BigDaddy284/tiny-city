@@ -86,6 +86,12 @@ namespace TinyCity.Simulation.Building
 
         public const int MinBlocks = 8;
 
+        /// <summary>
+        /// The least clear ground, in paces each way, a building spot needs (owner's AI log of 7 November: builders kept
+        /// picking spots with a pace or two clear, so every plan they drew failed and was asked for again, hundreds of times).
+        /// </summary>
+        public const int MinBuildRoom = 3;
+
         /// <summary>One gathered material makes this many blocks.</summary>
         public const int BlocksPerMaterial = 4;
 
